@@ -209,9 +209,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
+app.MapGet("/", () => Results.Ok(new
+{
+    status = "ok",
+    service = "back-end",
+    message = "Backend is running",
+    timestamp = DateTime.UtcNow
+}));
 app.MapGet("/health", () => "API is running!");
-
+app.MapGet("/healthz", () => Results.Ok(new
+{
+    status = "healthy",
+    timestamp = DateTime.UtcNow
+}));
 app.MapGet("/db-test", async (ApplicationDbContext context) =>
 {
     try
