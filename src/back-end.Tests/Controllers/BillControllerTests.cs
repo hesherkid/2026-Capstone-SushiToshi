@@ -109,6 +109,7 @@ public class BillControllerTests : IDisposable
         };
     }
 
+    // TODO: Rewrite tests to match the current BillController API.
     // Note: Tests disabled - BillController API has changed significantly
     // Controller methods now use different signatures (e.g., Get_Bill(_session_id, _bill_id) instead of GetBill(id))
     // and different DTOs. These tests would need to be rewritten to match the current API.
