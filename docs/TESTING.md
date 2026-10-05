@@ -1,8 +1,9 @@
-# Testing Documentation - CDAJT C-Capstone Project
+# Testing Documentation - 2026 C#Capstone - Sushi Toshi
 
 > **Recent Update (2025-11-10):** All test compilation errors have been fixed. Backend tests updated to use `User_Oid`/`User_Name` instead of `User_Id` to match the current authentication model. BillController tests updated to include `IPricingService` dependency. All 101 backend tests and 87 frontend tests are now passing.
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Testing Infrastructure](#testing-infrastructure)
 - [Current Test Coverage](#current-test-coverage)
@@ -21,11 +22,13 @@
 This document provides comprehensive documentation for the automated testing infrastructure implemented for the Sushi Toshi Restaurant Management System. The testing framework follows the **testing pyramid** strategy to ensure code quality and reliability.
 
 ### Testing Pyramid
+
 - **Unit Tests (70%)**: Back-end services, controllers, and front-end components
 - **Integration Tests (20%)**: API endpoints with database interactions
 - **E2E Tests (10%)**: Critical user flows and workflows
 
 ### Testing Philosophy
+
 - Tests are isolated and independent
 - Tests follow AAA pattern (Arrange, Act, Assert)
 - Tests have descriptive names (Given_When_Then pattern)
@@ -42,6 +45,7 @@ This document provides comprehensive documentation for the automated testing inf
 ### Backend Testing Stack
 
 **Framework & Tools:**
+
 - **Test Framework**: xUnit
 - **Assertion Library**: FluentAssertions
 - **Mocking Framework**: Moq
@@ -49,6 +53,7 @@ This document provides comprehensive documentation for the automated testing inf
 - **Code Coverage**: Coverlet
 
 **Test Projects:**
+
 ```
 src/
 ├── back-end.Tests/              # Unit tests
@@ -62,6 +67,7 @@ src/
 ### Frontend Testing Stack
 
 **Framework & Tools:**
+
 - **Unit Testing**: Jest + React Testing Library
 - **E2E Testing**: Playwright
 - **Assertion Library**: @testing-library/jest-dom
@@ -69,11 +75,13 @@ src/
 - **Code Coverage**: Istanbul (built into Jest)
 
 **Configuration Files:**
+
 - `src/front-end/jest.config.js` - Jest configuration
 - `src/front-end/jest.setup.js` - Test environment setup
 - `src/front-end/playwright.config.js` - E2E test configuration
 
 **Test Organization:**
+
 ```
 src/front-end/
 ├── src/
@@ -99,6 +107,7 @@ src/front-end/
 #### Implemented Tests ✅
 
 **Controllers (7/19 tested - ~37%)**
+
 1. **AuthControllerTests** (12+ test cases)
    - Login with valid/invalid credentials
    - Registration with validation
@@ -135,6 +144,7 @@ src/front-end/
    - Status updates
 
 **Services (1/3 tested - ~33%)**
+
 1. **QrGeneratorServiceTests** (15+ test cases)
    - WiFi credential retrieval
    - QR code generation (WiFi & Session)
@@ -145,6 +155,7 @@ src/front-end/
 #### Tests Needed ⚠️
 
 **Controllers:**
+
 - AnalyticsController
 - DashboardController
 - DiningSessionController
@@ -161,6 +172,7 @@ src/front-end/
 - TagController
 
 **Services:**
+
 - SendGridEmailServices
 - PricingService
 
@@ -196,6 +208,7 @@ src/front-end/
    - Accessibility
 
 **E2E Tests:**
+
 1. **QR Code Generation Flow** (Partially implemented)
    - Login page navigation
    - QR code page tests
@@ -205,6 +218,7 @@ src/front-end/
 #### Components Needing Tests ⚠️
 
 **High Priority (96 components):**
+
 - SessionDashboard (staff)
 - TableDashboard (staff)
 - QRCodeManagement (admin)
@@ -219,10 +233,12 @@ src/front-end/
 ### Coverage Statistics
 
 #### Backend
+
 - **Current Coverage**: ~35% (7 of 22 controllers tested)
 - **Target Coverage**: 80%+ overall, 90%+ for services
 
 #### Frontend
+
 - **Current Coverage**: ~3% (3 of 99 components tested)
 - **Target Coverage**: 70%+ overall, 90%+ for critical components
 - **Coverage Thresholds** (jest.config.js):
@@ -238,10 +254,12 @@ src/front-end/
 ### Backend Tests
 
 #### Prerequisites
+
 - .NET 9.0 SDK
 - Windows OS (required for QR code generation with System.Drawing)
 
 #### Run All Backend Tests
+
 ```bash
 # From project root
 dotnet test src/back-end.Tests/back-end.Tests.csproj
@@ -249,17 +267,20 @@ dotnet test src/back-end.IntegrationTests/back-end.IntegrationTests.csproj
 ```
 
 #### Run Specific Test File
+
 ```bash
 dotnet test --filter "FullyQualifiedName~AuthControllerTests"
 dotnet test --filter "FullyQualifiedName~QrGeneratorServiceTests"
 ```
 
 #### Run with Detailed Output
+
 ```bash
 dotnet test --logger "console;verbosity=detailed"
 ```
 
 #### Generate Coverage Report
+
 ```bash
 cd src/back-end.Tests
 dotnet test --collect:"XPlat Code Coverage"
@@ -269,16 +290,19 @@ dotnet test --collect:"XPlat Code Coverage"
 ### Frontend Tests
 
 #### Prerequisites
+
 - Node.js 18+
 - npm
 
 #### Install Dependencies
+
 ```bash
 cd src/front-end
 npm install
 ```
 
 #### Run Unit Tests
+
 ```bash
 # Run all tests once
 npm test
@@ -292,6 +316,7 @@ npm run test:coverage
 ```
 
 #### Run Specific Test File
+
 ```bash
 npm test LoginForm.test.jsx
 npm test -- --testNamePattern="should render"
@@ -300,17 +325,20 @@ npm test -- --testNamePattern="should render"
 ### End-to-End Tests
 
 #### Prerequisites
+
 - Playwright installed
 - Backend server running on `http://localhost:5264`
 - Frontend server running on `http://localhost:3000`
 
 #### Install Playwright Browsers
+
 ```bash
 cd src/front-end
 npx playwright install --with-deps
 ```
 
 #### Run E2E Tests
+
 ```bash
 # Headless mode (faster)
 npm run test:e2e
@@ -328,6 +356,7 @@ npx playwright test --project=chromium
 ### Run All Tests (PowerShell Script)
 
 Create `run-all-tests.ps1`:
+
 ```powershell
 Write-Host "Running Back-End Unit Tests..." -ForegroundColor Green
 dotnet test src/back-end.Tests/back-end.Tests.csproj
@@ -343,6 +372,7 @@ Write-Host "All tests completed!" -ForegroundColor Green
 ```
 
 Then run:
+
 ```bash
 .\run-all-tests.ps1
 ```
@@ -441,50 +471,50 @@ public class YourServiceTests
 #### Component Test Template
 
 ```jsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import YourComponent from '../YourComponent';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import YourComponent from "../YourComponent";
 
 // Mock dependencies
-jest.mock('axios');
-jest.mock('next/navigation', () => ({
-  useRouter: jest.fn()
+jest.mock("axios");
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn(),
 }));
 
-describe('YourComponent', () => {
+describe("YourComponent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should render component correctly', () => {
+  it("should render component correctly", () => {
     // Arrange & Act
     render(<YourComponent />);
 
     // Assert
-    expect(screen.getByText('Expected Text')).toBeInTheDocument();
+    expect(screen.getByText("Expected Text")).toBeInTheDocument();
   });
 
-  it('should handle user interaction', async () => {
+  it("should handle user interaction", async () => {
     // Arrange
     const user = userEvent.setup();
     render(<YourComponent />);
 
     // Act
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole("button", { name: /submit/i }));
 
     // Assert
     await waitFor(() => {
-      expect(screen.getByText('Success')).toBeInTheDocument();
+      expect(screen.getByText("Success")).toBeInTheDocument();
     });
   });
 
-  it('should handle API errors', async () => {
+  it("should handle API errors", async () => {
     // Arrange
-    axios.get.mockRejectedValueOnce(new Error('API Error'));
+    axios.get.mockRejectedValueOnce(new Error("API Error"));
     render(<YourComponent />);
 
     // Act
-    await user.click(screen.getByRole('button', { name: /load/i }));
+    await user.click(screen.getByRole("button", { name: /load/i }));
 
     // Assert
     await waitFor(() => {
@@ -520,6 +550,7 @@ describe('YourComponent', () => {
 ### Pipeline Jobs
 
 #### 1. Backend Tests Job
+
 ```yaml
 - Restores NuGet dependencies
 - Builds the application
@@ -530,6 +561,7 @@ describe('YourComponent', () => {
 ```
 
 #### 2. Frontend Tests Job
+
 ```yaml
 - Installs npm dependencies
 - Runs linter
@@ -538,6 +570,7 @@ describe('YourComponent', () => {
 ```
 
 #### 3. E2E Tests Job
+
 ```yaml
 - Starts backend server
 - Builds and starts frontend
@@ -547,6 +580,7 @@ describe('YourComponent', () => {
 ```
 
 #### 4. Test Summary Job
+
 ```yaml
 - Downloads all test results
 - Generates summary report
@@ -556,10 +590,12 @@ describe('YourComponent', () => {
 ### Pipeline Triggers
 
 **Automatic Execution:**
+
 - Push to `main`, `develop`, or feature branches
 - Pull requests to `main` or `develop` branches
 
 **Manual Execution:**
+
 - Navigate to Actions tab in GitHub
 - Select "Automated Tests" workflow
 - Click "Run workflow"
@@ -579,21 +615,25 @@ describe('YourComponent', () => {
 ### Backend Coverage
 
 **Generate Report:**
+
 ```bash
 cd src/back-end.Tests
 dotnet test --collect:"XPlat Code Coverage" /p:CoverletOutputFormat=cobertura
 ```
 
 **View Report:**
+
 - Coverage file: `TestResults/*/coverage.cobertura.xml`
 - Use tools like ReportGenerator to create HTML reports
 
 **Install ReportGenerator:**
+
 ```bash
 dotnet tool install -g dotnet-reportgenerator-globaltool
 ```
 
 **Generate HTML Report:**
+
 ```bash
 reportgenerator -reports:"TestResults/*/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
 ```
@@ -601,16 +641,19 @@ reportgenerator -reports:"TestResults/*/coverage.cobertura.xml" -targetdir:"cove
 ### Frontend Coverage
 
 **Generate Report:**
+
 ```bash
 cd src/front-end
 npm run test:coverage
 ```
 
 **View Report:**
+
 - Open `coverage/lcov-report/index.html` in browser
 - View summary in terminal output
 
 **Coverage Thresholds** (from jest.config.js):
+
 ```json
 {
   "branches": 70,
@@ -623,6 +666,7 @@ npm run test:coverage
 ### Coverage Goals
 
 #### Backend
+
 - **Overall**: 80%+
 - **Service Layer**: 90%+ (critical business logic)
 - **Controllers**: 80%+
@@ -633,6 +677,7 @@ npm run test:coverage
   - Payment processing
 
 #### Frontend
+
 - **Overall**: 70%+
 - **Critical Components**: 90%+
   - QRCodeManagement
@@ -658,6 +703,7 @@ npm run test:coverage
 ### Backend Best Practices
 
 1. **Use In-Memory Database** for unit tests
+
    ```csharp
    var options = new DbContextOptionsBuilder<ApplicationDbContext>()
        .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -665,6 +711,7 @@ npm run test:coverage
    ```
 
 2. **Use FluentAssertions** for readable assertions
+
    ```csharp
    result.Should().NotBeNull();
    result.Should().BeOfType<OkObjectResult>();
@@ -672,6 +719,7 @@ npm run test:coverage
    ```
 
 3. **Mock Dependencies with Moq**
+
    ```csharp
    var mockLogger = new Mock<ILogger<Controller>>();
    mockLogger.Verify(x => x.Log(...), Times.Once);
@@ -688,37 +736,41 @@ npm run test:coverage
 ### Frontend Best Practices
 
 1. **Query by Accessibility** - Use semantic queries
+
    ```jsx
-   screen.getByRole('button', { name: /submit/i })
-   screen.getByLabelText('Email')
-   screen.getByText('Welcome')
+   screen.getByRole("button", { name: /submit/i });
+   screen.getByLabelText("Email");
+   screen.getByText("Welcome");
    ```
 
 2. **Use userEvent over fireEvent**
+
    ```jsx
    const user = userEvent.setup();
    await user.click(button);
-   await user.type(input, 'text');
+   await user.type(input, "text");
    ```
 
 3. **Wait for Async Operations**
+
    ```jsx
    await waitFor(() => {
-     expect(screen.getByText('Success')).toBeInTheDocument();
+     expect(screen.getByText("Success")).toBeInTheDocument();
    });
    ```
 
 4. **Test Accessibility**
+
    ```jsx
-   const input = screen.getByLabelText('Email');
-   expect(input).toHaveAttribute('type', 'email');
-   expect(input).toHaveAttribute('aria-required', 'true');
+   const input = screen.getByLabelText("Email");
+   expect(input).toHaveAttribute("type", "email");
+   expect(input).toHaveAttribute("aria-required", "true");
    ```
 
 5. **Mock API Calls**
    ```jsx
    axios.get.mockResolvedValueOnce({ data: mockData });
-   axios.post.mockRejectedValueOnce(new Error('API Error'));
+   axios.post.mockRejectedValueOnce(new Error("API Error"));
    ```
 
 ---
@@ -730,6 +782,7 @@ npm run test:coverage
 #### Backend Tests
 
 **Issue**: Tests fail with database errors
+
 ```
 Solution: Ensure each test uses a unique in-memory database name
 var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -738,6 +791,7 @@ var options = new DbContextOptionsBuilder<ApplicationDbContext>()
 ```
 
 **Issue**: QR code tests fail on non-Windows
+
 ```
 Solution: QrGeneratorService uses System.Drawing (Windows-only).
 - Run tests on Windows, or
@@ -745,6 +799,7 @@ Solution: QrGeneratorService uses System.Drawing (Windows-only).
 ```
 
 **Issue**: Mock setup doesn't work
+
 ```
 Solution: Ensure interface is being mocked, not concrete class
 var mock = new Mock<IService>(); // Correct
@@ -754,12 +809,14 @@ var mock = new Mock<Service>();  // Won't work for sealed classes
 #### Frontend Tests
 
 **Issue**: "Cannot find module" errors
+
 ```
 Solution: Clear Jest cache
 npm test -- --clearCache
 ```
 
 **Issue**: Tests timeout
+
 ```
 Solution: Increase timeout in jest.config.js
 module.exports = {
@@ -768,6 +825,7 @@ module.exports = {
 ```
 
 **Issue**: "Not wrapped in act(...)" warnings
+
 ```
 Solution: Use waitFor for async operations
 await waitFor(() => {
@@ -776,6 +834,7 @@ await waitFor(() => {
 ```
 
 **Issue**: Router mock not working
+
 ```
 Solution: Mock Next.js router properly
 jest.mock('next/navigation', () => ({
@@ -789,6 +848,7 @@ jest.mock('next/navigation', () => ({
 #### E2E Tests
 
 **Issue**: E2E tests timeout
+
 ```
 Solution:
 1. Ensure backend is running on http://localhost:5264
@@ -797,6 +857,7 @@ Solution:
 ```
 
 **Issue**: Selectors not found
+
 ```
 Solution: Use more resilient selectors
 page.locator('[data-testid="submit-button"]') // Better
@@ -816,6 +877,7 @@ page.locator('button:has-text("Submit")')     // More resilient
 ### Framework Documentation
 
 #### Backend
+
 - [xUnit Documentation](https://xunit.net/)
 - [Moq Documentation](https://github.com/moq/moq4)
 - [FluentAssertions Documentation](https://fluentassertions.com/)
@@ -823,6 +885,7 @@ page.locator('button:has-text("Submit")')     // More resilient
 - [.NET Testing Best Practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 #### Frontend
+
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 - [Jest Documentation](https://jestjs.io/)
 - [Testing Library Queries](https://testing-library.com/docs/queries/about)
@@ -830,11 +893,13 @@ page.locator('button:has-text("Submit")')     // More resilient
 - [Common Testing Mistakes](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
 
 #### E2E Testing
+
 - [Playwright Documentation](https://playwright.dev/)
 - [Playwright Best Practices](https://playwright.dev/docs/best-practices)
 - [Playwright Test Generator](https://playwright.dev/docs/codegen)
 
 ### Articles & Guides
+
 - [Testing Pyramid](https://martinfowler.com/articles/practical-test-pyramid.html)
 - [AAA Pattern](https://docs.microsoft.com/en-us/visualstudio/test/unit-test-basics)
 - [TDD with xUnit](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-with-dotnet-test)
@@ -846,6 +911,7 @@ page.locator('button:has-text("Submit")')     // More resilient
 ### Current Status (Updated: 2025-11-10)
 
 ✅ **What's Working:**
+
 - Complete testing infrastructure setup
 - **ALL backend tests passing: 101/101 tests (100%)**
   - 7 backend controllers tested (37% of controllers)
@@ -861,6 +927,7 @@ page.locator('button:has-text("Submit")')     // More resilient
 - Code coverage tracking enabled
 
 ⚠️ **What's Needed:**
+
 - 15 more backend controllers to test
 - 96 more frontend components to test
 - Complete E2E test implementation
@@ -879,11 +946,13 @@ page.locator('button:has-text("Submit")')     // More resilient
 ### Next Steps
 
 1. **Run existing tests** to establish baseline
+
    ```bash
    .\run-all-tests.ps1
    ```
 
 2. **Review coverage reports** to identify gaps
+
    ```bash
    npm run test:coverage  # Frontend
    dotnet test --collect:"XPlat Code Coverage"  # Backend

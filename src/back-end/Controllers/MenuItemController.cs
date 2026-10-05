@@ -114,7 +114,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                
+
 
                 _logger.LogError(ex, "Error creating menu item {MenuItemName}", item_data.Name);
                 return StatusCode(500, new { message = "An error occurred while creating the menu item", error = ex.Message });
@@ -172,7 +172,7 @@ namespace back_end.Controllers
                 return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
             }
         }
-        
+
 
 
         /// <summary>
@@ -207,7 +207,7 @@ namespace back_end.Controllers
                     .OrderBy(mi => mi.Category_id)
                     .ThenBy(mi => mi.Name)
                     .ToListAsync();
-                
+
                 var result = allItems.Select(item => new MenuItemResponseDTO
                 {
                     Item_Id = item.item_id,
@@ -224,7 +224,7 @@ namespace back_end.Controllers
                         Color_Code = mit.Tag.tag_color
                     }).ToList()
                 }).ToList();
-                    
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -234,7 +234,7 @@ namespace back_end.Controllers
             }
         }
 
-       /// <summary>
+        /// <summary>
         /// Updates an existing menu item.
         /// </summary>
         /// <param name="item_id">The unique identifier of the menu item to update</param>
@@ -343,7 +343,7 @@ namespace back_end.Controllers
         }
 
 
-   /// <summary>
+        /// <summary>
         /// Uploads an image for a specific menu item.
         /// </summary>
         /// <param name="item_id">The unique identifier of the menu item</param>
@@ -421,7 +421,7 @@ namespace back_end.Controllers
                     Path.Combine(backendRoot, "..", "front-end", "public")
                 );
                 var targetFolder = Path.Combine(publicRoot, "menu-items");
-                
+
                 if (!Directory.Exists(targetFolder))
                     Directory.CreateDirectory(targetFolder);
 
@@ -472,7 +472,7 @@ namespace back_end.Controllers
         }
 
 
-         /// <summary>
+        /// <summary>
         /// Deletes a menu item and its associated image file.
         /// </summary>
         /// <param name="item_id">The unique identifier of the menu item to delete</param>
@@ -532,7 +532,7 @@ namespace back_end.Controllers
                     else
                     {
                         System.IO.File.Delete(ImagePath);
-                    }  
+                    }
                 }
 
                 _context.Remove(item);
@@ -649,7 +649,7 @@ namespace back_end.Controllers
                     Name = t.tag_name,
                     Tag_Id = t.tag_id
                 }).ToList();
-                
+
                 return Ok(response);
 
             }
@@ -684,15 +684,15 @@ namespace back_end.Controllers
         /// This endpoint requires authentication.
         /// Returns all tags for the specified menu item with their color codes, sorted alphabetically by tag name.
         /// </remarks>
- [Authorize(Policy = "staffOnly")]
+        [Authorize(Policy = "staffOnly")]
         [HttpGet("{item_id}/tags-with-colors")]
         [ProducesResponseType(typeof(IEnumerable<FullTagResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add_Tag_To_Menu(
-            int item_id,
-            int tag_id
-        )
+                   int item_id,
+                   int tag_id
+               )
         {
             try
             {
@@ -725,15 +725,15 @@ namespace back_end.Controllers
                 _logger.LogError(ex, "Error Getting Menu Item Tags with Colors");
                 return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
             }
-        }          
- 
+        }
+
         [Authorize(Policy = "staffOnly")]
         [HttpPost("{item_id}/tags/{tag_id}")]
         [ProducesResponseType(typeof(Menu_Item), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> AddTagToMenuItem (
+        public async Task<IActionResult> AddTagToMenuItem(
             int item_id,
             int tag_id
         )
@@ -806,7 +806,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Remove_Tag_To_Menu (
+        public async Task<IActionResult> Remove_Tag_To_Menu(
             int item_id,
             int tag_id
         )
@@ -842,9 +842,9 @@ namespace back_end.Controllers
                 _logger.LogError(ex, "Error Getting Menu Item Tags with Colors");
                 return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
             }
-        }                  
+        }
 
-    
+
     }
 
 }

@@ -1,10 +1,8 @@
 import axios from "axios";
 
 export const API_BASE_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) ||
-  "http://localhost:5264";
-
-
+  process.env.NEXT_PUBLIC_API_URL ??
+  (typeof window !== "undefined" ? "" : "http://127.0.0.1:5264");
 
 export const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
@@ -18,14 +16,14 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Skip auth for guest users or login endpoint
-    if (config.url?.includes("/auth/login")) 
-    {
+    if (config.url?.includes("/auth/login")) {
       return config;
     }
 
     // Add token from localStorage if it exists
-    const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
-    console.log(`Api Request: ${token}`)
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+    console.log(`Api Request: ${token}`);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,7 +32,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Optional: Handle 401 responses (token expired)
@@ -49,7 +47,7 @@ api.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

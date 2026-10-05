@@ -32,7 +32,7 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API for Sushi Toshi Restaurant Management System"
     });
-    
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -42,7 +42,7 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Description = "JWT Authorization header using the Bearer scheme. Enter your token in the text input below."
     });
-    
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -57,7 +57,7 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
-    
+
     c.EnableAnnotations();
 });
 
@@ -101,7 +101,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser();
         policy.RequireRole("Admin");
     });
-    
+
     options.AddPolicy("staffOnly", policy =>
     {
         policy.RequireAuthenticatedUser();
@@ -138,7 +138,7 @@ builder.Services.AddCors(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173","http://192.168.1.68:3000","https://twittery-tawanna-desireless.ngrok-free.dev")
+            policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "https://calorie-daylight-define.ngrok-free.dev")
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();
