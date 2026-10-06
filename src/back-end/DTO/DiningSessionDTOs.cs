@@ -73,7 +73,7 @@ namespace back_end.DTO.DiningSessionDTOs
   {
     public int TableId { get; set; }
     public int LocationId { get; set; }
-    
+
     public string? GuestName { get; set; }
   }
 

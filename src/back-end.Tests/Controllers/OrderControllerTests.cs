@@ -52,9 +52,6 @@ public class OrderControllerTests : IDisposable
         {
             Session_Id = 1,
             Location_Id = 1,
-            // Note: Status and Created_At properties may have changed in DiningSession entity
-            // Status = SessionStatus.Active,
-            // Created_At = DateTime.UtcNow
         };
 
         var bill = new Billing
@@ -76,12 +73,12 @@ public class OrderControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    private void SetupUserClaims(string userOid, string userName = "Test User")
+    private void SetupUserClaims(string userid, string userName = "Test User")
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, userOid),
-            new Claim("name", userName),  // Use lowercase "name" claim as expected by ClaimsHelpers
+            new Claim(ClaimTypes.NameIdentifier, userid),
+            new Claim(ClaimTypes.Name, userName),
             new Claim(ClaimTypes.Email, "test@example.com"),
             new Claim(ClaimTypes.Role, "Customer")
         };
@@ -99,7 +96,7 @@ public class OrderControllerTests : IDisposable
     public async Task CreateOrder_ValidData_CreatesOrder()
     {
         // Arrange
-        SetupUserClaims("test-oid-123", "Test User");
+        SetupUserClaims("123", "Test User");
 
         var orderCreateDto = new OrderCreateDTO
         {
@@ -118,20 +115,21 @@ public class OrderControllerTests : IDisposable
         orderResponse.Should().NotBeNull();
         orderResponse!.Session_Id.Should().Be(1);
         orderResponse.Bill_Id.Should().Be(1);
-        orderResponse.User_Oid.Should().Be("test-oid-123");
+        orderResponse.User_Id.Should().Be(123);
         orderResponse.User_Name.Should().Be("Test User");
         orderResponse.Status.Should().Be(OrderStatus.Pending);
 
         // Verify order was saved to database
         var savedOrder = await _context.SessionOrders.FirstOrDefaultAsync();
         savedOrder.Should().NotBeNull();
+        savedOrder!.User_Id.Should().Be(123);
     }
 
     [Fact]
     public async Task CreateOrder_InvalidSession_ReturnsNotFound()
     {
         // Arrange
-        SetupUserClaims("test-oid-123");
+        SetupUserClaims("123");
 
         var orderCreateDto = new OrderCreateDTO
         {
@@ -150,7 +148,7 @@ public class OrderControllerTests : IDisposable
     public async Task CreateOrder_InvalidBill_ReturnsNotFound()
     {
         // Arrange
-        SetupUserClaims("test-oid-123");
+        SetupUserClaims("123");
 
         var orderCreateDto = new OrderCreateDTO
         {
@@ -169,7 +167,7 @@ public class OrderControllerTests : IDisposable
     public async Task CreateOrder_ClosedBill_ReturnsNotFound()
     {
         // Arrange
-        SetupUserClaims("test-oid-123");
+        SetupUserClaims("123");
 
         var closedBill = new Billing
         {
@@ -204,7 +202,7 @@ public class OrderControllerTests : IDisposable
     public async Task CreateOrder_SetsCorrectTimestamp()
     {
         // Arrange
-        SetupUserClaims("test-oid-123");
+        SetupUserClaims("123");
         var beforeCreation = DateTime.UtcNow;
 
         var orderCreateDto = new OrderCreateDTO
@@ -224,12 +222,12 @@ public class OrderControllerTests : IDisposable
     }
 
     [Theory]
-    [InlineData("test-oid-123", "User One")]
-    [InlineData("test-oid-456", "User Two")]
-    public async Task CreateOrder_DifferentUsers_CreatesOrdersWithCorrectUserOid(string userOid, string userName)
+    [InlineData(123, "User One")]
+    [InlineData(456, "User Two")]
+    public async Task CreateOrder_DifferentUsers_CreatesOrdersWithCorrectUserId(int userId, string userName)
     {
         // Arrange
-        SetupUserClaims(userOid, userName);
+        SetupUserClaims(userId.ToString(), userName);
 
         var orderCreateDto = new OrderCreateDTO
         {
@@ -246,7 +244,7 @@ public class OrderControllerTests : IDisposable
         var orderResponse = okResult!.Value as OrderResponseDTO;
 
         orderResponse.Should().NotBeNull();
-        orderResponse!.User_Oid.Should().Be(userOid);
+        orderResponse!.User_Id.Should().Be(userId);
         orderResponse.User_Name.Should().Be(userName);
     }
 
@@ -254,7 +252,7 @@ public class OrderControllerTests : IDisposable
     public async Task CreateOrder_MultipleOrders_AllCreatedSuccessfully()
     {
         // Arrange
-        SetupUserClaims("test-oid-123");
+        SetupUserClaims("123");
 
         // Act - Create 3 orders
         for (int i = 0; i < 3; i++)
@@ -277,5 +275,32 @@ public class OrderControllerTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+    }
+
+    [Fact]
+    public async Task CreateOrder_WithRealLoginClaims_StoresEmailAsUserName()
+    {
+        // Arrange - mirrors AuthController.cs lines 309–312 (Name = Email, no given/family name)
+        var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, "123"),
+        new Claim(ClaimTypes.Name, "customer@example.com"),
+        new Claim(ClaimTypes.Email, "customer@example.com"),
+        new Claim(ClaimTypes.Role, "Customer")
+    };
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuthType"))
+            }
+        };
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+
+        // Assert - current known behavior; update if real names are added to the token see TODO on Auth controller
+        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
+        order!.User_Name.Should().Be("customer@example.com");
     }
 }
