@@ -14,7 +14,6 @@ namespace back_end.Controllers
     /// </summary>
     [ApiController]
     [Route("api/admin/qr")]
-    //[Authorize(Roles = "user.Admin,user.Staff")]
     [Authorize(Roles = "Admin")]
     public class AdminQrCodeController : ControllerBase
     {
@@ -32,7 +31,8 @@ namespace back_end.Controllers
         [HttpGet("wifi")]
         [SwaggerOperation(
             Summary = "Get WiFi QR code",
-            Description = "Generate or retrieve cached WiFi QR code for a specific location and table."
+            Description = "Returns the saved WiFi QR code for a location and table, generating it if none exists. " +
+                          "Set refresh=true to regenerate from current settings (use after changing WiFi credentials)."
         )]
         [Produces("image/png")]
         [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
@@ -41,34 +41,32 @@ namespace back_end.Controllers
         public async Task<IActionResult> GetWifiQr(
             [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table,
-            CancellationToken ct)
+            CancellationToken ct,
+            [FromQuery, SwaggerParameter("Regenerate instead of using the saved image")] bool refresh = false)
         {
             if (locationId <= 0 || table <= 0)
                 return BadRequest("locationId and table must be positive integers");
 
-            // Try cache path first
-            var existing = _qrService.GetExistingQrCodePath(locationId, table, "wifi");
-            if (existing is not null && System.IO.File.Exists(existing))
-            {
-                _logger.LogInformation("Returning cached WiFi QR for L{loc} T{table}", locationId, table);
-                var cached = await System.IO.File.ReadAllBytesAsync(existing, ct);
-                Response.Headers.CacheControl = "public, max-age=86400";
-                return File(cached, "image/png", $"wifi_L{locationId}_T{table}.png");
-            }
-
-            var bytes = await _qrService.GetWifiQrBytesAsync(locationId, table, useCache: false, ct);
+            // Service handles the disk cache: uses the saved PNG unless refresh=true (or none exists),
+            // otherwise generates from current config and saves it.
+            var bytes = await _qrService.GetWifiQrBytesAsync(locationId, table, useCache: !refresh, ct);
             if (bytes is null)
                 return NotFound($"Location {locationId} not found or WiFi credentials not configured");
 
-            Response.Headers.CacheControl = "public, max-age=86400";
-            _logger.LogInformation("Generated WiFi QR for L{loc} T{table}", locationId, table);
+            // Image contains the WiFi password: never allow shared/proxy caching,
+            // and make the browser re-check with the server instead of reusing a stale copy.
+            Response.Headers.CacheControl = "private, no-cache";
+
+            _logger.LogInformation("Generated WiFi QR for L{loc} T{table} (refresh={refresh})", locationId, table, refresh);
             return File(bytes, "image/png", $"wifi_L{locationId}_T{table}.png");
         }
 
         [HttpGet("session")]
         [SwaggerOperation(
             Summary = "Get session QR code",
-            Description = "Generate or retrieve cached session QR code for a specific location and table. Starts dining session and redirects to menu."
+            Description = "Returns the saved session QR code for a location and table, generating it if none exists. " +
+                          "Scanning it opens the login page with the location and table pre-filled. " +
+                          "Set refresh=true to regenerate from current settings (use after changing SessionPageUrl)."
         )]
         [Produces("image/png")]
         [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
@@ -77,26 +75,23 @@ namespace back_end.Controllers
         public async Task<IActionResult> GetSessionQr(
             [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table,
-            CancellationToken ct)
+            CancellationToken ct,
+            [FromQuery, SwaggerParameter("Regenerate instead of using the saved image")] bool refresh = false)
         {
             if (locationId <= 0 || table <= 0)
                 return BadRequest("locationId and table must be positive integers");
 
-            var existing = _qrService.GetExistingQrCodePath(locationId, table, "session");
-            if (existing is not null && System.IO.File.Exists(existing))
-            {
-                _logger.LogInformation("Returning cached Session QR for L{loc} T{table}", locationId, table);
-                var cached = await System.IO.File.ReadAllBytesAsync(existing, ct);
-                Response.Headers.CacheControl = "public, max-age=86400";
-                return File(cached, "image/png", $"session_L{locationId}_T{table}.png");
-            }
-
-            var bytes = await _qrService.GetSessionQrBytesAsync(locationId, table, useCache: false, ct);
+            // Service handles the disk cache: uses the saved PNG unless refresh=true (or none exists),
+            // otherwise generates from current config and saves it.
+            var bytes = await _qrService.GetSessionQrBytesAsync(locationId, table, useCache: !refresh, ct);
             if (bytes is null)
                 return NotFound($"Location {locationId} not found");
 
-            Response.Headers.CacheControl = "public, max-age=86400";
-            _logger.LogInformation("Generated Session QR for L{loc} T{table}", locationId, table);
+            // Admin-only response: keep it out of shared caches, and make the browser
+            // re-check with the server so a changed SessionPageUrl shows up immediately.
+            Response.Headers.CacheControl = "private, no-cache";
+
+            _logger.LogInformation("Generated Session QR for L{loc} T{table} (refresh={refresh})", locationId, table, refresh);
             return File(bytes, "image/png", $"session_L{locationId}_T{table}.png");
         }
 
@@ -275,6 +270,15 @@ namespace back_end.Controllers
                 const float cellWidth = availableWidth / qrPerRow; // 135 points per cell
                 const float cellHeight = availableHeight / qrPerColumn; // ~169 points per cell
 
+                // Fonts and paints, created once and reused for every page
+                var boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default;
+                var regularTypeface = SKTypeface.FromFamilyName("Arial") ?? SKTypeface.Default;
+                using var headerFont = new SKFont(boldTypeface, 16);
+                using var tableFont = new SKFont(boldTypeface, 12);
+                using var typeFont = new SKFont(regularTypeface, 10);
+                using var blackPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
+                using var grayPaint = new SKPaint { Color = SKColors.DarkGray, IsAntialias = true };
+
                 // Process QR codes in batches of 16 per page
                 for (int pageIndex = 0; pageIndex < qrCodes.Count; pageIndex += qrPerPage)
                 {
@@ -282,17 +286,9 @@ namespace back_end.Controllers
 
                     using var canvas = document.BeginPage(pageWidth, pageHeight);
 
-                    // Draw page header
-                    using var headerPaint = new SKPaint
-                    {
-                        Color = SKColors.Black,
-                        TextSize = 16,
-                        IsAntialias = true,
-                        Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
-                    };
+                    // Draw page header (centered)
                     var headerText = $"{locationName} - QR Codes (Page {(pageIndex / qrPerPage) + 1})";
-                    var headerWidth = headerPaint.MeasureText(headerText);
-                    canvas.DrawText(headerText, (pageWidth - headerWidth) / 2, marginY - 8, headerPaint);
+                    canvas.DrawText(headerText, pageWidth / 2, marginY - 8, SKTextAlign.Center, headerFont, blackPaint);
 
                     // Draw QR codes in grid
                     int qrOnThisPage = Math.Min(qrPerPage, qrCodes.Count - pageIndex);
@@ -314,28 +310,10 @@ namespace back_end.Controllers
                         var destRect = new SKRect(qrX, qrY, qrX + qrSize, qrY + qrSize);
                         canvas.DrawBitmap(bitmap, destRect);
 
-                        // Draw table number label
-                        using var tableNumPaint = new SKPaint
-                        {
-                            Color = SKColors.Black,
-                            TextSize = 12,
-                            IsAntialias = true,
-                            Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
-                        };
-                        var tableText = $"Table {tableNum}";
-                        var tableTextWidth = tableNumPaint.MeasureText(tableText);
-                        canvas.DrawText(tableText, cellX + (cellWidth - tableTextWidth) / 2, qrY + qrSize + 16, tableNumPaint);
-
-                        // Draw type label
-                        using var typePaint = new SKPaint
-                        {
-                            Color = SKColors.DarkGray,
-                            TextSize = 10,
-                            IsAntialias = true,
-                            Typeface = SKTypeface.FromFamilyName("Arial")
-                        };
-                        var typeWidth = typePaint.MeasureText(qrType);
-                        canvas.DrawText(qrType, cellX + (cellWidth - typeWidth) / 2, qrY + qrSize + 28, typePaint);
+                        // Draw labels centered under the QR code
+                        float centerX = cellX + cellWidth / 2;
+                        canvas.DrawText($"Table {tableNum}", centerX, qrY + qrSize + 16, SKTextAlign.Center, tableFont, blackPaint);
+                        canvas.DrawText(qrType, centerX, qrY + qrSize + 28, SKTextAlign.Center, typeFont, grayPaint);
                     }
 
                     document.EndPage();
@@ -364,57 +342,58 @@ namespace back_end.Controllers
             return Ok(new { success = true, message = $"Cleared QR codes for Location {locationId}, Table {table}" });
         }
 
-        /// <summary>
-        /// Draw a QR code on a page with exact print dimensions (1.75" × 1.75")
-        /// </summary>
-        private void DrawQRCodeForPrint(SKCanvas canvas, string qrPath, string label, int tableNumber,
-            string locationName, float pageWidth, float pageHeight, float qrPrintSize)
-        {
-            using var bitmap = SKBitmap.Decode(qrPath);
+        // FIXME: Is this needed? not called anywhere in the current code.
+        // <summary>
+        // Draw a QR code on a page with exact print dimensions (1.75" × 1.75")
+        // </summary>
+        // private void DrawQRCodeForPrint(SKCanvas canvas, string qrPath, string label, int tableNumber,
+        //     string locationName, float pageWidth, float pageHeight, float qrPrintSize)
+        // {
+        //     using var bitmap = SKBitmap.Decode(qrPath);
 
-            // Center QR code on page
-            float x = (pageWidth - qrPrintSize) / 2;
-            float y = 150f; // Top margin
+        //     // Center QR code on page
+        //     float x = (pageWidth - qrPrintSize) / 2;
+        //     float y = 150f; // Top margin
 
-            // Draw title
-            using var titlePaint = new SKPaint
-            {
-                Color = SKColors.Black,
-                TextSize = 24,
-                IsAntialias = true,
-                Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
-            };
-            var titleText = $"{locationName} - Table {tableNumber}";
-            var titleWidth = titlePaint.MeasureText(titleText);
-            canvas.DrawText(titleText, (pageWidth - titleWidth) / 2, 80, titlePaint);
+        //     // Draw title
+        //     using var titlePaint = new SKPaint
+        //     {
+        //         Color = SKColors.Black,
+        //         TextSize = 24,
+        //         IsAntialias = true,
+        //         Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+        //     };
+        //     var titleText = $"{locationName} - Table {tableNumber}";
+        //     var titleWidth = titlePaint.MeasureText(titleText);
+        //     canvas.DrawText(titleText, (pageWidth - titleWidth) / 2, 80, titlePaint);
 
-            // Draw label
-            using var labelPaint = new SKPaint
-            {
-                Color = SKColors.Black,
-                TextSize = 18,
-                IsAntialias = true,
-                Typeface = SKTypeface.FromFamilyName("Arial")
-            };
-            var labelWidth = labelPaint.MeasureText(label);
-            canvas.DrawText(label, (pageWidth - labelWidth) / 2, 120, labelPaint);
+        //     // Draw label
+        //     using var labelPaint = new SKPaint
+        //     {
+        //         Color = SKColors.Black,
+        //         TextSize = 18,
+        //         IsAntialias = true,
+        //         Typeface = SKTypeface.FromFamilyName("Arial")
+        //     };
+        //     var labelWidth = labelPaint.MeasureText(label);
+        //     canvas.DrawText(label, (pageWidth - labelWidth) / 2, 120, labelPaint);
 
-            // Draw QR code at exact print size (1.75" × 1.75")
-            // The image will be scaled to fit this size when printed
-            var destRect = new SKRect(x, y, x + qrPrintSize, y + qrPrintSize);
-            canvas.DrawBitmap(bitmap, destRect);
+        //     // Draw QR code at exact print size (1.75" × 1.75")
+        //     // The image will be scaled to fit this size when printed
+        //     var destRect = new SKRect(x, y, x + qrPrintSize, y + qrPrintSize);
+        //     canvas.DrawBitmap(bitmap, destRect);
 
-            // Add print specifications note at bottom
-            using var notePaint = new SKPaint
-            {
-                Color = SKColors.Gray,
-                TextSize = 10,
-                IsAntialias = true,
-                Typeface = SKTypeface.FromFamilyName("Arial")
-            };
-            var noteText = "Print size: 1.75\" × 1.75\" | 300 DPI | ECC Level H";
-            var noteWidth = notePaint.MeasureText(noteText);
-            canvas.DrawText(noteText, (pageWidth - noteWidth) / 2, pageHeight - 50, notePaint);
-        }
+        //     // Add print specifications note at bottom
+        //     using var notePaint = new SKPaint
+        //     {
+        //         Color = SKColors.Gray,
+        //         TextSize = 10,
+        //         IsAntialias = true,
+        //         Typeface = SKTypeface.FromFamilyName("Arial")
+        //     };
+        //     var noteText = "Print size: 1.75\" × 1.75\" | 300 DPI | ECC Level H";
+        //     var noteWidth = notePaint.MeasureText(noteText);
+        //     canvas.DrawText(noteText, (pageWidth - noteWidth) / 2, pageHeight - 50, notePaint);
+        // }
     }
 }

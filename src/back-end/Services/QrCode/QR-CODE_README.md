@@ -2,63 +2,69 @@
 
 ## Overview
 
-This service provides secure, location-based QR code generation for WiFi credentials and dining session initiation (menu redirect). All endpoints are protected with Admin/Staff authorization.
+This service generates location-based QR codes for **WiFi access** and **table login** (session start). It uses QRCoder for QR encoding and SkiaSharp for rendering, so it runs on Windows, Linux and macOS.
+
+- All endpoints require the **`Admin`** role.
+- Developer setup for testing on a phone (ngrok, user secrets): see [`TEAM_SETUP.md`](../../../../TEAM_SETUP.md).
 
 ## Folder Structure
 
 ```
 src/back-end/
 ├── Services/QrCode/
-│   ├── QrGeneratorService.cs         # Core QR generation logic
+│   ├── QrGeneratorService.cs         # Core QR generation logic (namespace back_end.Services)
 │   └── README.md                      # This file
 ├── Controllers/
 │   └── AdminQrCodeController.cs      # Admin-only endpoints
-└── storage/
-    ├── .gitignore                     # Ignores generated files
-    └── qrcodes/
-        └── .gitkeep                   # Keeps folder in git
+└── storage/qrcodes/                   # Generated PNGs (created automatically, ignored by git)
 ```
 
-## Admin-Protected API Endpoints
+## Admin API Endpoints
 
-All endpoints require authentication with `Admin` or `Staff` role.
+All endpoints require a JWT for a user with the `Admin` role (`[Authorize(Roles = "Admin")]`).
+
+| Method | Endpoint                          | Purpose                                                   |
+| ------ | --------------------------------- | --------------------------------------------------------- |
+| GET    | `/api/admin/qr/wifi`              | Single WiFi QR (PNG)                                      |
+| GET    | `/api/admin/qr/session`           | Single session/login QR (PNG)                             |
+| POST   | `/api/admin/qr/bulk`              | Generate WiFi + session QRs for every table at a location |
+| GET    | `/api/admin/qr/bulk/download-zip` | All saved QRs for a location as a ZIP                     |
+| GET    | `/api/admin/qr/bulk/download-pdf` | All saved QRs for a location as a printable PDF           |
+| DELETE | `/api/admin/qr/clear`             | Delete a table's saved QRs                                |
 
 ### 1. Get WiFi QR Code
 
 ```http
-GET /api/admin/qr/wifi?locationId={locationId}&table={tableNumber}
+GET /api/admin/qr/wifi?locationId={locationId}&table={tableNumber}[&refresh=true]
 ```
 
 **Parameters:**
+
 - `locationId` (int, required): Location ID
 - `table` (int, required): Table number
-
-**Response:**
-- Returns WiFi QR code as PNG image
-- Filename: `wifi_L{locationId}_T{table}.png`
+- `refresh` (bool, optional, default `false`): regenerate from current settings instead of returning the saved image
+  **Response:** PNG image, filename `wifi_L{locationId}_T{table}.png`
 
 **Example:**
+
 ```bash
 curl -H "Authorization: Bearer {token}" \
-  "http://localhost:5264/api/admin/qr/wifi?locationId=1&table=5" \
+  "http://localhost:5264/api/admin/qr/wifi?locationId=1&table=5&refresh=true" \
   --output wifi_L1_T5.png
 ```
 
 ### 2. Get Session QR Code
 
 ```http
-GET /api/admin/qr/session?locationId={locationId}&table={tableNumber}
+GET /api/admin/qr/session?locationId={locationId}&table={tableNumber}[&refresh=true]
 ```
 
-**Parameters:**
-- `locationId` (int, required): Location ID
-- `table` (int, required): Table number
+**Parameters:** same as WiFi.
 
-**Response:**
-- Returns session start QR code as PNG image (redirects to menu)
-- Filename: `session_L{locationId}_T{table}.png`
+**Response:** PNG image, filename `session_L{locationId}_T{table}.png`. Scanning it opens the login page for that table (see [Session URL Format](#session-url-format)).
 
 **Example:**
+
 ```bash
 curl -H "Authorization: Bearer {token}" \
   "http://localhost:5264/api/admin/qr/session?locationId=1&table=5" \
@@ -68,42 +74,57 @@ curl -H "Authorization: Bearer {token}" \
 ### 3. Bulk Generate QR Codes
 
 ```http
-POST /api/admin/qr/bulk?locationId={locationId}&tableCount={tableCount}
+POST /api/admin/qr/bulk?locationId={locationId}
 ```
 
 **Parameters:**
+
 - `locationId` (int, required): Location ID
-- `tableCount` (int, required): Number of tables (1-1000)
+  Tables are read from the database for that location (no `tableCount` parameter). Every table gets a WiFi and a session QR, and existing files are always **overwritten**.
 
 **Response:**
+
 ```json
 {
   "success": true,
-  "message": "Generated 40 QR codes for 20 tables",
   "locationId": 1,
   "tableCount": 20,
   "filesGenerated": 40,
-  "storageLocation": "storage/qrcodes/"
+  "storageLocation": "storage/qrcodes/",
+  "files": ["wifi_L1_T1.png", "session_L1_T1.png", "..."]
 }
 ```
 
-**Example:**
+**Errors:**
+
+- `404`: location not found
+- `400`: location has no tables
+  **Example:**
+
 ```bash
 curl -X POST -H "Authorization: Bearer {token}" \
-  "http://localhost:5264/api/admin/qr/bulk?locationId=1&tableCount=20"
+  "http://localhost:5264/api/admin/qr/bulk?locationId=1"
 ```
 
-### 4. Clear QR Code Cache
+### 4. Download All (ZIP / PDF)
+
+```http
+GET /api/admin/qr/bulk/download-zip?locationId={locationId}
+GET /api/admin/qr/bulk/download-pdf?locationId={locationId}
+```
+
+- Both use the **saved** files, so run bulk generate first.
+- **ZIP:** individual PNGs.
+- **PDF:** US Letter pages, 16 QR codes each (4 × 4), each QR printed at 1.75" × 1.75" with a "Table N" and "WiFi"/"Session" label.
+
+### 5. Clear Saved QR Codes
 
 ```http
 DELETE /api/admin/qr/clear?locationId={locationId}&table={tableNumber}
 ```
 
-**Parameters:**
-- `locationId` (int, required): Location ID
-- `table` (int, required): Table number
-
 **Response:**
+
 ```json
 {
   "success": true,
@@ -115,12 +136,14 @@ DELETE /api/admin/qr/clear?locationId={locationId}&table={tableNumber}
 
 ### Location-Based WiFi Credentials
 
-Each location can have unique WiFi credentials. The system uses a fallback mechanism:
+Each location can have its own WiFi credentials (`QrGeneratorService.GetLocationWifiCredentials`):
 
-1. **First**: Checks for location-specific WiFi in `appsettings.json` under `QRCodeSettings:Locations:{locationId}:WiFi`
-2. **Fallback**: Uses default WiFi credentials if no location-specific config exists
+1. **First:** `QRCodeSettings:Locations:{locationId}:WiFi` (both SSID and Password must be set)
+2. **Fallback:** `QRCodeSettings:WiFi`
+3. **If neither is set:** the WiFi endpoint returns `404`.
+   Values can come from `appsettings.json`, user secrets (development), or environment variables (production, e.g. `QRCodeSettings__Locations__1__WiFi__Password`).
+   **Configuration Example:**
 
-**Configuration Example:**
 ```json
 "QRCodeSettings": {
   "WiFi": {
@@ -142,55 +165,56 @@ Each location can have unique WiFi credentials. The system uses a fallback mecha
 
 ### File Caching
 
-Generated QR codes are automatically cached to improve performance:
+Generated QR codes are saved to disk and reused:
 
-- **Storage Location:** `storage/qrcodes/`
-- **WiFi Filename Format:** `wifi_L{locationId}_T{table}.png`
-- **Session Filename Format:** `session_L{locationId}_T{table}.png`
+- **Storage Location:** `storage/qrcodes/` under the folder the backend runs from (normally `src/back-end/storage/qrcodes/`). Created automatically on startup.
+- **Filenames:** `wifi_L{locationId}_T{table}.png`, `session_L{locationId}_T{table}.png`
 - **Cache Behavior:**
-  - Checks cache before regenerating
-  - Returns cached file if exists
-  - Regenerates if cache is cleared
-
-**Note:** The `storage/qrcodes/` folder is ignored by git (see `storage/.gitignore`). Generated files are not committed to version control.
+  - `GET /api/admin/qr/wifi` and `/session` return the saved file if one exists; add `&refresh=true` to regenerate from current settings
+  - `POST /api/admin/qr/bulk` always regenerates and overwrites
+  - `DELETE /api/admin/qr/clear` removes a table's saved files
+  - Responses send `Cache-Control: private, no-cache`, so browsers re-check instead of reusing old images
+- **After changing `SessionPageUrl` or WiFi settings:** restart the backend, then regenerate. Values are baked into the image.
+  **Note:** `storage/qrcodes/` is ignored by git. Generated files are not committed to version control.
 
 ### Labeled QR Codes
 
-Each QR code includes a professional label with:
-- Location name (from database)
-- Table number
-- QR code type (WiFi or Menu)
+Each PNG has a label strip below the QR code with the location name (from the database), the table number, and the type:
 
-**Label Format:**
 ```
+
 Location Name — Table 5 — WiFi
 Location Name — Table 5 — Menu
+
 ```
 
-### Security Features
+### Security Notes
 
-1. **Admin/Staff Only:** All endpoints protected with `[Authorize(Roles="Admin,Staff")]`
-2. **WiFi Credentials Never Exposed:** WiFi passwords remain server-side only
-3. **No Client-Side WiFi Generation:** WiFi QR codes only generated via authenticated backend endpoints
-4. **Session URLs Are Public:** Session QR codes can be scanned by anyone (they start a dining session and link to menu page)
+1. **Admin only:** all endpoints require the `Admin` role.
+2. **WiFi passwords:** never returned as text by the API, but they **are encoded in the WiFi QR image**. Anyone who can scan the code can read the password. Print them only for guest networks.
+3. **Not cached by shared proxies:** responses use `Cache-Control: private, no-cache`.
+4. **Session QR codes are public by design:** anyone at the table can scan them.
+5. **Never commit real credentials:** keep placeholders in `appsettings.json`.
 
 ## Configuration
 
 ### appsettings.json
 
+Committed values are placeholders. Real values go in user secrets (dev) or environment variables (production); see `TEAM_SETUP.md`, step 6.
+
 ```json
 {
   "QRCodeSettings": {
     "WiFi": {
-      "SSID": "Redsox-5G",
-      "Password": "bpjh38vw83"
+      "SSID": "Location-Test",
+      "Password": "Location-Password"
     },
-    "SessionPageUrl": "http://192.168.1.78:3000/menu",
+    "SessionPageUrl": "http://localhost:3000",
     "Locations": {
       "1": {
         "WiFi": {
-          "SSID": "Redsox-5G",
-          "Password": "bpjh38vw83"
+          "SSID": "Location-Test",
+          "Password": "Location-Password"
         }
       }
     }
@@ -198,10 +222,14 @@ Location Name — Table 5 — Menu
 }
 ```
 
+- `SessionPageUrl` is the frontend's base URL only (no path, no trailing slash). The service appends `/auth/login?locationId={id}&tableNumber={n}`.
+  - If it's missing, the service falls back to `Restaurant:BaseUrl`, then `http://localhost:3000`.
+- A location's own `WiFi` entry overrides the default `WiFi`.
+
 ### Service Registration (Program.cs)
 
 ```csharp
-builder.Services.AddScoped<back_end.Services.QrCode.QrGeneratorService>();
+builder.Services.AddScoped<QrGeneratorService>(); // namespace back_end.Services
 ```
 
 ## Usage Examples
@@ -209,13 +237,16 @@ builder.Services.AddScoped<back_end.Services.QrCode.QrGeneratorService>();
 ### C# Client Example
 
 ```csharp
-// Using HttpClient to download WiFi QR code
+using System.Net.Http.Headers;
+
+// Download a WiFi QR code (requires an Admin JWT)
 using var httpClient = new HttpClient();
 httpClient.DefaultRequestHeaders.Authorization =
     new AuthenticationHeaderValue("Bearer", jwtToken);
 
+// Add &refresh=true to regenerate from current settings instead of using the saved image
 var response = await httpClient.GetAsync(
-    "http://localhost:5264/api/admin/qr/wifi?locationId=1&table=5");
+    "http://localhost:5264/api/admin/qr/wifi?locationId=1&table=5&refresh=true");
 
 if (response.IsSuccessStatusCode)
 {
@@ -226,6 +257,8 @@ if (response.IsSuccessStatusCode)
 
 ### JavaScript/Fetch Example
 
+Relative `/api/...` paths work in the frontend because Next.js forwards `/api/*` to the backend (`next.config.mjs` rewrite).
+
 ```javascript
 // Download Session QR code
 async function downloadSessionQR(locationId, table) {
@@ -233,18 +266,19 @@ async function downloadSessionQR(locationId, table) {
     `/api/admin/qr/session?locationId=${locationId}&table=${table}`,
     {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
+        Authorization: `Bearer ${token}`,
+      },
+    },
   );
 
   if (response.ok) {
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `session_L${locationId}_T${table}.png`;
     a.click();
+    window.URL.revokeObjectURL(url);
   }
 }
 ```
@@ -252,127 +286,100 @@ async function downloadSessionQR(locationId, table) {
 ### Bulk Generation Example
 
 ```javascript
-// Generate QR codes for all 20 tables at location 1
-async function generateAllQRCodes(locationId, tableCount) {
-  const response = await fetch(
-    `/api/admin/qr/bulk?locationId=${locationId}&tableCount=${tableCount}`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
+// Generate QR codes for every table at a location
+async function generateAllQRCodes(locationId) {
+  const response = await fetch(`/api/admin/qr/bulk?locationId=${locationId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   const result = await response.json();
-  console.log(`Generated ${result.filesGenerated} QR codes`);
+  console.log(
+    `Generated ${result.filesGenerated} QR codes for ${result.tableCount} tables`,
+  );
 }
 
 // Usage
-await generateAllQRCodes(1, 20);
+await generateAllQRCodes(1);
 ```
 
 ## WiFi QR Code Format
 
-Generated WiFi QR codes use the standard WiFi QR format:
+WiFi QR codes use the standard format, generated by QRCoder's `PayloadGenerator.WiFi`:
 
 ```
-WIFI:T:WPA;S:{ssid};P:{password};H:false;;
+WIFI:T:WPA;S:{ssid};P:{password};;
 ```
 
-**Parameters:**
-- `T`: Encryption type (WPA/WPA2)
+- `T`: authentication type. The service always uses `WPA`, which phones treat as WPA/WPA2.
 - `S`: SSID (network name)
-- `P`: Password
-- `H`: Hidden network (true/false)
+- `P`: password
+- The network is always marked as **not hidden**, and QRCoder escapes special characters (`; , : \ "`) automatically.
+  When scanned with a phone camera, this prompts the user to join the network (tap **Join** on iPhone, **Connect** on Android).
 
-When scanned with a smartphone camera, this automatically prompts to join the WiFi network.
+**Limitations:** routers set to WPA3-only, or with a hidden SSID, may not join from these codes.
 
 ## Session URL Format
 
 Session QR codes link to:
 
 ```
-{baseUrl}/start-session?locationId={locationId}&tableNumber={tableNumber}
+{SessionPageUrl}/auth/login?locationId={locationId}&tableNumber={tableNumber}
 ```
+
+> **Note:** the session QR flow is under review.
 
 **Example:**
+
 ```
-http://192.168.1.78:3000/start-session?locationId=1&tableNumber=5
+https://<your-name>.ngrok-free.dev/auth/login?locationId=1&tableNumber=5
 ```
 
-The frontend should handle this URL by:
-1. Creating a dining session via `POST /api/diningsession/Create_Dinning_Session`
-2. Including the location ID and table number in the session creation
-3. Redirecting to the menu page after successful session creation
-
-**Frontend Implementation:**
-
-✅ **The `/start-session` page has been implemented** at `src/front-end/src/app/start-session/page.jsx`
-
-The page automatically:
-1. Extracts `locationId` and `tableNumber` from query parameters
-2. Looks up the `table_id` by querying all tables and finding the match
-3. Gets the default menu for the location
-4. Creates a dining session via `POST /api/diningsession/Create_Dinning_Session`
-5. Redirects to `/menu/full-menu?sessionId={sessionId}` after success
-
-**Flow:**
-```
-1. Customer scans QR code
-   ↓
-2. Opens: /start-session?locationId=1&tableNumber=5
-   ↓
-3. Page shows loading spinner
-   ↓
-4. Creates dining session in background
-   ↓
-5. Shows success message
-   ↓
-6. Redirects to menu (after 1.5s)
-```
+> **Note:** earlier versions linked to `/start-session?...`, which created a dining session and redirected to the menu. The service now links to `/auth/login`.
 
 ## Troubleshooting
 
 ### QR Code Not Generating
 
-1. **Check database:** Ensure location exists in the database
-2. **Check configuration:** Verify WiFi credentials in `appsettings.json`
-3. **Check permissions:** Ensure user has Admin or Staff role
-4. **Check logs:** Look for errors in application logs
+1. **Check the database:** the location (and, for bulk, its tables) must exist.
+2. **Check configuration:** WiFi credentials must be set (see [Location-Based WiFi Credentials](#location-based-wifi-credentials)). A `404` from `/wifi` usually means they're missing.
+3. **Check permissions:** the user needs the `Admin` role.
+4. **Check logs:** look for errors in the backend console.
 
-### Cache Issues
+### QR Shows Old Values
 
-To clear cache for a specific table:
+- **Saved file:** use `&refresh=true` or bulk generate.
+- **Browser cache:** in DevTools → Network, if the request's **Size** column shows `(disk cache)`, right-click → **Clear browser cache** and tick **Disable cache**.
+- **Settings not picked up:** restart the backend after changing user secrets or `appsettings.json`.
+
+### Clearing Saved QR Codes
+
+For a specific table:
 
 ```bash
 curl -X DELETE -H "Authorization: Bearer {token}" \
   "http://localhost:5264/api/admin/qr/clear?locationId=1&table=5"
 ```
 
-To clear all cached QR codes:
+For all tables, run from `src/back-end`:
 
 ```bash
-# Windows
+# Windows (cmd)
 del /Q "storage\qrcodes\*.png"
 
-# Linux/Mac
+# Linux/Mac/Git Bash
 rm -f storage/qrcodes/*.png
 ```
 
-### Platform Warnings
-
-Build warnings about `System.Drawing.Common` being Windows-only are expected. The service is designed to run on Windows servers. For cross-platform deployment, consider using:
-- SkiaSharp (alternative graphics library)
-- QRCoder with different rendering backend
-- Docker container with Windows base image
-
 ## Best Practices
 
-1. **Regenerate on WiFi Change:** Clear cache when WiFi credentials change
-2. **Print Table Tents:** Use bulk generation to create table tent QR codes
-3. **Separate Networks:** Consider different WiFi networks per location for better tracking
-4. **Secure Storage:** Ensure `storage/qrcodes/` has appropriate file permissions
-5. **Don't Commit QR Codes:** The `.gitignore` already handles this, but verify generated files aren't committed
+1. **Regenerate after any settings change:** bulk generate, or `&refresh=true` for a single code.
+2. **Print table tents:** bulk generate, then download the PDF.
+3. **Guest network only:** WiFi QR codes reveal the password, so never encode a staff or office network.
+4. **Separate networks per location:** use `QRCodeSettings:Locations:{id}:WiFi`.
+5. **Secure storage:** `storage/qrcodes/` contains WiFi passwords inside images; restrict file permissions on servers.
+6. **Don't commit QR codes or credentials:** `storage/qrcodes/` is git-ignored; keep `appsettings.json` on placeholders.
 
 ---

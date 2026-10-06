@@ -7,80 +7,9 @@ namespace back_end.Tests.Helpers;
 
 public class ClaimsHelpersTests
 {
-    [Fact]
-    public void GetUserOid_WithObjectIdentifierClaim_ReturnsObjectIdentifier()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("http://schemas.microsoft.com/identity/claims/objectidentifier", "12345-abcde")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        // Act
-        var result = ClaimsHelpers.GetUserOid(user);
-
-        // Assert
-        result.Should().Be("12345-abcde");
-    }
 
     [Fact]
-    public void GetUserOid_WithOidClaim_ReturnsOid()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("oid", "oid-12345")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        // Act
-        var result = ClaimsHelpers.GetUserOid(user);
-
-        // Assert
-        result.Should().Be("oid-12345");
-    }
-
-    [Fact]
-    public void GetUserOid_WithPreferredUsernameClaim_ReturnsPreferredUsername()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("preferred_username", "user@example.com")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        // Act
-        var result = ClaimsHelpers.GetUserOid(user);
-
-        // Assert
-        result.Should().Be("user@example.com");
-    }
-
-    [Fact]
-    public void GetUserOid_WithEmailClaim_ReturnsEmail()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("email", "test@example.com")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        // Act
-        var result = ClaimsHelpers.GetUserOid(user);
-
-        // Assert
-        result.Should().Be("test@example.com");
-    }
-
-    [Fact]
-    public void GetUserOid_WithNameIdentifierClaim_ReturnsNameIdentifier()
+    public void GetUserId_WithNameIdentifierClaim_ReturnsNameIdentifier()
     {
         // Arrange
         var claims = new List<Claim>
@@ -91,44 +20,58 @@ public class ClaimsHelpersTests
         var user = new ClaimsPrincipal(identity);
 
         // Act
-        var result = ClaimsHelpers.GetUserOid(user);
+        var result = ClaimsHelpers.GetUserId(user);
 
         // Assert
         result.Should().Be("name-id-123");
     }
 
     [Fact]
-    public void GetUserOid_WithNoClaims_ReturnsEmptyString()
+    public void GetUserId_WithNoClaims_ReturnsEmptyString()
     {
         // Arrange
         var identity = new ClaimsIdentity(new List<Claim>(), "TestAuth");
         var user = new ClaimsPrincipal(identity);
 
         // Act
-        var result = ClaimsHelpers.GetUserOid(user);
+        var result = ClaimsHelpers.GetUserId(user);
 
         // Assert
         result.Should().Be(string.Empty);
     }
 
     [Fact]
-    public void GetUserOid_WithMultipleClaims_ReturnsFirstPriority()
+    public void GetUserId_WithMultipleClaims_NameIdentifierTakesPrecedence()
     {
-        // Arrange - ObjectIdentifier should take precedence
+        // Arrange - matches JWT: NameIdentifier holds the numerid user id
         var claims = new List<Claim>
         {
-            new Claim("email", "test@example.com"),
-            new Claim("oid", "oid-12345"),
-            new Claim("http://schemas.microsoft.com/identity/claims/objectidentifier", "obj-id-first")
+            new Claim("user_id", "555"),
+            new Claim("id", "666"),
+            new Claim("sub", "777"),
+            new Claim(ClaimTypes.NameIdentifier, "123")
         };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"));
 
         // Act
-        var result = ClaimsHelpers.GetUserOid(user);
+        var result = ClaimsHelpers.GetUserId(user);
 
         // Assert
-        result.Should().Be("obj-id-first", "ObjectIdentifier claim should take precedence");
+        result.Should().Be("123", "NameIdentifier is checked first");
+    }
+
+    [Theory]
+    [InlineData("sub")]
+    [InlineData("id")]
+    [InlineData("user_id")]
+    public void GetUserId_WithFallbackClaim_ReturnsIt(string claimType)
+    {
+        // Arrange
+        var user = new ClaimsPrincipal(new ClaimsIdentity(
+            new List<Claim> { new Claim(claimType, "42") }, "TestAuth"));
+
+        // Act & Assert
+        ClaimsHelpers.GetUserId(user).Should().Be("42");
     }
 
     [Fact]
@@ -189,19 +132,12 @@ public class ClaimsHelpersTests
     [Fact]
     public void GetUserDisplayName_WithNameClaim_ReturnsName()
     {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("name", "John Doe")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
+        // Arrange - the helper falls back to ClaimTypes.Name (not lowercase "name")
+        var user = new ClaimsPrincipal(new ClaimsIdentity(
+            new List<Claim> { new Claim(ClaimTypes.Name, "John Doe") }, "TestAuth"));
 
-        // Act
-        var result = ClaimsHelpers.GetUserDisplayName(user);
-
-        // Assert
-        result.Should().Be("John Doe");
+        // Act & Assert
+        ClaimsHelpers.GetUserDisplayName(user).Should().Be("John Doe");
     }
 
     [Fact]
@@ -264,7 +200,7 @@ public class ClaimsHelpersTests
         {
             new Claim("given_name", "John"),
             new Claim("family_name", "Doe"),
-            new Claim("name", "Jane Smith")
+            new Claim(ClaimTypes.Name, "Jane Smith")
         };
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var user = new ClaimsPrincipal(identity);

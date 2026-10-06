@@ -28,7 +28,7 @@ namespace back_end.controllers
             _config = config;
         }
 
-       /// <summary>
+        /// <summary>
         /// Authenticates a user and returns a JWT access token.
         /// </summary>
         /// <param name="request">The login credentials containing email and password</param>
@@ -92,7 +92,7 @@ namespace back_end.controllers
             });
 
         }
-    
+
         /// <summary>
         /// Registers a new user account in the system.
         /// </summary>
@@ -178,9 +178,11 @@ namespace back_end.controllers
             }
 
 
-            return Ok(new { 
+            return Ok(new
+            {
                 access_token = GenerateJwtToken(SendNewTokenUser),
-                message = "User created successfully" });
+                message = "User created successfully"
+            });
         }
 
 
@@ -204,7 +206,7 @@ namespace back_end.controllers
                 };
 
                 GoogleJsonWebSignature.Payload payload;
-                
+
                 try
                 {
                     payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
@@ -224,14 +226,14 @@ namespace back_end.controllers
                 // Check if user exists
                 var existingUser = await _context.Users
                     .FirstOrDefaultAsync(u => u.Email == userEmail);
-                
+
                 domain.Entities.User user;
-                
+
                 if (existingUser != null)
                 {
                     // Existing user - update info if needed
                     user = existingUser;
-                    
+
                     if (string.IsNullOrEmpty(user.First_name))
                     {
                         user.First_name = userName;
@@ -241,7 +243,7 @@ namespace back_end.controllers
                     {
                         user.GoogleSocial = googleId;
                     }
-                    
+
                     await _context.SaveChangesAsync();
                 }
                 else
@@ -255,7 +257,7 @@ namespace back_end.controllers
                         Is_email_confirmed = emailVerified,
                         Created_at = DateTime.UtcNow
                     };
-                    
+
                     _context.Users.Add(user);
                     await _context.SaveChangesAsync();
                 }
@@ -308,9 +310,9 @@ namespace back_end.controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, user.User_id.ToString()),
                 new Claim(ClaimTypes.Name, user.Email),
-                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Email, user.Email), // TODO: do we want real names on orders, instead of email? Need to update Claims Helper if we do
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Email), // FIXME: Could we end up with two NameIdentifiers? should we set sub to user.User_id.ToString()
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 

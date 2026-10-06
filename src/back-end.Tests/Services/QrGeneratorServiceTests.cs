@@ -147,42 +147,6 @@ public class QrGeneratorServiceTests : IDisposable
             Times.Once);
     }
 
-    // Note: Tests disabled - QrGeneratorService has been refactored
-    // Old methods CreateWifiQr, CreateSessionQr, RenderLabeledQr no longer exist
-    // Service now uses GetWifiQrBytesAsync, GetSessionQrBytesAsync, etc.
-
-    /*
-    [Fact]
-    public async Task GetWifiQrBytesAsync_ValidCredentials_ReturnsQrCodeBytes()
-    {
-        // Arrange
-        var locationId = 1;
-        var table = 5;
-
-        // Act
-        var result = await _service.GetWifiQrBytesAsync(locationId, table, false);
-
-        // Assert
-        result.Should().NotBeNull();
-        result!.Length.Should().BeGreaterThan(0);
-    }
-
-    [Fact]
-    public async Task GetSessionQrBytesAsync_ValidUrl_ReturnsQrCodeBytes()
-    {
-        // Arrange
-        var locationId = 1;
-        var table = 5;
-
-        // Act
-        var result = await _service.GetSessionQrBytesAsync(locationId, table, false);
-
-        // Assert
-        result.Should().NotBeNull();
-        result!.Length.Should().BeGreaterThan(0);
-    }
-    */
-
     [Fact]
     public void GetSessionUrl_ValidParameters_ReturnsCorrectUrl()
     {
@@ -197,7 +161,7 @@ public class QrGeneratorServiceTests : IDisposable
         var result = _service.GetSessionUrl(locationId, tableNumber);
 
         // Assert
-        result.Should().Be($"{baseUrl}/start-session?locationId={locationId}&tableNumber={tableNumber}");
+        result.Should().Be($"{baseUrl}/auth/login?locationId={locationId}&tableNumber={tableNumber}");
     }
 
     [Fact]
@@ -220,14 +184,6 @@ public class QrGeneratorServiceTests : IDisposable
         result.Should().Contain($"locationId={locationId}");
         result.Should().Contain($"tableNumber={tableNumber}");
     }
-
-    /*
-    [Fact]
-    public void RenderLabeledQr_ValidBitmap_AddsLabel()
-    {
-        // Note: RenderLabeledQr method no longer exists in refactored service
-    }
-    */
 
     [Theory]
     [InlineData(1, "Location1-WiFi", "password1")]

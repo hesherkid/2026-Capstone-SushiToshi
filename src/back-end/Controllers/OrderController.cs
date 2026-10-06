@@ -554,7 +554,7 @@ namespace back_end.Controllers
                 {
                     var userIdString = ClaimsHelpers.GetUserId(User);
                     userName = ClaimsHelpers.GetUserDisplayName(User);
-                    
+
                     if (int.TryParse(userIdString, out var parsedUserId))
                     {
                         userId = parsedUserId;
@@ -583,10 +583,11 @@ namespace back_end.Controllers
 
                     order.OrderItems.Add(new OrderItems
                     {
-                        Menu_Id = order.DiningSession?.Menu_Id ?? 1,
+                        Menu_Id = order.DiningSession?.Menu_Id ?? 1, //FIXME: Defaulting to 1 if DiningSession or Menu_Id is null. Only works if DiningSession has loaded. Line 538 that loads the order should include the DiningSession, currently only includes items. 
+                        //TODO: either add lazy loading for DiningSession or include it when fetching the order.
                         Item_Id = item.Item_Id,
                         Quantity = item.Quantity,
-                        Price_At_Time = item.Price_At_Time,
+                        Price_At_Time = item.Price_At_Time, //FIXME: This should reflect the price at the time of ordering, ensure it's correctly set.
                         Order_Item_Status = OrderStatus.Pending
                     });
                 }
@@ -620,16 +621,16 @@ namespace back_end.Controllers
         /// <summary>
         /// Updates order items before approval (pending orders only).
         /// </summary>
- [Authorize(Policy = "staffOnly")]
+        [Authorize(Policy = "staffOnly")]
         [HttpPatch("{order_id}/items/{item_id}")]
         [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateOrderItem(
-            int order_id,
-            int item_id,
-            [FromBody] OrderItemUpdateDTO updateData
-        )
+                   int order_id,
+                   int item_id,
+                   [FromBody] OrderItemUpdateDTO updateData
+               )
         {
             try
             {
@@ -644,7 +645,7 @@ namespace back_end.Controllers
                 // Use authenticated user info
                 var userIdString = ClaimsHelpers.GetUserId(User);
                 var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
-                
+
                 if (string.IsNullOrEmpty(userIdString))
                 {
                     return Unauthorized("User ID not found in claims.");
@@ -657,7 +658,7 @@ namespace back_end.Controllers
 
                 // Check if user is the owner of the order
                 bool isOwner = order.User_Id == userId;
-                
+
                 // Check if user is staff/admin
                 bool isStaff = userRole.Contains("Staff") || userRole.Contains("Admin");
 
@@ -1264,5 +1265,5 @@ namespace back_end.Controllers
             }
         }
     }
-    
+
 }
