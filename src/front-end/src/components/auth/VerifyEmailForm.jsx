@@ -7,11 +7,11 @@ import {
   Box,
   Button,
   Typography,
-  Paper,
   Alert,
   CircularProgress,
 } from "@mui/material";
 import { MailCheck } from "lucide-react";
+import AuthCard from "@/components/auth/AuthCard";
 import { verifyEmail } from "@/utils/auth";
 
 const VerifyEmailForm = () => {
@@ -39,7 +39,7 @@ const VerifyEmailForm = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Verification failed. The link may be invalid or expired."
+        "Verification failed. The link may be invalid or expired."
       );
     } finally {
       setLoading(false);
@@ -47,146 +47,110 @@ const VerifyEmailForm = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        backgroundColor: "gray.100",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 1,
-      }}
+    <AuthCard
+      title="Verify Your Email"
+      icon={<MailCheck size={40} color="#1976d2" />}
     >
-      <Paper
-        sx={{
-          padding: 1,
-          width: "100%",
-          backgroundColor: "white",
-          borderRadius: 2,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 3,
-          }}
-        >
-          <MailCheck size={48} color="#1976d2" />
 
-          <Typography
-            component="h1"
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ width: "100%", marginBottom: 2 }}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {isSuccess ? (
+        <Box sx={{ width: "100%" }}>
+          <Alert
+            severity="success"
+            sx={{ width: "100%", marginBottom: 2 }}
+          >
+            Your email has been verified successfully!
+            You can now log in to your Sushi Toshi account.
+          </Alert>
+
+          <Button
+            fullWidth
+            variant="contained"
             sx={{
-              fontSize: "1.25rem",
-              fontWeight: "bold",
+              paddingY: 2,
+              backgroundColor: "primary.main",
+              "&:hover": {
+                backgroundColor: "primary.dark",
+              },
+              fontSize: "1rem",
+              height: 56,
+              textTransform: "none",
+            }}
+            onClick={() => router.push("/auth/login")}
+          >
+            Go to Login
+          </Button>
+        </Box>
+      ) : (
+        <Box sx={{ width: "100%" }}>
+          <Typography
+            sx={{
               textAlign: "center",
+              marginBottom: 2,
             }}
           >
-            Verify Your Email
+            Click the button below to verify your email address.
           </Typography>
 
-          {error && (
+          {!token && (
             <Alert
-              severity="error"
+              severity="warning"
               sx={{ width: "100%", marginBottom: 2 }}
             >
-              {error}
+              Verification token is missing.
             </Alert>
           )}
 
-          {isSuccess ? (
-            <Box sx={{ width: "100%" }}>
-              <Alert
-                severity="success"
-                sx={{ width: "100%", marginBottom: 2 }}
-              >
-                Your email has been verified successfully!
-                You can now log in to your Sushi Toshi account.
-              </Alert>
+          <Button
+            fullWidth
+            variant="contained"
+            disabled={loading || !token}
+            sx={{
+              paddingY: 2,
+              backgroundColor: "red.600",
+              "&:hover": {
+                backgroundColor: "red.700",
+              },
+              fontSize: "1rem",
+              height: 56,
+              textTransform: "none",
+            }}
+            onClick={handleVerifyEmail}
+          >
+            {loading ? (
+              <CircularProgress
+                size={24}
+                sx={{ color: "white" }}
+              />
+            ) : (
+              "Verify Email"
+            )}
+          </Button>
 
-              <Button
-                fullWidth
-                variant="contained"
-                sx={{
-                  paddingY: 2,
-                  backgroundColor: "primary.main",
-                  "&:hover": {
-                    backgroundColor: "primary.dark",
-                  },
-                  fontSize: "1rem",
-                  height: 56,
-                  textTransform: "none",
-                }}
-                onClick={() => router.push("/auth/login")}
-              >
-                Go to Login
-              </Button>
-            </Box>
-          ) : (
-            <Box sx={{ width: "100%" }}>
-              <Typography
-                sx={{
-                  textAlign: "center",
-                  marginBottom: 2,
-                }}
-              >
-                Click the button below to verify your email address.
-              </Typography>
-
-              {!token && (
-                <Alert
-                  severity="warning"
-                  sx={{ width: "100%", marginBottom: 2 }}
-                >
-                  Verification token is missing.
-                </Alert>
-              )}
-
-              <Button
-                fullWidth
-                variant="contained"
-                disabled={loading || !token}
-                sx={{
-                  paddingY: 2,
-                  backgroundColor: "red.600",
-                  "&:hover": {
-                    backgroundColor: "red.700",
-                  },
-                  fontSize: "1rem",
-                  height: 56,
-                  textTransform: "none",
-                }}
-                onClick={handleVerifyEmail}
-              >
-                {loading ? (
-                  <CircularProgress
-                    size={24}
-                    sx={{ color: "white" }}
-                  />
-                ) : (
-                  "Verify Email"
-                )}
-              </Button>
-
-              <Button
-                fullWidth
-                variant="text"
-                sx={{
-                  marginTop: 2,
-                  textTransform: "none",
-                }}
-                onClick={() =>
-                  router.push("/auth/resend-verification")
-                }
-              >
-                Resend Verification Email
-              </Button>
-            </Box>
-          )}
+          <Button
+            fullWidth
+            variant="text"
+            sx={{
+              marginTop: 2,
+              textTransform: "none",
+            }}
+            onClick={() =>
+              router.push("/auth/resend-verification")
+            }
+          >
+            Resend Verification Email
+          </Button>
         </Box>
-      </Paper>
-    </Box>
+      )}
+    </AuthCard>
   );
 };
 
