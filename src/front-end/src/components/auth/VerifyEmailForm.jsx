@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -14,7 +13,7 @@ import {
 import { MailCheck } from "lucide-react";
 import { verifyEmail } from "@/utils/auth";
 
-const VerifyEmailForm = () => {
+const VerifyEmailFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -39,7 +38,7 @@ const VerifyEmailForm = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Verification failed. The link may be invalid or expired."
+          "Verification failed. The link may be invalid or expired.",
       );
     } finally {
       setLoading(false);
@@ -87,22 +86,16 @@ const VerifyEmailForm = () => {
           </Typography>
 
           {error && (
-            <Alert
-              severity="error"
-              sx={{ width: "100%", marginBottom: 2 }}
-            >
+            <Alert severity="error" sx={{ width: "100%", marginBottom: 2 }}>
               {error}
             </Alert>
           )}
 
           {isSuccess ? (
             <Box sx={{ width: "100%" }}>
-              <Alert
-                severity="success"
-                sx={{ width: "100%", marginBottom: 2 }}
-              >
-                Your email has been verified successfully!
-                You can now log in to your Sushi Toshi account.
+              <Alert severity="success" sx={{ width: "100%", marginBottom: 2 }}>
+                Your email has been verified successfully! You can now log in to
+                your Sushi Toshi account.
               </Alert>
 
               <Button
@@ -160,10 +153,7 @@ const VerifyEmailForm = () => {
                 onClick={handleVerifyEmail}
               >
                 {loading ? (
-                  <CircularProgress
-                    size={24}
-                    sx={{ color: "white" }}
-                  />
+                  <CircularProgress size={24} sx={{ color: "white" }} />
                 ) : (
                   "Verify Email"
                 )}
@@ -176,9 +166,7 @@ const VerifyEmailForm = () => {
                   marginTop: 2,
                   textTransform: "none",
                 }}
-                onClick={() =>
-                  router.push("/auth/resend-verification")
-                }
+                onClick={() => router.push("/auth/resend-verification")}
               >
                 Resend Verification Email
               </Button>
@@ -189,5 +177,11 @@ const VerifyEmailForm = () => {
     </Box>
   );
 };
+
+const VerifyEmailForm = () => (
+  <Suspense fallback={null}>
+    <VerifyEmailFormContent />
+  </Suspense>
+);
 
 export default VerifyEmailForm;
