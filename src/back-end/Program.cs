@@ -9,8 +9,39 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
+using back_end.Configurations;
+using back_end.Services.Email;
+using back_end.Services.Auth;
+using SendGrid;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Settings for Email Service (SendGrid), Email Verification and Password Reset
+builder.Services
+    .AddOptions<SendGridSettings>()
+    .Bind(builder.Configuration.GetSection(
+        SendGridSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<AuthEmailSettings>()
+    .Bind(builder.Configuration.GetSection(
+        AuthEmailSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<ISendGridClient>(sp =>
+{
+    var settings = sp.GetRequiredService<
+        Microsoft.Extensions.Options.IOptions<SendGridSettings>>()
+        .Value;
+
+    return new SendGridClient(settings.ApiKey);
+});
+
+builder.Services.AddScoped<IEmailService, SendGridEmailService>();
+builder.Services.AddScoped<IAuthTokenService, AuthTokenService>();
 
 // Add services to the container
 builder.Services.AddControllers()
