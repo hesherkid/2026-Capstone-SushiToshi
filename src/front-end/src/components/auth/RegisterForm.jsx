@@ -2,18 +2,22 @@
 
 import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import NextLink from "next/link";
 import {
   Box,
   Button,
+  Link,
   TextField,
   Typography,
-  Paper,
   Alert,
   CircularProgress,
 } from "@mui/material";
 import { UserPlus, MailCheck } from "lucide-react";
-import { registerUser, resendVerificationEmail } from "@/utils/auth";
+import AuthCard from "@/components/auth/AuthCard";
+import {
+  registerUser,
+  resendVerificationEmail,
+} from "@/utils/auth";
 
 const RegisterFormContent = () => {
   const router = useRouter();
@@ -91,7 +95,7 @@ const RegisterFormContent = () => {
       setIsSuccess(true);
       setMessage(
         "Registration successful! Please check your email " +
-          "and click the verification link before signing in.",
+        "and click the verification link before signing in."
       );
 
       // Clear sensitive fields but retain email for resend.
@@ -140,12 +144,12 @@ const RegisterFormContent = () => {
 
       setMessage(
         "If your account requires verification, " +
-          "a new verification email will be sent.",
+        "a new verification email will be sent."
       );
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Unable to resend verification email. Please try again.",
+        "Unable to resend verification email. Please try again."
       );
     } finally {
       setResending(false);
@@ -153,255 +157,197 @@ const RegisterFormContent = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        backgroundColor: "#f3f4f6",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        p: { xs: 2, sm: 4 },
-      }}
+    <AuthCard
+      title={isSuccess ? "Verify Your Email" : "Create Account"}
+      footer={
+        !isSuccess && (
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", textAlign: "center" }}
+          >
+            Already have an account?{" "}
+            <Link
+              component={NextLink}
+              href={getAuthRoute("/auth/login")}
+              underline="hover"
+              sx={{ fontWeight: 700 }}
+            >
+              Sign in
+            </Link>
+          </Typography>
+        )
+      }
     >
-      <Paper
-        elevation={3}
-        sx={{
-          p: { xs: 3, sm: 5 },
-          width: "100%",
-          maxWidth: 500,
-          backgroundColor: "white",
-          borderRadius: 2,
-        }}
-      >
+
+      {/* Error */}
+      {error && (
+        <Alert severity="error" sx={{ width: "100%" }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Success / informational message */}
+      {message && (
+        <Alert severity="success" sx={{ width: "100%" }}>
+          {message}
+        </Alert>
+      )}
+
+      {isSuccess ? (
         <Box
           sx={{
+            width: "100%",
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
+            gap: 2,
+            textAlign: "center",
+          }}
+        >
+          <Typography variant="body1">
+            We sent a verification link to:
+          </Typography>
+
+          <Typography
+            fontWeight="bold"
+            sx={{ overflowWrap: "anywhere" }}
+          >
+            {registeredEmail}
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary">
+            Open your email and click the verification link.
+            Once verified, you can sign in to Sushi Toshi.
+          </Typography>
+
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() =>
+              router.push(getAuthRoute("/auth/login"))
+            }
+            sx={{
+              backgroundColor: "#dc2626",
+              "&:hover": {
+                backgroundColor: "#b91c1c",
+              },
+              py: 1.5,
+              textTransform: "none",
+            }}
+          >
+            Go to Login
+          </Button>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            disabled={resending}
+            onClick={handleResendVerification}
+          >
+            {resending ? (
+              <CircularProgress size={24} />
+            ) : (
+              "Resend Verification Email"
+            )}
+          </Button>
+
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            Didn't receive the email? Check your spam folder
+            or request another verification link.
+          </Typography>
+        </Box>
+      ) : (
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
             gap: 2.5,
           }}
         >
-          {/* Icon */}
-          <Box
-            sx={{
-              borderRadius: "50%",
-              backgroundColor: isSuccess ? "#dcfce7" : "#fee2e2",
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+          <TextField
+            label="First Name"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            autoComplete="given-name"
+            required
+            fullWidth
+            disabled={loading}
+          />
+
+          <TextField
+            label="Last Name"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            autoComplete="family-name"
+            required
+            fullWidth
+            disabled={loading}
+          />
+
+          <TextField
+            label="Email Address"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            autoComplete="email"
+            required
+            fullWidth
+            disabled={loading}
+          />
+
+          <TextField
+            label="Password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            autoComplete="new-password"
+            helperText="Minimum 8 characters"
+            inputProps={{ minLength: 8 }}
+            required
+            fullWidth
+            disabled={loading}
+          />
+
+          <TextField
+            label="Confirm Password"
+            name="confirmPassword"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            autoComplete="new-password"
+            required
+            fullWidth
+            disabled={loading}
+          />
+
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            disabled={loading}
           >
-            {isSuccess ? (
-              <MailCheck size={40} color="#16a34a" />
+            {loading ? (
+              <CircularProgress
+                size={24}
+                sx={{ color: "white" }}
+              />
             ) : (
-              <UserPlus size={40} color="#dc2626" />
+              "Create Account"
             )}
-          </Box>
+          </Button>
 
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{
-              fontWeight: "bold",
-              textAlign: "center",
-              color: "#111827",
-              fontSize: { xs: "1.5rem", sm: "2rem" },
-            }}
-          >
-            {isSuccess ? "Verify Your Email" : "Create Account"}
-          </Typography>
-
-          {/* Error */}
-          {error && (
-            <Alert severity="error" sx={{ width: "100%" }}>
-              {error}
-            </Alert>
-          )}
-
-          {/* Success / informational message */}
-          {message && (
-            <Alert severity="success" sx={{ width: "100%" }}>
-              {message}
-            </Alert>
-          )}
-
-          {isSuccess ? (
-            <Box
-              sx={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                textAlign: "center",
-              }}
-            >
-              <Typography variant="body1">
-                We sent a verification link to:
-              </Typography>
-
-              <Typography fontWeight="bold" sx={{ overflowWrap: "anywhere" }}>
-                {registeredEmail}
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary">
-                Open your email and click the verification link. Once verified,
-                you can sign in to Sushi Toshi.
-              </Typography>
-
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={() => router.push(getAuthRoute("/auth/login"))}
-                sx={{
-                  backgroundColor: "#dc2626",
-                  "&:hover": {
-                    backgroundColor: "#b91c1c",
-                  },
-                  py: 1.5,
-                  textTransform: "none",
-                }}
-              >
-                Go to Login
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                disabled={resending}
-                onClick={handleResendVerification}
-                sx={{
-                  borderColor: "#dc2626",
-                  color: "#dc2626",
-                  textTransform: "none",
-                  py: 1.5,
-                }}
-              >
-                {resending ? (
-                  <CircularProgress size={24} />
-                ) : (
-                  "Resend Verification Email"
-                )}
-              </Button>
-
-              <Typography variant="caption" color="text.secondary">
-                Didn't receive the email? Check your spam folder or request
-                another verification link.
-              </Typography>
-            </Box>
-          ) : (
-            <Box
-              component="form"
-              onSubmit={handleSubmit}
-              sx={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2.5,
-              }}
-            >
-              <TextField
-                label="First Name"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                autoComplete="given-name"
-                required
-                fullWidth
-                disabled={loading}
-              />
-
-              <TextField
-                label="Last Name"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                autoComplete="family-name"
-                required
-                fullWidth
-                disabled={loading}
-              />
-
-              <TextField
-                label="Email Address"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                autoComplete="email"
-                required
-                fullWidth
-                disabled={loading}
-              />
-
-              <TextField
-                label="Password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                autoComplete="new-password"
-                helperText="Minimum 8 characters"
-                inputProps={{ minLength: 8 }}
-                required
-                fullWidth
-                disabled={loading}
-              />
-
-              <TextField
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                autoComplete="new-password"
-                required
-                fullWidth
-                disabled={loading}
-              />
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading}
-                sx={{
-                  backgroundColor: "#dc2626",
-                  "&:hover": {
-                    backgroundColor: "#b91c1c",
-                  },
-                  color: "white",
-                  py: 1.5,
-                  height: 52,
-                  textTransform: "none",
-                  fontSize: "1rem",
-                }}
-              >
-                {loading ? (
-                  <CircularProgress size={24} sx={{ color: "white" }} />
-                ) : (
-                  "Create Account"
-                )}
-              </Button>
-
-              <Box sx={{ textAlign: "center" }}>
-                <Button
-                  component={Link}
-                  href={getAuthRoute("/auth/login")}
-                  variant="text"
-                  sx={{
-                    textTransform: "none",
-                    color: "#4b5563",
-                  }}
-                >
-                  Already have an account? Sign in
-                </Button>
-              </Box>
-            </Box>
-          )}
-        </Box>
-      </Paper>
-    </Box>
+        </Box >
+      )}
+    </AuthCard >
   );
 };
 

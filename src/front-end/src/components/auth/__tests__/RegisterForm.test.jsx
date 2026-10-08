@@ -87,18 +87,10 @@ describe("RegisterForm", () => {
       expect(confirmPasswordField()).toHaveValue("");
     });
 
-    it("renders the UserPlus icon", () => {
-      const { container } = render(<RegisterForm />);
-
-      expect(container.querySelector("svg")).toBeInTheDocument();
-    });
-
     it("shows a link to the login page", () => {
       render(<RegisterForm />);
 
-      const link = screen
-        .getByText(/Already have an account\? Sign in/i)
-        .closest("a");
+      const link = screen.getByRole("link", { name: /Sign in/i });
       expect(link).toHaveAttribute("href", "/auth/login");
     });
 
@@ -109,9 +101,7 @@ describe("RegisterForm", () => {
 
       render(<RegisterForm />);
 
-      const link = screen
-        .getByText(/Already have an account\? Sign in/i)
-        .closest("a");
+      const link = screen.getByRole("link", { name: /Sign in/i });
       expect(link).toHaveAttribute(
         "href",
         "/auth/login?locationId=2&tableNumber=7",
@@ -157,7 +147,7 @@ describe("RegisterForm", () => {
 
     it("shows a loading spinner and disables the button while submitting", async () => {
       const user = userEvent.setup();
-      registerUser.mockImplementation(() => new Promise(() => {})); // never resolves
+      registerUser.mockImplementation(() => new Promise(() => { })); // never resolves
 
       render(<RegisterForm />);
       await fillRegisterForm(user);

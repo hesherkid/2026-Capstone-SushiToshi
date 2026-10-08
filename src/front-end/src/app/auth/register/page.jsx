@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<div>Loading...</div>}>
       <RegisterForm />
     </Suspense>
   );

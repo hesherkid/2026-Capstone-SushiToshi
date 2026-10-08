@@ -35,6 +35,7 @@ jobs:
         run: dotnet test src/back-end.IntegrationTests/back-end.IntegrationTests.csproj
         env:
           SendGrid__ApiKey: ci-placeholder-not-a-real-key
+          SendGrid__FromEmail: ci@example.com
 
   frontend-tests:
     name: Frontend - lint, unit tests & build
@@ -95,6 +96,7 @@ jobs:
       ASPNETCORE_URLS: http://localhost:5264
       ConnectionStrings__MySqlConnection: "Server=127.0.0.1;Port=3307;Database=sushi_toshi_db;User=app_user;Password=app_password;"
       SendGrid__ApiKey: ci-placeholder-not-a-real-key
+      SendGrid__FromEmail: ci@example.com
 
     steps:
       - uses: actions/checkout@v5

@@ -49,7 +49,7 @@ describe("LoginForm", () => {
       render(<LoginForm />);
 
       expect(
-        screen.getByRole("heading", { name: /Login to Sushi Toshi/i }),
+        screen.getByRole("heading", { name: /Start your order/i }),
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
@@ -57,13 +57,13 @@ describe("LoginForm", () => {
         screen.getByRole("button", { name: /^Sign In$/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Sign In As Guest/i }),
+        screen.getByRole("button", { name: /Continue as Guest/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Forgot Password/i }),
+        screen.getByRole("link", { name: /Forgot Password/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Create New Account/i }),
+        screen.getByRole("link", { name: /Sign Up/i }),
       ).toBeInTheDocument();
     });
 
@@ -89,12 +89,6 @@ describe("LoginForm", () => {
         delete process.env.NEXT_PUBLIC_DEFAULT_EMAIL;
         delete process.env.NEXT_PUBLIC_DEFAULT_PASSWORD;
       }
-    });
-
-    it("renders the lock icon", () => {
-      const { container } = render(<LoginForm />);
-
-      expect(container.querySelector("svg")).toBeInTheDocument();
     });
 
     it("shows a success alert after a password reset", () => {
@@ -188,7 +182,7 @@ describe("LoginForm", () => {
 
     it("shows a loading spinner and disables the button while submitting", async () => {
       const user = userEvent.setup();
-      loginUser.mockImplementation(() => new Promise(() => {})); // never resolves
+      loginUser.mockImplementation(() => new Promise(() => { })); // never resolves
 
       render(<LoginForm />);
       await fillLoginForm(user);
@@ -201,7 +195,7 @@ describe("LoginForm", () => {
 
     it("prevents a second submission while loading", async () => {
       const user = userEvent.setup();
-      loginUser.mockImplementation(() => new Promise(() => {}));
+      loginUser.mockImplementation(() => new Promise(() => { }));
 
       render(<LoginForm />);
       await fillLoginForm(user);
@@ -220,7 +214,7 @@ describe("LoginForm", () => {
 
       render(<LoginForm />);
       await user.click(
-        screen.getByRole("button", { name: /Sign In As Guest/i }),
+        screen.getByRole("button", { name: /Continue as Guest/i }),
       );
 
       await waitFor(() => {
@@ -334,40 +328,32 @@ describe("LoginForm", () => {
   });
 
   describe("Navigation", () => {
-    it("navigates to the forgot password page", async () => {
-      const user = userEvent.setup();
+    it("links to the forgot password page", () => {
       render(<LoginForm />);
 
-      await user.click(
-        screen.getByRole("button", { name: /Forgot Password/i }),
-      );
-
-      expect(mockPush).toHaveBeenCalledWith("/auth/forgot-password");
+      expect(
+        screen.getByRole("link", { name: /Forgot Password/i }),
+      ).toHaveAttribute("href", "/auth/forgot-password");
     });
 
-    it("navigates to the register page", async () => {
-      const user = userEvent.setup();
+    it("links to the register page", () => {
       render(<LoginForm />);
 
-      await user.click(
-        screen.getByRole("button", { name: /Create New Account/i }),
+      expect(screen.getByRole("link", { name: /Sign Up/i })).toHaveAttribute(
+        "href",
+        "/auth/register",
       );
-
-      expect(mockPush).toHaveBeenCalledWith("/auth/register");
     });
 
-    it("keeps the restaurant QR context when navigating", async () => {
-      const user = userEvent.setup();
+    it("keeps the restaurant QR context in the sign-up link", () => {
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=2&tableNumber=7"),
       );
 
       render(<LoginForm />);
-      await user.click(
-        screen.getByRole("button", { name: /Create New Account/i }),
-      );
 
-      expect(mockPush).toHaveBeenCalledWith(
+      expect(screen.getByRole("link", { name: /Sign Up/i })).toHaveAttribute(
+        "href",
         "/auth/register?locationId=2&tableNumber=7",
       );
     });
