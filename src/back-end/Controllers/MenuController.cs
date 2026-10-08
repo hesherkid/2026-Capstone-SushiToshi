@@ -23,8 +23,8 @@ namespace back_end.Controllers
             _context = context;
             _logger = logger;
         }
-        
-        
+
+
         [Authorize(Policy = "staffOnly")]
         [HttpPost("createmenu")]
         [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
@@ -63,7 +63,7 @@ namespace back_end.Controllers
                 _logger.LogError(ex, "Error creating menu item");
                 return StatusCode(500, "Internal Server Error");
             }
-        }        
+        }
 
         /// <summary>
         /// Creates a new menu item with optional tags.
@@ -122,11 +122,11 @@ namespace back_end.Controllers
                 // Use fallbacks for nullable strings to satisfy non-nullable entity properties
                 var new_item = new Menu_Item
                 {
-                    Name        = item_data.Name!,
+                    Name = item_data.Name!,
                     Description = item_data.Description ?? string.Empty,
                     Category_id = item_data.Category_Id,
-                    image_url   = item_data.Item_Image_Url ?? string.Empty,
-                    Status      = MenuItemStatus.Available,
+                    image_url = item_data.Item_Image_Url ?? string.Empty,
+                    Status = MenuItemStatus.Available,
                     // Ensure collection is initialized before adding tags (if your entity doesn’t do it)
                     MenuItemTags = new List<MenuItemTag>()
                 };
@@ -149,17 +149,17 @@ namespace back_end.Controllers
 
                 return Ok(new MenuItemResponseDTO
                 {
-                    Item_Id        = new_item.item_id,
-                    Name           = new_item.Name,
-                    Description    = new_item.Description,
-                    Category_Id    = new_item.Category_id,
+                    Item_Id = new_item.item_id,
+                    Name = new_item.Name,
+                    Description = new_item.Description,
+                    Category_Id = new_item.Category_id,
                     Item_Image_Url = new_item.image_url,
                     Status = new_item.Status,
                     Tags = new_item.MenuItemTags.Select(t => new FullTagResponseDTO
                     {
-                        Tag_Id    = t.Tag.tag_id,
-                        Name      = t.Tag.tag_name,
-                        Color_Code= t.Tag.tag_color
+                        Tag_Id = t.Tag.tag_id,
+                        Name = t.Tag.tag_name,
+                        Color_Code = t.Tag.tag_color
                     }).ToList(),
 
                 });
@@ -293,7 +293,7 @@ namespace back_end.Controllers
                 //Check if time was given
                 if (string.IsNullOrEmpty(time))
                 {
-                    currentTime = TimeOnly.FromDateTime(DateTime.Now);
+                    currentTime = TimeOnly.FromDateTime(DateTime.UtcNow);
                 }
                 //Check if time given is proper
                 else if (!TimeOnly.TryParse(time, out currentTime))
@@ -464,7 +464,7 @@ namespace back_end.Controllers
         }
 
 
-        
+
         /// <summary>
         /// Updates an existing menu.
         /// </summary>
@@ -605,14 +605,14 @@ namespace back_end.Controllers
                 await _context.SaveChangesAsync();
                 return Ok("Menu Was deleted");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, $"Can't update the menu Id: {menu_id}");
                 return StatusCode(500, "Internal Server Error");
             }
         }
 
-        
+
 
     }
 }

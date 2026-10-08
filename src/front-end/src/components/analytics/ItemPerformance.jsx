@@ -221,6 +221,7 @@ const subscribeToStorage = (callback) => {
   return () => window.removeEventListener("storage", callback);
 };
 
+// useSyncExternalStore for hydration-safe client detection and storage subscription
 const ItemPerformance = () => {
   const isClient = useSyncExternalStore(
     noopSubscribe,

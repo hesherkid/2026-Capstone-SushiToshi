@@ -43,7 +43,6 @@ namespace back_end.domain.Seeders
             };
 
             _context.Menus.AddRange(menus);
-            //_context.SaveChanges();
 
             _logger.LogInformation($"Added {menus.Count} menus");
         }

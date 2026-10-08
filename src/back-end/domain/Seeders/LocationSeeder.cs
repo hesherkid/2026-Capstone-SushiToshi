@@ -31,7 +31,6 @@ namespace back_end.domain.Seeders
                     Postal_Code = "T5L 5E7",
                     Phone_Number = "780-488-6610",
                     Created_At = new DateTime(2025, 10, 1)
-                    //Email = yegsushitoshi@gmail.com
                 },
                 new Locations
                 {
@@ -42,14 +41,10 @@ namespace back_end.domain.Seeders
                     Postal_Code = "T6H 5R7",
                     Phone_Number = "825-404-6200",
                     Created_At = new DateTime(2025, 10, 1)
-                    //Email = yegsushitoshi.south@gmail.com
                 },
             };
 
             _context.Locations.AddRange(locations);
-            //_context.SaveChanges();
-
-            // _logger.LogInformation($"Added {locations.Count} locations");
         }
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ namespace back_end.controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     public class AnalyticsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
