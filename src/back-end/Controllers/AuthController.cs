@@ -1,16 +1,21 @@
 
-using System.Security.Cryptography.X509Certificates;
-using Microsoft.EntityFrameworkCore;
+using back_end.Configurations;
 using back_end.domain.DbContexts;
+using back_end.domain.Entities;
+using back_end.domain.enums;
 using back_end.DTO.Auth;
+using back_end.Services.Auth;
+using back_end.Services.Email;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
-using BCryptNet = BCrypt.Net.BCrypt;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using back_end.domain.enums;
-using Google.Apis.Auth;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using BCryptNet = BCrypt.Net.BCrypt;
 
 
 namespace back_end.controllers
@@ -21,11 +26,22 @@ namespace back_end.controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _config;
+        private readonly IEmailService _emailService;
+        private readonly IAuthTokenService _tokenService;
+        private readonly AuthEmailSettings _emailSettings;
 
-        public AuthController(ApplicationDbContext context, IConfiguration config)
+        public AuthController(
+            ApplicationDbContext context,
+            IConfiguration config,
+            IEmailService emailService,
+            IAuthTokenService tokenService,
+            IOptions<AuthEmailSettings> emailSettings)
         {
             _context = context;
             _config = config;
+            _emailService = emailService;
+            _tokenService = tokenService;
+            _emailSettings = emailSettings.Value;
         }
 
         /// <summary>
@@ -62,33 +78,51 @@ namespace back_end.controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Login([FromBody] LoginDTO request)
         {
-            string UserEmail = request.UserEmail ?? string.Empty;
-            string UserPassword = request.UserPassword ?? string.Empty;
-            var ReturnedUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == UserEmail);
-            if (ReturnedUser == null)
+            var userEmail = (request.UserEmail ?? "")
+            .Trim()
+            .ToLowerInvariant();
+
+            var userPassword = request.UserPassword ?? "";
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == userEmail);
+
+            if (user == null ||
+                string.IsNullOrEmpty(user.Password_hash) ||
+                !BCryptNet.Verify(userPassword, user.Password_hash))
             {
-                return Unauthorized(new { message = "Invalid email or password" });
+                return Unauthorized(new
+                {
+                    message = "Invalid email or password"
+                });
             }
-            if (ReturnedUser.Status != UserStatus.Active)
+
+            if (user.Status != UserStatus.Active)
             {
-                return BadRequest("Issue Login into System");
+                return StatusCode(403, new
+                {
+                    message = "Account is not active"
+                });
             }
-            bool isPasswordVerified = BCryptNet.Verify(UserPassword, ReturnedUser.Password_hash ?? string.Empty);
-            if (!isPasswordVerified)
+
+            if (!user.Is_email_confirmed)
             {
-                return Unauthorized(new { message = "Invalid email or password" });
+                return StatusCode(403, new
+                {
+                    message = "Please verify your email before logging in",
+                    requires_email_verification = true
+                });
             }
-            ReturnedUser.Last_Interaction_at = DateTime.UtcNow;
-            _context.Users.Update(ReturnedUser);
+
+            user.Last_Interaction_at = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            //Generate the JWT token with Returned user assigned above
-            var token = GenerateJwtToken(ReturnedUser);
             return Ok(new
             {
-                access_token = token,
+                access_token = GenerateJwtToken(user),
                 token_type = "Bearer",
-                expires_in = 7200, // 2 hours in seconds:
+                expires_in = int.Parse(
+                    _config["Jwt:ExpiresInMinutes"] ?? "60") * 60
             });
 
         }
@@ -177,14 +211,172 @@ namespace back_end.controllers
                 return BadRequest(new { message = $"Error creating user: {ex.Message}" });
             }
 
+            var token = await _tokenService.CreateAsync(SendNewTokenUser.User_id, AuthTokenPurpose.EmailVerification);
+            var verificationUrl =
+                $"{_emailSettings.FrontendBaseUrl.TrimEnd('/')}" +
+                "/auth/verify-email?token=" +
+                Uri.EscapeDataString(token);
+
+            await _emailService.SendEmailVerificationAsync(
+                SendNewTokenUser.Email,
+                verificationUrl);
 
             return Ok(new
             {
-                access_token = GenerateJwtToken(SendNewTokenUser),
-                message = "User created successfully"
+                message = "Registration successful. " +
+                          "Please check your email to verify your account.",
+                requires_email_verification = true
             });
         }
 
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDTO request)
+        {
+            var token = await _tokenService.FindValidAsync(
+                request.Token,
+                AuthTokenPurpose.EmailVerification);
+
+            if (token == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid or expired verification token"
+                });
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.User_id == token.UserId);
+
+            if (user == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid verification token"
+                });
+            }
+
+            // Perform consumption and confirmation atomically
+            // in production.
+            await _tokenService.ConsumeAsync(token);
+
+            user.Is_email_confirmed = true;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Email verified successfully. You can now log in."
+            });
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO request)
+        {
+            const string successMessage =
+                "If an account exists for this email, " +
+                "a password reset link will be sent.";
+
+            var email = request.Email.Trim().ToLowerInvariant();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == email);
+
+            if (user != null &&
+                !string.IsNullOrEmpty(user.Password_hash))
+            {
+                var token = await _tokenService.CreateAsync(
+                    user.User_id,
+                    AuthTokenPurpose.PasswordReset);
+
+                var resetUrl =
+                    $"{_emailSettings.FrontendBaseUrl.TrimEnd('/')}" +
+                    "/auth/reset-password?token=" +
+                    Uri.EscapeDataString(token);
+
+                await _emailService.SendPasswordResetAsync(
+                    user.Email,
+                    resetUrl);
+            }
+
+            return Ok(new
+            {
+                message = successMessage
+            });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO request)
+        {
+            var token = await _tokenService.FindValidAsync(
+                request.Token,
+                AuthTokenPurpose.PasswordReset);
+
+            if (token == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid or expired reset token"
+                });
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.User_id == token.UserId);
+
+            if (user == null ||
+                string.IsNullOrEmpty(user.Password_hash))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid reset token"
+                });
+            }
+
+            // These operations must be atomic in production.
+            await _tokenService.ConsumeAsync(token);
+
+            user.Password_hash =
+                BCryptNet.HashPassword(request.NewPassword);
+           
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Password reset successfully. Please log in."
+            });
+        }
+
+        [HttpPost("resend-verification")]
+        public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationDTO request)
+        {
+            const string message =
+                "If this account needs verification, " +
+                "a new email will be sent.";
+
+            var email = request.Email.Trim().ToLowerInvariant();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.Email == email);
+
+            if (user != null && !user.Is_email_confirmed)
+            {
+                var token = await _tokenService.CreateAsync(
+                    user.User_id,
+                    AuthTokenPurpose.EmailVerification);
+
+                var url =
+                    $"{_emailSettings.FrontendBaseUrl.TrimEnd('/')}" +
+                    "/auth/verify-email?token=" +
+                    Uri.EscapeDataString(token);
+
+                await _emailService.SendEmailVerificationAsync(
+                    user.Email,
+                    url);
+            }
+
+            return Ok(new { message });
+        }
 
         [HttpPost("google")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -222,6 +414,14 @@ namespace back_end.controllers
                 string userPicture = payload.Picture;
                 string googleId = payload.Subject;
                 bool emailVerified = payload.EmailVerified;
+
+                if (!payload.EmailVerified)
+                {
+                    return StatusCode(403, new
+                    {
+                        message = "Google email is not verified"
+                    });
+                }
 
                 // Check if user exists
                 var existingUser = await _context.Users
