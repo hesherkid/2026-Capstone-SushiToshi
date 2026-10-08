@@ -90,9 +90,7 @@ describe("RegisterForm", () => {
     it("shows a link to the login page", () => {
       render(<RegisterForm />);
 
-      const link = screen
-        .getByText(/Already have an account\? Sign in/i)
-        .closest("a");
+      const link = screen.getByRole("link", { name: /Sign in/i });
       expect(link).toHaveAttribute("href", "/auth/login");
     });
 
@@ -103,9 +101,7 @@ describe("RegisterForm", () => {
 
       render(<RegisterForm />);
 
-      const link = screen
-        .getByText(/Already have an account\? Sign in/i)
-        .closest("a");
+      const link = screen.getByRole("link", { name: /Sign in/i });
       expect(link).toHaveAttribute(
         "href",
         "/auth/login?locationId=2&tableNumber=7",
