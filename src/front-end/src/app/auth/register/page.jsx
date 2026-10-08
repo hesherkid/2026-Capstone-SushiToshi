@@ -1,12 +1,15 @@
+import { Suspense } from "react";
 import RegisterForm from "@/components/auth/RegisterForm";
 
 export const metadata = {
-  title: 'Register | Sushi Toshi',
-  description: 'Create a new account at Sushi Toshi',
+  title: "Register | Sushi Toshi",
+  description: "Create a new account at Sushi Toshi",
 };
 
 export default function RegisterPage() {
   return (
-    <RegisterForm />
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
   );
 }

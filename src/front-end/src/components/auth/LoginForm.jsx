@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import {
   Box,
   Button,
@@ -22,7 +21,7 @@ import { loginUser } from "@/utils/auth";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-const LoginForm = () => {
+const LoginFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -84,15 +83,9 @@ const LoginForm = () => {
     const status = err.response?.status;
     const data = err.response?.data;
 
-    if (
-      status === 403 &&
-      data?.requires_email_verification
-    ) {
+    if (status === 403 && data?.requires_email_verification) {
       setNeedsVerification(true);
-      setError(
-        data.message ||
-          "Please verify your email before signing in."
-      );
+      setError(data.message || "Please verify your email before signing in.");
       return;
     }
 
@@ -102,7 +95,7 @@ const LoginForm = () => {
       data?.detail ||
         data?.message ||
         err.message ||
-        "Authentication failed. Please try again."
+        "Authentication failed. Please try again.",
     );
   };
 
@@ -127,15 +120,10 @@ const LoginForm = () => {
     setNeedsVerification(false);
 
     try {
-      const response = await loginUser(
-        formData.email,
-        formData.password
-      );
+      const response = await loginUser(formData.email, formData.password);
 
       if (!response.access_token) {
-        throw new Error(
-          "Login succeeded but no access token was returned."
-        );
+        throw new Error("Login succeeded but no access token was returned.");
       }
 
       clearGuestSession();
@@ -164,15 +152,10 @@ const LoginForm = () => {
     setNeedsVerification(false);
 
     try {
-      const response = await loginUser(
-        guestEmail,
-        guestPassword
-      );
+      const response = await loginUser(guestEmail, guestPassword);
 
       if (!response.access_token) {
-        throw new Error(
-          "Guest login succeeded but no token was returned."
-        );
+        throw new Error("Guest login succeeded but no token was returned.");
       }
 
       saveRestaurantContext();
@@ -210,7 +193,7 @@ const LoginForm = () => {
 
       if (!data.access_token) {
         throw new Error(
-          "Google authentication did not return an access token."
+          "Google authentication did not return an access token.",
         );
       }
 
@@ -224,10 +207,7 @@ const LoginForm = () => {
       // is not returned.
 
       if (data.user) {
-        localStorage.setItem(
-          "user",
-          JSON.stringify(data.user)
-        );
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       saveRestaurantContext();
@@ -326,22 +306,18 @@ const LoginForm = () => {
 
           {searchParams.get("reset") === "success" && (
             <Alert severity="success" sx={{ width: "100%" }}>
-              Your password has been reset successfully.
-              Please sign in with your new password.
+              Your password has been reset successfully. Please sign in with
+              your new password.
             </Alert>
           )}
 
           {/* Authentication errors */}
           {error && (
             <Alert
-              severity={
-                needsVerification ? "warning" : "error"
-              }
+              severity={needsVerification ? "warning" : "error"}
               sx={{ width: "100%" }}
             >
-              <Typography variant="body2">
-                {error}
-              </Typography>
+              <Typography variant="body2">{error}</Typography>
 
               {needsVerification && (
                 <Button
@@ -372,9 +348,7 @@ const LoginForm = () => {
           >
             {/* Google authentication */}
             {googleClientID && (
-              <GoogleOAuthProvider
-                clientId={googleClientID}
-              >
+              <GoogleOAuthProvider clientId={googleClientID}>
                 <Box
                   sx={{
                     display: "flex",
@@ -393,10 +367,7 @@ const LoginForm = () => {
 
             {googleClientID && (
               <Divider>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                >
+                <Typography variant="body2" color="text.secondary">
                   OR
                 </Typography>
               </Divider>
@@ -446,10 +417,7 @@ const LoginForm = () => {
               }}
             >
               {loading ? (
-                <CircularProgress
-                  size={24}
-                  sx={{ color: "white" }}
-                />
+                <CircularProgress size={24} sx={{ color: "white" }} />
               ) : (
                 "Sign In"
               )}
@@ -512,5 +480,11 @@ const LoginForm = () => {
     </Box>
   );
 };
+
+const LoginForm = () => (
+  <Suspense fallback={null}>
+    <LoginFormContent />
+  </Suspense>
+);
 
 export default LoginForm;

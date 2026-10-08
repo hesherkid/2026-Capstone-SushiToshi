@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,12 +13,9 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { UserPlus, MailCheck } from "lucide-react";
-import {
-  registerUser,
-  resendVerificationEmail,
-} from "@/utils/auth";
+import { registerUser, resendVerificationEmail } from "@/utils/auth";
 
-const RegisterForm = () => {
+const RegisterFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -95,7 +91,7 @@ const RegisterForm = () => {
       setIsSuccess(true);
       setMessage(
         "Registration successful! Please check your email " +
-          "and click the verification link before signing in."
+          "and click the verification link before signing in.",
       );
 
       // Clear sensitive fields but retain email for resend.
@@ -120,16 +116,12 @@ const RegisterForm = () => {
             ? data.message
             : typeof data?.detail === "string"
               ? data.detail
-              : "Please check your registration information."
+              : "Please check your registration information.",
         );
       } else if (!err.response) {
-        setError(
-          "Unable to connect to the server. Please try again."
-        );
+        setError("Unable to connect to the server. Please try again.");
       } else {
-        setError(
-          "Registration failed. Please try again."
-        );
+        setError("Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -148,12 +140,12 @@ const RegisterForm = () => {
 
       setMessage(
         "If your account requires verification, " +
-          "a new verification email will be sent."
+          "a new verification email will be sent.",
       );
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Unable to resend verification email. Please try again."
+          "Unable to resend verification email. Please try again.",
       );
     } finally {
       setResending(false);
@@ -248,24 +240,19 @@ const RegisterForm = () => {
                 We sent a verification link to:
               </Typography>
 
-              <Typography
-                fontWeight="bold"
-                sx={{ overflowWrap: "anywhere" }}
-              >
+              <Typography fontWeight="bold" sx={{ overflowWrap: "anywhere" }}>
                 {registeredEmail}
               </Typography>
 
               <Typography variant="body2" color="text.secondary">
-                Open your email and click the verification link.
-                Once verified, you can sign in to Sushi Toshi.
+                Open your email and click the verification link. Once verified,
+                you can sign in to Sushi Toshi.
               </Typography>
 
               <Button
                 fullWidth
                 variant="contained"
-                onClick={() =>
-                  router.push(getAuthRoute("/auth/login"))
-                }
+                onClick={() => router.push(getAuthRoute("/auth/login"))}
                 sx={{
                   backgroundColor: "#dc2626",
                   "&:hover": {
@@ -297,12 +284,9 @@ const RegisterForm = () => {
                 )}
               </Button>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
-                Didn't receive the email? Check your spam folder
-                or request another verification link.
+              <Typography variant="caption" color="text.secondary">
+                Didn't receive the email? Check your spam folder or request
+                another verification link.
               </Typography>
             </Box>
           ) : (
@@ -394,10 +378,7 @@ const RegisterForm = () => {
                 }}
               >
                 {loading ? (
-                  <CircularProgress
-                    size={24}
-                    sx={{ color: "white" }}
-                  />
+                  <CircularProgress size={24} sx={{ color: "white" }} />
                 ) : (
                   "Create Account"
                 )}
@@ -423,5 +404,11 @@ const RegisterForm = () => {
     </Box>
   );
 };
+
+const RegisterForm = () => (
+  <Suspense fallback={null}>
+    <RegisterFormContent />
+  </Suspense>
+);
 
 export default RegisterForm;
