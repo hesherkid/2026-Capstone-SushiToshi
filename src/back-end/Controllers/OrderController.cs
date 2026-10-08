@@ -735,7 +735,7 @@ namespace back_end.Controllers
                     if (Enum.TryParse<OrderStatus>(updateData.Status, true, out var newStatus))
                     {
                         orderItem.Order_Item_Status = newStatus;
-                        if (newStatus == OrderStatus.Cancelled || newStatus == OrderStatus.Delivered)
+                        if (newStatus == OrderStatus.Cancelled || newStatus == OrderStatus.Delivered) // FIXME: this logic assumes cancelled orders are complete.
                         {
                             orderItem.Completed_At = DateTime.UtcNow;
                         }
