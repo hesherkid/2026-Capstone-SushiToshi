@@ -1,450 +1,395 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { useRouter } from 'next/navigation';
-import RegisterForm from '../RegisterForm';
-import { registerUser } from '@/utils/auth';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useRouter, useSearchParams } from "next/navigation";
+import RegisterForm from "../RegisterForm";
+import { registerUser, resendVerificationEmail } from "@/utils/auth";
 
 // Mock dependencies
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+  usePathname: jest.fn(() => "/"),
 }));
 
-jest.mock('@/utils/auth', () => ({
+jest.mock("@/utils/auth", () => ({
   registerUser: jest.fn(),
+  resendVerificationEmail: jest.fn(),
 }));
 
-describe('RegisterForm', () => {
+// Field helpers
+const passwordField = () => screen.getByLabelText(/^Password/i);
+const confirmPasswordField = () => screen.getByLabelText(/Confirm Password/i);
+const submitButton = () =>
+  screen.getByRole("button", { name: /^Create Account$/i });
+
+// Fills every field with valid values (the form starts empty)
+const fillRegisterForm = async (user, overrides = {}) => {
+  const values = {
+    firstName: "John",
+    lastName: "Doe",
+    email: "john@example.com",
+    password: "Password123",
+    confirmPassword: "Password123",
+    ...overrides,
+  };
+
+  await user.type(screen.getByLabelText(/First Name/i), values.firstName);
+  await user.type(screen.getByLabelText(/Last Name/i), values.lastName);
+  await user.type(screen.getByLabelText(/Email Address/i), values.email);
+  await user.type(passwordField(), values.password);
+  await user.type(confirmPasswordField(), values.confirmPassword);
+};
+
+// Register successfully and wait for the "Verify Your Email" screen
+const registerSuccessfully = async (user) => {
+  registerUser.mockResolvedValue({});
+  render(<RegisterForm />);
+  await fillRegisterForm(user);
+  await user.click(submitButton());
+  await waitFor(() => {
+    expect(
+      screen.getByRole("heading", { name: /Verify Your Email/i }),
+    ).toBeInTheDocument();
+  });
+};
+
+describe("RegisterForm", () => {
   const mockPush = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    useRouter.mockReturnValue({
-      push: mockPush,
-    });
+    useRouter.mockReturnValue({ push: mockPush });
+    useSearchParams.mockReturnValue(new URLSearchParams());
   });
 
-  describe('Rendering', () => {
-    it('renders the registration form with all elements', () => {
+  describe("Rendering", () => {
+    it("renders the registration form with all elements", () => {
       render(<RegisterForm />);
 
-      expect(screen.getByText(/Create Account/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /Create Account/i }),
+      ).toBeInTheDocument();
       expect(screen.getByLabelText(/First Name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Last Name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-      // Check that we have at least 2 password fields
-      expect(screen.getAllByLabelText(/Password/i).length).toBeGreaterThanOrEqual(2);
-      expect(screen.getByRole('button', { name: /Register/i })).toBeInTheDocument();
+      expect(passwordField()).toBeInTheDocument();
+      expect(confirmPasswordField()).toBeInTheDocument();
+      expect(submitButton()).toBeInTheDocument();
     });
 
-    it('renders with default test data', () => {
+    it("starts with all fields empty", () => {
       render(<RegisterForm />);
 
-      expect(screen.getByLabelText(/First Name/i)).toHaveValue('James');
-      expect(screen.getByLabelText(/Last Name/i)).toHaveValue('Smith');
-      expect(screen.getByLabelText(/Email Address/i)).toHaveValue('jamie2@example.com');
-
-      const [passwordField, confirmPasswordField] = screen.getAllByLabelText(/Password/i);
-      expect(passwordField).toHaveValue('somethingCool1');
-      expect(confirmPasswordField).toHaveValue('somethingCool1');
+      expect(screen.getByLabelText(/First Name/i)).toHaveValue("");
+      expect(screen.getByLabelText(/Last Name/i)).toHaveValue("");
+      expect(screen.getByLabelText(/Email Address/i)).toHaveValue("");
+      expect(passwordField()).toHaveValue("");
+      expect(confirmPasswordField()).toHaveValue("");
     });
 
-    it('renders the UserPlus icon', () => {
+    it("renders the UserPlus icon", () => {
       const { container } = render(<RegisterForm />);
 
-      const icon = container.querySelector('svg');
-      expect(icon).toBeInTheDocument();
+      expect(container.querySelector("svg")).toBeInTheDocument();
     });
 
-    it('shows login link', () => {
+    it("shows a link to the login page", () => {
       render(<RegisterForm />);
 
-      expect(screen.getByText(/Already have an account\? Sign in/i)).toBeInTheDocument();
+      const link = screen
+        .getByText(/Already have an account\? Sign in/i)
+        .closest("a");
+      expect(link).toHaveAttribute("href", "/auth/login");
     });
-  });
 
-  describe('Form Interaction', () => {
-    it('allows users to type in all fields', async () => {
-      const user = userEvent.setup();
+    it("keeps the restaurant QR context in the login link", () => {
+      useSearchParams.mockReturnValue(
+        new URLSearchParams("locationId=2&tableNumber=7"),
+      );
+
       render(<RegisterForm />);
 
-      const firstNameInput = screen.getByLabelText(/First Name/i);
-      const lastNameInput = screen.getByLabelText(/Last Name/i);
-      const emailInput = screen.getByLabelText(/Email Address/i);
-
-      const [passwordInput, confirmPasswordInput] = screen.getAllByLabelText(/Password/i);
-
-      await user.clear(firstNameInput);
-      await user.type(firstNameInput, 'John');
-      await user.clear(lastNameInput);
-      await user.type(lastNameInput, 'Doe');
-      await user.clear(emailInput);
-      await user.type(emailInput, 'john@example.com');
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'Password123');
-      await user.clear(confirmPasswordInput);
-      await user.type(confirmPasswordInput, 'Password123');
-
-      expect(firstNameInput).toHaveValue('John');
-      expect(lastNameInput).toHaveValue('Doe');
-      expect(emailInput).toHaveValue('john@example.com');
-      expect(passwordInput).toHaveValue('Password123');
-      expect(confirmPasswordInput).toHaveValue('Password123');
+      const link = screen
+        .getByText(/Already have an account\? Sign in/i)
+        .closest("a");
+      expect(link).toHaveAttribute(
+        "href",
+        "/auth/login?locationId=2&tableNumber=7",
+      );
     });
   });
 
-  describe('Form Submission', () => {
-    it('submits form with valid data', async () => {
+  describe("Form Interaction", () => {
+    it("allows users to type in all fields", async () => {
       const user = userEvent.setup();
-      registerUser.mockResolvedValue({ success: true });
-
       render(<RegisterForm />);
 
-      const firstNameInput = screen.getByLabelText(/First Name/i);
-      const lastNameInput = screen.getByLabelText(/Last Name/i);
-      const emailInput = screen.getByLabelText(/Email Address/i);
-      const passwordInput = screen.getAllByLabelText(/Password/i)[0];
-      const confirmPasswordInput = screen.getByLabelText(/Confirm Password/i);
-      const submitButton = screen.getByRole('button', { name: /Register/i });
+      await fillRegisterForm(user);
 
-      await user.clear(firstNameInput);
-      await user.type(firstNameInput, 'John');
-      await user.clear(lastNameInput);
-      await user.type(lastNameInput, 'Doe');
-      await user.clear(emailInput);
-      await user.type(emailInput, 'john@example.com');
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'Password123');
-      await user.clear(confirmPasswordInput);
-      await user.type(confirmPasswordInput, 'Password123');
+      expect(screen.getByLabelText(/First Name/i)).toHaveValue("John");
+      expect(screen.getByLabelText(/Last Name/i)).toHaveValue("Doe");
+      expect(screen.getByLabelText(/Email Address/i)).toHaveValue(
+        "john@example.com",
+      );
+      expect(passwordField()).toHaveValue("Password123");
+      expect(confirmPasswordField()).toHaveValue("Password123");
+    });
+  });
 
-      await user.click(submitButton);
+  describe("Form Submission", () => {
+    it("submits the entered data (email lower-cased)", async () => {
+      const user = userEvent.setup();
+      registerUser.mockResolvedValue({});
+
+      render(<RegisterForm />);
+      await fillRegisterForm(user, { email: "John@Example.com" });
+      await user.click(submitButton());
 
       await waitFor(() => {
         expect(registerUser).toHaveBeenCalledWith({
-          email: 'john@example.com',
-          password: 'Password123',
-          first_name: 'John',
-          last_name: 'Doe',
+          email: "john@example.com",
+          password: "Password123",
+          firstName: "John",
+          lastName: "Doe",
         });
       });
     });
 
-    it('shows loading state during submission', async () => {
+    it("shows a loading spinner and disables the button while submitting", async () => {
       const user = userEvent.setup();
-      registerUser.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      registerUser.mockImplementation(() => new Promise(() => {})); // never resolves
 
       render(<RegisterForm />);
+      await fillRegisterForm(user);
+      const button = submitButton();
+      await user.click(button);
 
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      expect(screen.getByRole('progressbar')).toBeInTheDocument();
-      expect(submitButton).toBeDisabled();
+      expect(screen.getByRole("progressbar")).toBeInTheDocument();
+      expect(button).toBeDisabled();
     });
 
-    it('shows success message on successful registration', async () => {
+    it("shows the verify-email screen after successful registration", async () => {
       const user = userEvent.setup();
-      registerUser.mockResolvedValue({ success: true });
+      await registerSuccessfully(user);
 
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Registration successful!/i)).toBeInTheDocument();
-      });
-    });
-
-    it('clears form fields after successful registration', async () => {
-      const user = userEvent.setup();
-      registerUser.mockResolvedValue({ success: true });
-
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Registration successful!/i)).toBeInTheDocument();
-      });
-
-      // Note: Form is replaced with success message, so fields won't be present
+      expect(screen.getByText(/Registration successful!/i)).toBeInTheDocument();
+      expect(screen.getByText("john@example.com")).toBeInTheDocument();
       expect(screen.queryByLabelText(/First Name/i)).not.toBeInTheDocument();
     });
 
-    it('shows "Go to Login" button after successful registration', async () => {
+    it("navigates to the login page from the success screen", async () => {
       const user = userEvent.setup();
-      registerUser.mockResolvedValue({ success: true });
+      await registerSuccessfully(user);
 
-      render(<RegisterForm />);
+      await user.click(screen.getByRole("button", { name: /Go to Login/i }));
 
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Go to Login/i)).toBeInTheDocument();
-      });
+      expect(mockPush).toHaveBeenCalledWith("/auth/login");
     });
 
-    it('navigates to login page when "Go to Login" is clicked', async () => {
+    it("resends the verification email from the success screen", async () => {
       const user = userEvent.setup();
-      registerUser.mockResolvedValue({ success: true });
+      resendVerificationEmail.mockResolvedValue({});
+      await registerSuccessfully(user);
 
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
+      await user.click(
+        screen.getByRole("button", { name: /Resend Verification Email/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByText(/Go to Login/i)).toBeInTheDocument();
+        expect(resendVerificationEmail).toHaveBeenCalledWith(
+          "john@example.com",
+        );
       });
+      expect(
+        await screen.findByText(/a new verification email will be sent/i),
+      ).toBeInTheDocument();
+    });
 
-      const goToLoginButton = screen.getByText(/Go to Login/i);
-      await user.click(goToLoginButton);
+    it("shows an error if resending the verification email fails", async () => {
+      const user = userEvent.setup();
+      resendVerificationEmail.mockRejectedValue({ response: { data: {} } });
+      await registerSuccessfully(user);
 
-      expect(mockPush).toHaveBeenCalledWith('/auth/login');
+      await user.click(
+        screen.getByRole("button", { name: /Resend Verification Email/i }),
+      );
+
+      expect(
+        await screen.findByText(/Unable to resend verification email/i),
+      ).toBeInTheDocument();
     });
   });
 
-  describe('Password Validation', () => {
-    it('shows error when passwords do not match', async () => {
+  describe("Password Validation", () => {
+    it("shows an error and does not submit when passwords do not match", async () => {
       const user = userEvent.setup();
       render(<RegisterForm />);
 
-      const passwordInput = screen.getAllByLabelText(/Password/i)[0];
-      const confirmPasswordInput = screen.getByLabelText(/Confirm Password/i);
-      const submitButton = screen.getByRole('button', { name: /Register/i });
+      await fillRegisterForm(user, { confirmPassword: "DifferentPassword" });
+      await user.click(submitButton());
 
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'Password123');
-      await user.clear(confirmPasswordInput);
-      await user.type(confirmPasswordInput, 'DifferentPassword');
-
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
-      });
+      expect(
+        await screen.findByText(/Passwords do not match/i),
+      ).toBeInTheDocument();
+      expect(registerUser).not.toHaveBeenCalled();
     });
 
-    it('does not call registerUser when passwords do not match', async () => {
+    it("shows an error and does not submit when the password is too short", async () => {
       const user = userEvent.setup();
       render(<RegisterForm />);
 
-      const passwordInput = screen.getAllByLabelText(/Password/i)[0];
-      const confirmPasswordInput = screen.getByLabelText(/Confirm Password/i);
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'Password123');
-      await user.clear(confirmPasswordInput);
-      await user.type(confirmPasswordInput, 'DifferentPassword');
-
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
+      await fillRegisterForm(user, {
+        password: "short",
+        confirmPassword: "short",
       });
+      fireEvent.submit(submitButton().closest("form"));
 
+      expect(
+        await screen.findByText(/at least 8 characters/i),
+      ).toBeInTheDocument();
       expect(registerUser).not.toHaveBeenCalled();
     });
   });
 
-  describe('Error Handling', () => {
-    it('displays error for 400 status code', async () => {
-      const user = userEvent.setup();
-      const errorMessage = 'Invalid email format';
-      registerUser.mockRejectedValue({
-        response: {
-          status: 400,
-          data: { detail: errorMessage },
-        },
-      });
-
+  describe("Error Handling", () => {
+    const submitWithError = async (user, rejection) => {
+      registerUser.mockRejectedValue(rejection);
       render(<RegisterForm />);
+      await fillRegisterForm(user);
+      await user.click(submitButton());
+    };
 
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
+    it("displays the server message for a 400 response", async () => {
+      const user = userEvent.setup();
+      await submitWithError(user, {
+        response: { status: 400, data: { detail: "Invalid email format" } },
       });
+
+      expect(
+        await screen.findByText("Invalid email format"),
+      ).toBeInTheDocument();
     });
 
-    it('displays error for 409 status code (email exists)', async () => {
+    it("displays the server message for a 422 response", async () => {
       const user = userEvent.setup();
-      registerUser.mockRejectedValue({
-        response: {
-          status: 409,
-        },
+      await submitWithError(user, {
+        response: { status: 422, data: { message: "Validation error" } },
       });
 
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Email already registered/i)).toBeInTheDocument();
-      });
+      expect(await screen.findByText("Validation error")).toBeInTheDocument();
     });
 
-    it('displays error for 422 status code', async () => {
+    it("displays a fallback message for a 400 response without details", async () => {
       const user = userEvent.setup();
-      registerUser.mockRejectedValue({
-        response: {
-          status: 422,
-          data: { detail: 'Validation error' },
-        },
-      });
+      await submitWithError(user, { response: { status: 400, data: {} } });
 
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Validation error/i)).toBeInTheDocument();
-      });
+      expect(
+        await screen.findByText(/Please check your registration information/i),
+      ).toBeInTheDocument();
     });
 
-    it('displays default error message for unknown status codes', async () => {
+    it('displays an "already registered" error for a 409 response', async () => {
       const user = userEvent.setup();
-      registerUser.mockRejectedValue({
-        response: {
-          status: 500,
-        },
-      });
+      await submitWithError(user, { response: { status: 409 } });
 
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Registration failed. Please try again./i)).toBeInTheDocument();
-      });
+      expect(
+        await screen.findByText(/This email address is already registered/i),
+      ).toBeInTheDocument();
     });
 
-    it('handles network errors', async () => {
+    it("displays a generic error for other status codes", async () => {
       const user = userEvent.setup();
-      registerUser.mockRejectedValue({
-        request: {},
-      });
+      await submitWithError(user, { response: { status: 500 } });
 
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/No response from server/i)).toBeInTheDocument();
-      });
+      expect(
+        await screen.findByText(/Registration failed. Please try again./i),
+      ).toBeInTheDocument();
     });
 
-    it('handles request setup errors', async () => {
+    it("displays a connection error when the server does not respond", async () => {
       const user = userEvent.setup();
-      registerUser.mockRejectedValue({
-        message: 'Request setup failed',
-      });
+      await submitWithError(user, { request: {}, message: "Network Error" });
 
-      render(<RegisterForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Register/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Failed to send registration request/i)).toBeInTheDocument();
-      });
+      expect(
+        await screen.findByText(/Unable to connect to the server/i),
+      ).toBeInTheDocument();
     });
 
-    it('clears error message on new submission', async () => {
+    it("clears the previous error on a new submission", async () => {
       const user = userEvent.setup();
       registerUser
         .mockRejectedValueOnce({
-          response: {
-            status: 400,
-            data: { detail: 'Error' },
-          },
+          response: { status: 400, data: { detail: "Error" } },
         })
-        .mockResolvedValueOnce({ success: true });
+        .mockResolvedValueOnce({});
 
       render(<RegisterForm />);
+      await fillRegisterForm(user);
 
-      const submitButton = screen.getByRole('button', { name: /Register/i });
+      await user.click(submitButton());
+      expect(await screen.findByText("Error")).toBeInTheDocument();
 
-      // First submission - error
-      await user.click(submitButton);
+      await user.click(submitButton());
       await waitFor(() => {
-        expect(screen.getByText('Error')).toBeInTheDocument();
-      });
-
-      // Second submission - should clear error
-      await user.click(submitButton);
-      await waitFor(() => {
-        expect(screen.queryByText('Error')).not.toBeInTheDocument();
+        expect(screen.queryByText("Error")).not.toBeInTheDocument();
       });
     });
   });
 
-  describe('Accessibility', () => {
-    it('has proper form labels', () => {
+  describe("Accessibility and Validation", () => {
+    it("email input has type email", () => {
       render(<RegisterForm />);
 
-      expect(screen.getByLabelText(/First Name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Last Name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-      expect(screen.getAllByLabelText(/Password/i)[0]).toBeInTheDocument();
-      expect(screen.getByLabelText(/Confirm Password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Email Address/i)).toHaveAttribute(
+        "type",
+        "email",
+      );
     });
 
-    it('email input has type email', () => {
+    it("password inputs have type password", () => {
       render(<RegisterForm />);
 
-      const emailInput = screen.getByLabelText(/Email Address/i);
-      expect(emailInput).toHaveAttribute('type', 'email');
+      expect(passwordField()).toHaveAttribute("type", "password");
+      expect(confirmPasswordField()).toHaveAttribute("type", "password");
     });
 
-    it('password inputs have type password', () => {
+    it("all fields are required", () => {
       render(<RegisterForm />);
 
-      const passwordInput = screen.getAllByLabelText(/Password/i)[0];
-      const confirmPasswordInput = screen.getByLabelText(/Confirm Password/i);
-
-      expect(passwordInput).toHaveAttribute('type', 'password');
-      expect(confirmPasswordInput).toHaveAttribute('type', 'password');
-    });
-  });
-
-  describe('Form Validation', () => {
-    it('all fields are required', () => {
-      render(<RegisterForm />);
-
-      expect(screen.getByLabelText(/First Name/i)).toHaveAttribute('required');
-      expect(screen.getByLabelText(/Last Name/i)).toHaveAttribute('required');
-      expect(screen.getByLabelText(/Email Address/i)).toHaveAttribute('required');
-
-      // Get all password fields and check they are required
-      const passwordFields = screen.getAllByLabelText(/Password/i);
-      expect(passwordFields.length).toBe(2); // Should have exactly 2 password fields
-      passwordFields.forEach(field => {
-        expect(field).toHaveAttribute('required');
-      });
+      expect(screen.getByLabelText(/First Name/i)).toBeRequired();
+      expect(screen.getByLabelText(/Last Name/i)).toBeRequired();
+      expect(screen.getByLabelText(/Email Address/i)).toBeRequired();
+      expect(passwordField()).toBeRequired();
+      expect(confirmPasswordField()).toBeRequired();
     });
 
-    it('has proper autocomplete attributes', () => {
+    it("has proper autocomplete attributes", () => {
       render(<RegisterForm />);
 
-      expect(screen.getByLabelText(/First Name/i)).toHaveAttribute('autocomplete', 'given-name');
-      expect(screen.getByLabelText(/Last Name/i)).toHaveAttribute('autocomplete', 'family-name');
-      expect(screen.getByLabelText(/Email Address/i)).toHaveAttribute('autocomplete', 'email');
+      expect(screen.getByLabelText(/First Name/i)).toHaveAttribute(
+        "autocomplete",
+        "given-name",
+      );
+      expect(screen.getByLabelText(/Last Name/i)).toHaveAttribute(
+        "autocomplete",
+        "family-name",
+      );
+      expect(screen.getByLabelText(/Email Address/i)).toHaveAttribute(
+        "autocomplete",
+        "email",
+      );
+      expect(passwordField()).toHaveAttribute("autocomplete", "new-password");
+      expect(confirmPasswordField()).toHaveAttribute(
+        "autocomplete",
+        "new-password",
+      );
+    });
 
-      // Get all password fields and check their autocomplete attributes
-      const passwordFields = screen.getAllByLabelText(/Password/i);
-      passwordFields.forEach(field => {
-        expect(field).toHaveAttribute('autocomplete', 'new-password');
-      });
+    it("password requires at least 8 characters", () => {
+      render(<RegisterForm />);
+
+      expect(passwordField()).toHaveAttribute("minlength", "8");
+      expect(screen.getByText(/Minimum 8 characters/i)).toBeInTheDocument();
     });
   });
 });
