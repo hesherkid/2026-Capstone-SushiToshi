@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import RegisterForm from "@/components/auth/RegisterForm";
 
 export const metadata = {
@@ -7,6 +8,8 @@ export const metadata = {
 
 export default function RegisterPage() {
   return (
-    <RegisterForm />
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
