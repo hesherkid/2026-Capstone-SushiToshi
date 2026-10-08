@@ -6,13 +6,15 @@ import {
   Button,
   TextField,
   Typography,
-  Paper,
   Alert,
   CircularProgress,
   Divider,
+  Link,
 } from "@mui/material";
 
 import { Lock } from "lucide-react";
+import AuthCard from "@/components/auth/AuthCard";
+import NextLink from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
@@ -93,9 +95,9 @@ const LoginFormContent = () => {
 
     setError(
       data?.detail ||
-        data?.message ||
-        err.message ||
-        "Authentication failed. Please try again.",
+      data?.message ||
+      err.message ||
+      "Authentication failed. Please try again.",
     );
   };
 
@@ -228,14 +230,6 @@ const LoginFormContent = () => {
   // NAVIGATION
   // --------------------------------------------------
 
-  const handleForgotPassword = () => {
-    router.push(getAuthRoute("/auth/forgot-password"));
-  };
-
-  const handleRegister = () => {
-    router.push(getAuthRoute("/auth/register"));
-  };
-
   const handleResendVerification = () => {
     const url = getAuthRoute("/auth/resend-verification");
 
@@ -247,237 +241,196 @@ const LoginFormContent = () => {
   // --------------------------------------------------
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        backgroundColor: "#f3f4f6",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        p: { xs: 2, sm: 4, md: 6 },
-      }}
-    >
-      <Paper
-        elevation={3}
-        sx={{
-          p: { xs: 3, sm: 5, md: 6 },
-          width: "100%",
-          maxWidth: 500,
-          backgroundColor: "white",
-          borderRadius: 2,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 3,
-          }}
+    <AuthCard
+      title="Start your order"
+      footer={
+        <Typography
+          variant="body2"
+          sx={{ color: "text.secondary", textAlign: "center" }}
         >
-          <Box
-            sx={{
-              borderRadius: "50%",
-              backgroundColor: "#fee2e2",
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+          Don&apos;t have an account?{" "}
+          <Link
+            component={NextLink}
+            href={getAuthRoute("/auth/register")}
+            underline="hover"
+            sx={{ fontWeight: 700 }}
           >
-            <Lock size={40} color="#dc2626" />
-          </Box>
+            Sign Up
+          </Link>
+        </Typography>
+      }
+    >
+      <Button
+        type="button"
+        onClick={handleContinueAsGuest}
+        fullWidth
+        variant="contained"
+        disabled={loading}
+      >
+        Continue as Guest
+      </Button>
 
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{
-              fontWeight: "bold",
-              textAlign: "center",
-              color: "#111827",
-              fontSize: {
-                xs: "1.5rem",
-                sm: "2rem",
-              },
-            }}
-          >
-            Login to Sushi Toshi
+      <Divider sx={{ width: "100%" }}>
+        <Typography variant="body2" color="text.secondary">
+          or
+        </Typography>
+      </Divider>
+
+      {searchParams.get("reset") === "success" && (
+        <Alert severity="success" sx={{ width: "100%" }}>
+          Your password has been reset successfully.
+          Please sign in with your new password.
+        </Alert>
+      )}
+
+      {/* Authentication errors */}
+      {error && (
+        <Alert
+          severity={
+            needsVerification ? "warning" : "error"
+          }
+          sx={{ width: "100%" }}
+        >
+          <Typography variant="body2">
+            {error}
           </Typography>
 
-          {searchParams.get("reset") === "success" && (
-            <Alert severity="success" sx={{ width: "100%" }}>
-              Your password has been reset successfully. Please sign in with
-              your new password.
-            </Alert>
-          )}
+          {
+            needsVerification && (
+              <Button
+                variant="text"
+                onClick={handleResendVerification}
+                sx={{
+                  mt: 1,
+                  color: "#92400e",
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                Resend Verification Email
+              </Button>
+            )
+          }
+        </Alert >
+      )}
 
-          {/* Authentication errors */}
-          {error && (
-            <Alert
-              severity={needsVerification ? "warning" : "error"}
-              sx={{ width: "100%" }}
-            >
-              <Typography variant="body2">{error}</Typography>
-
-              {needsVerification && (
-                <Button
-                  variant="text"
-                  onClick={handleResendVerification}
-                  sx={{
-                    mt: 1,
-                    color: "#92400e",
-                    textTransform: "none",
-                    fontWeight: 600,
-                  }}
-                >
-                  Resend Verification Email
-                </Button>
-              )}
-            </Alert>
-          )}
-
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 2.5,
+        }}
+      >
+        <Box sx={{ width: "100%" }}>
+          <Typography
+            variant="h6"
+            component="h2"
             sx={{
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: 2.5,
+              fontWeight: 600,
+              color: "#111827",
+              mb: 0.25,
             }}
           >
-            {/* Google authentication */}
-            {googleClientID && (
-              <GoogleOAuthProvider clientId={googleClientID}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                  }}
-                >
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => {
-                      setError("Google login failed.");
-                    }}
-                  />
-                </Box>
-              </GoogleOAuthProvider>
-            )}
+            Have an account?
+          </Typography>
 
-            {googleClientID && (
-              <Divider>
-                <Typography variant="body2" color="text.secondary">
-                  OR
-                </Typography>
-              </Divider>
-            )}
-
-            {/* Email */}
-            <TextField
-              label="Email Address"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              autoComplete="email"
-              required
-              fullWidth
-              disabled={loading}
-            />
-
-            {/* Password */}
-            <TextField
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              autoComplete="current-password"
-              required
-              fullWidth
-              disabled={loading}
-            />
-
-            {/* Sign in */}
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              disabled={loading}
-              sx={{
-                backgroundColor: "#dc2626",
-                "&:hover": {
-                  backgroundColor: "#b91c1c",
-                },
-                color: "white",
-                py: 1.5,
-                textTransform: "none",
-                fontSize: "1rem",
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={24} sx={{ color: "white" }} />
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-
-            {/* Guest login */}
-            <Button
-              type="button"
-              onClick={handleContinueAsGuest}
-              fullWidth
-              variant="outlined"
-              disabled={loading}
-              sx={{
-                borderColor: "#dc2626",
-                color: "#dc2626",
-                "&:hover": {
-                  borderColor: "#b91c1c",
-                  backgroundColor: "#fef2f2",
-                },
-                py: 1.5,
-                textTransform: "none",
-                fontSize: "1rem",
-              }}
-            >
-              Sign In As Guest
-            </Button>
-
-            <Divider />
-
-            {/* Forgot password */}
-            <Button
-              type="button"
-              onClick={handleForgotPassword}
-              fullWidth
-              variant="text"
-              sx={{
-                color: "#4b5563",
-                textTransform: "none",
-              }}
-            >
-              Forgot Password?
-            </Button>
-
-            {/* Registration */}
-            <Button
-              type="button"
-              onClick={handleRegister}
-              fullWidth
-              variant="text"
-              sx={{
-                color: "#4b5563",
-                textTransform: "none",
-              }}
-            >
-              Create New Account
-            </Button>
-          </Box>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "#4b5563",
+              mb: 1,
+            }}
+          >
+            Sign in to Sushi Toshi
+          </Typography>
         </Box>
-      </Paper>
-    </Box>
+
+        {/* Email */}
+        <TextField
+          label="Email Address"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          autoComplete="email"
+          required
+          fullWidth
+          disabled={loading}
+        />
+
+        {/* Password */}
+        <TextField
+          label="Password"
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          autoComplete="current-password"
+          required
+          fullWidth
+          disabled={loading}
+        />
+
+        {/* Forgot password */}
+        <Link
+          component={NextLink}
+          href={getAuthRoute("/auth/forgot-password")}
+          sx={{
+            display: "block",
+            width: "100%",
+            textAlign: "right",
+            mt: -1,
+            color: "#4b5563",
+            fontSize: { xs: "0.875rem", sm: "0.95rem" },
+            textDecoration: "none",
+            "&:hover": { textDecoration: "underline" },
+          }}
+        >
+          Forgot Password?
+        </Link>
+
+        {/* Sign in */}
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          disabled={loading}
+        >
+          {loading ? (
+            <CircularProgress
+              size={24}
+              sx={{ color: "white" }}
+            />
+          ) : (
+            "Sign In"
+          )}
+        </Button>
+
+        {googleClientID && (
+          <Divider>
+            <Typography variant="body2" color="text.secondary">
+              or
+            </Typography>
+          </Divider>
+        )}
+
+        {googleClientID && (
+          <GoogleOAuthProvider clientId={googleClientID}>
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => {
+                  setError("Google login failed.");
+                }}
+              />
+            </Box>
+          </GoogleOAuthProvider>
+        )}
+      </Box>
+    </AuthCard >
   );
 };
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Toolbar } from "@mui/material";
+import { Box, Toolbar, Typography } from "@mui/material";
 import AppBarWithTitle from "./AppBarWithTitle";
 
 const Layout = ({ children }) => {
@@ -37,7 +37,9 @@ const Layout = ({ children }) => {
           textAlign: "center",
         }}
       >
-        <h3>Copyright 2025</h3>
+        <Typography component="p" variant="body2">
+          &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
+        </Typography>
       </Box>
     </Box>
   );

@@ -38,44 +38,36 @@ Example verified sender:
 4. Select restricted/custom permissions with **Mail Send** access.
 5. Generate the key and store it securely. It may only be displayed once.
 
-## 4. Configure `appsettings.json`
+## 4. Configure SendGrid outside source control
 
-Add these sections to your existing file (do not replace the rest of its configuration):
+Do not put `SendGrid:ApiKey` or `SendGrid:FromEmail` in tracked settings such as `appsettings.json`. The sender address is included in outgoing emails, and keeping it out of the repository prevents it from being exposed through the source. Recipients will still see the sender address, so use a verified role address such as `noreply@yourdomain.com` rather than a personal address.
 
-```json
-{
-  "SendGrid": {
-    "ApiKey": "",
-    "FromEmail": "noreply@example.com",
-    "FromName": "Sushi Toshi"
-  },
-  "AuthEmail": {
-    "FrontendBaseUrl": "http://localhost:3000",
-    "VerificationExpiryMinutes": 1440,
-    "PasswordResetExpiryMinutes": 30
-  }
-}
+The project already has a `UserSecretsId`. From `src/back-end`, configure local development values with User Secrets:
+
+```bash
+dotnet user-secrets set "SendGrid:ApiKey" "YOUR_SENDGRID_API_KEY"
+dotnet user-secrets set "SendGrid:FromEmail" "verified-sender@yourdomain.com"
 ```
+
+Replace the sender example with an address verified in SendGrid. User Secrets are loaded for local Development and are not committed to the repository. `SendGrid:FromName` can remain in `appsettings.json` because it is a display name, not a credential.
+
+For deployment, use a secret manager or environment variables:
+
+```text
+SendGrid__ApiKey=YOUR_SENDGRID_API_KEY
+SendGrid__FromEmail=verified-sender@yourdomain.com
+```
+
+`AuthEmail` settings such as `FrontendBaseUrl`, `VerificationExpiryMinutes`, and `PasswordResetExpiryMinutes` can remain in `appsettings.json`; they are not SendGrid credentials.
 
 | Setting | Meaning |
 |---|---|
 | `SendGrid:ApiKey` | Secret used to authenticate requests to SendGrid |
-| `SendGrid:FromEmail` | Verified sender address |
+| `SendGrid:FromEmail` | Verified sender address shown to email recipients |
 | `SendGrid:FromName` | Sender display name |
 | `AuthEmail:FrontendBaseUrl` | Next.js origin, without `/auth` |
 | `AuthEmail:VerificationExpiryMinutes` | Verification link lifetime |
 | `AuthEmail:PasswordResetExpiryMinutes` | Password reset link lifetime |
-
-### Keep secrets outside source control
-
-For local development:
-
-```bash
-dotnet user-secrets init
-dotnet user-secrets set "SendGrid:ApiKey" "YOUR_SENDGRID_API_KEY"
-```
-
-For deployment, use a secret manager or set the environment variable `SendGrid__ApiKey`.
 
 ## 5. Email service architecture
 
