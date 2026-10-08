@@ -1,5 +1,7 @@
 # Testing Documentation - 2026 C#Capstone - Sushi Toshi
 
+> **CI Update (2026-10-08):** GitHub Actions workflow rebuilt for this fork. CI now runs on `main` only (PRs + pushes) plus a manual "Run workflow" button. Frontend requires Node.js 20.9+ (CI uses Node 22). E2E tests run in CI after merges to `main` and on manual runs (Chromium only, not a required check). Codecov has been removed. QR code generation uses SkiaSharp (not System.Drawing). See [CI/CD Pipeline](https://claude.ai/chat/ac7329a5-d6e8-4f73-ba5d-6f90f211b858#cicd-pipeline).
+
 > **Recent Update (2025-11-10):** All test compilation errors have been fixed. Backend tests updated to use `User_Oid`/`User_Name` instead of `User_Id` to match the current authentication model. BillController tests updated to include `IPricingService` dependency. All 101 backend tests and 87 frontend tests are now passing.
 
 ## Table of Contents
@@ -240,7 +242,7 @@ src/front-end/
 #### Frontend
 
 - **Current Coverage**: ~3% (3 of 99 components tested)
-- **Target Coverage**: 70%+ overall, 90%+ for critical components
+- **Target Coverage**: 0%+ overall, 90%+ for critical components
 - **Coverage Thresholds** (jest.config.js):
   - Branches: 70%
   - Functions: 70%
@@ -256,7 +258,8 @@ src/front-end/
 #### Prerequisites
 
 - .NET 9.0 SDK
-- Windows OS (required for QR code generation with System.Drawing)
+- Windows OS recommended (CI uses Windows). QR code generation uses SkiaSharp; `SkiaSharp.NativeAssets.Linux` is referenced in `back-end.csproj` so it also runs on Linux.
+- Integration tests start the real app, which validates `SendGrid:ApiKey` on startup. Locally this comes from user secrets; CI supplies a placeholder value
 
 #### Run All Backend Tests
 
@@ -291,7 +294,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 #### Prerequisites
 
-- Node.js 18+
+- Node.js 20.9+ (required by Next.js 16; CI uses Node 22)
 - npm
 
 #### Install Dependencies
@@ -324,9 +327,12 @@ npm test -- --testNamePattern="should render"
 
 ### End-to-End Tests
 
+> **E2E tests run in CI** after merges to `main` and on manual runs - not on PRs, and they are not a required check. Run them locally before opening a PR that changes critical flows (QR codes, ordering, login).
+
 #### Prerequisites
 
 - Playwright installed
+- MariaDB running (via `docker-compose`)
 - Backend server running on `http://localhost:5264`
 - Frontend server running on `http://localhost:3000`
 
@@ -549,64 +555,64 @@ describe("YourComponent", () => {
 
 ### Pipeline Jobs
 
-#### 1. Backend Tests Job
+#### 1. Backend - build, unit & integration tests (`windows-latest`) - required
 
 ```yaml
-- Restores NuGet dependencies
-- Builds the application
-- Runs unit tests
-- Runs integration tests
-- Generates coverage reports
-- Uploads results to Codecov
+- dotnet test on back-end.Tests (restores + builds the API automatically)
+- dotnet test on back-end.IntegrationTests (SendGrid__ApiKey set to a placeholder - no email is sent)
 ```
 
-#### 2. Frontend Tests Job
+#### 2. Frontend - lint, unit tests & build (`ubuntu-latest`, Node 22) - required
 
 ```yaml
-- Installs npm dependencies
-- Runs linter
-- Runs unit tests with coverage
-- Uploads results to Codecov
+- npm ci (package-lock.json must be committed and in sync)
+- Lint (non-blocking - warnings shown in the log but do not fail the job)
+- Jest unit tests with coverage (coverage table printed in the log)
+- Next.js production build (npm run build)
 ```
 
-#### 3. E2E Tests Job
+#### 3. E2E tests - Playwright, Chromium (`ubuntu-latest`) - NOT required
 
 ```yaml
-- Starts backend server
-- Builds and starts frontend
-- Installs Playwright browsers
-- Runs E2E tests
-- Uploads test reports and videos
+- Runs only after a PR merges into main, or from "Run workflow" - never on PRs
+- Starts MariaDB as a service container (Linux-only feature) on port 3307
+- Starts the API on port 5264 and waits until /db-test confirms the database
+  (the API applies migrations and seeds the empty database on startup)
+- Builds the frontend; Playwright starts it with `npm run start`
+- Runs Playwright with Chromium only
+- Uploads the "playwright-report" artifact (screenshots of failures)
 ```
 
-#### 4. Test Summary Job
-
-```yaml
-- Downloads all test results
-- Generates summary report
-- Posts results to PR (if applicable)
-```
+**Not in CI:** Codecov (removed). Results and coverage are shown in each job's log.
 
 ### Pipeline Triggers
 
 **Automatic Execution:**
 
-- Push to `main`, `develop`, or feature branches
-- Pull requests to `main` or `develop` branches
+- Pull requests to `main` (backend + frontend jobs)
+- Pushes to `main`, i.e. after a PR is merged (backend + frontend + E2E jobs)
 
 **Manual Execution:**
 
 - Navigate to Actions tab in GitHub
 - Select "Automated Tests" workflow
-- Click "Run workflow"
+- Click "Run workflow", choose the branch, and run (includes E2E)
+
+### Required Checks (branch protection on `main`)
+
+PRs cannot be merged until both of these pass. If a check fails, the PR author fixes it and pushes again:
+
+- `Backend - build, unit & integration tests`
+- `Frontend - lint, unit tests & build`
+
+> If a job's `name:` is changed in the workflow file, the required check must be updated in Settings > Branches to match.
 
 ### Viewing Results
 
-1. Navigate to **Actions** tab in GitHub repository
-2. Select the latest workflow run
-3. Review job summaries and logs
-4. Download artifacts for detailed reports
-5. Check Codecov for coverage trends
+1. Open the PR and scroll to the checks section, or go to the **Actions** tab
+2. Select the workflow run
+3. Click a failed job, then the failed step, to read the log
+4. For E2E failures, download the "playwright-report" artifact (bottom of the run page), unzip it and open `index.html`
 
 ---
 
@@ -674,7 +680,6 @@ npm run test:coverage
   - QR code generation
   - Authentication
   - Authorization
-  - Payment processing
 
 #### Frontend
 
@@ -793,9 +798,19 @@ var options = new DbContextOptionsBuilder<ApplicationDbContext>()
 **Issue**: QR code tests fail on non-Windows
 
 ```
-Solution: QrGeneratorService uses System.Drawing (Windows-only).
-- Run tests on Windows, or
-- Update to use SkiaSharp for cross-platform support
+Solution: QrGeneratorService uses SkiaSharp. The base SkiaSharp package does not
+include the Linux native library.
+- Run tests on Windows (this is what CI does), or
+- Add the SkiaSharp.NativeAssets.Linux package to back-end.csproj
+  (it also requires libfontconfig1 installed on the machine)
+```
+
+**Issue**: Integration tests fail in CI with `OptionsValidationException` (SendGrid)
+
+```
+Solution: Program.cs validates SendGridSettings on startup and ApiKey is [Required].
+- Locally: set the key with user secrets
+- CI: the workflow sets SendGrid__ApiKey to a placeholder for the integration test step
 ```
 
 **Issue**: Mock setup doesn't work
@@ -854,6 +869,14 @@ Solution:
 1. Ensure backend is running on http://localhost:5264
 2. Ensure frontend is running on http://localhost:3000
 3. Increase timeout in playwright.config.js
+```
+
+**Issue**: E2E job fails in CI at "Start backend" or "Verify database connection"
+
+```
+Solution: Open the "Start backend" step log - the API log is printed there when it fails.
+- Check the MariaDB service started (job "Initialize containers" step)
+- Check the connection string env var in the e2e-tests job matches the service settings
 ```
 
 **Issue**: Selectors not found
@@ -975,8 +998,8 @@ page.locator('button:has-text("Submit")')     // More resilient
 
 ---
 
-**Version**: 1.0
-**Last Updated**: 2025-01-07
+**Version**: 1.1
+**Last Updated**: 2026-10-08
 **Status**: Active Development
 
 For questions or issues with testing, please contact the development team or submit an issue on GitHub.

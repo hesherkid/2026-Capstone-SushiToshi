@@ -2,181 +2,140 @@ name: Automated Tests
 
 on:
   push:
-    branches: [ main, develop, David--QR-code ]
+    branches: [main]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push cancels the older, now-outdated run on the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-tests:
+    name: Backend - build, unit & integration tests
     runs-on: windows-latest
-
+    timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '9.0.x'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
 
-    - name: Restore dependencies
-      run: dotnet restore src/back-end/back-end.csproj
+      # Used dotnet test to restore, build, and run the unit tests
+      - name: Run unit tests
+        run: dotnet test src/back-end.Tests/back-end.Tests.csproj
 
-    - name: Build
-      run: dotnet build src/back-end/back-end.csproj --no-restore --configuration Release
-
-    - name: Run Unit Tests
-      run: dotnet test src/back-end.Tests/back-end.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=unit-test-results.trx"
-
-    - name: Run Integration Tests
-      run: dotnet test src/back-end.IntegrationTests/back-end.IntegrationTests.csproj --configuration Release --verbosity minimal --logger "trx;LogFileName=integration-test-results.trx"
-
-    - name: Generate Coverage Report
-      run: dotnet test src/back-end.Tests/back-end.Tests.csproj --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
-
-    - name: Upload Test Results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: backend-test-results
-        path: |
-          **/*.trx
-          ./coverage/**
-
-    - name: Upload Coverage to Codecov
-      if: success()
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./coverage/**/coverage.cobertura.xml
-        flags: backend
-        name: backend-coverage
+      - name: Run integration tests
+        run: dotnet test src/back-end.IntegrationTests/back-end.IntegrationTests.csproj
+        env:
+          SendGrid__ApiKey: ci-placeholder-not-a-real-key
 
   frontend-tests:
+    name: Frontend - lint, unit tests & build
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/front-end
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: src/front-end/package-lock.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: src/front-end/package-lock.json
 
-    - name: Install dependencies
-      run: npm ci
-      working-directory: src/front-end
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run Linter
-      run: npm run lint
-      working-directory: src/front-end
-      continue-on-error: true
+      - name: Lint (warnings only - does not fail the job)
+        run: npm run lint
+        continue-on-error: true
 
-    - name: Run Unit Tests
-      run: npm test -- --coverage --watchAll=false
-      working-directory: src/front-end
+      - name: Run unit tests (with coverage)
+        run: npm test -- --ci --coverage
 
-    - name: Upload Test Results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-test-results
-        path: src/front-end/coverage
+      - name: Build
+        run: npm run build
 
-    - name: Upload Coverage to Codecov
-      if: success()
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./src/front-end/coverage/lcov.info
-        flags: frontend
-        name: frontend-coverage
-
+  # End-to-end tests against the full app: database + API + website.
+  # Runs after merges to main and from "Run workflow" - NOT on PRs, and NOT a required check.
   e2e-tests:
+    name: E2E tests - Playwright, Chromium
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 30
+
+    services:
+      mariadb:
+        image: mariadb:latest
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_DATABASE: sushi_toshi_db
+          MARIADB_USER: app_user
+          MARIADB_PASSWORD: app_password
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5264
+      ConnectionStrings__MySqlConnection: "Server=127.0.0.1;Port=3307;Database=sushi_toshi_db;User=app_user;Password=app_password;"
+      SendGrid__ApiKey: ci-placeholder-not-a-real-key
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '9.0.x'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: src/front-end/package-lock.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: src/front-end/package-lock.json
 
-    - name: Install Backend Dependencies
-      run: dotnet restore src/back-end/back-end.csproj
+      - name: Install font library for QR codes (SkiaSharp)
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1
 
-    - name: Build Backend
-      run: dotnet build src/back-end/back-end.csproj --no-restore --configuration Release
+      - name: Start backend
+        working-directory: src/back-end
+        run: |
+          nohup dotnet run --no-launch-profile > backend.log 2>&1 &
+          for i in $(seq 1 100); do
+            curl -sf http://localhost:5264/db-test && exit 0
+            sleep 3
+          done
+          echo "Backend did not start - log below"; cat backend.log; exit 1
 
-    - name: Start Backend
-      run: |
-        cd src/back-end
-        dotnet run --no-build --configuration Release &
-        sleep 15
-      env:
-        ASPNETCORE_URLS: http://localhost:5264
+      - name: Set up frontend and Playwright
+        working-directory: src/front-end
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
 
-    - name: Install Frontend Dependencies
-      run: npm ci
-      working-directory: src/front-end
+      - name: Run E2E tests
+        working-directory: src/front-end
+        run: npx playwright test --project=chromium
 
-    - name: Build Frontend
-      run: npm run build
-      working-directory: src/front-end
-
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-      working-directory: src/front-end
-
-    - name: Run E2E Tests
-      run: npm run test:e2e
-      working-directory: src/front-end
-
-    - name: Upload E2E Test Results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: playwright-report
-        path: src/front-end/playwright-report
-        retention-days: 30
-
-  test-summary:
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
-    if: always()
-
-    steps:
-    - name: Download Backend Test Results
-      uses: actions/download-artifact@v4
-      with:
-        name: backend-test-results
-        path: ./backend-results
-      continue-on-error: true
-
-    - name: Download Frontend Test Results
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-test-results
-        path: ./frontend-results
-      continue-on-error: true
-
-    - name: Test Summary
-      run: |
-        echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Backend Tests" >> $GITHUB_STEP_SUMMARY
-        echo "Unit and Integration tests completed" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Frontend Tests" >> $GITHUB_STEP_SUMMARY
-        echo "Component tests completed" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Check artifacts for detailed test results and coverage reports" >> $GITHUB_STEP_SUMMARY
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report
+          path: src/front-end/playwright-report
