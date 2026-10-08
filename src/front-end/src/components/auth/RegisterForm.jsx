@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import NextLink from "next/link";
 import {
@@ -20,7 +19,7 @@ import {
   resendVerificationEmail,
 } from "@/utils/auth";
 
-const RegisterForm = () => {
+const RegisterFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -121,16 +120,12 @@ const RegisterForm = () => {
             ? data.message
             : typeof data?.detail === "string"
               ? data.detail
-              : "Please check your registration information."
+              : "Please check your registration information.",
         );
       } else if (!err.response) {
-        setError(
-          "Unable to connect to the server. Please try again."
-        );
+        setError("Unable to connect to the server. Please try again.");
       } else {
-        setError(
-          "Registration failed. Please try again."
-        );
+        setError("Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -350,10 +345,16 @@ const RegisterForm = () => {
             )}
           </Button>
 
-        </Box>
+        </Box >
       )}
-    </AuthCard>
+    </AuthCard >
   );
 };
+
+const RegisterForm = () => (
+  <Suspense fallback={null}>
+    <RegisterFormContent />
+  </Suspense>
+);
 
 export default RegisterForm;

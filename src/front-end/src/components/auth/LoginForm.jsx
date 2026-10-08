@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import {
   Box,
   Button,
@@ -23,7 +23,7 @@ import { loginUser } from "@/utils/auth";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-const LoginForm = () => {
+const LoginFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -85,15 +85,9 @@ const LoginForm = () => {
     const status = err.response?.status;
     const data = err.response?.data;
 
-    if (
-      status === 403 &&
-      data?.requires_email_verification
-    ) {
+    if (status === 403 && data?.requires_email_verification) {
       setNeedsVerification(true);
-      setError(
-        data.message ||
-        "Please verify your email before signing in."
-      );
+      setError(data.message || "Please verify your email before signing in.");
       return;
     }
 
@@ -103,7 +97,7 @@ const LoginForm = () => {
       data?.detail ||
       data?.message ||
       err.message ||
-      "Authentication failed. Please try again."
+      "Authentication failed. Please try again.",
     );
   };
 
@@ -128,15 +122,10 @@ const LoginForm = () => {
     setNeedsVerification(false);
 
     try {
-      const response = await loginUser(
-        formData.email,
-        formData.password
-      );
+      const response = await loginUser(formData.email, formData.password);
 
       if (!response.access_token) {
-        throw new Error(
-          "Login succeeded but no access token was returned."
-        );
+        throw new Error("Login succeeded but no access token was returned.");
       }
 
       clearGuestSession();
@@ -165,15 +154,10 @@ const LoginForm = () => {
     setNeedsVerification(false);
 
     try {
-      const response = await loginUser(
-        guestEmail,
-        guestPassword
-      );
+      const response = await loginUser(guestEmail, guestPassword);
 
       if (!response.access_token) {
-        throw new Error(
-          "Guest login succeeded but no token was returned."
-        );
+        throw new Error("Guest login succeeded but no token was returned.");
       }
 
       saveRestaurantContext();
@@ -211,7 +195,7 @@ const LoginForm = () => {
 
       if (!data.access_token) {
         throw new Error(
-          "Google authentication did not return an access token."
+          "Google authentication did not return an access token.",
         );
       }
 
@@ -225,10 +209,7 @@ const LoginForm = () => {
       // is not returned.
 
       if (data.user) {
-        localStorage.setItem(
-          "user",
-          JSON.stringify(data.user)
-        );
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       saveRestaurantContext();
@@ -314,21 +295,23 @@ const LoginForm = () => {
             {error}
           </Typography>
 
-          {needsVerification && (
-            <Button
-              variant="text"
-              onClick={handleResendVerification}
-              sx={{
-                mt: 1,
-                color: "#92400e",
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              Resend Verification Email
-            </Button>
-          )}
-        </Alert>
+          {
+            needsVerification && (
+              <Button
+                variant="text"
+                onClick={handleResendVerification}
+                sx={{
+                  mt: 1,
+                  color: "#92400e",
+                  textTransform: "none",
+                  fontWeight: 600,
+                }}
+              >
+                Resend Verification Email
+              </Button>
+            )
+          }
+        </Alert >
       )}
 
       <Box
@@ -447,8 +430,14 @@ const LoginForm = () => {
           </GoogleOAuthProvider>
         )}
       </Box>
-    </AuthCard>
+    </AuthCard >
   );
 };
+
+const LoginForm = () => (
+  <Suspense fallback={null}>
+    <LoginFormContent />
+  </Suspense>
+);
 
 export default LoginForm;

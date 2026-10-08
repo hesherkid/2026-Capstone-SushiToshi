@@ -1,321 +1,387 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { useRouter } from 'next/navigation';
-import LoginForm from '../LoginForm';
-import { loginUser } from '@/utils/auth';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useRouter, useSearchParams } from "next/navigation";
+import LoginForm from "../LoginForm";
+import { loginUser } from "@/utils/auth";
 
 // Mock dependencies
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+  usePathname: jest.fn(() => "/"),
 }));
 
-jest.mock('@/utils/auth', () => ({
+jest.mock("@/utils/auth", () => ({
   loginUser: jest.fn(),
 }));
 
-describe('LoginForm', () => {
+const fillLoginForm = async (
+  user,
+  email = "test@example.com",
+  password = "password123",
+) => {
+  const emailInput = screen.getByLabelText(/Email Address/i);
+  const passwordInput = screen.getByLabelText(/Password/i);
+  await user.clear(emailInput);
+  await user.type(emailInput, email);
+  await user.clear(passwordInput);
+  await user.type(passwordInput, password);
+};
+
+describe("LoginForm", () => {
   const mockPush = jest.fn();
+  const mockReplace = jest.fn();
+  const mockRefresh = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
     useRouter.mockReturnValue({
       push: mockPush,
+      replace: mockReplace,
+      refresh: mockRefresh,
     });
+    useSearchParams.mockReturnValue(new URLSearchParams());
   });
 
-  describe('Rendering', () => {
-    it('renders the login form with all elements', () => {
+  describe("Rendering", () => {
+    it("renders the login form with all elements", () => {
       render(<LoginForm />);
 
-      expect(screen.getByText(/Login to Sushi Toshi/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /Start your order/i }),
+      ).toBeInTheDocument();
       expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Sign In/i })).toBeInTheDocument();
-      expect(screen.getByText(/Forgot Password?/i)).toBeInTheDocument();
-      expect(screen.getByText(/Create New Account/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /^Sign In$/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Continue as Guest/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /Forgot Password/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /Sign Up/i }),
+      ).toBeInTheDocument();
     });
 
-    it('renders with default test credentials', () => {
+    it("starts with empty fields when no default credentials are configured", () => {
       render(<LoginForm />);
 
-      const emailInput = screen.getByLabelText(/Email Address/i);
-      const passwordInput = screen.getByLabelText(/Password/i);
-
-      expect(emailInput).toHaveValue('admin.user@sushitoshi.ca');
-      expect(passwordInput).toHaveValue('AdminPass123!');
+      expect(screen.getByLabelText(/Email Address/i)).toHaveValue("");
+      expect(screen.getByLabelText(/Password/i)).toHaveValue("");
     });
 
-    it('renders the lock icon', () => {
-      const { container } = render(<LoginForm />);
+    it("pre-fills fields from NEXT_PUBLIC_DEFAULT_* when set", () => {
+      process.env.NEXT_PUBLIC_DEFAULT_EMAIL = "admin.user@sushitoshi.ca";
+      process.env.NEXT_PUBLIC_DEFAULT_PASSWORD = "AdminPass123!";
 
-      // Lock icon is rendered via lucide-react
-      const lockIcon = container.querySelector('svg');
-      expect(lockIcon).toBeInTheDocument();
+      try {
+        render(<LoginForm />);
+
+        expect(screen.getByLabelText(/Email Address/i)).toHaveValue(
+          "admin.user@sushitoshi.ca",
+        );
+        expect(screen.getByLabelText(/Password/i)).toHaveValue("AdminPass123!");
+      } finally {
+        delete process.env.NEXT_PUBLIC_DEFAULT_EMAIL;
+        delete process.env.NEXT_PUBLIC_DEFAULT_PASSWORD;
+      }
+    });
+
+    it("shows a success alert after a password reset", () => {
+      useSearchParams.mockReturnValue(new URLSearchParams("reset=success"));
+
+      render(<LoginForm />);
+
+      expect(
+        screen.getByText(/Your password has been reset successfully/i),
+      ).toBeInTheDocument();
     });
   });
 
-  describe('Form Interaction', () => {
-    it('allows users to type in email field', async () => {
+  describe("Form Interaction", () => {
+    it("allows users to type in email and password fields", async () => {
       const user = userEvent.setup();
       render(<LoginForm />);
 
-      const emailInput = screen.getByLabelText(/Email Address/i);
-      await user.clear(emailInput);
-      await user.type(emailInput, 'test@example.com');
+      await fillLoginForm(user, "user@test.com", "newpassword123");
 
-      expect(emailInput).toHaveValue('test@example.com');
-    });
-
-    it('allows users to type in password field', async () => {
-      const user = userEvent.setup();
-      render(<LoginForm />);
-
-      const passwordInput = screen.getByLabelText(/Password/i);
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'newpassword123');
-
-      expect(passwordInput).toHaveValue('newpassword123');
-    });
-
-    it('updates form state when inputs change', async () => {
-      const user = userEvent.setup();
-      render(<LoginForm />);
-
-      const emailInput = screen.getByLabelText(/Email Address/i);
-      const passwordInput = screen.getByLabelText(/Password/i);
-
-      await user.clear(emailInput);
-      await user.type(emailInput, 'user@test.com');
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'password123');
-
-      expect(emailInput).toHaveValue('user@test.com');
-      expect(passwordInput).toHaveValue('password123');
+      expect(screen.getByLabelText(/Email Address/i)).toHaveValue(
+        "user@test.com",
+      );
+      expect(screen.getByLabelText(/Password/i)).toHaveValue("newpassword123");
     });
   });
 
-  describe('Form Submission', () => {
-    it('submits form with valid credentials', async () => {
+  describe("Form Submission", () => {
+    it("submits the entered credentials", async () => {
       const user = userEvent.setup();
-      loginUser.mockResolvedValue({ success: true });
+      loginUser.mockResolvedValue({ access_token: "test-token" });
 
       render(<LoginForm />);
-
-      const emailInput = screen.getByLabelText(/Email Address/i);
-      const passwordInput = screen.getByLabelText(/Password/i);
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-
-      await user.clear(emailInput);
-      await user.type(emailInput, 'test@example.com');
-      await user.clear(passwordInput);
-      await user.type(passwordInput, 'password123');
-
-      await user.click(submitButton);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
 
       await waitFor(() => {
-        expect(loginUser).toHaveBeenCalledWith('test@example.com', 'password123');
+        expect(loginUser).toHaveBeenCalledWith(
+          "test@example.com",
+          "password123",
+        );
       });
     });
 
-    it('shows loading state during submission', async () => {
+    it("redirects to the home page on successful login", async () => {
       const user = userEvent.setup();
-      loginUser.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      loginUser.mockResolvedValue({ access_token: "test-token" });
 
       render(<LoginForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-
-      await user.click(submitButton);
-
-      // Check for loading spinner
-      expect(screen.getByRole('progressbar')).toBeInTheDocument();
-      expect(submitButton).toBeDisabled();
-    });
-
-    it('redirects to home page on successful login', async () => {
-      const user = userEvent.setup();
-      loginUser.mockResolvedValue({ success: true });
-
-      render(<LoginForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-      await user.click(submitButton);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith('/');
+        expect(mockReplace).toHaveBeenCalledWith("/");
       });
+      expect(mockRefresh).toHaveBeenCalled();
     });
 
-    it('prevents submission while loading', async () => {
+    it("saves the restaurant QR context (location + table) on successful login", async () => {
       const user = userEvent.setup();
-      loginUser.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      useSearchParams.mockReturnValue(
+        new URLSearchParams("locationId=2&tableNumber=7"),
+      );
+      loginUser.mockResolvedValue({ access_token: "test-token" });
 
       render(<LoginForm />);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
 
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
+      await waitFor(() => {
+        expect(localStorage.getItem("locationId")).toBe("2");
+      });
+      expect(localStorage.getItem("tableNumber")).toBe("7");
+    });
 
+    it("shows an error when the response has no access token", async () => {
+      const user = userEvent.setup();
+      loginUser.mockResolvedValue({});
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/no access token was returned/i),
+        ).toBeInTheDocument();
+      });
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("shows a loading spinner and disables the button while submitting", async () => {
+      const user = userEvent.setup();
+      loginUser.mockImplementation(() => new Promise(() => { })); // never resolves
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      const submitButton = screen.getByRole("button", { name: /^Sign In$/i });
       await user.click(submitButton);
 
-      // Button should be disabled while loading
+      expect(screen.getByRole("progressbar")).toBeInTheDocument();
       expect(submitButton).toBeDisabled();
+    });
 
-      // Should only be called once
+    it("prevents a second submission while loading", async () => {
+      const user = userEvent.setup();
+      loginUser.mockImplementation(() => new Promise(() => { }));
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      const submitButton = screen.getByRole("button", { name: /^Sign In$/i });
+      await user.click(submitButton);
+
+      expect(submitButton).toBeDisabled();
       expect(loginUser).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('Error Handling', () => {
-    it('displays error message on failed login', async () => {
+  describe("Guest Login", () => {
+    it("signs in with the guest account and marks the session as guest", async () => {
       const user = userEvent.setup();
-      const errorMessage = 'Invalid credentials';
+      loginUser.mockResolvedValue({ access_token: "guest-token" });
+
+      render(<LoginForm />);
+      await user.click(
+        screen.getByRole("button", { name: /Continue as Guest/i }),
+      );
+
+      await waitFor(() => {
+        expect(loginUser).toHaveBeenCalledWith(
+          "guestemail@email.com",
+          "GuestUser!",
+        );
+      });
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/");
+      });
+      expect(localStorage.getItem("guest")).toBe("true");
+    });
+  });
+
+  describe("Error Handling", () => {
+    it("displays the server error detail on failed login", async () => {
+      const user = userEvent.setup();
+      loginUser.mockRejectedValue({
+        response: { status: 401, data: { detail: "Invalid credentials" } },
+      });
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Invalid credentials")).toBeInTheDocument();
+      });
+    });
+
+    it("displays a default error message when no detail is provided", async () => {
+      const user = userEvent.setup();
+      loginUser.mockRejectedValue({ response: { status: 500, data: {} } });
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Authentication failed. Please try again./i),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("re-enables the form after an error", async () => {
+      const user = userEvent.setup();
+      loginUser.mockRejectedValue({ response: { data: { detail: "Error" } } });
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      const submitButton = screen.getByRole("button", { name: /^Sign In$/i });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Error")).toBeInTheDocument();
+      });
+      expect(submitButton).not.toBeDisabled();
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    it("clears the previous error on a new submission", async () => {
+      const user = userEvent.setup();
+      loginUser
+        .mockRejectedValueOnce({ response: { data: { detail: "Error" } } })
+        .mockResolvedValueOnce({ access_token: "test-token" });
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      const submitButton = screen.getByRole("button", { name: /^Sign In$/i });
+
+      await user.click(submitButton);
+      await waitFor(() => {
+        expect(screen.getByText("Error")).toBeInTheDocument();
+      });
+
+      await user.click(submitButton);
+      await waitFor(() => {
+        expect(screen.queryByText("Error")).not.toBeInTheDocument();
+      });
+    });
+
+    it("asks unverified users to verify their email and links to resend", async () => {
+      const user = userEvent.setup();
       loginUser.mockRejectedValue({
         response: {
+          status: 403,
           data: {
-            detail: errorMessage,
+            requires_email_verification: true,
+            message: "Please verify your email before signing in.",
           },
         },
       });
 
       render(<LoginForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      });
-    });
-
-    it('displays default error message when no detail provided', async () => {
-      const user = userEvent.setup();
-      loginUser.mockRejectedValue({
-        response: {
-          data: {},
-        },
-      });
-
-      render(<LoginForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-      await user.click(submitButton);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/Login failed. Please check your credentials and try again./i)).toBeInTheDocument();
-      });
-    });
-
-    it('clears error message on new submission', async () => {
-      const user = userEvent.setup();
-      loginUser.mockRejectedValueOnce({
-        response: {
-          data: { detail: 'Error' },
-        },
-      }).mockResolvedValueOnce({ success: true });
-
-      render(<LoginForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-
-      // First submission - error
-      await user.click(submitButton);
-      await waitFor(() => {
-        expect(screen.getByText('Error')).toBeInTheDocument();
+        expect(
+          screen.getByText(/Please verify your email before signing in./i),
+        ).toBeInTheDocument();
       });
 
-      // Second submission - should clear error
-      await user.click(submitButton);
-      await waitFor(() => {
-        expect(screen.queryByText('Error')).not.toBeInTheDocument();
-      });
-    });
-
-    it('hides loading state after error', async () => {
-      const user = userEvent.setup();
-      loginUser.mockRejectedValue({
-        response: {
-          data: { detail: 'Error' },
-        },
-      });
-
-      render(<LoginForm />);
-
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Error')).toBeInTheDocument();
-      });
-
-      expect(submitButton).not.toBeDisabled();
-      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: /Resend Verification Email/i }),
+      );
+      expect(mockPush).toHaveBeenCalledWith("/auth/resend-verification");
     });
   });
 
-  describe('Navigation', () => {
-    it('navigates to forgot password page when clicked', async () => {
-      const user = userEvent.setup();
+  describe("Navigation", () => {
+    it("links to the forgot password page", () => {
       render(<LoginForm />);
 
-      const forgotPasswordButton = screen.getByText(/Forgot Password?/i);
-      await user.click(forgotPasswordButton);
-
-      expect(mockPush).toHaveBeenCalledWith('/auth/forgot-password');
+      expect(
+        screen.getByRole("link", { name: /Forgot Password/i }),
+      ).toHaveAttribute("href", "/auth/forgot-password");
     });
 
-    it('navigates to register page when clicked', async () => {
-      const user = userEvent.setup();
+    it("links to the register page", () => {
       render(<LoginForm />);
 
-      const registerButton = screen.getByText(/Create New Account/i);
-      await user.click(registerButton);
+      expect(screen.getByRole("link", { name: /Sign Up/i })).toHaveAttribute(
+        "href",
+        "/auth/register",
+      );
+    });
 
-      expect(mockPush).toHaveBeenCalledWith('/auth/register');
+    it("keeps the restaurant QR context in the sign-up link", () => {
+      useSearchParams.mockReturnValue(
+        new URLSearchParams("locationId=2&tableNumber=7"),
+      );
+
+      render(<LoginForm />);
+
+      expect(screen.getByRole("link", { name: /Sign Up/i })).toHaveAttribute(
+        "href",
+        "/auth/register?locationId=2&tableNumber=7",
+      );
     });
   });
 
-  describe('Accessibility', () => {
-    it('has proper form labels', () => {
-      render(<LoginForm />);
-
-      expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
-    });
-
-    it('email input has type email', () => {
+  describe("Accessibility and Validation", () => {
+    it("email input has type email and is required", () => {
       render(<LoginForm />);
 
       const emailInput = screen.getByLabelText(/Email Address/i);
-      expect(emailInput).toHaveAttribute('type', 'email');
+      expect(emailInput).toHaveAttribute("type", "email");
+      expect(emailInput).toBeRequired();
     });
 
-    it('password input has type password', () => {
+    it("password input has type password and is required", () => {
       render(<LoginForm />);
 
       const passwordInput = screen.getByLabelText(/Password/i);
-      expect(passwordInput).toHaveAttribute('type', 'password');
+      expect(passwordInput).toHaveAttribute("type", "password");
+      expect(passwordInput).toBeRequired();
     });
 
-    it('submit button is accessible', () => {
+    it("sign in button is a submit button", () => {
       render(<LoginForm />);
 
-      const submitButton = screen.getByRole('button', { name: /Sign In/i });
-      expect(submitButton).toHaveAttribute('type', 'submit');
-    });
-  });
-
-  describe('Form Validation', () => {
-    it('email field is required', () => {
-      render(<LoginForm />);
-
-      const emailInput = screen.getByLabelText(/Email Address/i);
-      expect(emailInput).toHaveAttribute('required');
-    });
-
-    it('password field is required', () => {
-      render(<LoginForm />);
-
-      const passwordInput = screen.getByLabelText(/Password/i);
-      expect(passwordInput).toHaveAttribute('required');
+      expect(
+        screen.getByRole("button", { name: /^Sign In$/i }),
+      ).toHaveAttribute("type", "submit");
     });
   });
 });

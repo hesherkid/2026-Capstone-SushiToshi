@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -14,7 +13,7 @@ import { MailCheck } from "lucide-react";
 import AuthCard from "@/components/auth/AuthCard";
 import { verifyEmail } from "@/utils/auth";
 
-const VerifyEmailForm = () => {
+const VerifyEmailFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -39,7 +38,7 @@ const VerifyEmailForm = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-        "Verification failed. The link may be invalid or expired."
+        "Verification failed. The link may be invalid or expired.",
       );
     } finally {
       setLoading(false);
@@ -100,14 +99,16 @@ const VerifyEmailForm = () => {
             Click the button below to verify your email address.
           </Typography>
 
-          {!token && (
-            <Alert
-              severity="warning"
-              sx={{ width: "100%", marginBottom: 2 }}
-            >
-              Verification token is missing.
-            </Alert>
-          )}
+          {
+            !token && (
+              <Alert
+                severity="warning"
+                sx={{ width: "100%", marginBottom: 2 }}
+              >
+                Verification token is missing.
+              </Alert>
+            )
+          }
 
           <Button
             fullWidth
@@ -148,10 +149,16 @@ const VerifyEmailForm = () => {
           >
             Resend Verification Email
           </Button>
-        </Box>
+        </Box >
       )}
-    </AuthCard>
+    </AuthCard >
   );
 };
+
+const VerifyEmailForm = () => (
+  <Suspense fallback={null}>
+    <VerifyEmailFormContent />
+  </Suspense>
+);
 
 export default VerifyEmailForm;

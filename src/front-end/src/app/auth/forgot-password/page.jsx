@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 
 export const metadata = {
@@ -7,6 +8,8 @@ export const metadata = {
 
 export default function ForgotPasswordPage() {
   return (
-    <ForgotPasswordForm />
+    <Suspense fallback={null}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }
