@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Box,
@@ -12,55 +13,92 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { UserPlus } from "lucide-react";
-//import { registerUser } from "@/utils/auth";
-import { registerUser } from "@/config/auth";
+import { UserPlus, MailCheck } from "lucide-react";
+import {
+  registerUser,
+  resendVerificationEmail,
+} from "@/utils/auth";
 
 const RegisterForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [formData, setFormData] = useState({
-    email: "jamie2@example.com",
+    email: "",
     password: "",
     confirmPassword: "",
-    firstName: "James",
-    lastName: "Smith",
+    firstName: "",
+    lastName: "",
   });
+
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevState) => ({
-      ...prevState,
+  // Preserve restaurant context across authentication pages.
+  const getAuthRoute = (path) => {
+    const params = new URLSearchParams();
+
+    const locationId = searchParams.get("locationId");
+    const tableNumber = searchParams.get("tableNumber");
+
+    if (locationId) params.set("locationId", locationId);
+    if (tableNumber) params.set("tableNumber", tableNumber);
+
+    const query = params.toString();
+    return query ? `${path}?${query}` : path;
+  };
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
       [name]: value,
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-    // Validate password match
+    setError("");
+    setMessage("");
+
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
+      setError("Passwords do not match.");
       return;
     }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const request = await registerUser({
-        email: formData.email,
+      const email = formData.email.trim().toLowerCase();
+
+      // Calls POST /api/auth/register through utils/auth.js
+      // Payload: userEmail, userPassword, firstName, lastName.
+      await registerUser({
+        email,
         password: formData.password,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
       });
-      localStorage.setItem("access_token", request.data.access_token);
-      localStorage.setItem("authToken", request.data.access_token);
 
+      setRegisteredEmail(email);
       setIsSuccess(true);
+      setMessage(
+        "Registration successful! Please check your email " +
+          "and click the verification link before signing in."
+      );
 
-      // Reset form fields
+      // Clear sensitive fields but retain email for resend.
       setFormData({
         email: "",
         password: "",
@@ -68,31 +106,57 @@ const RegisterForm = () => {
         firstName: "",
         lastName: "",
       });
-      router.push("/");
-    } catch (err) {
-      console.error("Registration error:", err);
-      if (err.response) {
-        const status = err.response.status;
-        const detail = err.response.data?.detail;
 
-        if (status === 400) {
-          setError(detail || "Password or Email invalid");
-        } else if (status === 422) {
-          const errorMessage = detail || "Invalid input data";
-          setError(errorMessage);
-        } else if (status === 409) {
-          setError("Email already registered");
-        } else {
-          setError("Registration failed. Please try again.");
-        }
-      } else if (err.request) {
-        setError("No response from server. Please check your connection.");
+      // No JWT storage and no automatic login.
+    } catch (err) {
+      const status = err.response?.status;
+      const data = err.response?.data;
+
+      if (status === 409) {
+        setError("This email address is already registered.");
+      } else if (status === 400 || status === 422) {
+        setError(
+          typeof data?.message === "string"
+            ? data.message
+            : typeof data?.detail === "string"
+              ? data.detail
+              : "Please check your registration information."
+        );
+      } else if (!err.response) {
+        setError(
+          "Unable to connect to the server. Please try again."
+        );
       } else {
-        setError("Failed to send registration request.");
+        setError(
+          "Registration failed. Please try again."
+        );
       }
-      console.error("Registration error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!registeredEmail) return;
+
+    setResending(true);
+    setError("");
+    setMessage("");
+
+    try {
+      await resendVerificationEmail(registeredEmail);
+
+      setMessage(
+        "If your account requires verification, " +
+          "a new verification email will be sent."
+      );
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Unable to resend verification email. Please try again."
+      );
+    } finally {
+      setResending(false);
     }
   };
 
@@ -100,17 +164,19 @@ const RegisterForm = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        backgroundColor: "gray.100",
+        backgroundColor: "#f3f4f6",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 1,
+        p: { xs: 2, sm: 4 },
       }}
     >
       <Paper
+        elevation={3}
         sx={{
-          padding: 1,
+          p: { xs: 3, sm: 5 },
           width: "100%",
+          maxWidth: 500,
           backgroundColor: "white",
           borderRadius: 2,
         }}
@@ -120,61 +186,134 @@ const RegisterForm = () => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 3,
+            gap: 2.5,
           }}
         >
-          <UserPlus sx={{ fontSize: 48, color: "primary.main" }} />
-
-          <Typography
-            component="h1"
+          {/* Icon */}
+          <Box
             sx={{
-              fontSize: "1.25rem",
-              fontWeight: "bold",
-              textAlign: "center",
+              borderRadius: "50%",
+              backgroundColor: isSuccess ? "#dcfce7" : "#fee2e2",
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            Create Account
+            {isSuccess ? (
+              <MailCheck size={40} color="#16a34a" />
+            ) : (
+              <UserPlus size={40} color="#dc2626" />
+            )}
+          </Box>
+
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: "bold",
+              textAlign: "center",
+              color: "#111827",
+              fontSize: { xs: "1.5rem", sm: "2rem" },
+            }}
+          >
+            {isSuccess ? "Verify Your Email" : "Create Account"}
           </Typography>
 
+          {/* Error */}
           {error && (
-            <Alert severity="error" sx={{ width: "100%", marginBottom: 2 }}>
+            <Alert severity="error" sx={{ width: "100%" }}>
               {error}
             </Alert>
           )}
 
-          {isSuccess ? (
-            <Box sx={{ width: "100%" }}>
-              <Alert severity="success" sx={{ width: "100%", marginBottom: 2 }}>
-                Registration successful! Please check your email to confirm
-                account creation.
-              </Alert>
+          {/* Success / informational message */}
+          {message && (
+            <Alert severity="success" sx={{ width: "100%" }}>
+              {message}
+            </Alert>
+          )}
 
-              <Button
-                fullWidth
-                variant="contained"
-                sx={{
-                  paddingY: 2,
-                  backgroundColor: "primary.main",
-                  "&:hover": {
-                    backgroundColor: "primary.dark",
-                  },
-                  fontSize: "1rem",
-                  height: 56,
-                  textTransform: "none",
-                }}
-                onClick={() => router.push("/auth/login")}
-              >
-                Go to Login
-              </Button>
-            </Box>
-          ) : (
-            <form
-              onSubmit={handleSubmit}
+          {isSuccess ? (
+            <Box
               sx={{
                 width: "100%",
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="body1">
+                We sent a verification link to:
+              </Typography>
+
+              <Typography
+                fontWeight="bold"
+                sx={{ overflowWrap: "anywhere" }}
+              >
+                {registeredEmail}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary">
+                Open your email and click the verification link.
+                Once verified, you can sign in to Sushi Toshi.
+              </Typography>
+
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() =>
+                  router.push(getAuthRoute("/auth/login"))
+                }
+                sx={{
+                  backgroundColor: "#dc2626",
+                  "&:hover": {
+                    backgroundColor: "#b91c1c",
+                  },
+                  py: 1.5,
+                  textTransform: "none",
+                }}
+              >
+                Go to Login
+              </Button>
+
+              <Button
+                fullWidth
+                variant="outlined"
+                disabled={resending}
+                onClick={handleResendVerification}
+                sx={{
+                  borderColor: "#dc2626",
+                  color: "#dc2626",
+                  textTransform: "none",
+                  py: 1.5,
+                }}
+              >
+                {resending ? (
+                  <CircularProgress size={24} />
+                ) : (
+                  "Resend Verification Email"
+                )}
+              </Button>
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >
+                Didn't receive the email? Check your spam folder
+                or request another verification link.
+              </Typography>
+            </Box>
+          ) : (
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+              sx={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2.5,
               }}
             >
               <TextField
@@ -182,10 +321,10 @@ const RegisterForm = () => {
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleChange}
+                autoComplete="given-name"
                 required
                 fullWidth
-                autoComplete="given-name"
-                sx={{ marginBottom: 2 }}
+                disabled={loading}
               />
 
               <TextField
@@ -193,10 +332,10 @@ const RegisterForm = () => {
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleChange}
+                autoComplete="family-name"
                 required
                 fullWidth
-                autoComplete="family-name"
-                sx={{ marginBottom: 2 }}
+                disabled={loading}
               />
 
               <TextField
@@ -205,10 +344,10 @@ const RegisterForm = () => {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
+                autoComplete="email"
                 required
                 fullWidth
-                autoComplete="email"
-                sx={{ marginBottom: 2 }}
+                disabled={loading}
               />
 
               <TextField
@@ -217,10 +356,12 @@ const RegisterForm = () => {
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
+                autoComplete="new-password"
+                helperText="Minimum 8 characters"
+                inputProps={{ minLength: 8 }}
                 required
                 fullWidth
-                autoComplete="new-password"
-                sx={{ marginBottom: 2 }}
+                disabled={loading}
               />
 
               <TextField
@@ -229,10 +370,10 @@ const RegisterForm = () => {
                 type="password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
+                autoComplete="new-password"
                 required
                 fullWidth
-                autoComplete="new-password"
-                sx={{ marginBottom: 3 }}
+                disabled={loading}
               />
 
               <Button
@@ -241,40 +382,41 @@ const RegisterForm = () => {
                 variant="contained"
                 disabled={loading}
                 sx={{
-                  paddingY: 2,
-                  marginBottom: 3,
-                  backgroundColor: "red.600",
+                  backgroundColor: "#dc2626",
                   "&:hover": {
-                    backgroundColor: "red.700",
+                    backgroundColor: "#b91c1c",
                   },
-                  fontSize: "1rem",
-                  height: 56,
+                  color: "white",
+                  py: 1.5,
+                  height: 52,
                   textTransform: "none",
+                  fontSize: "1rem",
                 }}
               >
                 {loading ? (
-                  <CircularProgress size={24} sx={{ color: "white" }} />
+                  <CircularProgress
+                    size={24}
+                    sx={{ color: "white" }}
+                  />
                 ) : (
-                  "Register"
+                  "Create Account"
                 )}
               </Button>
 
-              <Box sx={{ textAlign: "center", marginTop: 2 }}>
-                <Link href="/auth/login" passHref>
-                  <Button
-                    sx={{
-                      textTransform: "none",
-                      fontSize: "0.875rem",
-                      padding: "0.5rem 1rem",
-                      color: "blue.600",
-                      "&:hover": { color: "blue.800" },
-                    }}
-                  >
-                    Already have an account? Sign in
-                  </Button>
-                </Link>
+              <Box sx={{ textAlign: "center" }}>
+                <Button
+                  component={Link}
+                  href={getAuthRoute("/auth/login")}
+                  variant="text"
+                  sx={{
+                    textTransform: "none",
+                    color: "#4b5563",
+                  }}
+                >
+                  Already have an account? Sign in
+                </Button>
               </Box>
-            </form>
+            </Box>
           )}
         </Box>
       </Paper>

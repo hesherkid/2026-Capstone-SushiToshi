@@ -13,7 +13,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { KeyRound } from "lucide-react";
-import api from "@/config/api";
+import { resetPassword } from "@/utils/auth";
 
 const ResetPasswordFormContent = () => {
   const router = useRouter();
@@ -35,39 +35,60 @@ const ResetPasswordFormContent = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
+  if (formData.newPassword !== formData.confirmPassword) {
+    setError("Passwords do not match");
+    return;
+  }
 
-    if (!token) {
-      setError("Reset token is missing");
-      setLoading(false);
-      return;
-    }
+  if (formData.newPassword.length < 8) {
+    setError("Password must be at least 8 characters long");
+    return;
+  }
 
-    try {
-      await api.post("/auth/reset-password", {
-        token,
-        new_password: formData.newPassword,
-      });
+  if (!token) {
+    setError("Reset token is missing");
+    return;
+  }
 
-      router.push("/auth/login?reset=success");
-    } catch (err) {
+  setLoading(true);
+
+  try {
+    await resetPassword(token, formData.newPassword);
+
+    // Clear password fields
+    setFormData({
+      newPassword: "",
+      confirmPassword: "",
+    });
+
+    router.push("/auth/login?reset=success");
+  } catch (err) {
+    const data = err.response?.data;
+
+    if (err.response?.status === 400) {
       setError(
-        err.response?.data?.detail ||
+        data?.message ||
+          data?.detail ||
+          "Invalid or expired reset link. Please request a new one."
+      );
+    } else if (err.response?.status === 429) {
+      setError("Too many requests. Please try again later.");
+    } else {
+      setError(
+        data?.message ||
+          data?.detail ||
           "Failed to reset password. Please try again."
       );
-    } finally {
-      setLoading(false);
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Box
