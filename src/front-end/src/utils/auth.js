@@ -1,133 +1,191 @@
+
 import api from "@/config/api";
 import { decodeToken, getUserRoles } from "@/config/auth";
 
-
-// Import dispatchAuthChange from useAuth hook
 let dispatchAuthChange;
-if (typeof window !== 'undefined') {
-  import("@/hooks/useAuth").then(module => {
+
+if (typeof window !== "undefined") {
+  import("@/hooks/useAuth").then((module) => {
     dispatchAuthChange = module.dispatchAuthChange;
   });
 }
 
-// export const GoogleSocialLogin = () => {
-//   const passport = require('passport')
-//   const GoogleStategy = require('passport-google-oauth20').Strategy
-//   passport.use(
-//     new GoogleStategy(
-//       {
-//         clientID: process.env.GOOGLE_CLIENT_ID,
-//         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//         callbackURL:'/auth/google/callback'
+const notifyAuthChange = () => {
+  if (typeof window !== "undefined") {
+    dispatchAuthChange?.();
+  }
+};
 
-//       },
-//           async (accessToken, refreshToken, profile, done) => {
-//       try {
-//         // Check if user exists
-//         let user = await User.findOne({ googleId: profile.id })
-//         if (!user) {
-//           // Create new user if not found
-//           user = new User({
-//             googleId: profile.id,
-//             username: profile.displayName,
-//             email: profile.emails[0].value,
-//           })
-//           await user.save()
-//           console.log(user)
-//         }
-//         return done(null, user)
-//       } catch (error) {
-//         return done(error, false)
-//       }
-//     }
-//     )
-//   )
-// }
+// --------------------------------------------------
+// TOKEN MANAGEMENT
+// --------------------------------------------------
 
-/**
- * Get stored auth token
- */
 export const getAuthToken = () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
+
   return localStorage.getItem("authToken");
 };
 
-/**
- * Login user with email and password
- */
+// --------------------------------------------------
+// LOGIN
+// --------------------------------------------------
+
 export const loginUser = async (email, password) => {
   const response = await api.post("/auth/login", {
     email,
     password,
   });
-  
-  console.log(`Auth.js Response:`, response.data);
-  
-  if (response.data.access_token) {
-    localStorage.setItem("authToken", response.data.access_token);
-    localStorage.setItem("access_token", response.data.access_token);
-    
-    if (response.data.expires_in) {
-      const expiresAt = Date.now() + (response.data.expires_in * 1000);
-      localStorage.setItem("tokenExpiresAt", expiresAt.toString());
+
+  const data = response.data;
+
+  if (data.access_token && typeof window !== "undefined") {
+    localStorage.setItem("authToken", data.access_token);
+    localStorage.setItem("access_token", data.access_token);
+
+    if (data.expires_in) {
+      const expiresAt = Date.now() + data.expires_in * 1000;
+
+      localStorage.setItem(
+        "tokenExpiresAt",
+        expiresAt.toString()
+      );
     }
-    
-    if (response.data.user) {
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+
+    if (data.user) {
+      localStorage.setItem("user", JSON.stringify(data.user));
     }
-    
-    // Dispatch auth change event
-    if (typeof window !== 'undefined' && dispatchAuthChange) {
-      dispatchAuthChange();
-    }
+
+    notifyAuthChange();
   }
+
+  return data;
+};
+
+// --------------------------------------------------
+// REGISTER
+// --------------------------------------------------
+
+export const registerUser = async ({
+  email,
+  password,
+  firstName,
+  lastName,
+}) => {
+  const response = await api.post("/auth/register", {
+    email,
+    password,
+    first_name: firstName,
+    last_name: lastName,
+  });
 
   return response.data;
 };
 
-/**
- * Logout user
- */
-export const logoutUser = () => {
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("access_token");
-  localStorage.clear();
-  // Dispatch auth change event
-  if (typeof window !== 'undefined' && dispatchAuthChange) {
-    dispatchAuthChange();
-  }
-  
-  if (typeof window !== 'undefined') {
-    window.location.href = "/";
-  }
+// --------------------------------------------------
+// EMAIL VERIFICATION
+// --------------------------------------------------
+
+export const verifyEmail = async (token) => {
+  const response = await api.post("/auth/verify-email", {
+    token,
+  });
+
+  return response.data;
 };
 
-/**
- * Get current authenticated user
- */
+// --------------------------------------------------
+// RESEND VERIFICATION
+// --------------------------------------------------
+
+export const resendVerificationEmail = async (email) => {
+  const response = await api.post(
+    "/auth/resend-verification",
+    { email }
+  );
+
+  return response.data;
+};
+
+// --------------------------------------------------
+// FORGOT PASSWORD
+// --------------------------------------------------
+
+export const forgotPassword = async (email) => {
+  const response = await api.post(
+    "/auth/forgot-password",
+    { email }
+  );
+
+  return response.data;
+};
+
+// --------------------------------------------------
+// RESET PASSWORD
+// --------------------------------------------------
+
+export const resetPassword = async (token, newPassword) => {
+  const response = await api.post(
+    "/auth/reset-password",
+    {
+      token,
+      newPassword,
+    }
+  );
+
+  return response.data;
+};
+
+// --------------------------------------------------
+// LOGOUT
+// --------------------------------------------------
+
+export const logoutUser = () => {
+  if (typeof window === "undefined") return;
+
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("tokenExpiresAt");
+  localStorage.removeItem("user");
+
+  notifyAuthChange();
+
+  window.location.href = "/";
+};
+
+// --------------------------------------------------
+// CURRENT USER
+// --------------------------------------------------
+
 export const getCurrentUser = async () => {
   const response = await api.get("/auth/me");
   return response.data;
 };
 
-/**
- * Check if user is authenticated
- */
+// --------------------------------------------------
+// AUTHENTICATION STATUS
+// --------------------------------------------------
+
 export const isAuthenticated = () => {
-  if (typeof window === 'undefined') return false;
-  
-  const token = localStorage.getItem("authToken");
+  if (typeof window === "undefined") return false;
+
+  const token = getAuthToken();
   if (!token) return false;
-  
-  const claims = decodeToken(token);
-  if (!claims || !claims.exp) return false;
-  
-  return claims.exp * 1000 > Date.now();
+
+  try {
+    const claims = decodeToken(token);
+
+    if (!claims?.exp) return false;
+
+    return claims.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
 };
 
-/**
- * Get current user's roles
- */
+// --------------------------------------------------
+// USER ROLES
+// --------------------------------------------------
+
 export const getCurrentUserRoles = () => {
   const token = getAuthToken();
   return getUserRoles(token);

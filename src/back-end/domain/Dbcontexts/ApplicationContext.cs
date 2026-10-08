@@ -6,7 +6,7 @@ namespace back_end.domain.DbContexts
   public class ApplicationDbContext : DbContext
   {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-
+    public DbSet<AuthActionToken> AuthActionTokens => Set<AuthActionToken>();
     public DbSet<Billing> Bills { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
     public DbSet<DiningSession> DiningSessions { get; set; } = null!;
@@ -32,6 +32,23 @@ namespace back_end.domain.DbContexts
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+      // AuthActionToken for email verification and reset password
+      modelBuilder.Entity<AuthActionToken>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.TokenHash)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.HasIndex(x => x.TokenHash)
+                .IsUnique();
+
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
       // Composite keys for junction tables - REQUIRED since EF can't infer these
       modelBuilder.Entity<MenuItemTag>()
           .HasKey(mit => new { mit.Menu_item_id, mit.Tag_id });
@@ -41,7 +58,7 @@ namespace back_end.domain.DbContexts
 
       modelBuilder.Entity<MenuLocations>()
           .HasKey(ml => new { ml.Menu_Id, ml.Location_Id });
-
+            
       // DiningSession relationships
       modelBuilder.Entity<DiningSession>()
           .HasOne(ds => ds.Location)

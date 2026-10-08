@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import api from "@/config/api";
+import { forgotPassword } from "@/utils/auth";
 import {
   Box,
   Button,
@@ -26,10 +26,18 @@ export const ForgotPasswordForm = () => {
     setLoading(true);
 
     try {
-      await api.post("/auth/forgot-password", { email });
+      const response = await forgotPassword(
+        email.trim().toLowerCase()
+      );
+
+      setSuccess(
+        response?.message ||
+          "If an account exists for this email, a password reset link will be sent. Please check your inbox."
+      );
     } catch (err) {
       setError(
-        err.response?.data?.detail ||
+        err.response?.data?.message ||
+          err.response?.data?.detail ||
           "An error occurred. Please try again later."
       );
     } finally {
