@@ -140,13 +140,13 @@ namespace back_end.Services
 
             // location-specific overrides
             var locSsid = _config[$"QRCodeSettings:Locations:{locationId}:WiFi:SSID"];
-            var locPwd  = _config[$"QRCodeSettings:Locations:{locationId}:WiFi:Password"];
+            var locPwd = _config[$"QRCodeSettings:Locations:{locationId}:WiFi:Password"];
             if (!string.IsNullOrWhiteSpace(locSsid) && !string.IsNullOrWhiteSpace(locPwd))
                 return (locSsid!, locPwd!);
 
             // defaults
             var defSsid = _config["QRCodeSettings:WiFi:SSID"];
-            var defPwd  = _config["QRCodeSettings:WiFi:Password"];
+            var defPwd = _config["QRCodeSettings:WiFi:Password"];
             if (string.IsNullOrWhiteSpace(defSsid) || string.IsNullOrWhiteSpace(defPwd))
             {
                 _logger.LogError("No WiFi credentials configured (QRCodeSettings:WiFi)");
@@ -167,7 +167,7 @@ namespace back_end.Services
 
         private static byte[] CreateQrPng(string content, QRCodeGenerator.ECCLevel ecc, int pixelsPerModule)
         {
-            using var gen  = new QRCodeGenerator();
+            using var gen = new QRCodeGenerator();
             using var data = gen.CreateQrCode(content, ecc);
             var png = new PngByteQRCode(data);
             return png.GetGraphic(pixelsPerModule);
@@ -195,7 +195,7 @@ namespace back_end.Services
             using var typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
                                 ?? SKTypeface.Default;
 
-            using var font = new SKFont(typeface, 24); // <--- Enter Text size
+            using var font = new SKFont(typeface, 36);
 
             using var paint = new SKPaint
             {
@@ -207,7 +207,7 @@ namespace back_end.Services
             float textX = qrW / 2f;
 
             // Compute Y position manually
-            float textY = qrH + (labelHeight / 2f);
+            float textY = qrH + (labelHeight / 2f) - 44f;
 
             // Draw centered text (set alignment on paint)
             canvas.DrawText(label, textX, textY, SKTextAlign.Center, font, paint);

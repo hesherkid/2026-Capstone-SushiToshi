@@ -23,7 +23,7 @@ api.interceptors.request.use(
     // Add token from localStorage if it exists
     const token =
       typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
-    console.log(`Api Request: ${token}`);
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
