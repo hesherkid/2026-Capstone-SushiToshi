@@ -14,7 +14,6 @@ import {
   ListItemButton,
   Box,
   useTheme,
-  useMediaQuery,
   CircularProgress,
   Select,
   MenuItem,
@@ -36,7 +35,7 @@ import {
   Table,
   Group,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { logoutUser } from "@/utils/auth";
@@ -49,24 +48,18 @@ import { useNotification } from "@/contexts/NotificationContext";
 
 const AppBarWithTitle = ({ title }) => {
   const router = useRouter();
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/auth/login";
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(
     storage.get("branch-location")
   );
   const [allLocations, setAllLocations] = useState([]);
   const { isAuthenticated, userRole, loading } = useAuth();
-  const { notifySuccess, notifyError, notifyInfo } = useNotification();
+  const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
   const isGuest = typeof window !== "undefined" && localStorage.getItem("guest") === "true";
 
-  console.log("AppBar Debug:", { 
-    isAuthenticated, 
-    userRole, 
-    loading, 
-    isGuest 
-  });
-  
   useEffect(() => {
     const fetchAllLocations = async () => {
       try {
@@ -217,10 +210,11 @@ const handleLogout = async () => {
     </List>
   );
 
-  if (loading) return <CircularProgress />;
-
   return (
-    <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+    <AppBar
+      position="fixed"
+      sx={{ zIndex: theme.zIndex.drawer + 1, overflow: "visible" }}
+    >
       <Toolbar
         sx={{
           minHeight: { xs: 56, sm: 64 },
@@ -272,11 +266,13 @@ const handleLogout = async () => {
           <Image
             src="/images/logo.png"
             alt="Logo"
-            width={isMobile ? 80 : 115}
-            height={isMobile ? 48 : 70}
+            width={115}
+            height={70}
             style={{
               objectFit: "contain",
-              padding: isMobile ? "2px" : "4px",
+              width: "clamp(80px, 20vw, 115px)",
+              height: "auto",
+              padding: "4px",
             }}
             priority
           />
@@ -346,26 +342,30 @@ const handleLogout = async () => {
               </FormControl>
             )}
 
-          <Button
-            color="inherit"
-            onClick={
-              isAuthenticated
-                ? handleLogout
-                : () => handleNavigation("/auth/login")
-            }
-            startIcon={isAuthenticated ? <LogOut /> : <LogIn />}
-            sx={{
-              minWidth: { xs: 40, sm: "auto" },
-              px: { xs: 1, sm: 2 },
-              "& .MuiButton-startIcon": {
-                margin: { xs: 0, sm: "auto" },
-              },
-            }}
-          >
-            <Typography sx={{ display: { xs: "none", sm: "block" } }}>
-              {isAuthenticated || isGuest ? "Logout" : "Login"}
-            </Typography>
-          </Button>
+          {!isLoginPage && (
+            <Button
+              color="inherit"
+              onClick={
+                isAuthenticated
+                  ? handleLogout
+                  : () => handleNavigation("/auth/login")
+              }
+              endIcon={isAuthenticated ? <LogOut /> : <LogIn />}
+              sx={{
+                minWidth: { xs: 56, sm: "auto" },
+                px: { xs: 2, sm: 2.5 },
+                justifyContent: "flex-end",
+                "& .MuiButton-endIcon": {
+                  margin: 0,
+                  marginLeft: 1,
+                },
+              }}
+            >
+              <Typography sx={{ display: { xs: "none", sm: "block" } }}>
+                {isAuthenticated || isGuest ? "Logout" : "Login"}
+              </Typography>
+            </Button>
+          )}
         </Box>
 
         <Drawer
@@ -381,6 +381,25 @@ const handleLogout = async () => {
           {renderMenuList()}
         </Drawer>
       </Toolbar>
+    {loading && (
+      <Box
+        role="status"
+        aria-label="Loading"
+        sx={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: theme.zIndex.drawer + 2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
+        }}
+      >
+        <CircularProgress size={24} />
+      </Box>
+    )}
     </AppBar>
   );
 };

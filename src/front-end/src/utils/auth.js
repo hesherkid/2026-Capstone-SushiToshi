@@ -149,7 +149,7 @@ export const logoutUser = () => {
 
   notifyAuthChange();
 
-  window.location.href = "/";
+  window.location.href = "/auth/login";
 };
 
 // --------------------------------------------------

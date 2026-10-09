@@ -50,7 +50,7 @@ useEffect(() => {
       window.location.href = "/";
       
     } catch (err) {
-      console.log(err)
+      console.error(err)
       alert(err?.response?.data?.message || "Unable to join this table.");
       window.location.href = "/";
     }
