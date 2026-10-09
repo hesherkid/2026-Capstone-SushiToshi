@@ -37,23 +37,35 @@ namespace back_end.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<UserResponseDTO>> CreateStaff(
             [FromBody] CreateStaffDTO user_data
-            // [FromQuery] UserRoles role
+        // [FromQuery] UserRoles role
         )
         {
-            var location = new Locations();
-            var role = user_data.Role;
+            Locations location = new();
+            UserRoles? role = user_data.Role;
+
             if (role != UserRoles.Staff && role != UserRoles.Admin)
                 return BadRequest("Role must be either staff or admin");
 
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
 
-            var email = user_data.Email.Trim().ToLowerInvariant();
-            var emailExists = await _context.Users.AnyAsync(u => u.Email.ToLower() == email);
-            if (emailExists) return Conflict("Email already registered");
+            string? email = user_data.Email?.Trim().ToLowerInvariant();
+            bool emailExists = await _context.Users.AnyAsync(u => u.Email.Equals(email, StringComparison.CurrentCultureIgnoreCase));
 
-            var now = DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(user_data.First_name) || string.IsNullOrWhiteSpace(user_data.Last_name))
+                return BadRequest("First name and last name are required");
 
-            var entity = new User
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest("Email is required");
+            else if (emailExists)
+                return Conflict("Email already registered");
+
+            if (string.IsNullOrWhiteSpace(user_data.Password))
+                return BadRequest("Password is required");
+
+            DateTime now = DateTime.UtcNow;
+
+            User entity = new()
             {
                 Email = email,
                 Password_hash = BCrypt.Net.BCrypt.HashPassword(user_data.Password, workFactor: 12),
@@ -117,7 +129,7 @@ namespace back_end.Controllers
                     Location = u.PrimaryLocation != null ? u.PrimaryLocation.Name : "Not Assigned"
                 })
                 .ToListAsync();
-            
+
 
             return Ok(users);
         }
@@ -174,7 +186,7 @@ namespace back_end.Controllers
         [HttpPut("{user_id:int}")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<UserResponseDTO>> UpdateStaff(int user_id, [FromBody] StaffMemberUpdateDTO user_data)
-        { 
+        {
             // var user = await _context.Users
             //     .Where(x => x.User_id == user_id &&
             //                 (x.Role == UserRoles.Staff || x.Role == UserRoles.Admin))
@@ -211,7 +223,7 @@ namespace back_end.Controllers
             user.Status = user_data.Status;
 
             await _context.SaveChangesAsync();
-             return Ok(ToResponse(user));
+            return Ok(ToResponse(user));
         }
 
         // POST: /api/staff/5/change-password
@@ -290,8 +302,8 @@ namespace back_end.Controllers
 
 
         }
-        
-        
+
+
         [HttpGet("get-initial-staff-location")]
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetStaffStartingLocation(
@@ -305,7 +317,7 @@ namespace back_end.Controllers
                 {
                     return BadRequest("Issue in processing a User location request.");
                 }
-                var user = await _context.Users.Include( u => u.PrimaryLocation).FirstOrDefaultAsync(u => u.User_id == userId);
+                var user = await _context.Users.Include(u => u.PrimaryLocation).FirstOrDefaultAsync(u => u.User_id == userId);
                 if (user is null)
                 {
                     return BadRequest("Issue in Processing a user request for location change");
