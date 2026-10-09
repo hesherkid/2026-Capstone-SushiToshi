@@ -14,8 +14,6 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal Price { get; set; }
         public int? Total_Units_Ordered { get; set; } = 0;
-        public int? Total_Views { get; set; } = 0;
-        public int? Total_View_Seconds { get; set; } = 0;
         public int? Adult_Limit { get; set; } = 0;
         public int? Child_Limit { get; set; } = 0;
         public int? Senior_Limit { get; set; } = 0;
@@ -34,10 +32,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal? Price { get; set; }
         public int? Total_Units_Ordered { get; set; }
-        public int? Total_Views { get; set; }
-        public int? Total_View_Seconds { get; set; }
         public DateTime? Last_Ordered_At { get; set; }
-        public DateTime? Last_Viewed_At { get; set; }
         public int? Adult_Limit { get; set; }
         public int? Child_Limit { get; set; }
         public int? Senior_Limit { get; set; }
@@ -49,7 +44,6 @@ namespace back_end.DTO.MenuItemAssignmentDTO
     class MenuAssignmentResponse : MenuItemAssignmentBaseDTO
     {
         public DateTime? Last_Ordered_At { get; set; }
-        public DateTime? Last_Viewed_At { get; set; }
         public bool? Is_Add_On { get; set; }
         public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
     }

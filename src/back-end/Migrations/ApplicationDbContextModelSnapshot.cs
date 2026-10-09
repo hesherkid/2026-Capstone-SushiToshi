@@ -302,9 +302,6 @@ namespace back_end.Migrations
                     b.Property<DateTime>("LastOrdered")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("LastViewedAt")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(65,30)");
 
@@ -318,12 +315,6 @@ namespace back_end.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Total_Units_Ordered")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Total_View_Seconds")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Total_Views")
                         .HasColumnType("int");
 
                     b.HasKey("Menu_Id", "Item_Id");

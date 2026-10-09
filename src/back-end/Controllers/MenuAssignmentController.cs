@@ -4,7 +4,6 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.DTO.MenuItemAssignmentDTO;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.VisualBasic;
 
 namespace back_end.Controllers
 {
@@ -31,19 +30,15 @@ namespace back_end.Controllers
         /// An <see cref="IActionResult"/> containing the created <see cref="MenuItemAssignment"/> object.
         /// Returns HTTP 200 (OK) with the created assignment on success.
         /// Returns HTTP 400 (Bad Request) if validation fails.
-        /// Returns HTTP 404 (Not Found) if the menu or item doesn't exist.
-        /// Returns HTTP 409 (Conflict) if the assignment already exists.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
         /// </returns>
         /// <response code="200">Returns the newly created menu item assignment</response>
         /// <response code="400">If the request data is invalid</response>
-        /// <response code="404">If the menu or menu item is not found</response>
-        /// <response code="409">If the assignment already exists</response>
         /// <response code="500">If an internal error occurs while creating the assignment</response>
         /// <remarks>
         /// Sample request:
         ///
-        ///     POST /api/menu
+        ///     POST /api/menuassignment
         ///     {
         ///         "menu_Id": 123,
         ///         "item_Id": 456,
@@ -52,21 +47,18 @@ namespace back_end.Controllers
         ///         "senior_Limit": 50,
         ///         "child_Limit": 30,
         ///         "tot_Limit": 20,
-        ///         "total_Units_Ordered": 0,
-        ///         "total_Views": 0,
-        ///         "total_View_Seconds": 0,
+        ///         "is_Add_on": true,
         ///         "status": "Available"
         ///     }
         ///
         /// Creates a new association between a menu and a menu item.
-        /// All limit and statistics fields default to 0 if not provided.
+        /// Limits default to 0 if not provided. Add-on items must have a price above 0.
+        /// Item views are recorded separately (POST api/menu-item-views).
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
         [ProducesResponseType(typeof(MenuItemAssignment), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Create_Menu_Item_Assignment(
                    MenuAssignmentCreate assignmentData
@@ -86,8 +78,6 @@ namespace back_end.Controllers
                     Item_Id = assignmentData.Item_Id,
                     Price = assignmentData.Price,
                     Total_Units_Ordered = assignmentData.Total_Units_Ordered ?? 0,
-                    Total_Views = assignmentData.Total_Views ?? 0,
-                    Total_View_Seconds = assignmentData.Total_View_Seconds ?? 0,
                     Adult_Limit = assignmentData.Adult_Limit ?? 0,
                     Child_limit = assignmentData.Child_Limit ?? 0,
                     Senior_limit = assignmentData.Senior_Limit ?? 0,
@@ -137,15 +127,13 @@ namespace back_end.Controllers
         ///         "senior_Limit": 50,
         ///         "child_Limit": 30,
         ///         "tot_Limit": 20,
-        ///         "total_Units_Ordered": 200,
         ///         "is_Add_on": false,
         ///         "status": "Available"
         ///     }
         ///
         /// This endpoint requires Admin or Staff role authorization.
         /// All fields are optional - only provided fields will be updated.
-        /// Validates that individual limits do not exceed total limit and follow hierarchy rules.
-        /// Total_Views and Total_View_Seconds are incremented (not replaced) when provided.
+        /// Child, toddler, and senior limits cannot exceed the adult limit.
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPut("{menu_id}/{item_id}")]
@@ -193,7 +181,7 @@ namespace back_end.Controllers
 
                 if (updateData.Adult_Limit.HasValue)
                 {
-                    assignment.Adult_Limit = (int)updateData.Adult_Limit;
+                    assignment.Adult_Limit = updateData.Adult_Limit.Value;
                 }
                 if (updateData.Child_Limit.HasValue)
                 {
@@ -201,31 +189,19 @@ namespace back_end.Controllers
                 }
                 if (updateData.Senior_Limit.HasValue)
                 {
-                    assignment.Senior_limit = (int)updateData.Senior_Limit;
+                    assignment.Senior_limit = updateData.Senior_Limit.Value;
                 }
                 if (updateData.Tot_Limit.HasValue)
                 {
-                    assignment.Tot_Limit = (int)updateData.Tot_Limit;
+                    assignment.Tot_Limit = updateData.Tot_Limit.Value;
                 }
                 if (updateData.Total_Units_Ordered.HasValue)
                 {
-                    assignment.Total_Units_Ordered = (int)updateData.Total_Units_Ordered;
-                }
-                if (updateData.Total_Views.HasValue)
-                {
-                    assignment.Total_Views = assignment.Total_Views + (int)updateData.Total_Views;
-                }
-                if (updateData.Total_View_Seconds.HasValue)
-                {
-                    assignment.Total_View_Seconds = assignment.Total_View_Seconds + (int)updateData.Total_View_Seconds;
+                    assignment.Total_Units_Ordered = updateData.Total_Units_Ordered.Value;
                 }
                 if (updateData.Last_Ordered_At.HasValue)
                 {
                     assignment.LastOrdered = DateTime.UtcNow;
-                }
-                if (updateData.Last_Viewed_At.HasValue)
-                {
-                    assignment.LastViewedAt = DateTime.UtcNow;
                 }
                 if (updateData.Price.HasValue)
                 {
@@ -366,8 +342,6 @@ namespace back_end.Controllers
                         Senior_limit = element.Senior_limit,
                         Tot_Limit = element.Tot_Limit,
                         Total_Units_Ordered = 0,
-                        Total_Views = 0,
-                        Total_View_Seconds = 0,
                         Is_Add_On = element.Is_Add_On,
                         Status = element.Status,
                     });
