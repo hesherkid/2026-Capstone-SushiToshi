@@ -228,17 +228,22 @@ namespace back_end.Controllers
             if (!tables.Any())
                 return BadRequest($"No tables found for location {locationId}");
 
-            // Collect all QR code paths with their metadata
-            var qrCodes = new List<(string path, string type, int tableNumber)>();
+            // Group QR codes by table so a shared table label is drawn once per table group.
+            var qrCodesByTable = new List<(int tableNumber, List<(string path, string type)> qrCodes)>();
             foreach (var table in tables)
             {
+                var tableQrCodes = new List<(string path, string type)>();
+
                 var wifiPath = _qrService.GetExistingQrCodePath(locationId, table.table_number, "wifi");
                 if (wifiPath != null && System.IO.File.Exists(wifiPath))
-                    qrCodes.Add((wifiPath, "WiFi", table.table_number));
+                    tableQrCodes.Add((wifiPath, "Scan for WiFi"));
 
                 var sessionPath = _qrService.GetExistingQrCodePath(locationId, table.table_number, "session");
                 if (sessionPath != null && System.IO.File.Exists(sessionPath))
-                    qrCodes.Add((sessionPath, "Session", table.table_number));
+                    tableQrCodes.Add((sessionPath, "Scan to Order"));
+
+                if (tableQrCodes.Count > 0)
+                    qrCodesByTable.Add((table.table_number, tableQrCodes));
             }
 
             // Create PDF in memory
@@ -249,16 +254,15 @@ namespace back_end.Controllers
                 const float pageWidth = 612f;
                 const float pageHeight = 792f;
 
-                // Layout: 4 across × 4 down = 16 QR codes per page
+                // Layout: 2 table groups across × 4 down = 8 tables per page
                 // QR code print size: 1.75" × 1.75" (126 points at 72 DPI)
-                const int qrPerRow = 4;
-                const int qrPerColumn = 4;
-                const int qrPerPage = qrPerRow * qrPerColumn; // 16
+                const int tableGroupsPerRow = 2;
+                const int tableGroupsPerColumn = 4;
+                const int tableGroupsPerPage = tableGroupsPerRow * tableGroupsPerColumn;
+                const float qrGap = 6f;
 
                 // QR code specifications
                 const float qrSize = 1.75f * 72f; // 126 points (1.75 inches)
-                const float labelHeight = 28f; // Space for labels below QR code
-
                 // Calculate cell dimensions with margins
                 const float marginX = 36f; // 0.5" margins on left/right
                 const float marginY = 36f; // 0.5" margins on top/bottom
@@ -267,53 +271,61 @@ namespace back_end.Controllers
                 const float availableWidth = pageWidth - (2 * marginX);
                 const float availableHeight = pageHeight - (2 * marginY) - headerHeight;
 
-                const float cellWidth = availableWidth / qrPerRow; // 135 points per cell
-                const float cellHeight = availableHeight / qrPerColumn; // ~169 points per cell
+                const float cellWidth = availableWidth / tableGroupsPerRow;
+                const float cellHeight = availableHeight / tableGroupsPerColumn;
 
                 // Fonts and paints, created once and reused for every page
                 var boldTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default;
-                var regularTypeface = SKTypeface.FromFamilyName("Arial") ?? SKTypeface.Default;
-                using var headerFont = new SKFont(boldTypeface, 16);
-                using var tableFont = new SKFont(boldTypeface, 12);
-                using var typeFont = new SKFont(regularTypeface, 10);
-                using var blackPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
-                using var grayPaint = new SKPaint { Color = SKColors.DarkGray, IsAntialias = true };
+                var regularTypeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal) ?? SKTypeface.Default;
+                using SKFont headerFont = new(boldTypeface, 16);
+                using SKFont tableFont = new(boldTypeface, 15);
+                using SKFont typeFont = new(regularTypeface, 13) { Embolden = true };
+                using SKPaint blackPaint = new() { Color = SKColors.Black, IsAntialias = true };
+                using SKPaint grayPaint = new() { Color = SKColors.Black, IsAntialias = true };
 
-                // Process QR codes in batches of 16 per page
-                for (int pageIndex = 0; pageIndex < qrCodes.Count; pageIndex += qrPerPage)
+                // Process table groups in batches of 8 per page.
+                for (int pageIndex = 0; pageIndex < qrCodesByTable.Count; pageIndex += tableGroupsPerPage)
                 {
                     ct.ThrowIfCancellationRequested();
 
                     using var canvas = document.BeginPage(pageWidth, pageHeight);
 
                     // Draw page header (centered)
-                    var headerText = $"{locationName} - QR Codes (Page {(pageIndex / qrPerPage) + 1})";
+                    var headerText = $"{locationName} - QR Codes (Page {(pageIndex / tableGroupsPerPage) + 1})";
                     canvas.DrawText(headerText, pageWidth / 2, marginY - 8, SKTextAlign.Center, headerFont, blackPaint);
 
-                    // Draw QR codes in grid
-                    int qrOnThisPage = Math.Min(qrPerPage, qrCodes.Count - pageIndex);
-                    for (int i = 0; i < qrOnThisPage; i++)
+                    // Draw table groups in grid; each group may contain both WiFi and Order QR codes.
+                    int tablesOnThisPage = Math.Min(tableGroupsPerPage, qrCodesByTable.Count - pageIndex);
+                    for (int i = 0; i < tablesOnThisPage; i++)
                     {
-                        int row = i / qrPerRow;
-                        int col = i % qrPerRow;
+                        int row = i / tableGroupsPerRow;
+                        int col = i % tableGroupsPerRow;
 
-                        var (qrPath, qrType, tableNum) = qrCodes[pageIndex + i];
+                        var (tableNum, qrCodes) = qrCodesByTable[pageIndex + i];
 
-                        // Calculate position (centered in cell)
+                        // Center the QR pair within the table group.
                         float cellX = marginX + (col * cellWidth);
                         float cellY = marginY + headerHeight + (row * cellHeight);
-                        float qrX = cellX + (cellWidth - qrSize) / 2;
-                        float qrY = cellY + (cellHeight - qrSize - labelHeight) / 2;
-
-                        // Draw QR code at exact 1.75" × 1.75" size
-                        using var bitmap = SKBitmap.Decode(qrPath);
-                        var destRect = new SKRect(qrX, qrY, qrX + qrSize, qrY + qrSize);
-                        canvas.DrawBitmap(bitmap, destRect);
-
-                        // Draw labels centered under the QR code
                         float centerX = cellX + cellWidth / 2;
-                        canvas.DrawText($"Table {tableNum}", centerX, qrY + qrSize + 16, SKTextAlign.Center, tableFont, blackPaint);
-                        canvas.DrawText(qrType, centerX, qrY + qrSize + 28, SKTextAlign.Center, typeFont, grayPaint);
+                        float pairWidth = qrCodes.Count * qrSize + Math.Max(0, qrCodes.Count - 1) * qrGap;
+                        float pairX = cellX + (cellWidth - pairWidth) / 2;
+                        float qrY = cellY + 22f;
+
+                        // Draw the table label once per table group.
+                        canvas.DrawText($"Table {tableNum}", centerX, cellY + 21f, SKTextAlign.Center, tableFont, blackPaint);
+
+                        for (int qrIndex = 0; qrIndex < qrCodes.Count; qrIndex++)
+                        {
+                            var (qrPath, qrType) = qrCodes[qrIndex];
+
+                            float qrX = pairX + qrIndex * (qrSize + qrGap);
+
+                            using var bitmap = SKBitmap.Decode(qrPath);
+                            var destRect = new SKRect(qrX, qrY, qrX + qrSize, qrY + qrSize);
+                            canvas.DrawBitmap(bitmap, destRect);
+
+                            canvas.DrawText(qrType, qrX + qrSize / 2, qrY + qrSize + 8, SKTextAlign.Center, typeFont, grayPaint);
+                        }
                     }
 
                     document.EndPage();

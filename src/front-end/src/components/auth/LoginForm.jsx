@@ -85,6 +85,12 @@ const LoginFormContent = () => {
     const status = err.response?.status;
     const data = err.response?.data;
 
+    if (status === 404 || status >= 500 || !err.response) {
+      setNeedsVerification(false);
+      setError("Something went wrong. Please try again.");
+      return;
+    }
+
     if (status === 403 && data?.requires_email_verification) {
       setNeedsVerification(true);
       setError(data.message || "Please verify your email before signing in.");
@@ -167,7 +173,11 @@ const LoginFormContent = () => {
       router.replace("/");
       router.refresh();
     } catch (err) {
-      handleAuthError(err);
+      if (err.response?.status === 401) {
+        setError("Something went wrong. Please try again.");
+      } else {
+        handleAuthError(err);
+      }
     } finally {
       setLoading(false);
     }

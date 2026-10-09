@@ -289,6 +289,9 @@ using (var scope = app.Services.CreateScope())
             else
             {
                 logger.LogInformation("Database has already been seeded.");
+                UserSeeder userSeeder = scope.ServiceProvider.GetRequiredService<UserSeeder>();
+                userSeeder.Seed();
+                await context.SaveChangesAsync();
             }
         }
         else
