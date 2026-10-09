@@ -174,7 +174,7 @@ describe("LoginForm", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/no access token was returned/i),
+          screen.getByText(/Something went wrong\. Please try again\./i),
         ).toBeInTheDocument();
       });
       expect(mockReplace).not.toHaveBeenCalled();
@@ -256,7 +256,7 @@ describe("LoginForm", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Authentication failed. Please try again./i),
+          screen.getByText(/Something went wrong\. Please try again\./i),
         ).toBeInTheDocument();
       });
     });
