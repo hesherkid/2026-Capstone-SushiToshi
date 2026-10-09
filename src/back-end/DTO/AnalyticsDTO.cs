@@ -2,14 +2,169 @@ using System.Text.Json.Serialization;
 
 namespace back_end.DTO.Analytics
 {
-    public class BrowsingBehaviorDTO
+    public class BrowsingBehaviorResponseDTO
     {
-        public int ItemId { get; set; }
-        public string ItemName { get; set; } = string.Empty;
-        public int ViewCount { get; set; }
+        [JsonPropertyName("range")]
+        public ItemPerformanceRangeDTO Range { get; set; } = new();
 
-        public int totalViewTimes { get; set; }
+        [JsonPropertyName("location")]
+        public ItemPerformanceLocationDTO? Location { get; set; }
+
+        [JsonPropertyName("summary")]
+        public BrowsingSummaryDTO Summary { get; set; } = new();
+
+        [JsonPropertyName("most_viewed")]
+        public List<BrowsingItemDTO> MostViewed { get; set; } = new();
+
+        [JsonPropertyName("least_viewed")]
+        public List<BrowsingItemDTO> LeastViewed { get; set; } = new();
+
+        [JsonPropertyName("never_viewed")]
+        public List<BrowsingItemDTO> NeverViewed { get; set; } = new();
+
+        [JsonPropertyName("viewed_not_ordered")]
+        public List<BrowsingItemDTO> ViewedNotOrdered { get; set; } = new();
+
+        [JsonPropertyName("top_viewed_not_ordered")]
+        public List<BrowsingItemDTO> TopViewedNotOrdered { get; set; } = new();
+
+        [JsonPropertyName("top_viewed_and_ordered")]
+        public List<BrowsingItemDTO> TopViewedAndOrdered { get; set; } = new();
+
+        [JsonPropertyName("low_conversion_high_views")]
+        public List<BrowsingItemDTO> LowConversionHighViews { get; set; } = new();
+
+        [JsonPropertyName("unavailable_views")]
+        public List<BrowsingItemDTO> UnavailableViews { get; set; } = new();
+
+        /// <summary>Every included item: viewed items by views, then unviewed items A-Z.</summary>
+        [JsonPropertyName("items")]
+        public List<BrowsingItemDTO> Items { get; set; } = new();
+
+        [JsonPropertyName("filters")]
+        public ItemPerformanceFiltersDTO Filters { get; set; } = new();
     }
+
+    public class BrowsingSummaryDTO
+    {
+        [JsonPropertyName("total_views")]
+        public int TotalViews { get; set; }
+
+        [JsonPropertyName("short_views_excluded")]
+        public int ShortViewsExcluded { get; set; }
+
+        [JsonPropertyName("total_view_seconds")]
+        public int TotalViewSeconds { get; set; }
+
+        [JsonPropertyName("average_view_seconds")]
+        public decimal? AverageViewSeconds { get; set; }
+
+        [JsonPropertyName("average_view_seconds_ordered")]
+        public decimal? AverageViewSecondsOrdered { get; set; }
+
+        [JsonPropertyName("average_view_seconds_not_ordered")]
+        public decimal? AverageViewSecondsNotOrdered { get; set; }
+
+        [JsonPropertyName("viewing_sessions")]
+        public int ViewingSessions { get; set; }
+
+        [JsonPropertyName("session_item_views")]
+        public int SessionItemViews { get; set; }
+
+        [JsonPropertyName("session_item_orders")]
+        public int SessionItemOrders { get; set; }
+
+        [JsonPropertyName("conversion_rate")]
+        public decimal? ConversionRate { get; set; }
+
+        [JsonPropertyName("items_considered")]
+        public int ItemsConsidered { get; set; }
+
+        [JsonPropertyName("items_viewed")]
+        public int ItemsViewed { get; set; }
+
+        [JsonPropertyName("items_never_viewed")]
+        public int ItemsNeverViewed { get; set; }
+
+        [JsonPropertyName("unavailable_views")]
+        public int UnavailableViews { get; set; }
+
+        [JsonPropertyName("min_view_seconds")]
+        public int MinViewSeconds { get; set; }
+
+        [JsonPropertyName("min_views")]
+        public int MinViews { get; set; }
+
+        /// <summary>Median views across viewed items. 0 when nothing was viewed.</summary>
+        [JsonPropertyName("median_views")]
+        public decimal MedianViews { get; set; }
+
+        /// <summary>Views needed for low_conversion_high_views: the larger of min_views and the median (rounded up).</summary>
+        [JsonPropertyName("high_views_threshold")]
+        public int HighViewsThreshold { get; set; }
+    }
+
+    public class BrowsingItemDTO
+    {
+        [JsonPropertyName("item_id")]
+        public int ItemId { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("category_id")]
+        public int CategoryId { get; set; }
+
+        [JsonPropertyName("category_name")]
+        public string CategoryName { get; set; } = string.Empty;
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = string.Empty;
+
+        [JsonPropertyName("currently_available")]
+        public bool CurrentlyAvailable { get; set; }
+
+        [JsonPropertyName("tags")]
+        public List<ItemPerformanceTagDTO> Tags { get; set; } = new();
+
+        [JsonPropertyName("views")]
+        public int Views { get; set; }
+
+        /// <summary>Competition rank by views (1, 2, 2, 4). Null when not viewed.</summary>
+        [JsonPropertyName("view_rank")]
+        public int? ViewRank { get; set; }
+
+        [JsonPropertyName("short_views")]
+        public int ShortViews { get; set; }
+
+        [JsonPropertyName("total_view_seconds")]
+        public int TotalViewSeconds { get; set; }
+
+        [JsonPropertyName("average_view_seconds")]
+        public decimal? AverageViewSeconds { get; set; }
+
+        [JsonPropertyName("viewing_sessions")]
+        public int ViewingSessions { get; set; }
+
+        [JsonPropertyName("ordering_sessions")]
+        public int OrderingSessions { get; set; }
+
+        [JsonPropertyName("conversion_rate")]
+        public decimal? ConversionRate { get; set; }
+
+        [JsonPropertyName("units_ordered_after_view")]
+        public int UnitsOrderedAfterView { get; set; }
+
+        [JsonPropertyName("average_view_seconds_ordered")]
+        public decimal? AverageViewSecondsOrdered { get; set; }
+
+        [JsonPropertyName("average_view_seconds_not_ordered")]
+        public decimal? AverageViewSecondsNotOrdered { get; set; }
+
+        [JsonPropertyName("unavailable_views")]
+        public int UnavailableViews { get; set; }
+    }
+
 
     public class TableTurnoverDailyDTO
     {
@@ -70,15 +225,12 @@ namespace back_end.DTO.Analytics
         [JsonPropertyName("summary")]
         public ItemPerformanceSummaryDTO Summary { get; set; } = new();
 
-        /// <summary>Highest units sold first. Items with zero sales are never included.</summary>
         [JsonPropertyName("best")]
         public List<ItemPerformanceDTO> Best { get; set; } = new();
 
-        /// <summary>Lowest units sold first (above zero). Never overlaps with Best.</summary>
         [JsonPropertyName("worst")]
         public List<ItemPerformanceDTO> Worst { get; set; } = new();
 
-        /// <summary>Eligible items that sold nothing in the range, A-Z.</summary>
         [JsonPropertyName("zero_sales")]
         public List<ItemPerformanceDTO> ZeroSales { get; set; } = new();
 
@@ -86,18 +238,15 @@ namespace back_end.DTO.Analytics
         [JsonPropertyName("add_ons")]
         public List<ItemPerformanceDTO> AddOns { get; set; } = new();
 
-        /// <summary>Every included item: ranked items first, then zero-sales items.</summary>
         [JsonPropertyName("items")]
         public List<ItemPerformanceDTO> Items { get; set; } = new();
 
-        /// <summary>Options for the category / tag dropdowns (ignores the current category/tag filter).</summary>
         [JsonPropertyName("filters")]
         public ItemPerformanceFiltersDTO Filters { get; set; } = new();
     }
 
     public class ItemPerformanceRangeDTO
     {
-        /// <summary>today | yesterday | last7 | last30 | custom</summary>
         [JsonPropertyName("preset")]
         public string Preset { get; set; } = string.Empty;
 
@@ -109,7 +258,6 @@ namespace back_end.DTO.Analytics
         [JsonPropertyName("to")]
         public string To { get; set; } = string.Empty;
 
-        /// <summary>Number of local days in the window (1 for today / yesterday).</summary>
         [JsonPropertyName("days")]
         public int Days { get; set; }
 
@@ -158,7 +306,6 @@ namespace back_end.DTO.Analytics
         [JsonPropertyName("category_name")]
         public string CategoryName { get; set; } = string.Empty;
 
-        /// <summary>Current item status: Available | Seasonal | Unavailable.</summary>
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
 
@@ -175,23 +322,18 @@ namespace back_end.DTO.Analytics
         [JsonPropertyName("units_sold")]
         public int UnitsSold { get; set; }
 
-        /// <summary>Percent of all units sold in the result set, 1 decimal place.</summary>
         [JsonPropertyName("share_of_units")]
         public decimal ShareOfUnits { get; set; }
 
-        /// <summary>Units of this item that were ordered as an add-on.</summary>
         [JsonPropertyName("add_on_units")]
         public int AddOnUnits { get; set; }
 
-        /// <summary>Percent of this item's units that were add-ons, 1 decimal place.</summary>
         [JsonPropertyName("add_on_share")]
         public decimal AddOnShare { get; set; }
 
-        /// <summary>Local days in the window with at least one add-on sale of this item.</summary>
         [JsonPropertyName("add_on_days")]
         public int AddOnDays { get; set; }
 
-        /// <summary>Competition rank (1, 2, 2, 4). Null for zero-sales items.</summary>
         [JsonPropertyName("rank")]
         public int? Rank { get; set; }
     }

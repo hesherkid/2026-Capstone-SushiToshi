@@ -27,7 +27,7 @@ namespace back_end.controllers
         }
 
         /// <summary>
-        /// Units sold per menu item for a repoting window, with best / worst / zero-sales breakdown.
+        /// Units sold per menu item for a reporting window, with best / worst / zero-sales breakdown.
         /// </summary>
         /// <param name=""range"> today | yesterday | last7 (default) | last 30 | custom. last7 & last30 are full days excluding today.
         /// <param name="from">Custom range start, yyyy-MM-dd (inclusive, Mountain Time). Required when range=custom.</param>
@@ -344,73 +344,365 @@ namespace back_end.controllers
         }
 
 
+        /// <summary>Default for minViews: an item needs at least this many views to count as "high views".</summary>
+        public const int DefaultMinViews = 10;
+
         /// <summary>
-        /// Retrieves browsing behavior metrics for menu items showing total views and view duration.
+        /// How diners browse the menu for a reporting window: what they look at, what they order after
+        /// looking, and what they look at but don't order.
         /// </summary>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of browsing behavior data objects.
-        /// Returns HTTP 200 (OK) with browsing metrics on success.
-        /// Returns HTTP 404 (Not Found) if no browsing data is available.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns browsing behavior metrics for all menu items</response>
-        /// <response code="404">If no browsing behavior data is found</response>
-        /// <response code="500">If an internal error occurs while retrieving metrics</response>
+        /// <param name="range">today | yesterday | last7 (default) | last30 | custom. last7 and last30 are full days excluding today.</param>
+        /// <param name="from">Custom range start, yyyy-MM-dd (inclusive, restaurant time). Required when range=custom.</param>
+        /// <param name="to">Custom range end, yyyy-MM-dd (inclusive, restaurant time). Required when range=custom.</param>
+        /// <param name="locationId">Limit to one location. Omit for all locations.</param>
+        /// <param name="categoryId">Limit to one category.</param>
+        /// <param name="tagId">Limit to items with this tag.</param>
+        /// <param name="top">How many items in each top / bottom list (1-25, default 5).</param>
+        /// <param name="minViews">Fewest views for an item to count as "high views" (1-1000, default 10).</param>
         /// <remarks>
-        /// Sample request:
+        /// Sample requests:
         ///
         ///     GET /api/analytics/browsing-behavior
+        ///     GET /api/analytics/browsing-behavior?range=yesterday&amp;locationId=1
+        ///     GET /api/analytics/browsing-behavior?range=custom&amp;from=2026-10-01&amp;to=2026-10-07&amp;categoryId=3&amp;minViews=20
         ///
-        /// Returns aggregated metrics across all menu assignments showing:
-        /// - Item ID and name
-        /// - Total view duration in seconds
-        /// - Total number of views across all menus
-        /// 
-        /// Data is aggregated from all MenuItemAssignments, combining statistics
-        /// for the same item across different menus.
+        /// Rules:
+        /// - A view counts when it lasted at least 5 seconds. Shorter views are reported only as short_views.
+        /// - A view belongs to the window by when it started (UTC; day boundaries use the restaurant
+        ///   time zone). Location comes from the dining session the view was made in.
+        /// - Viewed and ordered = the same dining session has a Delivered order item for that item.
+        ///   The order can be before or after the view and can finish after the window ends.
+        /// - Conversion rate = ordering sessions / viewing sessions for the item.
+        /// - low_conversion_high_views = items with at least minViews views, lowest conversion first.
+        /// - Unavailable views = counted views made while the item or its menu assignment was Unavailable.
+        /// - Items included: anything viewed in the window, plus anything orderable now.
+        /// - never_viewed only lists items orderable now.
         /// </remarks>
+        /// <response code="200">Browsing behavior for the requested window (lists may be empty)</response>
+        /// <response code="400">Invalid range, dates, top or minViews</response>
+        /// <response code="404">The locationId does not exist</response>
+        /// <response code="500">Unexpected server error</response>
         [HttpGet("browsing-behavior")]
-        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BrowsingBehaviorResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetBrowsingBehavior()
+        public async Task<IActionResult> GetBrowsingBehavior(
+
+           [FromQuery] string? range,
+           [FromQuery] string? from,
+           [FromQuery] string? to,
+           [FromQuery] int? locationId,
+           [FromQuery] int? categoryId,
+           [FromQuery] int? tagId,
+           [FromQuery] int top = 5,
+           [FromQuery] int minViews = DefaultMinViews)
         {
+            if (top < 1 || top > 25)
+            {
+                ModelState.AddModelError(nameof(top), "top must be between 1 and 25");
+                return ValidationProblem(ModelState);
+            }
+
+            if (minViews < 1 || minViews > 1000)
+            {
+                ModelState.AddModelError(nameof(minViews), "minViews must be between 1 and 1000");
+                return ValidationProblem(ModelState);
+            }
+
             try
             {
-                var browsingData = await _context.MenuItemAssignments
-                    .Join(
-                        _context.MenuItems,
-                        assignment => assignment.Item_Id,
-                        menuItem => menuItem.item_id,
-                        (assignment, menuItem) => new
-                        {
-                            assignment.Item_Id,
-                            menuItem.Name,
-                            assignment.Total_View_Seconds,
-                            assignment.Total_Views,
-                            assignment.Menu_Id
-                        })
-                    .GroupBy(x => new { x.Item_Id, x.Name })
+                var timeZone = GetAnalyticsTimeZone();
+
+                if (!AnalyticsDateRange.TryResolve(range, from, to, DateTime.UtcNow, timeZone, out var period, out var errorKey, out var errorMessage) || period == null)
+                {
+                    ModelState.AddModelError(errorKey, errorMessage);
+                    return ValidationProblem(ModelState);
+                }
+
+                ItemPerformanceLocationDTO? location = null;
+                if (locationId.HasValue)
+                {
+                    location = await _context.Locations
+                        .AsNoTracking()
+                        .Where(l => l.Location_Id == locationId.Value)
+                        .Select(l => new ItemPerformanceLocationDTO { Id = l.Location_Id, Name = l.Name })
+                        .FirstOrDefaultAsync();
+
+                    if (location == null)
+                    {
+                        return NotFound(new { message = $"Location {locationId.Value} was not found." });
+                    }
+                }
+
+                var startUtc = period.StartUtc;
+                var endUtc = period.EndUtc;
+                const int minSeconds = ViewTrackingRules.MinQualifyingSeconds;
+
+                // Views that started in the window. Half-open range: >= start AND < end.
+                var windowViews = _context.MenuItemViews
+                    .AsNoTracking()
+                    .Where(v => v.Viewed_At >= startUtc && v.Viewed_At < endUtc);
+
+                if (locationId.HasValue)
+                {
+                    var locId = locationId.Value;
+                    windowViews = windowViews.Where(v => v.Location_Id == locId);
+                }
+
+                var countedViews = windowViews.Where(v => v.View_Seconds >= minSeconds);
+
+                var shortViewsByItem = await windowViews
+                    .Where(v => v.View_Seconds < minSeconds)
+                    .GroupBy(v => v.Item_Id)
+                    .Select(g => new { ItemId = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.ItemId, x => x.Count);
+
+                // One row per (item, session): the unit for conversion and ordered-vs-not view time.
+                var viewPairs = await countedViews
+                    .GroupBy(v => new { v.Item_Id, v.Session_Id })
                     .Select(g => new
                     {
-                        item_id = g.Key.Item_Id,
-                        name = g.Key.Name,
-                        total_view_seconds = g.Sum(x => x.Total_View_Seconds),
-                        total_views = g.Sum(x => x.Total_Views)
+                        ItemId = g.Key.Item_Id,
+                        SessionId = g.Key.Session_Id,
+                        Views = g.Count(),
+                        Seconds = g.Sum(v => v.View_Seconds),
+                        UnavailableViews = g.Sum(v => v.Was_Available ? 0 : 1)
                     })
                     .ToListAsync();
 
-                if (browsingData == null || browsingData.Count == 0)
+                // Which viewed (item, session) pairs the same session ordered (Delivered).
+                var orderedPairs = await _context.OrderItems
+                    .AsNoTracking()
+                    .Where(oi => oi.Order_Item_Status == OrderStatus.Delivered
+                        && countedViews.Any(v => v.Session_Id == oi.SessionOrder.session_id && v.Item_Id == oi.Item_Id))
+                    .Select(oi => new { oi.Item_Id, oi.Quantity, SessionId = oi.SessionOrder.session_id })
+                    .GroupBy(x => new { x.Item_Id, x.SessionId })
+                    .Select(g => new { ItemId = g.Key.Item_Id, g.Key.SessionId, Units = g.Sum(x => x.Quantity) })
+                    .ToListAsync();
+
+                var orderedUnitsByPair = orderedPairs.ToDictionary(p => (p.ItemId, p.SessionId), p => p.Units);
+                bool PairOrdered(int itemId, int sessionId) => orderedUnitsByPair.ContainsKey((itemId, sessionId));
+
+                // Items to report: anything viewed in the window, plus anything orderable now.
+                var viewedItemIds = viewPairs.Select(p => p.ItemId)
+                    .Concat(shortViewsByItem.Keys)
+                    .Distinct()
+                    .ToList();
+
+                var candidateItems = await _context.MenuItems
+                    .AsNoTracking()
+                    .Select(mi => new
+                    {
+                        mi.item_id,
+                        mi.Name,
+                        mi.Category_id,
+                        CategoryName = mi.Category.Category_name,
+                        mi.Status,
+                        CurrentlyAvailable =
+                            mi.Status != MenuItemStatus.Unavailable &&
+                            mi.MenuAssignments.Any(a =>
+                                a.Status != MenuItemStatus.Unavailable &&
+                                a.Menu.Is_active &&
+                                (locationId == null || a.Menu.MenuLocations.Any(ml => ml.Location_Id == locationId)))
+                    })
+                    .Where(x => x.CurrentlyAvailable || viewedItemIds.Contains(x.item_id))
+                    .ToListAsync();
+
+                var candidateIds = candidateItems.Select(i => i.item_id).ToList();
+                var tagsByItem = (await _context.MenuItemTags
+                        .AsNoTracking()
+                        .Where(t => candidateIds.Contains(t.Menu_item_id))
+                        .Select(t => new
+                        {
+                            t.Menu_item_id,
+                            Tag = new ItemPerformanceTagDTO
+                            {
+                                TagId = t.Tag_id,
+                                Name = t.Tag.tag_name,
+                                Color = t.Tag.tag_color
+                            }
+                        })
+                        .ToListAsync())
+                    .GroupBy(t => t.Menu_item_id)
+                    .ToDictionary(g => g.Key, g => g.Select(t => t.Tag).OrderBy(t => t.Name).ToList());
+
+                List<ItemPerformanceTagDTO> TagsFor(int itemId) =>
+                    tagsByItem.TryGetValue(itemId, out var tags) ? tags : new List<ItemPerformanceTagDTO>();
+
+                // Dropdown options ignore the current category/tag filter, as in item performance.
+                var filters = new ItemPerformanceFiltersDTO
                 {
-                    return NotFound(new { message = "No browsing behavior data found." });
+                    Categories = candidateItems
+                        .GroupBy(i => new { i.Category_id, i.CategoryName })
+                        .Select(g => new ItemPerformanceFilterOptionDTO { Id = g.Key.Category_id, Name = g.Key.CategoryName })
+                        .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                        .ToList(),
+                    Tags = tagsByItem.Values
+                        .SelectMany(t => t)
+                        .GroupBy(t => t.TagId)
+                        .Select(g => g.First())
+                        .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                };
+
+                // Per-item metrics, in memory (menu-sized lists).
+                var pairsByItem = viewPairs.ToLookup(p => p.ItemId);
+
+                var rows = candidateItems
+                    .Where(i => categoryId == null || i.Category_id == categoryId)
+                    .Where(i => tagId == null || TagsFor(i.item_id).Any(t => t.TagId == tagId))
+                    .Select(i =>
+                    {
+                        var pairs = pairsByItem[i.item_id].ToList();
+                        var ordered = pairs.Where(p => PairOrdered(p.ItemId, p.SessionId)).ToList();
+                        var notOrdered = pairs.Where(p => !PairOrdered(p.ItemId, p.SessionId)).ToList();
+                        var views = pairs.Sum(p => p.Views);
+                        var seconds = pairs.Sum(p => p.Seconds);
+
+                        return new BrowsingItemDTO
+                        {
+                            ItemId = i.item_id,
+                            Name = i.Name,
+                            CategoryId = i.Category_id,
+                            CategoryName = i.CategoryName,
+                            Status = i.Status.ToString(),
+                            CurrentlyAvailable = i.CurrentlyAvailable,
+                            Tags = TagsFor(i.item_id),
+                            Views = views,
+                            ShortViews = shortViewsByItem.TryGetValue(i.item_id, out var shortViews) ? shortViews : 0,
+                            TotalViewSeconds = seconds,
+                            AverageViewSeconds = SecondsPerView(seconds, views),
+                            ViewingSessions = pairs.Count,
+                            OrderingSessions = ordered.Count,
+                            ConversionRate = Percent(ordered.Count, pairs.Count),
+                            UnitsOrderedAfterView = ordered.Sum(p => orderedUnitsByPair[(p.ItemId, p.SessionId)]),
+                            AverageViewSecondsOrdered = SecondsPerView(ordered.Sum(p => p.Seconds), ordered.Sum(p => p.Views)),
+                            AverageViewSecondsNotOrdered = SecondsPerView(notOrdered.Sum(p => p.Seconds), notOrdered.Sum(p => p.Views)),
+                            UnavailableViews = pairs.Sum(p => p.UnavailableViews)
+                        };
+                    })
+                    .ToList();
+
+                // Lists.
+                var viewed = rows
+                    .Where(r => r.Views > 0)
+                    .OrderByDescending(r => r.Views)
+                    .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                // Competition ranking: ties share a rank, the next rank skips (1, 2, 2, 4).
+                for (var i = 0; i < viewed.Count; i++)
+                {
+                    viewed[i].ViewRank = i > 0 && viewed[i].Views == viewed[i - 1].Views
+                        ? viewed[i - 1].ViewRank
+                        : i + 1;
                 }
 
-                return Ok(browsingData);
+                var unviewedRows = rows
+                    .Where(r => r.Views == 0)
+                    .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                // Least viewed comes from what's left after most viewed, so the two lists never repeat an item.
+                var leastCount = Math.Min(top, Math.Max(0, viewed.Count - top));
+                var viewedNotOrdered = viewed.Where(r => r.OrderingSessions == 0).ToList();
+                var neverViewed = unviewedRows.Where(r => r.CurrentlyAvailable).ToList();
+
+                // Summary over the filtered items only.
+                var includedIds = rows.Select(r => r.ItemId).ToHashSet();
+                var includedPairs = viewPairs.Where(p => includedIds.Contains(p.ItemId)).ToList();
+                var includedOrdered = includedPairs.Where(p => PairOrdered(p.ItemId, p.SessionId)).ToList();
+                var includedNotOrdered = includedPairs.Where(p => !PairOrdered(p.ItemId, p.SessionId)).ToList();
+                var totalViews = includedPairs.Sum(p => p.Views);
+                var totalSeconds = includedPairs.Sum(p => p.Seconds);
+
+                var response = new BrowsingBehaviorResponseDTO
+                {
+                    Range = new ItemPerformanceRangeDTO
+                    {
+                        Preset = period.Preset.ToString().ToLowerInvariant(),
+                        From = period.FromLocal.ToString("yyyy-MM-dd"),
+                        To = period.ToLocal.ToString("yyyy-MM-dd"),
+                        Days = period.ToLocal.DayNumber - period.FromLocal.DayNumber + 1,
+                        TimeZone = period.TimeZoneId
+                    },
+                    Location = location,
+                    Summary = new BrowsingSummaryDTO
+                    {
+                        TotalViews = totalViews,
+                        ShortViewsExcluded = rows.Sum(r => r.ShortViews),
+                        TotalViewSeconds = totalSeconds,
+                        AverageViewSeconds = SecondsPerView(totalSeconds, totalViews),
+                        AverageViewSecondsOrdered = SecondsPerView(includedOrdered.Sum(p => p.Seconds), includedOrdered.Sum(p => p.Views)),
+                        AverageViewSecondsNotOrdered = SecondsPerView(includedNotOrdered.Sum(p => p.Seconds), includedNotOrdered.Sum(p => p.Views)),
+                        ViewingSessions = includedPairs.Select(p => p.SessionId).Distinct().Count(),
+                        SessionItemViews = includedPairs.Count,
+                        SessionItemOrders = includedOrdered.Count,
+                        ConversionRate = Percent(includedOrdered.Count, includedPairs.Count),
+                        ItemsConsidered = rows.Count,
+                        ItemsViewed = viewed.Count,
+                        ItemsNeverViewed = neverViewed.Count,
+                        UnavailableViews = rows.Sum(r => r.UnavailableViews),
+                        MinViewSeconds = minSeconds,
+                        MinViews = minViews
+                    },
+                    MostViewed = viewed.Take(top).ToList(),
+                    LeastViewed = viewed.Skip(viewed.Count - leastCount).Reverse().ToList(),
+                    NeverViewed = neverViewed,
+                    ViewedNotOrdered = viewedNotOrdered,
+                    TopViewedNotOrdered = viewedNotOrdered.Take(top).ToList(),
+                    TopViewedAndOrdered = viewed
+                        .Where(r => r.OrderingSessions > 0)
+                        .OrderByDescending(r => r.OrderingSessions)
+                        .ThenByDescending(r => r.ConversionRate)
+                        .ThenByDescending(r => r.Views)
+                        .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                        .Take(top)
+                        .ToList(),
+                    LowConversionHighViews = viewed
+                        .Where(r => r.Views >= minViews)
+                        .OrderBy(r => r.ConversionRate ?? 0)
+                        .ThenByDescending(r => r.Views)
+                        .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                        .Take(top)
+                        .ToList(),
+                    UnavailableViews = rows
+                        .Where(r => r.UnavailableViews > 0)
+                        .OrderByDescending(r => r.UnavailableViews)
+                        .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                        .ToList(),
+                    Items = viewed.Concat(unviewedRows).ToList(),
+                    Filters = filters
+                };
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Error retrieving browsing behavior");
+                return StatusCode(500, new { message = "An error occurred while loading browsing behavior." });
             }
+        }
+
+
+        /// <summary>Seconds per view to 1 decimal place. Null when there are no views.</summary>
+        private static decimal? SecondsPerView(int seconds, int views) =>
+            views == 0 ? null : Math.Round((decimal)seconds / views, 1, MidpointRounding.AwayFromZero);
+
+        /// <summary>part / whole as a percent to 1 decimal place. Null when whole is 0.</summary>
+        private static decimal? Percent(int part, int whole) =>
+            whole == 0 ? null : Math.Round(part * 100m / whole, 1, MidpointRounding.AwayFromZero);
+
+        /// <summary>Median of the values; the mean of the middle two for an even count. 0 when empty.</summary>
+        private static decimal Median(List<int> values)
+        {
+            if (values.Count == 0) return 0;
+            var sorted = values.OrderBy(v => v).ToList();
+            var mid = sorted.Count / 2;
+            return sorted.Count % 2 == 1
+                ? sorted[mid]
+                : (sorted[mid - 1] + sorted[mid]) / 2m;
         }
 
         /// <summary>
