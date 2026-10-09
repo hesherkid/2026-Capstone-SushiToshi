@@ -22,6 +22,8 @@ namespace back_end.domain.Seeders
 
         public void Seed()
         {
+            var locations = _context.Locations.ToList();
+
             var menus = new List<Menu>
             {
                 new Menu
@@ -42,9 +44,18 @@ namespace back_end.domain.Seeders
                 }
             };
 
+            foreach (var menu in menus)
+            {
+                foreach (var location in locations)
+                {
+                    menu.MenuLocations.Add(new MenuLocations { Location_Id = location.Location_Id });
+                }
+            }
+
             _context.Menus.AddRange(menus);
 
-            _logger.LogInformation($"Added {menus.Count} menus");
+            _logger.LogInformation($"Added {menus.Count} menus, each served at {locations.Count} locations");
+
         }
     }
 }
