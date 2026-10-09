@@ -11,7 +11,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
     {
         public int Menu_Id { get; set; }
         public int Item_Id { get; set; }
-        // Add Annotation to be greater then 0
+        [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal Price { get; set; }
         public int? Total_Units_Ordered { get; set; } = 0;
         public int? Total_Views { get; set; } = 0;
@@ -26,12 +26,13 @@ namespace back_end.DTO.MenuItemAssignmentDTO
     public class MenuAssignmentCreate : MenuItemAssignmentBaseDTO
     {
         public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
+        public bool Is_Add_on { get; set; } = false;
     }
 
     public class MenuAssignmentUpdateDTO
     {
-        // Add Annotation to be greater then 0
-        public decimal Price { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
+        public decimal? Price { get; set; }
         public int? Total_Units_Ordered { get; set; }
         public int? Total_Views { get; set; }
         public int? Total_View_Seconds { get; set; }
@@ -41,8 +42,8 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public int? Child_Limit { get; set; }
         public int? Senior_Limit { get; set; }
         public int? Tot_Limit { get; set; }
-        public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
-        public bool Is_Add_on { get; set; }
+        public MenuItemStatus? Status { get; set; } // no default, so "not sent" stays null
+        public bool? Is_Add_on { get; set; }
     }
 
     class MenuAssignmentResponse : MenuItemAssignmentBaseDTO
@@ -50,7 +51,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public DateTime? Last_Ordered_At { get; set; }
         public DateTime? Last_Viewed_At { get; set; }
         public bool? Is_Add_On { get; set; }
-        public MenuItemStatus Status { get; set; } = MenuItemStatus.Available; 
+        public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
     }
 
 }

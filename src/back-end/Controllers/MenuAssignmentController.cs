@@ -22,7 +22,7 @@ namespace back_end.Controllers
         }
 
 
-        
+
         /// <summary>
         /// Creates a new menu item assignment, associating an item with a menu at a specific price.
         /// </summary>
@@ -61,7 +61,7 @@ namespace back_end.Controllers
         /// Creates a new association between a menu and a menu item.
         /// All limit and statistics fields default to 0 if not provided.
         /// </remarks>
- [Authorize(Policy = "adminOnly")]
+        [Authorize(Policy = "adminOnly")]
         [HttpPost]
         [ProducesResponseType(typeof(MenuItemAssignment), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -69,12 +69,17 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Create_Menu_Item_Assignment(
-            MenuAssignmentCreate assignmentData
-        )
+                   MenuAssignmentCreate assignmentData
+               )
         {
 
             try
             {
+                if (assignmentData.Is_Add_on && assignmentData.Price <= 0)
+                {
+                    return BadRequest("Add-on items must have a price greater than 0");
+                }
+
                 var assignment = new MenuItemAssignment
                 {
                     Menu_Id = assignmentData.Menu_Id,
@@ -87,7 +92,8 @@ namespace back_end.Controllers
                     Child_limit = assignmentData.Child_Limit ?? 0,
                     Senior_limit = assignmentData.Senior_Limit ?? 0,
                     Tot_Limit = assignmentData.Tot_Limit ?? 0,
-                    Status = assignmentData.Status
+                    Status = assignmentData.Status,
+                    Is_Add_On = assignmentData.Is_Add_on,
                 };
 
                 await _context.MenuItemAssignments.AddAsync(assignment);
@@ -97,7 +103,8 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Error creating menu assignment for Menu_Id: {Menu_Id}, Item_Id: {Item_Id}", assignmentData.Menu_Id, assignmentData.Item_Id);
+                return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
 
@@ -164,21 +171,33 @@ namespace back_end.Controllers
                 var finalChildLimit = updateData.Child_Limit ?? assignment.Child_limit;
                 var finalTotLimit = updateData.Tot_Limit ?? assignment.Tot_Limit;
 
-                if (finalChildLimit > assignment.Adult_Limit)
+                if (finalChildLimit > finalAdultLimit)
                 {
-                    return BadRequest("Child Limit Can not be Greater then a Adult or Total Limit");
+                    return BadRequest("Child limit cannot be greater than the adult limit");
                 }
-                if (finalTotLimit > assignment.Adult_Limit)
+                if (finalTotLimit > finalAdultLimit)
                 {
-                    return BadRequest("Toddler limit must be less then a adult  ");
+                    return BadRequest("Toddler limit cannot be greater than the adult limit");
                 }
-                if (finalSeniorLimit > assignment.Adult_Limit)
+                if (finalSeniorLimit > finalAdultLimit)
                 {
-                    return BadRequest("Senior Limit Can not be Greater then a Adult or Total limit");
+                    return BadRequest("Senior limit cannot be greater than the adult limit");
                 }
+
+                var finalIsAddOn = updateData.Is_Add_on ?? assignment.Is_Add_On;
+                var finalPrice = updateData.Price ?? assignment.Price;
+                if (finalIsAddOn && finalPrice <= 0)
+                {
+                    return BadRequest("Add-on items must have a price greater than 0");
+                }
+
                 if (updateData.Adult_Limit.HasValue)
                 {
                     assignment.Adult_Limit = (int)updateData.Adult_Limit;
+                }
+                if (updateData.Child_Limit.HasValue)
+                {
+                    assignment.Child_limit = updateData.Child_Limit.Value;
                 }
                 if (updateData.Senior_Limit.HasValue)
                 {
@@ -208,18 +227,26 @@ namespace back_end.Controllers
                 {
                     assignment.LastViewedAt = DateTime.UtcNow;
                 }
-                assignment.Price = updateData.Price;
-                assignment.Is_Add_On = updateData.Is_Add_on;
-                assignment.Status = updateData.Status;
-                _context.Update(assignment);
+                if (updateData.Price.HasValue)
+                {
+                    assignment.Price = updateData.Price.Value;
+                }
+                if (updateData.Is_Add_on.HasValue)
+                {
+                    assignment.Is_Add_On = updateData.Is_Add_on.Value;
+                }
+                if (updateData.Status.HasValue)
+                {
+                    assignment.Status = updateData.Status.Value;
+                }
                 await _context.SaveChangesAsync();
                 return Ok(assignment);
 
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving active session");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Error updating menu assignment {MenuId}/{ItemId}", menu_id, item_id);
+                return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
 
@@ -257,19 +284,19 @@ namespace back_end.Controllers
         {
             try
             {
-                var assignment = await _context.MenuItemAssignments.Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == Item_id).FirstAsync();
+                var assignment = await _context.MenuItemAssignments.Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == Item_id).FirstOrDefaultAsync();
                 if (assignment == null)
                 {
                     return NotFound("Menu Assignment for deletion was not found");
                 }
                 _context.Remove(assignment);
                 await _context.SaveChangesAsync();
-                return Ok("Menu Assignment was Deleted Successfully");
+                return Ok("Menu Assignment was deleted Successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving active session");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Error deleting menu assignment {MenuId}/{ItemId}", menu_id, Item_id);
+                return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
 
@@ -305,7 +332,7 @@ namespace back_end.Controllers
         [HttpPost("copy_menu/{source_menu_id}")]
         [ProducesResponseType(typeof(IEnumerable<MenuItemAssignment>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]       
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Copy_Menu_Assignments(
             int source_menu_id,
             string new_menu_name
@@ -338,22 +365,23 @@ namespace back_end.Controllers
                         Child_limit = element.Child_limit,
                         Senior_limit = element.Senior_limit,
                         Tot_Limit = element.Tot_Limit,
-                        Total_Units_Ordered = element.Total_Units_Ordered,
-                        Total_Views = element.Total_Views,
-                        Total_View_Seconds = element.Total_View_Seconds
-
+                        Total_Units_Ordered = 0,
+                        Total_Views = 0,
+                        Total_View_Seconds = 0,
+                        Is_Add_On = element.Is_Add_On,
+                        Status = element.Status,
                     });
                 }
                 _context.AddRange(newAssignment);
                 await _context.SaveChangesAsync();
-                
+
                 return Ok(newAssignment);
 
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving active session");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Error copying menu assignment from source menu {SourceMenuId} to new menu {NewMenuName}", source_menu_id, new_menu_name);
+                return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
     }
