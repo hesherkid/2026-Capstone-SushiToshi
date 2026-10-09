@@ -348,6 +348,51 @@ namespace back_end.Migrations
                     b.ToTable("menu_item_tag");
                 });
 
+            modelBuilder.Entity("back_end.domain.Entities.MenuItemView", b =>
+                {
+                    b.Property<long>("View_Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("View_Id"));
+
+                    b.Property<int>("Item_Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Location_Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Menu_Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Session_Id")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("User_Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("View_Seconds")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Viewed_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Was_Available")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("View_Id");
+
+                    b.HasIndex("Item_Id");
+
+                    b.HasIndex("Session_Id", "Item_Id")
+                        .HasDatabaseName("IX_menu_item_view_session_item");
+
+                    b.HasIndex("Viewed_At", "Location_Id")
+                        .HasDatabaseName("IX_menu_item_view_viewed_at_location");
+
+                    b.ToTable("menu_item_view");
+                });
+
             modelBuilder.Entity("back_end.domain.Entities.MenuLocations", b =>
                 {
                     b.Property<int>("Menu_Id")
@@ -806,6 +851,25 @@ namespace back_end.Migrations
                     b.Navigation("MenuItem");
 
                     b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("back_end.domain.Entities.MenuItemView", b =>
+                {
+                    b.HasOne("back_end.domain.Entities.Menu_Item", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("Item_Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("back_end.domain.Entities.DiningSession", "DiningSession")
+                        .WithMany()
+                        .HasForeignKey("Session_Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DiningSession");
+
+                    b.Navigation("MenuItem");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.MenuLocations", b =>
