@@ -30,6 +30,7 @@ namespace back_end.domain.Seeders
     private readonly SessionOrderSeeder _sessionOrderSeeder;
     private readonly OrderItemSeeder _orderItemSeeder;
     private readonly ServiceRequestSeeder _serviceRequestSeeder;
+    private readonly MenuItemViewSeeder _menuItemViewSeeder;
 
     private readonly Dictionary<string, (string DisplayName, string GivenName, string Surname)> _userSeedData;
     private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userIdSeedData;
@@ -50,7 +51,8 @@ namespace back_end.domain.Seeders
         BillSeeder billSeeder,
         SessionOrderSeeder sessionOrderSeeder,
         OrderItemSeeder orderItemSeeder,
-        ServiceRequestSeeder serviceRequestSeeder)
+        ServiceRequestSeeder serviceRequestSeeder,
+        MenuItemViewSeeder menuItemViewSeeder)
     {
       _context = context;
       _logger = logger;
@@ -69,6 +71,7 @@ namespace back_end.domain.Seeders
       _sessionOrderSeeder = sessionOrderSeeder;
       _orderItemSeeder = orderItemSeeder;
       _serviceRequestSeeder = serviceRequestSeeder;
+      _menuItemViewSeeder = menuItemViewSeeder;
 
       _userSeedData = LoadUserSeedData();
     }
@@ -134,17 +137,17 @@ namespace back_end.domain.Seeders
 
     private void CreateUserIdMapping()
     {
-        // Create a simple mapping using existing users
-        var users = _context.Users.Take(20).ToList(); // Get first 20 users
-        _userIdSeedData = new Dictionary<int, (string DisplayName, string GivenName, string Surname)>();
-        
-        foreach (var user in users)
-        {
-            var displayName = $"{user.First_name} {user.Last_name}".Trim();
-            _userIdSeedData[user.User_id] = (displayName, user.First_name, user.Last_name);
-        }
-        
-        _logger.LogInformation($"Created user ID mapping for {_userIdSeedData.Count} users");
+      // Create a simple mapping using existing users
+      var users = _context.Users.Take(20).ToList(); // Get first 20 users
+      _userIdSeedData = new Dictionary<int, (string DisplayName, string GivenName, string Surname)>();
+
+      foreach (var user in users)
+      {
+        var displayName = $"{user.First_name} {user.Last_name}".Trim();
+        _userIdSeedData[user.User_id] = (displayName, user.First_name, user.Last_name);
+      }
+
+      _logger.LogInformation($"Created user ID mapping for {_userIdSeedData.Count} users");
     }
 
     /// <summary>Seeds all tables with initial data.</summary>
@@ -178,10 +181,10 @@ namespace back_end.domain.Seeders
         // Users must be seeded before session-driven data
         _userSeeder.Seed(); _logger.LogInformation("Users seeded successfully");
         await _context.SaveChangesAsync();
-        
+
         // Create user ID mapping after users are seeded
         CreateUserIdMapping();
-        
+
         // Pass userSeedData to seeders that need it
         _billSeeder.SetUserSeedData(_userIdSeedData);
         _sessionParticipantSeeder.SetUserSeedData(_userIdSeedData);
@@ -198,6 +201,8 @@ namespace back_end.domain.Seeders
         _sessionOrderSeeder.Seed(); _logger.LogInformation("Session orders seeded successfully");
         await _context.SaveChangesAsync();
         _orderItemSeeder.Seed(); _logger.LogInformation("Order items seeded successfully");
+        await _context.SaveChangesAsync();
+        _menuItemViewSeeder.Seed(); _logger.LogInformation("Menu item views seeded successfully");
         await _context.SaveChangesAsync();
         _serviceRequestSeeder.Seed(); _logger.LogInformation("Service requests seeded successfully");
 
@@ -231,6 +236,7 @@ namespace back_end.domain.Seeders
         var sessionOrders = _context.SessionOrders.Count();
         var orderItems = _context.OrderItems.Count();
         var serviceRequests = _context.ServiceRequests.Count();
+        var menuItemViews = _context.MenuItemViews.Count();
 
         // Log counts
         _logger.LogInformation($"Locations: {locations}");
@@ -247,6 +253,7 @@ namespace back_end.domain.Seeders
         _logger.LogInformation($"SessionOrders: {sessionOrders}");
         _logger.LogInformation($"OrderItems: {orderItems}");
         _logger.LogInformation($"ServiceRequests: {serviceRequests}");
+        _logger.LogInformation($"MenuItemViews: {menuItemViews}");
 
         var verification = new List<bool>
                 {
@@ -259,7 +266,8 @@ namespace back_end.domain.Seeders
                     tables == 68,                      // Exactly 68 tables (34 per location × 2 locations)
                     tableGroups == 8,                  // Exactly 8 table groups (4 per location × 2 locations)
                     diningSessions >= 100,             // At least 100 sessions (50 per location × 2 locations)
-                    activeSessions == 10               // Exactly 10 active sessions (5 per location × 2 locations)
+                    activeSessions == 20,               // Exactly 10 active sessions (5 per location × 2 locations)
+                    menuItemViews > 0                  // Browsing behavior has data
                 };
 
         var allValid = verification.All(v => v);
@@ -281,6 +289,7 @@ namespace back_end.domain.Seeders
       _logger.LogInformation("Clearing existing data...");
 
       // Delete in reverse dependency order
+      _context.MenuItemViews.RemoveRange(_context.MenuItemViews);
       _context.ServiceRequests.RemoveRange(_context.ServiceRequests);
       _context.OrderItems.RemoveRange(_context.OrderItems);
       _context.SessionOrders.RemoveRange(_context.SessionOrders);

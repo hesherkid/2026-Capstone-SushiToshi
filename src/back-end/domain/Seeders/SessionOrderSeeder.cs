@@ -42,9 +42,9 @@ namespace back_end.domain.Seeders
 
                 (int min, int max) waves = bill.Status switch
                 {
-                    BillStatus.Open       => (2, 4),
-                    BillStatus.Closed     => (3, 5),
-                    BillStatus.Cancelled  => (1, 2),
+                    BillStatus.Open => (2, 4),
+                    BillStatus.Closed => (3, 5),
+                    BillStatus.Cancelled => (1, 2),
                     _ => (2, 4)
                 };
 
@@ -87,11 +87,11 @@ namespace back_end.domain.Seeders
             }
 
             var unusedUsers = _userSeedData.Keys.Where(userId => !userUsageCount.ContainsKey(userId) || userUsageCount[userId] < 2).ToList();
-    
+
             if (unusedUsers.Any() && bills.Any())
             {
                 int billIndex = 0;
-                
+
                 foreach (var userId in unusedUsers)
                 {
                     var usage = userUsageCount.GetValueOrDefault(userId, 0);
@@ -99,9 +99,9 @@ namespace back_end.domain.Seeders
                     {
                         var bill = bills[billIndex % bills.Count];
                         billIndex++;
-                        
+
                         var info = _userSeedData[userId];
-                        
+
                         var order = new SessionOrder
                         {
                             session_id = bill.Session_Id,

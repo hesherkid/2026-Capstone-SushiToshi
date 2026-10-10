@@ -12,6 +12,7 @@ using Microsoft.OpenApi.Models;
 using back_end.Configurations;
 using back_end.Services.Email;
 using back_end.Services.Auth;
+using back_end.Helpers;
 using SendGrid;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -159,8 +160,28 @@ builder.Services.AddRateLimiter(options =>
         config.QueueLimit = 2;
     });
 
+    // Menu item view tracking (POST api/menu-item-views).
+    // Partitioned by the bearer token, not IP or user id: every guest at the restaurant shares the
+    // Wi-Fi IP and the guest account, but each sign-in gets its own token.
+    // Reads the raw header so it works even though UseRateLimiter runs before UseAuthentication.
+    options.AddPolicy(ViewTrackingRules.RateLimitPolicy, httpContext =>
+    {
+        var authorization = httpContext.Request.Headers.Authorization.ToString();
+        var partitionKey = string.IsNullOrEmpty(authorization)
+            ? $"ip:{httpContext.Connection.RemoteIpAddress}"
+            : $"token:{authorization}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = ViewTrackingRules.RateLimitPerMinute,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
+
 
 // Add CORS policy
 builder.Services.AddCors(options =>

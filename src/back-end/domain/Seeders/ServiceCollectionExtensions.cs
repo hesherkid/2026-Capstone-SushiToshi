@@ -26,6 +26,7 @@ namespace back_end.domain.Seeders
       services.AddScoped<SessionOrderSeeder>();
       services.AddScoped<OrderItemSeeder>();
       services.AddScoped<ServiceRequestSeeder>();
+      services.AddScoped<MenuItemViewSeeder>();
 
       services.AddScoped<LocationSeeder>();
 

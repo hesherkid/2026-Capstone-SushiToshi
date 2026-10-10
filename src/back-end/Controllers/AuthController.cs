@@ -338,7 +338,7 @@ namespace back_end.controllers
 
             user.Password_hash =
                 BCryptNet.HashPassword(request.NewPassword);
-           
+
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -394,6 +394,7 @@ namespace back_end.controllers
                 // Verify the Google token
                 var settings = new GoogleJsonWebSignature.ValidationSettings
                 {
+                    //TODO: is there where we would add ngrok origins? Should this be somewhere else?
                     Audience = new[] { "913755751162-t0grfn5dn2np3lds6sca84l6all5rl4d.apps.googleusercontent.com" }
                 };
 
@@ -500,6 +501,7 @@ namespace back_end.controllers
 
             var keyStr = _config["Jwt:Key"];
             Console.WriteLine($"[JWT SIGN] Key len: {keyStr?.Length}, First8: {keyStr?[..Math.Min(8, keyStr!.Length)]}");
+            // TODO: Not good practice to log the JWT key, even partially. Remove this in production. Should also rotate the JWT key in appsettings.json as it was previously commited, move it to a secure location.
 
             var securityKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_config["Jwt:Key"]));

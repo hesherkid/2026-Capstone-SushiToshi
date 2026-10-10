@@ -51,7 +51,7 @@ namespace back_end.domain.Seeders
                     Claimed_By = userClaimer?.User_id,
                     Notes = "Need extra napkins",
                     Status = ServiceRequestStatus.Pending,
-                    Created_At = DateTime.Now,
+                    Created_At = DateTime.UtcNow,
                     Claimed_At = null,
                     Completed_At = null
                 },
@@ -63,8 +63,8 @@ namespace back_end.domain.Seeders
                     Claimed_By = userClaimer?.User_id,
                     Notes = "Requesting water refill",
                     Status = ServiceRequestStatus.Claimed,
-                    Created_At = DateTime.Now.AddMinutes(-15),
-                    Claimed_At = DateTime.Now.AddMinutes(-10),
+                    Created_At = DateTime.UtcNow.AddMinutes(-15),
+                    Claimed_At = DateTime.UtcNow.AddMinutes(-10),
                     Completed_At = null
                 },
                 new ServiceRequest
@@ -75,14 +75,14 @@ namespace back_end.domain.Seeders
                     Claimed_By = userClaimer?.User_id,
                     Notes = "Bill requested",
                     Status = ServiceRequestStatus.Completed,
-                    Created_At = DateTime.Now.AddHours(-2),
-                    Claimed_At = DateTime.Now.AddHours(-1).AddMinutes(-30),
-                    Completed_At = DateTime.Now.AddHours(-1)
+                    Created_At = DateTime.UtcNow.AddHours(-2),
+                    Claimed_At = DateTime.UtcNow.AddHours(-1).AddMinutes(-30),
+                    Completed_At = DateTime.UtcNow.AddHours(-1)
                 }
             };
 
             _context.ServiceRequests.AddRange(serviceRequests);
-           // _context.SaveChanges();
+            // _context.SaveChanges();
 
             _logger.LogInformation($"Added {serviceRequests.Count} service requests");
         }
