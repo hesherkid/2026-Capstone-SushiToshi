@@ -19,5 +19,12 @@ namespace back_end.Helpers
 
         /// <summary>Views accepted per minute per signed-in token.</summary>
         public const int RateLimitPerMinute = 60;
+
+        /// <summary>Default for the browsing behavior "minViews" filter: views an item needs to count as "high views".</summary>
+        public const int DefaultMinViews = 10;
+
+        /// <summary>Largest minViews accepted by the browsing behavior report.</summary>
+        public const int MaxMinViews = 1000;
     }
 }
+

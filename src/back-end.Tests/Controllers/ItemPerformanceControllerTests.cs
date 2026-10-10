@@ -10,6 +10,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.Analytics;
+using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
 
@@ -18,7 +19,7 @@ namespace back_end.Tests.Controllers;
 /// Most tests use a fixed past week (Mon 2025-01-06 to Sun 2025-01-12, Mountain Standard Time, UTC-7)
 /// through range=custom, so results never depend on today's date.
 /// </summary>
-public class AnalyticsControllerItemPerformanceTests : IDisposable
+public class ItemPerformanceControllerTests : IDisposable
 {
     private const string WeekFrom = "2025-01-06";
     private const string WeekTo = "2025-01-12";
@@ -33,11 +34,11 @@ public class AnalyticsControllerItemPerformanceTests : IDisposable
 
     private readonly ApplicationDbContext _context;
     private readonly Mock<IConfiguration> _mockConfig;
-    private readonly Mock<ILogger<AnalyticsController>> _mockLogger;
-    private readonly AnalyticsController _controller;
+    private readonly Mock<ILogger<ItemPerformanceController>> _mockLogger;
+    private readonly ItemPerformanceController _controller;
     private int _nextOrderItemId = 1;
 
-    public AnalyticsControllerItemPerformanceTests()
+    public ItemPerformanceControllerTests()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -45,9 +46,11 @@ public class AnalyticsControllerItemPerformanceTests : IDisposable
 
         _context = new ApplicationDbContext(options);
         _mockConfig = new Mock<IConfiguration>();
-        _mockLogger = new Mock<ILogger<AnalyticsController>>();
+        _mockLogger = new Mock<ILogger<ItemPerformanceController>>();
 
-        _controller = new AnalyticsController(_context, _mockConfig.Object, _mockLogger.Object);
+        _controller = new ItemPerformanceController(
+            new ItemPerformanceService(_context, _mockConfig.Object, TimeProvider.System),
+            _mockLogger.Object);
 
         SeedTestData();
     }

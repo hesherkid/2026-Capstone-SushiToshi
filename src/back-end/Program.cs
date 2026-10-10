@@ -12,6 +12,7 @@ using Microsoft.OpenApi.Models;
 using back_end.Configurations;
 using back_end.Services.Email;
 using back_end.Services.Auth;
+using back_end.Services.Analytics;
 using back_end.Helpers;
 using SendGrid;
 
@@ -211,6 +212,7 @@ builder.Services.AddHttpContextAccessor();
 // Services
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<QrGeneratorService>();
+builder.Services.AddAnalyticsServices();
 
 // Temporary //**
 Console.WriteLine(">>> USING CONNECTION STRING:");
