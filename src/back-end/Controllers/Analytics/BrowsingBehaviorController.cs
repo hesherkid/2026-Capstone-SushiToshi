@@ -9,6 +9,7 @@ namespace back_end.controllers
     [ApiController]
     [Route("api/analytics")] // literal, not [controller]: the URL stays /api/analytics/browsing-behavior
     [Authorize(Roles = "Admin")]
+    [Tags("Analytics")]
     public class BrowsingBehaviorController : ControllerBase
     {
         private readonly IBrowsingBehaviorService _service;

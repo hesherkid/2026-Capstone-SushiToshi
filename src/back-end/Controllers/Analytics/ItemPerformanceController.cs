@@ -8,6 +8,7 @@ namespace back_end.controllers
     [ApiController]
     [Route("api/analytics")] // literal, not [controller]: the URL stays /api/analytics/item-performance
     [Authorize(Roles = "Admin")]
+    [Tags("Analytics")]
     public class ItemPerformanceController : ControllerBase
     {
         private readonly IItemPerformanceService _service;
