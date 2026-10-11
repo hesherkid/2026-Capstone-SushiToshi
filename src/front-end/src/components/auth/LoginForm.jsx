@@ -19,6 +19,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
 import api from "@/config/api";
+import { decodeToken } from "@/config/auth";
 import { loginUser } from "@/utils/auth";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -55,6 +56,71 @@ const LoginFormContent = () => {
     if (tableNumber) {
       localStorage.setItem("tableNumber", tableNumber);
     }
+  };
+
+  const startQrDiningSession = async (accessToken) => {
+    if (!locationId || !tableNumber) return null;
+
+    const numericLocationId = Number(locationId);
+    const numericTableNumber = Number(tableNumber);
+    const claims = decodeToken(accessToken);
+    const userId = Number(
+      claims?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ??
+        claims?.nameid ??
+        claims?.user_id
+    );
+
+    if (!numericLocationId || !numericTableNumber || !userId) {
+      throw new Error("The QR code is missing valid table or login information.");
+    }
+
+    const [tablesResponse, menusResponse] = await Promise.all([
+      api.get("/TableEntity"),
+      api.get("/Menu"),
+    ]);
+    const tables = Array.isArray(tablesResponse.data) ? tablesResponse.data : [];
+    const menus = Array.isArray(menusResponse.data) ? menusResponse.data : [];
+    const table = tables.find(
+      (candidate) =>
+        Number(candidate.location_Id ?? candidate.Location_Id) === numericLocationId &&
+        Number(candidate.table_number ?? candidate.Table_Number) === numericTableNumber &&
+        (candidate.is_active ?? candidate.Is_Active) !== false
+    );
+
+    if (!table) {
+      throw new Error(`Table ${tableNumber} was not found at this location.`);
+    }
+
+    const menu =
+      menus.find(
+        (candidate) =>
+          Number(candidate.location_Id ?? candidate.Location_Id) === numericLocationId
+      ) ?? menus[0];
+    const menuId = Number(menu?.menu_id ?? menu?.Menu_Id ?? menu?.menuId);
+    const tableId = Number(table.table_Id ?? table.Table_Id ?? table.table_id);
+
+    if (!menuId || !tableId) {
+      throw new Error("A menu or table could not be found for this QR code.");
+    }
+
+    const response = await api.post("/DiningSession/Create_Dinning_Session", {
+      Menu_Id: menuId,
+      Location_Id: numericLocationId,
+      Table_Id: tableId,
+      AssignmentType: "table",
+      Request_By_User_Id: userId,
+      Request_By_Name: "Guest",
+    });
+    const sessionId = Number(
+      response.data?.session_Id ?? response.data?.Session_Id ?? response.data?.sessionId
+    );
+
+    if (!sessionId) {
+      throw new Error("The dining session could not be started for this table.");
+    }
+
+    localStorage.setItem("session_id", String(sessionId));
+    return sessionId;
   };
 
   const clearExistingAuthentication = () => {
@@ -136,8 +202,9 @@ const LoginFormContent = () => {
 
       clearGuestSession();
       saveRestaurantContext();
+      const sessionId = await startQrDiningSession(response.access_token);
 
-      router.replace("/");
+      router.replace(sessionId ? "/menu/full-menu" : "/");
       router.refresh();
     } catch (err) {
       handleAuthError(err);
@@ -167,10 +234,9 @@ const LoginFormContent = () => {
       }
 
       saveRestaurantContext();
-
       localStorage.setItem("guest", "true");
-
-      router.replace("/");
+      const sessionId = await startQrDiningSession(response.access_token);
+      router.replace(sessionId ? "/menu/full-menu" : "/");
       router.refresh();
     } catch (err) {
       if (err.response?.status === 401) {
@@ -223,11 +289,12 @@ const LoginFormContent = () => {
       }
 
       saveRestaurantContext();
+      const sessionId = await startQrDiningSession(data.access_token);
 
       // Synchronize with the existing auth hook.
       window.dispatchEvent(new Event("authChange"));
 
-      router.replace("/");
+      router.replace(sessionId ? "/menu/full-menu" : "/");
       router.refresh();
     } catch (err) {
       handleAuthError(err);

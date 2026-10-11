@@ -6,34 +6,19 @@ import {
   Typography,
   Button,
   IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemButton,
   Box,
   useTheme,
   CircularProgress,
+  Badge,
   Select,
   MenuItem,
   FormControl,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  MenuSquare,
   LogOut,
   LogIn,
-  Home,
-  Clock,
-  Users,
-  BarChart,
-  Tag,
-  QrCode,
-  Phone,
-  MapPin,
-  Table,
-  Group,
+  ShoppingBag,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -45,6 +30,7 @@ import api from "@/config/api";
 import storage from "@/utils/storage";
 import { LocationOn } from "@mui/icons-material";
 import { useNotification } from "@/contexts/NotificationContext";
+import AppNavigationDrawer from "@/components/AppNavigationDrawer";
 
 const AppBarWithTitle = ({ title }) => {
   const router = useRouter();
@@ -56,9 +42,28 @@ const AppBarWithTitle = ({ title }) => {
     storage.get("branch-location")
   );
   const [allLocations, setAllLocations] = useState([]);
+  const [tableNumber, setTableNumber] = useState("");
+  const [bagItemCount, setBagItemCount] = useState(0);
   const { isAuthenticated, userRole, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
   const isGuest = typeof window !== "undefined" && localStorage.getItem("guest") === "true";
+  const canShowDrawer =
+    !isLoginPage && (isAuthenticated || isGuest);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    setTableNumber(localStorage.getItem("tableNumber") || "");
+
+    const handleCartCountChange = (event) => {
+      setBagItemCount(Number(event.detail?.count) || 0);
+    };
+
+    window.addEventListener("menu-cart-count-changed", handleCartCountChange);
+    return () => {
+      window.removeEventListener("menu-cart-count-changed", handleCartCountChange);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchAllLocations = async () => {
@@ -99,9 +104,15 @@ const AppBarWithTitle = ({ title }) => {
   //   };
   // }, []);
   
-const handleLogout = async () => {
-  await logoutUser(true); // true = redirect to login
+const handleLogout = () => {
+  if (typeof window !== "undefined") {
+    ["guest", "session_id", "guest_oid", "tableNumber", "locationId", "currentBillId"].forEach(
+      (key) => localStorage.removeItem(key)
+    );
+  }
+
   setDrawerOpen(false);
+  logoutUser();
 };
 
   const handleLogin = () => {
@@ -138,77 +149,8 @@ const handleLogout = async () => {
       // setSelectedLocation(previousValue);
     }
   };
-  const menuItems = {
-    customer: [
-      { icon: Home, label: "Home", path: "/" },
-      { icon: Clock, label: "Bills", path: "/dashboard/bills" },
-      { icon: MenuSquare, label: "Menu", path: "/menu/full-menu" },
-      { icon: Users, label: "Orders", path: "/dashboard/orders" },
-      { icon: Phone, label: "Call Server", path: "/dashboard/call-server" },
-    ],
-    staff: [
-      { icon: Home, label: "Home", path: "/" },
-      { icon: Clock, label: "Sessions", path: "/dashboard/sessions" },
-      { icon: Table, label: "Tables", path: "/dashboard/tables" },
-      { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
-      { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes" },
-    ],
-    admin: [
-      { icon: Home, label: "Home", path: "/" },
-      { icon: Clock, label: "Sessions", path: "/dashboard/sessions" },
-      { icon: Table, label: "Tables", path: "/dashboard/tables" },
-      { icon: MapPin,label: "Manage Locations",path: "/location/menu-location",},
-      { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
-      { icon: MenuIcon, label: "Manage Menu Items", path: "/admin/menu-items" },
-      { icon: Group, label: "Manage Menu Categories", path: "/admin/menu-categories" },
-      { icon: Users, label: "Manage Staff", path: "/admin/staff" },
-      { icon: Tag, label: "Manage Tags", path: "/tags/tag-management" },
-      { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes" },
-      { icon: BarChart, label: "Analytics", path: "/analytics/analytic-page" },
-    ],
-  };
-
   const effectiveRole = userRole || (isGuest ? "customer" : null);
  console.log(effectiveRole)
-  const renderMenuList = () => (
-    <List
-      sx={{
-        width: 320,
-        pt: 3,
-      }}
-    >
-      {effectiveRole &&
-        menuItems[effectiveRole].map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <ListItemButton
-              key={index}
-              onClick={() => handleNavigation(item.path)}
-              sx={{
-                cursor: "pointer",
-                py: 3,
-                "& .MuiListItemIcon-root": {
-                  minWidth: 56,
-                  "& svg": {
-                    width: 24,
-                    height: 24,
-                  },
-                },
-                "& .MuiListItemText-primary": {
-                  fontSize: "1.1rem",
-                  fontWeight: 500,
-                },
-              }}
-            >
-              <ListItemIcon>
-                <Icon />
-              </ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          );
-        })}
-    </List>
-  );
 
   return (
     <AppBar
@@ -232,7 +174,7 @@ const handleLogout = async () => {
             flex: "1 1 0",
           }}
         >
-          {(isAuthenticated  || isGuest) && (
+          {canShowDrawer && (
             <IconButton
               color="inherit"
               aria-label="menu"
@@ -284,9 +226,42 @@ const handleLogout = async () => {
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
-            gap: 2,
+            gap: { xs: 0.5, sm: 2 },
           }}
         >
+          {isGuest && tableNumber && (
+            <Box
+              aria-label={`Table ${tableNumber}`}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                color: "inherit",
+                whiteSpace: "nowrap",
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              <Typography component="span" sx={{ fontSize: { xs: "1rem", sm: "0.9rem" } }}>
+                Table {tableNumber}
+              </Typography>
+            </Box>
+          )}
+
+          {isGuest && pathname === "/menu/full-menu" && (
+            <IconButton
+              color="inherit"
+              aria-label={`Shopping bag, ${bagItemCount} ${bagItemCount === 1 ? "item" : "items"}`}
+              disabled={bagItemCount === 0}
+              onClick={() =>
+                window.dispatchEvent(new Event("menu-cart-open"))
+              }
+            >
+              <Badge badgeContent={bagItemCount} color="secondary" showZero>
+                <ShoppingBag size={21} />
+              </Badge>
+            </IconButton>
+          )}
+
           {/* Location Dropdown - Only visible for staff and admin */}
           {isAuthenticated &&
             (userRole === "staff" || userRole === "admin") && (
@@ -346,11 +321,11 @@ const handleLogout = async () => {
             <Button
               color="inherit"
               onClick={
-                isAuthenticated
+                isAuthenticated || isGuest
                   ? handleLogout
                   : () => handleNavigation("/auth/login")
               }
-              endIcon={isAuthenticated ? <LogOut /> : <LogIn />}
+              endIcon={isAuthenticated || isGuest ? <LogOut /> : <LogIn />}
               sx={{
                 minWidth: { xs: 56, sm: "auto" },
                 px: { xs: 2, sm: 2.5 },
@@ -368,18 +343,14 @@ const handleLogout = async () => {
           )}
         </Box>
 
-        <Drawer
-          anchor="left"
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          sx={{
-            "& .MuiDrawer-paper": {
-              top: { xs: 56, sm: 64 },
-            },
-          }}
-        >
-          {renderMenuList()}
-        </Drawer>
+        {canShowDrawer && (
+          <AppNavigationDrawer
+            open={drawerOpen}
+            role={effectiveRole}
+            onClose={() => setDrawerOpen(false)}
+            onNavigate={handleNavigation}
+          />
+        )}
       </Toolbar>
     {loading && (
       <Box

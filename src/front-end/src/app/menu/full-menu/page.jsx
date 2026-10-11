@@ -1,113 +1,24 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Typography,
   Box,
   Button,
   Container,
   Alert,
   TextField,
-  CircularProgress,
-  Paper,
+  Divider,
 } from "@mui/material";
-import { ChevronDown, Search } from "lucide-react";
-import BillSelect from "@/components/customer/OrderDashboard/components/BillSelect";
-import OrderSummary from "@/components/customer/OrderDashboard/components/OrderSummaryItem";
+import { Search } from "lucide-react";
+import MenuItemCard from "@/components/menu/MenuItemCard";
+import CartDrawer from "@/components/menu/CartDrawer";
 import useMenuSearch from "@/components/menu/searchUtils";
-import Tags from "@/components/Tags";
 import api from "@/config/api";
 import publicApi from "@/config/publicApi";
 import { useOrderActions } from "@/hooks/useOrderActions";
 
-const SWIPE_THRESHOLD = 50;
-const ANIMATION_DURATION = 300;
-
 //Check if the logged in user is a guest.
 const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
-
-const SwipeableItem = ({
-  children,
-  onSwipeLeft,
-  onSwipeRight,
-  threshold = 50,
-  className = "",
-}) => {
-  const [translateX, setTranslateX] = useState(0);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-  const elementRef = useRef(null);
-
-  useEffect(() => {
-    const element = elementRef.current;
-    if (!element) return;
-
-    const handleTouchStart = (e) => {
-      touchStartX.current = e.touches[0].clientX;
-      touchStartY.current = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e) => {
-      if (!touchStartX.current || !touchStartY.current) return;
-
-      const touchX = e.touches[0].clientX;
-      const touchY = e.touches[0].clientY;
-      const deltaX = touchX - touchStartX.current;
-      const deltaY = touchY - touchStartY.current;
-
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        e.preventDefault();
-        const limitedDeltaX = Math.min(Math.max(deltaX, -75), 75);
-        setTranslateX(limitedDeltaX);
-      }
-    };
-
-    const handleTouchEnd = (e) => {
-      if (!touchStartX.current) return;
-
-      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-
-      if (Math.abs(deltaX) >= threshold) {
-        if (deltaX > 0) {
-          onSwipeRight?.();
-        } else {
-          onSwipeLeft?.();
-        }
-      }
-
-      setTranslateX(0);
-      touchStartX.current = null;
-      touchStartY.current = null;
-    };
-
-    element.addEventListener("touchstart", handleTouchStart, { passive: true });
-    element.addEventListener("touchmove", handleTouchMove, { passive: false });
-    element.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-    return () => {
-      element.removeEventListener("touchstart", handleTouchStart);
-      element.removeEventListener("touchmove", handleTouchMove);
-      element.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [onSwipeLeft, onSwipeRight, threshold]);
-
-  return (
-    <div
-      ref={elementRef}
-      className={className}
-      style={{
-        transform: `translateX(${translateX}px)`,
-        transition: translateX === 0 ? "transform 0.2s ease-out" : "none",
-        touchAction: "pan-y pinch-zoom",
-        width: "100%",
-      }}
-    >
-      {children}
-    </div>
-  );
-};
 
 const FullMenu = () => {
   const [categories, setCategories] = useState([]);
@@ -118,6 +29,8 @@ const FullMenu = () => {
   const [selectedBillId, setSelectedBillId] = useState("");
   const [menuId, setMenuId] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   const handleOrderSuccess = () => {
     setOrderSuccess(true);
@@ -216,6 +129,24 @@ const FullMenu = () => {
   };
 
   useEffect(() => {
+    const count = Object.values(quantities).reduce(
+      (total, categoryQuantities) =>
+        total + Object.values(categoryQuantities).reduce((categoryTotal, quantity) => categoryTotal + quantity, 0),
+      0
+    );
+
+    window.dispatchEvent(
+      new CustomEvent("menu-cart-count-changed", { detail: { count } })
+    );
+  }, [quantities]);
+
+  useEffect(() => {
+    const openCart = () => setCartDrawerOpen(true);
+    window.addEventListener("menu-cart-open", openCart);
+    return () => window.removeEventListener("menu-cart-open", openCart);
+  }, []);
+
+  useEffect(() => {
     const getActiveSession = async () => {
       // Handle guest users separately
       if (isGuest()) {
@@ -247,6 +178,52 @@ const FullMenu = () => {
 
     getActiveSession();
   }, []);
+
+  useEffect(() => {
+    if (!sessionId || sessionId < 1) return;
+
+    const selectCurrentBill = async () => {
+      try {
+        const apiClient = isGuest() ? publicApi : api;
+        const response = await apiClient.get(`/Bill/get_bills/${sessionId}`);
+        const bills = Array.isArray(response.data) ? response.data : [];
+
+        if (!bills.length) {
+          setSelectedBillId("");
+          return;
+        }
+
+        const sortedBills = [...bills].sort(
+          (a, b) =>
+            new Date(
+              b.created_At ?? b.created_at ?? b.Created_At ?? 0
+            ).getTime() -
+            new Date(
+              a.created_At ?? a.created_at ?? a.Created_At ?? 0
+            ).getTime()
+        );
+
+        const currentBill =
+          sortedBills.find(
+            (bill) =>
+              (bill.status ?? bill.Status ?? "")
+                .toString()
+                .toUpperCase() !== "CLOSED"
+          ) ?? sortedBills[0];
+
+        const billId = Number(currentBill?.bill_id ?? currentBill?.Bill_Id);
+
+        if (!Number.isNaN(billId) && billId > 0) {
+          setSelectedBillId(billId);
+          localStorage.setItem("currentBillId", String(billId));
+        }
+      } catch (err) {
+        console.error("Error fetching current bill:", err);
+      }
+    };
+
+    selectCurrentBill();
+  }, [sessionId]);
 
   useEffect(() => {
     //Session ID can only be 1 or above
@@ -314,7 +291,7 @@ const FullMenu = () => {
         setCategories(
           data.map((c) => ({
             category_id: c.category_id ?? c.Category_id,
-            name: c.name ?? c.Category_name,
+            name: c.name ?? c.category_name ?? c.Category_name,
           }))
         );
       } catch (err) {
@@ -430,22 +407,40 @@ const FullMenu = () => {
 
       await addOrderItems(newOrderId, orderItems);
     } catch (error) {
-      console.error("❌ Error processing order:", error);
+      console.error("Error processing order:", error);
       setError(error.message || "Error processing order");
     }
   };
 
-
   // Combine local and hook errors
   const displayError = error || actionError;
 
+  const filteredMenuGroups = categories
+    .filter(
+      (category) =>
+        selectedCategory === "all" || category.category_id === selectedCategory
+    )
+    .map((category) => ({
+      category,
+      items: filterMenuItems(menuItems[category.category_id], category.category_id),
+    }))
+    .filter(({ items }) => items.length > 0);
+
+  const allMenuItemCount = categories.reduce(
+    (total, category) =>
+      total +
+      filterMenuItems(menuItems[category.category_id], category.category_id).length,
+    0
+  );
+
   return (
+
     <Container disableGutters maxWidth={false}>
       <Box sx={{ p: 0 }}>
         <Typography
-          variant="h4"
+          variant="h5"
           component="h1"
-          sx={{ mt: 4, mb: 4, textAlign: "center", width: "100%" }}
+          sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200,}}
         >
           All You Can Eat Menu
         </Typography>
@@ -464,319 +459,187 @@ const FullMenu = () => {
           </Alert>
         )}
 
-        <Box sx={{ width: "100%" }} mb={3}>
+        <Box sx={{ width: "100%", mb: 3 }}>
           {sessionId ? (
             <>
-              <BillSelect
-                session_id={sessionId}
-                value={selectedBillId}
-                onChange={handleBillChange}
-                sx={{ width: "100%", mb: 2 }}
-                message="Select Bill To Place Order"
+              <TextField
+                fullWidth
+                placeholder="Search the menu..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <Search size={20} style={{ marginRight: 8 }} />
+                  ),
+                  endAdornment: searchTerm ? (
+                    <Button
+                      onClick={() => setSearchTerm("")}
+                      sx={{
+                        minWidth: "auto",
+                        p: 0.5,
+                        color: "text.secondary",
+                        "&:hover": {
+                          backgroundColor: "transparent",
+                          color: "text.primary",
+                        },
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  ) : null,
+                }}
+                sx={{ mb: 2 }}
               />
-              {selectedBillId && (
-                <TextField
-                  fullWidth
-                  placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  InputProps={{
-                    startAdornment: (
-                      <Search size={20} style={{ marginRight: 8 }} />
-                    ),
-                    endAdornment: searchTerm ? (
-                      <Button
-                        onClick={() => setSearchTerm("")}
-                        sx={{
-                          minWidth: "auto",
-                          p: 0.5,
-                          color: "text.secondary",
-                          "&:hover": {
-                            backgroundColor: "transparent",
-                            color: "text.primary",
-                          },
-                        }}
-                      >
-                        ✕
-                      </Button>
-                    ) : null,
+
+              {categories.length > 0 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    overflowX: "auto",
+                    pb: 1,
+                    mb: 2,
+                    "&::-webkit-scrollbar": { display: "none" },
                   }}
-                  sx={{ mb: 2 }}
-                />
+                >
+                  <Button
+                    variant={selectedCategory === "all" ? "contained" : "outlined"}
+                    onClick={() => setSelectedCategory("all")}
+                    sx={{
+                      minWidth: "max-content",
+                      bgcolor: selectedCategory === "all" ? "#C01E2E" : "transparent",
+                      color: selectedCategory === "all" ? "#fff" : "#C01E2E",
+                      borderColor: "#C01E2E",
+                    }}
+                  >
+                    Full Menu
+                  </Button>
+
+                  {categories.map((category) => (
+                    <Button
+                      key={`cat-btn-${category.category_id}`}
+                      variant={
+                        selectedCategory === category.category_id
+                          ? "contained"
+                          : "outlined"
+                      }
+                      onClick={() => setSelectedCategory(category.category_id)}
+                      sx={{
+                        minWidth: "max-content",
+                        bgcolor:
+                          selectedCategory === category.category_id
+                            ? "#C01E2E"
+                            : "transparent",
+                        color:
+                          selectedCategory === category.category_id
+                            ? "#fff"
+                            : "#C01E2E",
+                        borderColor: "#C01E2E",
+                      }}
+                    >
+                      {category.name || `Category ${category.category_id}`}
+                    </Button>
+                    
+                  ))}
+                </Box>
+                
               )}
             </>
           ) : (
             <Alert severity="info">No active session found</Alert>
           )}
+          
         </Box>
 
-        {selectedBillId && (
+        {sessionId && menuId && (
           <Box sx={{ width: "100%", mb: 4 }}>
-            {categories.map((category) => {
-              const filteredItems = filterMenuItems(
-                menuItems[category.category_id],
-                category.category_id
-              );
+            <Divider sx={{ mb: 2 }} />
 
-              const stats = getSelectedItemsStats(category.category_id);
-              const visibleCount = filteredItems.length;
+            {!selectedBillId && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Your menu is available, but there is no open bill for this session yet.
+                Ask a staff member to open a bill before placing an order.
+              </Alert>
+            )}
 
-              // Skip categories with no visible items
-              if (visibleCount === 0 && stats.itemCount === 0) {
-                return null;
-              }
-
-              return (
-                <Accordion
-                  key={`category-${category.category_id}`}
-                  onChange={() => menuId && fetchMenuItems(category.category_id, menuId)}
-                  sx={{ mb: 1 }}
+            {selectedCategory === "all" && (
+              <Typography
+                variant="h6"
+                component="h2"
+                sx={{
+                  fontWeight: 600,
+                  mb: 2,
+                  color: "#1f2937",
+                  textAlign: "left",
+                }}
+              >
+                Viewing Full Menu{" "}
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: "0.75rem",
+                    fontWeight: 400,
+                    color: "#6b7280",
+                    ml: 0.5,
+                  }}
                 >
-                  <AccordionSummary
-                    expandIcon={<ChevronDown />}
+                  {allMenuItemCount} items
+                </Typography>
+              </Typography>
+  
+            )}
+
+            {filteredMenuGroups.length === 0 ? (
+              <Alert severity="info">No items match your search.</Alert>
+            ) : (
+              filteredMenuGroups.map(({ category, items }) => (
+                <Box key={`group-${category.category_id}`} sx={{ mb: 3 }}>
+                  <Typography
+                    variant="h5"
+                    component="h2"
                     sx={{
-                      "&.MuiAccordionSummary-root": {
-                        backgroundColor: "#f8f9fa",
-                        minHeight: "48px",
-                        "&:hover": { backgroundColor: "#eeeeee" },
-                        justifyContent: "center",
-                      },
+                      fontWeight: 600,
+                      mb: 1.5,
+                      color: "#1f2937",
+                      textAlign: "left",
                     }}
                   >
-                    <Box
+                    {category.name || `Category ${category.category_id}`}{" "}
+                    <Typography
+                      component="span"
                       sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        width: "100%",
-                        pr: 2,
+                        fontSize: "0.75rem",
+                        fontWeight: 400,
+                        color: "#6b7280",
+                        ml: 0.5,
                       }}
                     >
-                      <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                        {(category.name || menuItems[category.category_id]?.[0]?.category || `Category ${category.category_id}`)}
-                        {" "}
-                        ({visibleCount} {visibleCount === 1 ? "item" : "items"})
-                      </Typography>
+                      {items.length} items
+                    </Typography>
+                  </Typography>
 
-                      {stats.itemCount > 0 && (
-                        <Typography
-                          variant="subtitle2"
-                          sx={{
-                            color: "#C01E2E",
-                            bgcolor: "#FFF3CD",
-                            px: 1.5,
-                            py: 0.5,
-                            borderRadius: 1,
-                            fontWeight: "medium",
-                            textAlign: "center",
-                          }}
-                        >
-                          {`${stats.itemCount} ${stats.itemCount === 1 ? "item" : "items"}, ${stats.totalQuantity} ${stats.totalQuantity === 1 ? "unit" : "units"}`}
-                        </Typography>
-                      )}
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails sx={{ p: 0 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0.5,
-                        width: "100%",
-                      }}
-                    >
-                      {filteredItems.map((item) => (
-                        <Paper
-                          key={`item-${category.category_id}-${item.item_id}`}
-                          elevation={1}
-                          sx={{
-                            display: "flex",
-                            width: "100%",
-                            border: "1px solid",
-                            borderColor: "divider",
-                            borderRadius: 1,
-                            overflow: "hidden",
-                            minHeight: "100px",
-                          }}
-                        >
-                          <SwipeableItem
-                            key={`swipeable-${category.category_id}-${item.item_id}`}
-                            onSwipeLeft={() =>
-                              handleQuantityChange(
-                                category.category_id,
-                                item.item_id,
-                                -1
-                              )
-                            }
-                            onSwipeRight={() =>
-                              handleQuantityChange(
-                                category.category_id,
-                                item.item_id,
-                                1
-                              )
-                            }
-                          >
-                            <Box sx={{ display: "flex", width: "100%" }}>
-                              <Box
-                                sx={{
-                                  width: "90px",
-                                  minWidth: "90px",
-                                  height: "100%",
-                                  position: "relative",
-                                }}
-                              >
-                                <Box
-                                  component="img"
-                                  src={
-                                    item.item_image_url ||
-                                    "/images/placeholder.png"
-                                  }
-                                  alt={item.name}
-                                  sx={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                  }}
-                                />
-                              </Box>
-
-                              <Box
-                                sx={{
-                                  flex: 1,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  p: 1.5,
-                                  minWidth: 0,
-                                  gap: 1.5,
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "flex-start",
-                                    width: "100%",
-                                  }}
-                                >
-                                  <Typography
-                                    variant="subtitle1"
-                                    sx={{
-                                      fontWeight: "medium",
-                                      fontSize: "0.9rem",
-                                      lineHeight: 1.2,
-                                      flex: 1,
-                                      mr: 1,
-                                      textAlign: "left",
-                                    }}
-                                    noWrap
-                                  >
-                                    {item.name}
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      color: "text.secondary",
-                                      whiteSpace: "nowrap",
-                                      fontSize: "0.8rem",
-                                    }}
-                                  >
-                                    {item.is_add_on
-                                      ? `$${item.price}`
-                                      : "Included"}
-                                  </Typography>
-                                </Box>
-
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                  align="left"
-                                  sx={{
-                                    fontSize: "0.75rem",
-                                    lineHeight: 1.3,
-                                  }}
-                                >
-                                  {item.description}
-                                </Typography>
-
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    flexWrap: "wrap",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  <Tags item_id={item.tags} size="m" />
-                                </Box>
-
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                    width: "100%",
-                                  }}
-                                >
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() =>
-                                      handleQuantityChange(
-                                        category.category_id,
-                                        item.item_id,
-                                        -1
-                                      )
-                                    }
-                                    sx={{
-                                      flex: 1,
-                                      height: "30px",
-                                      borderColor: "#C01E2E",
-                                      color: "#C01E2E",
-                                    }}
-                                  >
-                                    -
-                                  </Button>
-                                  <Typography
-                                    sx={{
-                                      minWidth: "24px",
-                                      textAlign: "center",
-                                      userSelect: "none",
-                                      fontSize: "0.85rem",
-                                    }}
-                                  >
-                                    {quantities[category.category_id]?.[
-                                      item.item_id
-                                    ] || 0}
-                                  </Typography>
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() =>
-                                      handleQuantityChange(
-                                        category.category_id,
-                                        item.item_id,
-                                        1
-                                      )
-                                    }
-                                    sx={{
-                                      flex: 1,
-                                      height: "30px",
-                                      borderColor: "#C01E2E",
-                                      color: "#C01E2E",
-                                    }}
-                                  >
-                                    +
-                                  </Button>
-                                </Box>
-                              </Box>
-                            </Box>
-                          </SwipeableItem>
-                        </Paper>
-                      ))}
-                    </Box>
-                  </AccordionDetails>
-                </Accordion>
-              );
-            })}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1.5,
+                    }}
+                  >
+                    {items.map((item) => (
+                      <MenuItemCard
+                        key={`item-${category.category_id}-${item.item_id}`}
+                        item={item}
+                        categoryId={category.category_id}
+                        quantity={
+                          quantities[category.category_id]?.[item.item_id] || 0
+                        }
+                        onQuantityChange={handleQuantityChange}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              ))
+            )}
 
             {orderSuccess && (
               <Alert severity="success" sx={{ mb: 2 }}>
@@ -784,59 +647,22 @@ const FullMenu = () => {
               </Alert>
             )}
 
-            {/* Order Summary */}
-            {getTotalStats().itemCount > 0 && (
-              <Paper elevation={2} sx={{ mb: 3, overflow: "hidden" }}>
-                <Box sx={{ p: 2 }}>
-                  <OrderSummary
-                    categories={categories}
-                    quantities={quantities}
-                    menuItems={menuItems}
-                    onQuantityChange={handleQuantityChange}
-                  />
-                </Box>
-              </Paper>
-            )}
-
-            {/* Confirm Order Button */}
-            <Button
-              variant="contained"
-              fullWidth
-              size="large"
-              onClick={handleConfirmOrder}
-              disabled={
-                isLoading || !selectedBillId || getTotalStats().itemCount === 0
-              }
-              sx={{
-                bgcolor: "#C01E2E",
-                "&:hover": {
-                  bgcolor: "#A01725",
-                },
-                py: 1.5,
-                fontSize: "1.2rem",
-              }}
-            >
-              {isLoading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                `Confirm Order ${
-                  getTotalStats().itemCount > 0
-                    ? `(${getTotalStats().itemCount} items`
-                    : ""
-                }${
-                  getTotalStats().itemCount > 0 &&
-                  getTotalStats().totalQuantity > 0
-                    ? ", "
-                    : ""
-                }${
-                  getTotalStats().totalQuantity > 0
-                    ? `${getTotalStats().totalQuantity} units)`
-                    : ""
-                }`
-              )}
-            </Button>
           </Box>
         )}
+
+        <CartDrawer
+          open={cartDrawerOpen}
+          onClose={() => setCartDrawerOpen(false)}
+          categories={categories}
+          quantities={quantities}
+          menuItems={menuItems}
+          onQuantityChange={handleQuantityChange}
+          onConfirmOrder={handleConfirmOrder}
+          isLoading={isLoading}
+          selectedBillId={selectedBillId}
+          itemCount={getTotalStats().itemCount}
+          totalQuantity={getTotalStats().totalQuantity}
+        />
       </Box>
     </Container>
   );
