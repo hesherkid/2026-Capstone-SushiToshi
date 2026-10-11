@@ -10,6 +10,7 @@ import {
   Alert,
   Chip,
   IconButton,
+  Button,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Plus } from "lucide-react";
@@ -271,30 +272,54 @@ const fetchOrders = async (billId = "") => {
   }
 
   return (
-    <Box p={2}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
+    <Box>
+      <Typography
+        variant="h4"
+        component="h1"
+        sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200,}}
       >
-        <Typography variant="h4">Table Orders</Typography>
-        <IconButton
+        Table Orders
+      </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+            gap: 2,
+          }}
+        >
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mt: 0.5,
+            fontSize: { xs: "0.8rem", sm: "0.875rem" },
+          }}
+        >
+          Add more items to your order
+        </Typography>
+
+        <Button
+          variant="contained"
+          startIcon={<Plus size={20} />}
           onClick={() => router.push("/menu/full-menu")}
           sx={{
-            backgroundColor: "primary.main",
-            color: "white",
-            width: 48,
-            height: 48,
+            borderRadius: 2,
+            px: { xs: 1.5, sm: 2.5 },
+            py: 1.25,
+            fontSize: { xs: "0.875rem", sm: "1rem" },
+            fontWeight: 600,
+            textTransform: "none",
+            whiteSpace: "nowrap",
+            boxShadow: "none",
             "&:hover": {
-              backgroundColor: "primary.dark",
+              boxShadow: 1,
             },
           }}
         >
-          <Plus size={24} />
-        </IconButton>
+          Order More
+        </Button>
       </Box>
 
       <Box mb={3}>

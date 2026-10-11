@@ -579,9 +579,10 @@ const columns = [
         <Typography variant="h5" component="h1" sx={{ fontWeight: "bold" }}>
           Tag Management
         </Typography>
-        <AddButton sx={{ ml: 2 }} onClick={() => handleOpenDialog("add")}>
+        <Button sx={{ ml: 2 }} onClick={() => handleOpenDialog("add")}>
           <Plus />
-        </AddButton>
+          Add New Tag
+        </Button>
       </Box>
 
       <Box

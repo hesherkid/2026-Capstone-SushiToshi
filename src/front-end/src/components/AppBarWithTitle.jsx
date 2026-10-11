@@ -16,7 +16,6 @@ import {
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  LogOut,
   LogIn,
   ShoppingBag,
 } from "lucide-react";
@@ -169,9 +168,10 @@ const handleLogout = () => {
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "start",
-            gap: 1,
-            flex: "1 1 0",
+            justifyContent: "flex-start",
+            gap: { xs: 2, sm: 3},
+            flex: "0 0 auto",
+            minWidth: 0,
           }}
         >
           {canShowDrawer && (
@@ -179,12 +179,12 @@ const handleLogout = () => {
               color="inherit"
               aria-label="menu"
               onClick={() => setDrawerOpen(true)}
-              sx={{ p: { xs: 1, sm: 1.5 } }}
+              sx={{ p: { xs: 1, sm: 1.5 }, flexShrink: 0,}}
             >
               <MenuIcon />
             </IconButton>
           )}
-          <Typography
+          {/* <Typography
             variant="h6"
             component="div"
             sx={{
@@ -195,7 +195,7 @@ const handleLogout = () => {
             }}
           >
             {title}
-          </Typography>
+          </Typography> */}
         </Box>
 
         <Box
@@ -235,13 +235,26 @@ const handleLogout = () => {
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 0.5,
+                gap: 0.75,
+                px: { xs: 1, sm: 1.5 },
+                py: 0.5,
+                borderRadius: 2,
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                backgroundColor: "rgba(255, 255, 255, 0.12)",
                 color: "inherit",
                 whiteSpace: "nowrap",
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                flexShrink: 0,
               }}
             >
-              <Typography component="span" sx={{ fontSize: { xs: "1rem", sm: "0.9rem" } }}>
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: { xs: "0.9rem", sm: "0.875rem" },
+                  fontWeight: 600,
+                  letterSpacing: "0.02em",
+                  lineHeight: 1.4,
+                }}
+              >
                 Table {tableNumber}
               </Typography>
             </Box>
@@ -257,7 +270,7 @@ const handleLogout = () => {
               }
             >
               <Badge badgeContent={bagItemCount} color="secondary" showZero>
-                <ShoppingBag size={21} />
+                <ShoppingBag size={25} />
               </Badge>
             </IconButton>
           )}
@@ -317,15 +330,11 @@ const handleLogout = () => {
               </FormControl>
             )}
 
-          {!isLoginPage && (
+          {!isLoginPage && !isAuthenticated && !isGuest && (
             <Button
               color="inherit"
-              onClick={
-                isAuthenticated || isGuest
-                  ? handleLogout
-                  : () => handleNavigation("/auth/login")
-              }
-              endIcon={isAuthenticated || isGuest ? <LogOut /> : <LogIn />}
+              onClick={() => handleNavigation("/auth/login")}
+              endIcon={<LogIn />}
               sx={{
                 minWidth: { xs: 56, sm: "auto" },
                 px: { xs: 2, sm: 2.5 },
@@ -337,7 +346,7 @@ const handleLogout = () => {
               }}
             >
               <Typography sx={{ display: { xs: "none", sm: "block" } }}>
-                {isAuthenticated || isGuest ? "Logout" : "Login"}
+                Login
               </Typography>
             </Button>
           )}
@@ -349,6 +358,7 @@ const handleLogout = () => {
             role={effectiveRole}
             onClose={() => setDrawerOpen(false)}
             onNavigate={handleNavigation}
+            onLogout={handleLogout}
           />
         )}
       </Toolbar>
