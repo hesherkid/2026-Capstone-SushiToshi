@@ -10,6 +10,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.Analytics;
+using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
 
@@ -20,7 +21,7 @@ namespace back_end.Tests.Controllers;
 /// Each dining session has its own bill and order with the same id, so sales attach by session.
 /// </summary>
 
-public class AnalyticsControllerBrowsingBehaviorTests : IDisposable
+public class BrowsingBehaviorControllerTests : IDisposable
 {
     private const string WeekFrom = "2025-01-06";
     private const string WeekTo = "2025-01-12";
@@ -34,22 +35,21 @@ public class AnalyticsControllerBrowsingBehaviorTests : IDisposable
     private const int S1 = 1, S2 = 2, S3 = 3, S4 = 4;
 
     private readonly ApplicationDbContext _context;
-    private readonly AnalyticsController _controller;
+    private readonly BrowsingBehaviorController _controller;
     private readonly Dictionary<int, int> _sessionLocation = new();
     private int _nextOrderItemId = 1;
     private long _nextViewId = 1;
 
-    public AnalyticsControllerBrowsingBehaviorTests()
+    public BrowsingBehaviorControllerTests()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
         _context = new ApplicationDbContext(options);
-        _controller = new AnalyticsController(
-            _context,
-            new Mock<IConfiguration>().Object,
-            new Mock<ILogger<AnalyticsController>>().Object);
+        _controller = new BrowsingBehaviorController(
+            new BrowsingBehaviorService(_context, new Mock<IConfiguration>().Object, TimeProvider.System),
+            new Mock<ILogger<BrowsingBehaviorController>>().Object);
 
         SeedTestData();
     }
