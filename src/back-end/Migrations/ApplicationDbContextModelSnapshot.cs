@@ -529,6 +529,12 @@ namespace back_end.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Order_Id"));
 
+                    b.Property<DateTime?>("Approved_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("Approved_By")
+                        .HasColumnType("int");
+
                     b.Property<int>("Bill_Id")
                         .HasColumnType("int");
 

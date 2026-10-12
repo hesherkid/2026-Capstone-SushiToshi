@@ -14,7 +14,6 @@ namespace back_end.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [AllowAnonymous]
 
     public class OrderController : ControllerBase
     {
@@ -127,8 +126,8 @@ namespace back_end.Controllers
         /// <summary>
         /// Approves a pending order and transitions to Approved/Processing status.
         /// </summary>
-        [Authorize(Policy = "staffOnly")]
         [HttpPatch("{order_id}/approve")]
+        [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -164,6 +163,8 @@ namespace back_end.Controllers
                 }
 
                 order.Status = OrderStatus.Processing;
+                order.Approved_At = DateTime.UtcNow;
+                if (int.TryParse(userIdString, out var userId)) order.Approved_By = userId;
 
                 foreach (var item in order.OrderItems)
                 {
@@ -237,8 +238,8 @@ namespace back_end.Controllers
         /// Users can only delete items from their own pending orders.
         /// Staff and Admin users can delete items from approved orders.
         /// </remarks>
-        [Authorize(Policy = "staffOnly")]
         [HttpDelete("{order_id}/items/{order_item_id}")]
+        [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -316,8 +317,8 @@ namespace back_end.Controllers
         /// This endpoint requires Admin or Staff role authorization.
         /// The order item status will be updated to 'Delivered' and the completion timestamp will be set.
         /// </remarks>
-        [Authorize(Policy = "staffOnly")]
         [HttpPatch("{order_id}/items/{item_id}/complete")]
+        [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -359,8 +360,8 @@ namespace back_end.Controllers
         /// <summary>
         /// Marks the whole order as delivered/completed.
         /// </summary>
-        [Authorize(Policy = "staffOnly")]
         [HttpPatch("{order_id}/complete")]
+        [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -451,8 +452,8 @@ namespace back_end.Controllers
         /// Only orders with 'Pending' status can be cancelled.
         /// Orders that are approved or delivered cannot be cancelled.
         /// </remarks>
-        [Authorize]
         [HttpPatch("{order_id}/cancel")]
+        [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -621,8 +622,8 @@ namespace back_end.Controllers
         /// <summary>
         /// Updates order items before approval (pending orders only).
         /// </summary>
-        [Authorize(Policy = "staffOnly")]
         [HttpPatch("{order_id}/items/{item_id}")]
+        [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -791,8 +792,8 @@ namespace back_end.Controllers
         /// </remarks>
         //GET api/order
         //Get all Orders
-        [Authorize(Policy = "staffOnly")]
         [HttpGet]
+        [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(IEnumerable<SessionOrder>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<SessionOrder>>> GetAllOrder()
@@ -813,8 +814,8 @@ namespace back_end.Controllers
         // GET: api/Order/all-orders
         // Get all orders, filtered by location
         // Helpful for dashbaord
-        [Authorize(Policy = "staffOnly")]
         [HttpGet("all_orders")]
+        [Authorize(Policy = "staffOnly")]
         public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery] int? locationId = null)
         {
             try
@@ -914,6 +915,7 @@ namespace back_end.Controllers
         //GET: api/order/{id}
         //Get an Order with all the items
         [HttpGet("{id}")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -1127,6 +1129,7 @@ namespace back_end.Controllers
         //GET: api/order/user/{userOid}
         //Get all orders placed by a specific customer
         [HttpGet("user/{userId}")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
