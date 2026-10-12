@@ -22,7 +22,6 @@ public class OrderControllerTests : IDisposable
 
     public OrderControllerTests()
     {
-        // Setup in-memory database
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
@@ -31,7 +30,6 @@ public class OrderControllerTests : IDisposable
         _mockLogger = new Mock<ILogger<OrderController>>();
         _controller = new OrderController(_context, _mockLogger.Object);
 
-        // Setup test data
         SeedTestData();
     }
 
@@ -180,7 +178,7 @@ public class OrderControllerTests : IDisposable
 
         var orderCreateDto = new OrderCreateDTO
         {
-            Session_Id = 999, // Non-existent session
+            Session_Id = 999,
             Bill_Id = 1
         };
 
@@ -200,7 +198,7 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 1,
-            Bill_Id = 999 // Non-existent bill
+            Bill_Id = 999
         };
 
         // Act
@@ -225,7 +223,7 @@ public class OrderControllerTests : IDisposable
             Adult_Count = 2,
             Child_Count = 0,
             Total_Count = 2,
-            Status = BillStatus.Paid, // Closed bill
+            Status = BillStatus.Paid,
             Created_At = DateTime.UtcNow
         };
 
@@ -301,7 +299,7 @@ public class OrderControllerTests : IDisposable
         // Arrange
         SetupUserClaims("123");
 
-        // Act - Create 3 orders
+        // Act
         for (int i = 0; i < 3; i++)
         {
             var orderCreateDto = new OrderCreateDTO
@@ -327,7 +325,7 @@ public class OrderControllerTests : IDisposable
     [Fact]
     public async Task CreateOrder_WithRealLoginClaims_StoresEmailAsUserName()
     {
-        // Arrange - mirrors AuthController.cs lines 309–312 (Name = Email, no given/family name)
+        // Arrange
         var claims = new List<Claim>
     {
         new Claim(ClaimTypes.NameIdentifier, "123"),
@@ -346,7 +344,7 @@ public class OrderControllerTests : IDisposable
         // Act
         var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
 
-        // Assert - current known behavior; update if real names are added to the token see TODO on Auth controller
+        // Assert
         var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
         order!.User_Name.Should().Be("customer@example.com");
     }

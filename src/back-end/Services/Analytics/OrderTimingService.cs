@@ -26,13 +26,11 @@ namespace back_end.Services.Analytics
         public const int MinDeliveries = 5;
 
         private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _config;
         private readonly TimeProvider _clock;
 
-        public OrderTimingService(ApplicationDbContext context, IConfiguration config, TimeProvider clock)
+        public OrderTimingService(ApplicationDbContext context, TimeProvider clock)
         {
             _context = context;
-            _config = config;
             _clock = clock;
         }
 
@@ -42,7 +40,7 @@ namespace back_end.Services.Analytics
             if (topError != null) return topError;
 
             var windowResult = await AnalyticsQueries.ResolveWindowAsync(
-                _context, _config, _clock, query.Range, query.From, query.To, query.LocationId);
+                _context, _clock, query.Range, query.From, query.To, query.LocationId);
             if (!windowResult.IsOk) return windowResult.AsError<OrderTimingResponseDTO>();
 
             var (period, timeZone, location) = windowResult.Value!;
@@ -61,6 +59,7 @@ namespace back_end.Services.Analytics
 
             return AnalyticsResult<OrderTimingResponseDTO>.Ok(response);
         }
+
 
         private async Task AddSessionsAndPacingAsync(
             OrderTimingResponseDTO response, DateTime startUtc, DateTime endUtc, int? locationId)

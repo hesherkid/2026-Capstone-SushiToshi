@@ -24,13 +24,11 @@ namespace back_end.Services.Analytics
     public sealed class BrowsingBehaviorService : IBrowsingBehaviorService
     {
         private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _config;
         private readonly TimeProvider _clock;
 
-        public BrowsingBehaviorService(ApplicationDbContext context, IConfiguration config, TimeProvider clock)
+        public BrowsingBehaviorService(ApplicationDbContext context, TimeProvider clock)
         {
             _context = context;
-            _config = config;
             _clock = clock;
         }
 
@@ -46,7 +44,7 @@ namespace back_end.Services.Analytics
             }
 
             var windowResult = await AnalyticsQueries.ResolveWindowAsync(
-                _context, _config, _clock, query.Range, query.From, query.To, query.LocationId);
+                _context, _clock, query.Range, query.From, query.To, query.LocationId);
             if (!windowResult.IsOk) return windowResult.AsError<BrowsingBehaviorResponseDTO>();
 
             var (period, _, location) = windowResult.Value!;

@@ -8,7 +8,7 @@ using back_end.Helpers;
 
 namespace back_end.controllers
 {
-    /// TODO:Analytics endpoints not yet moved to their own controller and service table turnover, order timing. 
+    /// TODO:Analytics endpoints not yet moved to their own controller and service table turnover.
     [ApiController]
     [Route("api/analytics")] // literal so renaming or splitting this class can't change the URLs
     [Authorize(Roles = "Admin")]

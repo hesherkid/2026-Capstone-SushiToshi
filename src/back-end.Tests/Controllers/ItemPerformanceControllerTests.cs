@@ -3,7 +3,6 @@ using Moq;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using back_end.controllers;
 using back_end.domain.DbContexts;
@@ -14,26 +13,19 @@ using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
 
-/// <summary>
-/// Tests for GET api/analytics/item-performance.
-/// Most tests use a fixed past week (Mon 2025-01-06 to Sun 2025-01-12, Mountain Standard Time, UTC-7)
-/// through range=custom, so results never depend on today's date.
-/// </summary>
 public class ItemPerformanceControllerTests : IDisposable
 {
     private const string WeekFrom = "2025-01-06";
     private const string WeekTo = "2025-01-12";
 
-    // Reference data ids
     private const int North = 1, South = 2;
-    private const int DinnerMenu = 1;      // active, linked to North and South
-    private const int RetiredMenu = 2;     // inactive, linked to North
-    private const int SouthOnlyMenu = 3;   // active, linked to South only
+    private const int DinnerMenu = 1;
+    private const int RetiredMenu = 2;
+    private const int SouthOnlyMenu = 3;
     private const int Nigiri = 1, Desserts = 2;
     private const int Spicy = 1, Vegan = 2;
 
     private readonly ApplicationDbContext _context;
-    private readonly Mock<IConfiguration> _mockConfig;
     private readonly Mock<ILogger<ItemPerformanceController>> _mockLogger;
     private readonly ItemPerformanceController _controller;
     private int _nextOrderItemId = 1;
@@ -45,17 +37,15 @@ public class ItemPerformanceControllerTests : IDisposable
             .Options;
 
         _context = new ApplicationDbContext(options);
-        _mockConfig = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<ItemPerformanceController>>();
 
         _controller = new ItemPerformanceController(
-            new ItemPerformanceService(_context, _mockConfig.Object, TimeProvider.System),
+            new ItemPerformanceService(_context, TimeProvider.System),
             _mockLogger.Object);
 
         SeedTestData();
     }
 
-    /// <summary>Mountain Standard Time (UTC-7 in January 2025) to UTC.</summary>
     private static DateTime Mst(int day, int hour, int minute = 0) =>
         new DateTime(2025, 1, day, hour, minute, 0, DateTimeKind.Utc).AddHours(7);
 
@@ -84,7 +74,6 @@ public class ItemPerformanceControllerTests : IDisposable
             new Tag { tag_id = Spicy, tag_name = "Spicy", tag_color = "#FF0000" },
             new Tag { tag_id = Vegan, tag_name = "Vegan", tag_color = "#00FF00" });
 
-        // One dining session, bill and order per location; sales attach to the order for their location.
         _context.DiningSessions.AddRange(
             new DiningSession { Session_Id = North, Location_Id = North, Menu_Id = DinnerMenu, Started_At = Mst(6, 17) },
             new DiningSession { Session_Id = South, Location_Id = South, Menu_Id = DinnerMenu, Started_At = Mst(6, 17) });
@@ -150,7 +139,7 @@ public class ItemPerformanceControllerTests : IDisposable
         _context.OrderItems.Add(new OrderItems
         {
             Order_Item_Id = _nextOrderItemId++,
-            Order_Key = location, // order id matches location id in the reference data
+            Order_Key = location,
             Menu_Id = menuId,
             Item_Id = itemId,
             Quantity = quantity,
@@ -179,7 +168,7 @@ public class ItemPerformanceControllerTests : IDisposable
     [Fact]
     public async Task GetItemPerformance_MixedOrderStatuses_CountsOnlyDelivered()
     {
-        // Arrange - cancelled items get Completed_At in the live flow, so status must be checked
+        // Arrange
         AddItem(10, "Salmon");
         AddSale(10, 3, Mst(7, 12));
         AddSale(10, 5, Mst(7, 13), OrderStatus.Cancelled);
@@ -199,10 +188,10 @@ public class ItemPerformanceControllerTests : IDisposable
     {
         // Arrange
         AddItem(10, "Salmon");
-        AddSale(10, 1000, Mst(5, 23, 59));   // before the week
-        AddSale(10, 1, Mst(6, 0));           // exactly the start: included
-        AddSale(10, 100, Mst(12, 23, 59));   // last minute of the week: included
-        AddSale(10, 10, Mst(13, 0));         // exactly the end: excluded
+        AddSale(10, 1000, Mst(5, 23, 59));
+        AddSale(10, 1, Mst(6, 0));
+        AddSale(10, 100, Mst(12, 23, 59));
+        AddSale(10, 10, Mst(13, 0));
 
         // Act
         var response = await GetWeekAsync();
@@ -259,7 +248,7 @@ public class ItemPerformanceControllerTests : IDisposable
     [Fact]
     public async Task GetItemPerformance_ItemOnMenuNotLinkedToLocation_OnlyAppearsWhereItIsServed()
     {
-        // Arrange - South Special is only on a menu linked to South
+        // Arrange
         AddItem(19, "South Special", menus: new[] { SouthOnlyMenu });
 
         // Act
@@ -294,7 +283,7 @@ public class ItemPerformanceControllerTests : IDisposable
     [Fact]
     public async Task GetItemPerformance_AssignmentUnavailableButSoldInRange_IsIncludedAndFlagged()
     {
-        // Arrange - item itself is Available, but its menu assignment is Unavailable
+        // Arrange
         AddItem(18, "Assignment Off", assignmentStatus: MenuItemStatus.Unavailable);
         AddSale(18, 2, Mst(8, 18));
 
@@ -311,10 +300,10 @@ public class ItemPerformanceControllerTests : IDisposable
     public async Task GetItemPerformance_NotOrderableNowAndNoSales_IsExcluded()
     {
         // Arrange
-        AddItem(10, "Salmon");                                                     // control: available, no sales
-        AddItem(16, "Unavailable Item", status: MenuItemStatus.Unavailable);       // item unavailable
-        AddItem(18, "Assignment Off", assignmentStatus: MenuItemStatus.Unavailable); // assignment unavailable
-        AddItem(17, "Retired Menu Only", menus: new[] { RetiredMenu });            // only on an inactive menu
+        AddItem(10, "Salmon");
+        AddItem(16, "Unavailable Item", status: MenuItemStatus.Unavailable);
+        AddItem(18, "Assignment Off", assignmentStatus: MenuItemStatus.Unavailable);
+        AddItem(17, "Retired Menu Only", menus: new[] { RetiredMenu });
 
         // Act
         var response = await GetWeekAsync();
@@ -342,7 +331,7 @@ public class ItemPerformanceControllerTests : IDisposable
     [Fact]
     public async Task GetItemPerformance_TiedUnits_ShareCompetitionRank()
     {
-        // Arrange - 10, 7, 7, 3 units -> ranks 1, 2, 2, 4
+        // Arrange
         AddItem(1, "Alpha"); AddSale(1, 10, Mst(7, 12));
         AddItem(2, "Charlie"); AddSale(2, 7, Mst(7, 12));
         AddItem(3, "Bravo"); AddSale(3, 7, Mst(7, 12));
@@ -351,7 +340,7 @@ public class ItemPerformanceControllerTests : IDisposable
         // Act
         var response = await GetWeekAsync();
 
-        // Assert - ties are ordered by name
+        // Assert
         response.Items.Select(i => (i.Name, i.Rank)).Should().Equal(
             ("Alpha", 1), ("Bravo", 2), ("Charlie", 2), ("Delta", 4));
     }
@@ -359,7 +348,7 @@ public class ItemPerformanceControllerTests : IDisposable
     [Fact]
     public async Task GetItemPerformance_ManySellers_BestAndWorstDoNotOverlap()
     {
-        // Arrange - six sellers with 6..1 units
+        // Arrange
         for (var units = 6; units >= 1; units--)
         {
             AddItem(units, $"Item {units}");
@@ -376,8 +365,8 @@ public class ItemPerformanceControllerTests : IDisposable
     }
 
     [Theory]
-    [InlineData(3, 2, 2, 1)] // 3 sellers, top 2: worst gets the 1 left over
-    [InlineData(2, 2, 2, 0)] // 2 sellers, top 2: nothing left for worst
+    [InlineData(3, 2, 2, 1)]
+    [InlineData(2, 2, 2, 0)]
     [InlineData(1, 5, 1, 0)]
     public async Task GetItemPerformance_FewSellers_WorstOnlyUsesItemsNotInBest(
         int sellers, int top, int expectedBest, int expectedWorst)
@@ -486,14 +475,14 @@ public class ItemPerformanceControllerTests : IDisposable
     [Fact]
     public async Task GetItemPerformance_AddOnSales_CountedPerMenuAndByLocalDay()
     {
-        // Arrange - Mochi is an add-on on Dinner but included (not an add-on) on South Lunch
+        // Arrange
         AddItem(13, "Mochi", categoryId: Desserts,
             menus: new[] { DinnerMenu, SouthOnlyMenu }, addOnMenus: new[] { DinnerMenu });
 
-        AddSale(13, 1, Mst(7, 23, 30));  // Jan 7 local (Jan 8 06:30 UTC)
-        AddSale(13, 2, Mst(8, 0, 30));   // Jan 8 local (Jan 8 07:30 UTC, same UTC date)
-        AddSale(13, 1, Mst(8, 12));      // Jan 8 again
-        AddSale(13, 4, Mst(9, 12), location: South, menuId: SouthOnlyMenu); // not an add-on there
+        AddSale(13, 1, Mst(7, 23, 30));
+        AddSale(13, 2, Mst(8, 0, 30));
+        AddSale(13, 1, Mst(8, 12));
+        AddSale(13, 4, Mst(9, 12), location: South, menuId: SouthOnlyMenu);
 
         // Act
         var response = await GetWeekAsync(locationId: null);
@@ -514,10 +503,10 @@ public class ItemPerformanceControllerTests : IDisposable
     {
         // Arrange
         AddItem(1, "Steady Add-on", addOnMenus: new[] { DinnerMenu });
-        AddSale(1, 1, Mst(6, 12)); AddSale(1, 1, Mst(7, 12)); AddSale(1, 1, Mst(8, 12)); // 3 days, 3 units
+        AddSale(1, 1, Mst(6, 12)); AddSale(1, 1, Mst(7, 12)); AddSale(1, 1, Mst(8, 12));
 
         AddItem(2, "Spike Add-on", addOnMenus: new[] { DinnerMenu });
-        AddSale(2, 10, Mst(9, 12));                                                       // 1 day, 10 units
+        AddSale(2, 10, Mst(9, 12));
 
         AddItem(3, "Regular Item");
         AddSale(3, 50, Mst(9, 12));
@@ -572,42 +561,6 @@ public class ItemPerformanceControllerTests : IDisposable
         response!.Range.Preset.Should().Be("last7");
         response.Range.Days.Should().Be(7);
         response.Range.TimeZone.Should().Be("America/Edmonton");
-    }
-
-    [Fact]
-    public async Task GetItemPerformance_ConfiguredTimeZone_IsUsed()
-    {
-        // Arrange
-        _mockConfig.Setup(c => c["Analytics:TimeZoneId"]).Returns("America/Regina");
-
-        // Act
-        var result = await _controller.GetItemPerformance("custom", WeekFrom, WeekTo, North, null, null);
-
-        // Assert
-        var response = (result as OkObjectResult)!.Value as ItemPerformanceResponseDTO;
-        response!.Range.TimeZone.Should().Be("America/Regina");
-    }
-
-    [Fact]
-    public async Task GetItemPerformance_UnknownTimeZoneConfigured_Returns500AndLogsError()
-    {
-        // Arrange
-        _mockConfig.Setup(c => c["Analytics:TimeZoneId"]).Returns("Not/A_Zone");
-
-        // Act
-        var result = await _controller.GetItemPerformance("custom", WeekFrom, WeekTo, North, null, null);
-
-        // Assert
-        var error = result.Should().BeOfType<ObjectResult>().Subject;
-        error.StatusCode.Should().Be(500);
-
-        _mockLogger.Verify(l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 
     public void Dispose()

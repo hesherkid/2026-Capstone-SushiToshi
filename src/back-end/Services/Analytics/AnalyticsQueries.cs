@@ -60,13 +60,6 @@ namespace back_end.Services.Analytics
         public const int MinTop = 1;
         public const int MaxTop = 25;
 
-        public static TimeZoneInfo GetTimeZone(IConfiguration config)
-        {
-            var id = config["Analytics:TimeZoneId"];
-            return TimeZoneInfo.FindSystemTimeZoneById(
-                string.IsNullOrWhiteSpace(id) ? AnalyticsDateRange.DefaultTimeZoneId : id);
-        }
-
         public static AnalyticsResult<T>? ValidateTop<T>(int top) =>
             top < MinTop || top > MaxTop
                 ? AnalyticsResult<T>.Invalid("top", $"top must be between {MinTop} and {MaxTop}")
@@ -74,14 +67,13 @@ namespace back_end.Services.Analytics
 
         public static async Task<AnalyticsResult<AnalyticsWindow>> ResolveWindowAsync(
             ApplicationDbContext context,
-            IConfiguration config,
             TimeProvider clock,
             string? range,
             string? from,
             string? to,
             int? locationId)
         {
-            var timeZone = GetTimeZone(config);
+            var timeZone = AnalyticsDateRange.RestaurantTimeZone;
 
             if (!AnalyticsDateRange.TryResolve(range, from, to, clock.GetUtcNow().UtcDateTime, timeZone,
                     out var period, out var errorKey, out var errorMessage) || period == null)

@@ -3,7 +3,6 @@ using Moq;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using back_end.controllers;
 using back_end.domain.DbContexts;
@@ -14,13 +13,6 @@ using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
 
-/// <summary>
-/// Tests for GET api/analytics/browsing-behavior.
-/// Uses the same fixed past week as the item performance tests (Mon 2025-01-06 to Sun 2025-01-12,
-/// Mountain Standard Time, UTC-7) through range=custom, so results never depend on today's date.
-/// Each dining session has its own bill and order with the same id, so sales attach by session.
-/// </summary>
-
 public class BrowsingBehaviorControllerTests : IDisposable
 {
     private const string WeekFrom = "2025-01-06";
@@ -28,10 +20,9 @@ public class BrowsingBehaviorControllerTests : IDisposable
 
     // Reference data ids
     private const int North = 1, South = 2;
-    private const int DinnerMenu = 1;      // active, linked to North and South
+    private const int DinnerMenu = 1;
     private const int Nigiri = 1, Desserts = 2;
     private const int Spicy = 1;
-    // Sessions: 1-3 at North, 4 at South
     private const int S1 = 1, S2 = 2, S3 = 3, S4 = 4;
 
     private readonly ApplicationDbContext _context;
@@ -48,7 +39,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
 
         _context = new ApplicationDbContext(options);
         _controller = new BrowsingBehaviorController(
-            new BrowsingBehaviorService(_context, new Mock<IConfiguration>().Object, TimeProvider.System),
+            new BrowsingBehaviorService(_context, TimeProvider.System),
             new Mock<ILogger<BrowsingBehaviorController>>().Object);
 
         SeedTestData();
@@ -56,7 +47,6 @@ public class BrowsingBehaviorControllerTests : IDisposable
 
     public void Dispose() => _context.Dispose();
 
-    /// <summary>Mountain Standard Time (UTC-7 in January 2025) to UTC.</summary>
     private static DateTime Mst(int day, int hour, int minute = 0) =>
         new DateTime(2025, 1, day, hour, minute, 0, DateTimeKind.Utc).AddHours(7);
 
@@ -129,7 +119,6 @@ public class BrowsingBehaviorControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    /// <summary>Adds several counted 10 second views from one session.</summary>
     private void AddViews(int itemId, int sessionId, int count)
     {
         for (var i = 0; i < count; i++) AddView(itemId, sessionId, 10, Mst(7, 18));
@@ -140,7 +129,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
         _context.OrderItems.Add(new OrderItems
         {
             Order_Item_Id = _nextOrderItemId++,
-            Order_Key = sessionId, // order id matches session id
+            Order_Key = sessionId,
             Menu_Id = DinnerMenu,
             Item_Id = itemId,
             Quantity = quantity,
@@ -190,10 +179,10 @@ public class BrowsingBehaviorControllerTests : IDisposable
     {
         // Arrange
         AddItem(10, "Salmon");
-        AddView(10, S1, 10, Mst(5, 23, 59));   // before the week
-        AddView(10, S1, 10, Mst(6, 0));        // exactly the start: included
-        AddView(10, S1, 10, Mst(12, 23, 59));  // last minute: included
-        AddView(10, S1, 10, Mst(13, 0));       // exactly the end: excluded
+        AddView(10, S1, 10, Mst(5, 23, 59));
+        AddView(10, S1, 10, Mst(6, 0));
+        AddView(10, S1, 10, Mst(12, 23, 59));
+        AddView(10, S1, 10, Mst(13, 0));
 
         // Act
         var response = await GetWeekAsync();
@@ -205,7 +194,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
     [Fact]
     public async Task GetBrowsingBehavior_OrderInSameSession_Converts_OrderInOtherSessionDoesNot()
     {
-        // Arrange - S1 and S2 view; S1 orders. S3 orders without viewing (ignored).
+        // Arrange
         AddItem(10, "Salmon");
         AddView(10, S1, 10, Mst(7, 18));
         AddView(10, S2, 20, Mst(7, 18));
@@ -243,7 +232,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
     [Fact]
     public async Task GetBrowsingBehavior_OrderFinishedAfterWindow_StillConvertsTheView()
     {
-        // Arrange - viewed in the last minute of the week, delivered after it ended
+        // Arrange
         AddItem(10, "Salmon");
         AddView(10, S1, 10, Mst(12, 23, 59));
         AddSale(10, S1, 1, Mst(13, 0, 20));
@@ -258,7 +247,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
     [Fact]
     public async Task GetBrowsingBehavior_ShortViewThenOrder_DoesNotConvert()
     {
-        // Arrange - a 3 second glance is not a view, so the order isn't attributed to it
+        // Arrange
         AddItem(10, "Salmon");
         AddView(10, S1, 3, Mst(7, 18));
         AddSale(10, S1, 1, Mst(7, 19));
@@ -278,8 +267,8 @@ public class BrowsingBehaviorControllerTests : IDisposable
     {
         // Arrange
         AddItem(10, "Salmon");
-        AddView(10, S1, 10, Mst(7, 18)); // North
-        AddView(10, S4, 10, Mst(7, 18)); // South
+        AddView(10, S1, 10, Mst(7, 18));
+        AddView(10, S4, 10, Mst(7, 18));
 
         // Act
         var north = await GetWeekAsync(locationId: North);
@@ -321,7 +310,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
     [Fact]
     public async Task GetBrowsingBehavior_MostAndLeastViewed_NeverOverlap()
     {
-        // Arrange - 3 viewed items, top 2: least viewed only gets what's left
+        // Arrange
         AddItem(10, "Salmon");
         AddItem(11, "Tuna");
         AddItem(12, "Eel");
@@ -380,10 +369,10 @@ public class BrowsingBehaviorControllerTests : IDisposable
     public async Task GetBrowsingBehavior_TopViewedAndOrdered_RanksByOrderingSessionsThenConversion()
     {
         // Arrange
-        AddItem(10, "Salmon"); // 2 of 3 sessions ordered
-        AddItem(11, "Tuna");   // 2 of 2 sessions ordered
-        AddItem(12, "Eel");    // 1 of 1
-        AddItem(13, "Squid");  // viewed, never ordered
+        AddItem(10, "Salmon");
+        AddItem(11, "Tuna");
+        AddItem(12, "Eel");
+        AddItem(13, "Squid");
         foreach (var s in new[] { S1, S2, S3 }) AddView(10, s, 10, Mst(7, 18));
         foreach (var s in new[] { S1, S2 }) AddView(11, s, 10, Mst(7, 18));
         AddView(12, S1, 10, Mst(7, 18));
@@ -406,7 +395,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
     [Fact]
     public async Task GetBrowsingBehavior_LowConversionHighViews_OnlyItemsWithAtLeastMinViews()
     {
-        // Arrange - view counts 2, 4, 12, 20; Squid converts, Eel does not
+        // Arrange
         AddItem(10, "Salmon");
         AddItem(11, "Tuna");
         AddItem(12, "Eel");
@@ -430,7 +419,7 @@ public class BrowsingBehaviorControllerTests : IDisposable
     [Fact]
     public async Task GetBrowsingBehavior_AverageViewTime_SplitsOrderedAndNotOrdered()
     {
-        // Arrange - S1 looks for 30s and orders; S2 looks twice for 6s and 10s and doesn't
+        // Arrange
         AddItem(10, "Salmon");
         AddView(10, S1, 30, Mst(7, 18));
         AddView(10, S2, 6, Mst(7, 18));
