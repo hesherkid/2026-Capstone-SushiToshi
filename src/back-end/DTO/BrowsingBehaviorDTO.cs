@@ -2,8 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace back_end.DTO.Analytics
 {
-    // GET api/analytics/browsing-behavior.
-
     public class BrowsingBehaviorResponseDTO
     {
         [JsonPropertyName("range")]

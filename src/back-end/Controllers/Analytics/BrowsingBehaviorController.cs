@@ -52,10 +52,6 @@ namespace back_end.controllers
         /// - Items included: anything viewed in the window, plus anything orderable now.
         /// - never_viewed only lists items orderable now.
         /// </remarks>
-        /// <response code="200">Browsing behavior for the requested window (lists may be empty)</response>
-        /// <response code="400">Invalid range, dates, top or minViews</response>
-        /// <response code="404">The locationId does not exist</response>
-        /// <response code="500">Unexpected server error</response>
         [HttpGet("browsing-behavior")]
         [ProducesResponseType(typeof(BrowsingBehaviorResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]

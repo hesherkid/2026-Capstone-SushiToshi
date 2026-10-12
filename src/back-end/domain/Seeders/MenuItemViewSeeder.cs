@@ -6,20 +6,6 @@ using back_end.Helpers;
 
 namespace back_end.domain.Seeders
 {
-    /// <summary>
-    /// Seeds menu_item_view so the Browsing Behavior report has data on a fresh database.
-    /// Must run after dining sessions, participants and order items.
-    /// </summary>
-    /// <remarks>
-    /// Per dining session:
-    /// - About 80% of the items the session ordered get a 6-60 second view shortly before the order
-    ///   (viewed and ordered). The rest have no view (ordered straight from the list).
-    /// - 3-10 other items on the session's menu are browsed but not ordered. About 30% of those are
-    ///   glances under 5 seconds, which reports ignore.
-    /// - Some items are more appealing than others, so "most viewed" and "least viewed" differ.
-    /// - About 3% of views are marked as made while the item was unavailable.
-    /// All views fall inside the session (start to end, or now for open sessions).
-    /// </remarks>
     public class MenuItemViewSeeder : ISeeder
     {
         private readonly ApplicationDbContext _context;
@@ -95,7 +81,7 @@ namespace back_end.domain.Seeders
                 {
                     foreach (var (itemId, orderedAt) in orderedItems)
                     {
-                        if (_rng.NextDouble() > 0.8) continue; // ordered without opening the item
+                        if (_rng.NextDouble() > 0.8) continue;
 
                         var seconds = _rng.Next(6, 61);
                         var latestEnd = orderedAt < sessionEnd ? orderedAt : sessionEnd;
@@ -137,7 +123,6 @@ namespace back_end.domain.Seeders
             Was_Available = _rng.NextDouble() >= 0.03
         };
 
-        /// <summary>A random moment between from and to; from when the range is empty.</summary>
         private DateTime Between(DateTime from, DateTime to) =>
             to <= from ? from : from.AddTicks((long)(_rng.NextDouble() * (to - from).Ticks));
     }

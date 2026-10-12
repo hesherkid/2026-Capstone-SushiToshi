@@ -47,10 +47,6 @@ namespace back_end.controllers
         ///   add_on_days = number of local days in the window with at least one add-on sale.
         /// - Best and worst never overlap; zero-sales items are returned separately.
         /// </remarks>
-        /// <response code="200">Item performance for the requested window (lists may be empty)</response>
-        /// <response code="400">Invalid range, dates or top value</response>
-        /// <response code="404">The locationId does not exist</response>
-        /// <response code="500">Unexpected server error</response>
         [HttpGet("item-performance")]
         [ProducesResponseType(typeof(ItemPerformanceResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]

@@ -16,7 +16,6 @@ using back_end.Helpers;
 
 namespace back_end.Tests.Controllers;
 
-/// <summary>Tests for POST api/menu-item-views.</summary>
 public class MenuItemViewControllerTests : IDisposable
 {
     // Reference data ids
@@ -150,7 +149,7 @@ public class MenuItemViewControllerTests : IDisposable
     [Fact]
     public async Task RecordView_ItemNotOnTheSessionsMenu_ReturnsNotFound()
     {
-        // Act - Lunch Special is on another menu at the same location, but not the session's menu
+        // Act
         var result = await Record(OpenSession, LunchSpecial);
 
         // Assert

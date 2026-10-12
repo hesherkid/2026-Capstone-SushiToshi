@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace back_end.DTO.Analytics
 {
-    // GET api/analytics/item-performance.
 
     public class ItemPerformanceResponseDTO
     {
