@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { DataGrid } from "@mui/x-data-grid";
-import { Add as AddIcon, Refresh as RefreshIcon } from "@mui/icons-material";
+import { Refresh as RefreshIcon } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -18,16 +17,16 @@ import {
   DialogActions,
   Typography,
   Alert,
-  Snackbar,
   InputAdornment,
   IconButton,
   CircularProgress,
   Tooltip,
 } from "@mui/material";
-import { Plus, Edit, Image as ImageIcon, Trash2, Eye, X } from "lucide-react";
-import { styled } from "@mui/material/styles";
+import { Edit, Image as ImageIcon, Trash2, Eye, X } from "lucide-react";
 import api from "@/config/api";
 import TagChip from "./TagChip";
+import ManagementPage from "@/components/common/ManagementPage";
+import { actionsColumn } from "@/components/common/RowActions";
 //import { isAuthenticated } from "@/utils/token";
 // import { userAgentFromString } from "next/server";F
 
@@ -141,22 +140,10 @@ const generateColorSet = (count, existingColors) => {
   return Array.from(colors);
 };
 
-const AddButton = styled(IconButton)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.main,
-  color: "white",
-  padding: theme.spacing(1),
-  minWidth: "auto",
-  "&:hover": {
-    backgroundColor: theme.palette.primary.dark,
-  },
-  "& svg": {
-    width: 30,
-    height: 30,
-  },
-}));
 
 const TagManagement = () => {
   const [tags, setTags] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 const [currentTag, setCurrentTag] = useState({tag_name: "", tag_color: "" });
   const [error, setError] = useState(null);
@@ -211,19 +198,31 @@ const columns = [
       );
     },
   },
-  {
-    field: "actions",
-    headerName: "Actions",
-    flex: 0.25,
-    sortable: false,
-    renderCell: (params) => {
-      if (!params?.row) return null;
-      return renderActionButtons(params.row);
-    },
-  },
+  actionsColumn(
+    (tag) => [
+      {
+        label: "Edit",
+        icon: Edit,
+        onClick: () => handleOpenDialog("update", tag),
+      },
+      {
+        label: "View Items",
+        icon: Eye,
+        onClick: () => handleOpenItemsDialog(tag),
+      },
+      {
+        label: "Delete",
+        icon: Trash2,
+        color: "error",
+        onClick: () => handleDelete(tag),
+      },
+    ],
+    { flex: 0.25 }
+  ),
 ];
 
   const handleDelete = async (tag) => {
+    setError(null);
     setTagToDelete(tag);
     setDeleteDialogOpen(true);
   };
@@ -270,29 +269,6 @@ const columns = [
     fetchMenuItemsForTag(tag.tag_id);
   };
 
-  const renderActionButtons = (tag) => (
-    <Box sx={{ display: "flex", gap: 1 }}>
-      <Tooltip title="Edit">
-        <IconButton
-          color="light"
-          onClick={() => handleOpenDialog("update", tag)}
-        >
-          <Edit size={20} />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="View Items">
-        <IconButton color="light" onClick={() => handleOpenItemsDialog(tag)}>
-          <Eye size={20} />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Delete">
-        <IconButton color="dark" onClick={() => handleDelete(tag)}>
-          <Trash2 size={20} />
-        </IconButton>
-      </Tooltip>
-    </Box>
-  );
-
   const DeleteConfirmationDialog = () => (
     <Dialog
       open={deleteDialogOpen}
@@ -314,6 +290,7 @@ const columns = [
             This action will remove the tag from all menu items and cannot be
             undone.
           </Typography>
+          {error && <Alert severity="error">{error}</Alert>}
         </Box>
       </DialogContent>
       <DialogActions>
@@ -363,6 +340,11 @@ const columns = [
           </Box>
         </DialogTitle>
         <DialogContent dividers>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
           {loadingItems ? (
             <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
               <CircularProgress />
@@ -475,6 +457,7 @@ const columns = [
   };
 
   const fetchTags = async () => {
+    setLoading(true);
     try {
       // TODO: Tag/colours ???
 
@@ -494,6 +477,8 @@ const columns = [
       }
     } catch (err) {
       setError("Failed to fetch tags");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -566,60 +551,21 @@ const columns = [
   };
 
   return (
-    <>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "left",
-          alignItems: "center",
-          p: 3,
-          width: "100%",
-        }}
-      >
-        <Typography variant="h5" component="h1" sx={{ fontWeight: "bold" }}>
-          Tag Management
-        </Typography>
-        <Button sx={{ ml: 2 }} onClick={() => handleOpenDialog("add")}>
-          <Plus />
-          Add New Tag
-        </Button>
-      </Box>
-
-      <Box
-        sx={{
-          height: "100%",
-          width: "100%",
-          "& .MuiDataGrid-root": {
-            border: "none",
-            backgroundColor: "background.paper",
-            "& .MuiDataGrid-cell:focus": {
-              outline: "none",
-            },
-          },
-          "& .MuiDataGrid-columnHeaders": {
-            backgroundColor: "primary.main",
-            color: "primary.contrastText",
-            "& .MuiDataGrid-columnHeaderTitle": {
-              color: "black",
-            },
-          },
-        }}
-      >
-        <DataGrid
-          rows={tags}
-          columns={columns}
-          getRowId={(row) => row.tag_id}
-          disableColumnMenu
-          disableRowSelectionOnClick
-          pageSizeOptions={[5, 10, 25]}
-          initialState={{
-            pagination: {
-              paginationModel: { pageSize: 10 },
-            },
-          }}
-        />
-      </Box>
-
+    <ManagementPage
+      title="Tag Management"
+      addLabel="Add New Tag"
+      onAdd={() => handleOpenDialog("add")}
+      error={dialogOpen || deleteDialogOpen || itemsDialogOpen ? null : error}
+      onErrorClose={() => setError(null)}
+      success={successMessage}
+      onSuccessClose={() => setSuccessMessage(null)}
+      gridProps={{
+        rows: tags,
+        columns,
+        loading,
+        getRowId: (row) => row.tag_id,
+      }}
+    >
       <Dialog
         open={dialogOpen}
         onClose={handleCloseDialog}
@@ -644,6 +590,9 @@ const columns = [
               pt: 1,
             }}
           >
+            {error && currentTag.tag_name?.trim() && (
+              <Alert severity="error">{error}</Alert>
+            )}
             <TextField
               label="Tag Name"
               value={currentTag.tag_name}
@@ -773,27 +722,7 @@ const columns = [
       <DeleteConfirmationDialog />
       <MenuItemsDialog />
 
-      <Snackbar
-        open={Boolean(error || successMessage)}
-        autoHideDuration={6000}
-        onClose={() => {
-          setError(null);
-          setSuccessMessage(null);
-        }}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          severity={error ? "error" : "success"}
-          onClose={() => {
-            setError(null);
-            setSuccessMessage(null);
-          }}
-          sx={{ width: "100%" }}
-        >
-          {error || successMessage}
-        </Alert>
-      </Snackbar>
-    </>
+    </ManagementPage>
   );
 };
 
