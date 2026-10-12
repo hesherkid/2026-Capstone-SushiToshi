@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace back_end.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/analytics")]
     [Authorize(Roles = "Admin")]
     [Tags("Analytics")]
     public class TableTurnoverController : ControllerBase

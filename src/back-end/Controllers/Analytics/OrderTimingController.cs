@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace back_end.Controllers
 {
     [ApiController]
-    [Route("api/analytics")] // literal, not [controller]: the URL stays /api/analytics/order-timing
+    [Route("api/analytics")]
     [Authorize(Roles = "Admin")]
     [Tags("Analytics")]
     public class OrderTimingController : ControllerBase

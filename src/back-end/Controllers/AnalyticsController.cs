@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using back_end.DTO.Analytics;
 using back_end.Helpers;
 
-
+//TODO: once table turn over front end is complete this controller can be removed
 namespace back_end.controllers
 {
     [ApiController]
