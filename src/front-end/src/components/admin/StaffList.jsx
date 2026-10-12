@@ -1,175 +1,82 @@
 import React from "react";
-// TODO: Fix depcrecated DataGrid import
-import { DataGrid, GridActionsCellItem, GridToolbar } from "@mui/x-data-grid";
-import {
-  Box,
-  CircularProgress,
-  Alert,
-  Chip,
-  Typography,
-  Tooltip,
-} from "@mui/material";
-import { Edit, Key, UserMinus, UserCheck } from "lucide-react";
+import { Chip } from "@mui/material";
+import { Edit, Key } from "lucide-react";
+import ManagementGrid from "@/components/common/ManagementGrid";
+import { actionsColumn } from "@/components/common/RowActions";
 
-const StaffList = ({
-  staff = [],
-  currentUser,
-  isLoading = false,
-  error = null,
-  onEdit,
-  onStatusChange,
-  onChangePassword,
-}) => {
-
-  const getStatusColor = (status) => {
-
-    switch (status) {
-      case "active":
-        return "success";
-      case "inactive":
-        return "error";
-      default:
-        return "default";
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight={200}
-      >
-        <CircularProgress />
-      </Box>
-    );
+const getStatusColor = (status) => {
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "error";
+    default:
+      return "default";
   }
+};
 
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        {error}
-      </Alert>
-    );
-  }
-
-  const columns = [
-    {
-      field: "name",
-      headerName: "Name",
-      flex: 1,
-      renderCell: (params) => (
-        <Typography
-          variant="body1"
-          sx={{ display: "flex", alignItems: "center", height: "100%" }}
-        >
-          {params.row.first_name} {params.row.last_name}
-        </Typography>
-      ),
-    },
-    {
-      field: "email",
-      headerName: "Email",
-      flex: 1,
-      renderCell: (params) => (
-        <Typography
-          variant="body2"
-          sx={{ display: "flex", alignItems: "center", height: "100%" }}
-        >
-          {params.row.email}
-        </Typography>
-      ),
-    },
-    {
-      field: "Location",
-      headerName: "Location",
-      flex:1,
-      renderCell: (params) =>(
-        <Chip
-          label={params.row.location}
-          size="small"
-        />
-      )
-    },
-    {
-      field: "role",
-      headerName: "Role",
-      flex: 1,
-      renderCell: (params) => (
-        <Chip
-          label={params.row.role}
-          color={params.row.role === "admin" ? "error" : "primary"}
-          size="small"
-        />
-      ),
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      flex: 1,
-      renderCell: (params) => (
-        <Chip
-          label={params.row.status}
-          color={getStatusColor(params.row.status)}
-          size="small"
-        />
-      ),
-    },
-    {
-      field: "actions",
-      headerName: "Actions",
-      type: "actions",
-      width: 140,
-      getActions: (params) => [
-        <Tooltip title="Edit User" key="edit">
-          <GridActionsCellItem
-            icon={<Edit size={20} />}
-            label="Edit"
-            onClick={() => onEdit(params.row)}
-          />
-        </Tooltip>,
-        <Tooltip title="Reset Password" key="changePassword">
-          <GridActionsCellItem
-            icon={<Key size={20} />}
-            label="Change Password"
-            onClick={() => onChangePassword(params.row)}
-          />
-        </Tooltip>,
-        // Optionally remove or disable status change
-        // <Tooltip title="Status change managed in Entra" key="statusChange">
-        //   <span />
-        // </Tooltip>,
-      ],
-    },
-  ];
-
-  return (
-    <Box sx={{ height: 600, width: "100%" }}>
-      <DataGrid
-        rows={staff}
-        columns={columns}
-        getRowId={(row) => row.user_id}
-        components={{
-          Toolbar: GridToolbar,
-        }}
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        disableSelectionOnClick
-        style={{ height: "auto", minHeight: 400 }}
-        sx={{
-          "& .MuiDataGrid-columnHeaders": {
-            backgroundColor: "primary.dark",
-            fontSize: "1rem",
-            fontWeight: "bold",
-          },
-          "& .MuiDataGrid-cell": {
-            display: "flex",
-            alignItems: "center",
-          },
-        }}
+// Column definitions shared by the staff and customer management pages
+export const getStaffColumns = ({ onEdit, onChangePassword }) => [
+  {
+    field: "name",
+    headerName: "Name",
+    flex: 1,
+    valueGetter: (value, row) => `${row.first_name ?? ""} ${row.last_name ?? ""}`.trim(),
+  },
+  {
+    field: "email",
+    headerName: "Email",
+    flex: 1,
+  },
+  {
+    field: "location",
+    headerName: "Location",
+    flex: 1,
+    renderCell: (params) =>
+      params.value ? <Chip label={params.value} size="small" /> : null,
+  },
+  {
+    field: "role",
+    headerName: "Role",
+    flex: 1,
+    renderCell: (params) => (
+      <Chip
+        label={params.value}
+        color={params.value === "admin" ? "error" : "primary"}
+        size="small"
       />
-    </Box>
+    ),
+  },
+  {
+    field: "status",
+    headerName: "Status",
+    flex: 1,
+    renderCell: (params) => (
+      <Chip
+        label={params.value}
+        color={getStatusColor(params.value)}
+        size="small"
+      />
+    ),
+  },
+  actionsColumn((row) => [
+    { label: "Edit User", icon: Edit, onClick: () => onEdit(row) },
+    {
+      label: "Reset Password",
+      icon: Key,
+      onClick: () => onChangePassword(row),
+    },
+  ]),
+];
+
+const StaffList = ({ staff = [], isLoading = false, onEdit, onChangePassword }) => {
+  return (
+    <ManagementGrid
+      rows={staff}
+      columns={getStaffColumns({ onEdit, onChangePassword })}
+      loading={isLoading}
+      getRowId={(row) => row.user_id}
+    />
   );
 };
 

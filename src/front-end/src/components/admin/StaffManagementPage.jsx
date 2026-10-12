@@ -1,20 +1,10 @@
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Container,
-  Typography,
-  Alert,
-  Snackbar,
-  Dialog,
-  IconButton,
-} from "@mui/material";
-import { styled } from "@mui/material/styles";
-import { UserPlus } from "lucide-react";
+import { Dialog } from "@mui/material";
 import StaffManagementForm from "@/components/admin/StaffManagementForm";
-import StaffList from "@/components/admin/StaffList";
+import { getStaffColumns } from "@/components/admin/StaffList";
 import PasswordChangeDialog from "@/components/admin/PasswordChangeDialog";
 import api from "@/config/api";
+import ManagementPage from "@/components/common/ManagementPage";
 
 // TODO: Missing Staff api
 
@@ -27,11 +17,7 @@ const StaffManagementPage = () => {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [editMode, setEditMode] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+  const [successMessage, setSuccessMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null)
   const fetchStaff = async () => {
@@ -72,19 +58,6 @@ const StaffManagementPage = () => {
     }
   };
 
-  const StyledButton = styled(IconButton)(({ theme }) => ({
-    backgroundColor: theme.palette.primary.main,
-    color: "white",
-    padding: theme.spacing(1),
-    minWidth: "auto",
-    "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
-    },
-    "& svg": {
-      width: 30,
-      height: 30,
-    },
-  }));
 
   const token = localStorage.getItem("access_token");
   const tokenData = JSON.parse(atob(token.split(".")[1]));
@@ -105,13 +78,9 @@ const StaffManagementPage = () => {
 
       await fetchStaff();
 
-      setSnackbar({
-        open: true,
-        message: `Staff member ${
+      setSuccessMessage(`Staff member ${
           newStatus === "active" ? "activated" : "deactivated"
-        } successfully`,
-        severity: "success",
-      });
+        } successfully`);
     } catch (err) {
       console.error("Error updating staff status:", err);
       setError(
@@ -134,11 +103,7 @@ const StaffManagementPage = () => {
       await api.post(`/staff/`, formData);
       await fetchStaff();
       setFormOpen(false);
-      setSnackbar({
-        open: true,
-        message: "Staff member created successfully",
-        severity: "success",
-      });
+      setSuccessMessage("Staff member created successfully");
     } catch (err) {
       console.error("Error creating staff member:", err);
       setError(err.response?.data?.detail || "Failed to create staff member");
@@ -161,11 +126,7 @@ const StaffManagementPage = () => {
 
       await fetchStaff();
       setFormOpen(false);
-      setSnackbar({
-        open: true,
-        message: "Staff member updated successfully",
-        severity: "success",
-      });
+      setSuccessMessage("Staff member updated successfully");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -188,11 +149,7 @@ const StaffManagementPage = () => {
       }
 
       setPasswordDialogOpen(false);
-      setSnackbar({
-        open: true,
-        message: "Password reset successfully",
-        severity: "success",
-      });
+      setSuccessMessage("Password reset successfully");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -202,82 +159,35 @@ const StaffManagementPage = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "left",
-          alignItems: "center",
-          gap: 2,
-          mb: 4,
-        }}
-      >
-        <Typography variant="h4">Staff Management</Typography>
-        <StyledButton
-          onClick={() => {
-            setEditMode(false);
-            setSelectedStaff(null);
+    <ManagementPage
+      title="Staff Management"
+      addLabel="Create New Staff Account"
+      onAdd={() => {
+        setEditMode(false);
+        setSelectedStaff(null);
+        setFormOpen(true);
+      }}
+      error={formOpen || passwordDialogOpen ? null : error}
+      onErrorClose={() => setError(null)}
+      success={successMessage}
+      onSuccessClose={() => setSuccessMessage(null)}
+      gridProps={{
+        rows: staff,
+        columns: getStaffColumns({
+          onEdit: (staff) => {
+            setSelectedStaff(staff);
+            setEditMode(true);
             setFormOpen(true);
-          }}
-        >
-          <UserPlus />
-        </StyledButton>
-      </Box>
-
-      <StaffList
-        staff={staff}
-        currentUser={currentUser}
-        isLoading={loading}
-        error={error}
-        onEdit={(staff) => {
-          setSelectedStaff(staff);
-          setEditMode(true);
-          setFormOpen(true);
-        }}
-        onStatusChange={handleStatusChange}
-        onChangePassword={(staff) => {
-          setSelectedStaff(staff);
-          setPasswordDialogOpen(true);
-        }}
-      />
-      
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "left",
-          alignItems: "center",
-          gap: 2,
-          mb: 4,
-        }}
-      >
-        <Typography variant="h4">User Management</Typography>
-        <StyledButton
-          onClick={() => {
-            setEditMode(false);
-            setSelectedStaff(null);
-            setFormOpen(true);
-          }}
-        >
-          <UserPlus />
-        </StyledButton>
-      </Box>
-       <StaffList
-        staff={customers}
-        currentUser={currentUser}
-        isLoading={loading}
-        error={error}
-        onEdit={(customer) => {
-          setSelectedStaff(customer);
-          setEditMode(true);
-          setFormOpen(true);
-        }}
-        onStatusChange={handleStatusChange}
-        onChangePassword={(customer) => {
-          setSelectedStaff(customer);
-          setPasswordDialogOpen(true);
-        }}
-      />
-
+          },
+          onChangePassword: (staff) => {
+            setSelectedStaff(staff);
+            setPasswordDialogOpen(true);
+          },
+        }),
+        loading,
+        getRowId: (row) => row.user_id,
+      }}
+    >
       <Dialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -302,19 +212,7 @@ const StaffManagementPage = () => {
         error={error}
       />
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+    </ManagementPage>
   );
 };
 

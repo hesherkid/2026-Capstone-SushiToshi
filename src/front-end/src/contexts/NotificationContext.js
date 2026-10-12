@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback } from "react";
+import React, { createContext, useState, useContext, useCallback, useMemo } from "react";
 
 export const NotificationContext = createContext(null);
 
@@ -8,32 +8,36 @@ export const useNotification = () => {
     throw new Error("useNotification must be used within NotificationProvider");
   }
 
+  // Depend on the stable showNotification, not the whole context, so these
+  // helpers keep the same identity across notification state changes
+  const { showNotification } = context;
+
   const notifySuccess = useCallback(
     (message, duration = 6000) => {
-      context.showNotification(message, "success", duration);
+      showNotification(message, "success", duration);
     },
-    [context]
+    [showNotification]
   );
 
   const notifyError = useCallback(
     (message, duration = 6000) => {
-      context.showNotification(message, "error", duration);
+      showNotification(message, "error", duration);
     },
-    [context]
+    [showNotification]
   );
 
   const notifyWarning = useCallback(
     (message, duration = 6000) => {
-      context.showNotification(message, "warning", duration);
+      showNotification(message, "warning", duration);
     },
-    [context]
+    [showNotification]
   );
 
   const notifyInfo = useCallback(
     (message, duration = 6000) => {
-      context.showNotification(message, "info", duration);
+      showNotification(message, "info", duration);
     },
-    [context]
+    [showNotification]
   );
 
   return {
@@ -51,25 +55,31 @@ export const NotificationProvider = ({ children }) => {
   const [severity, setSeverity] = useState("info");
   const [autoHideDuration, setAutoHideDuration] = useState(6000);
 
-  const showNotification = (message, severity = "info", duration = 6000) => {
-    setMessage(message);
-    setSeverity(severity);
-    setAutoHideDuration(duration);
-    setOpen(true);
-  };
+  const showNotification = useCallback(
+    (message, severity = "info", duration = 6000) => {
+      setMessage(message);
+      setSeverity(severity);
+      setAutoHideDuration(duration);
+      setOpen(true);
+    },
+    []
+  );
 
-  const hideNotification = () => {
+  const hideNotification = useCallback(() => {
     setOpen(false);
-  };
+  }, []);
 
-  const value = {
-    open,
-    message,
-    severity,
-    autoHideDuration,
-    showNotification,
-    hideNotification,
-  };
+  const value = useMemo(
+    () => ({
+      open,
+      message,
+      severity,
+      autoHideDuration,
+      showNotification,
+      hideNotification,
+    }),
+    [open, message, severity, autoHideDuration, showNotification, hideNotification]
+  );
 
   return (
     <NotificationContext.Provider value={value}>

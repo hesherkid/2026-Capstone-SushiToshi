@@ -3,6 +3,18 @@ import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
 import LoginForm from "../LoginForm";
 import { loginUser } from "@/utils/auth";
+import api from "@/config/api";
+import { decodeToken } from "@/config/auth";
+
+jest.mock("@/config/api", () => ({
+  __esModule: true,
+  default: {
+    get: jest.fn(),
+    post: jest.fn(),
+  },
+}));
+
+jest.mock("@/config/auth", () => ({ decodeToken: jest.fn() }));
 
 // Mock dependencies
 jest.mock("next/navigation", () => ({
@@ -228,6 +240,50 @@ describe("LoginForm", () => {
       });
       expect(localStorage.getItem("guest")).toBe("true");
     });
+
+    it("creates a session for the table in the scanned QR code", async () => {
+      const user = userEvent.setup();
+      loginUser.mockResolvedValue({ access_token: "guest-token" });
+      decodeToken.mockReturnValue({
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": "22",
+      });
+      useSearchParams.mockReturnValue(
+        new URLSearchParams("locationId=3&tableNumber=8")
+      );
+      api.get.mockImplementation((url) => {
+        if (url === "/TableEntity") {
+          return Promise.resolve({
+            data: [{ table_Id: 5, table_number: 8, location_Id: 3, is_active: true }],
+          });
+        }
+        if (url === "/Menu") {
+          return Promise.resolve({ data: [{ menu_id: 12, location_Id: 3 }] });
+        }
+        return Promise.resolve({ data: [] });
+      });
+      api.post.mockResolvedValue({ data: { session_Id: 101 } });
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledWith(
+          "/DiningSession/Create_Dinning_Session",
+          expect.objectContaining({
+            Menu_Id: 12,
+            Location_Id: 3,
+            Table_Id: 5,
+            AssignmentType: "table",
+            Request_By_User_Id: 22,
+            Request_By_Name: "Guest",
+          })
+        );
+        expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu");
+      });
+
+      expect(localStorage.getItem("session_id")).toBe("101");
+    });
+
   });
 
   describe("Error Handling", () => {

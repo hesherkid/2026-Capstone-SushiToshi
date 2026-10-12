@@ -1,23 +1,18 @@
 import { useState, useEffect } from "react";
-import { DataGrid, gridRenderContextColumnsSelector } from "@mui/x-data-grid";
 import {
-  Box,
   Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton,
   Typography,
-  Stack,
-  Alert,
-  FormControl
 } from "@mui/material";
-import { Edit, Delete, Plus, AlertTriangle, Trash2, LocateFixed  } from "lucide-react";
-import { styled } from "@mui/material/styles";
+import { Edit, AlertTriangle, Trash2, LocateFixed } from "lucide-react";
 import MenuForm from "@/components/location/MenuForm";
 import AddLocationsToMenu from "@/components/location/AddLocationToMenu";
 import api from "@/config/api";
+import ManagementPage from "@/components/common/ManagementPage";
+import { actionsColumn } from "@/components/common/RowActions";
 
 const MenuManagement = () => {
   const [menus, setMenus] = useState([]);
@@ -31,19 +26,6 @@ const MenuManagement = () => {
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [locationsList, setLocationsList] = useState([]);
 
-  const AddButton = styled(IconButton)(({ theme }) => ({
-    backgroundColor: theme.palette.primary.main,
-    color: "white",
-    padding: theme.spacing(1),
-    minWidth: "auto",
-    "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
-    },
-    "& svg": {
-      width: 20,
-      height: 20,
-    },
-  }));
 
   const fetchMenus = async () => {
     try {
@@ -234,66 +216,36 @@ const MenuManagement = () => {
         </Typography>
       )
     },
-    {
-      field: "actions",
-      headerName: "Actions",
-      width: 150,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <IconButton onClick={() => handleEdit(params.row)} size="small">
-            <Edit size={20} />
-          </IconButton>
-          <IconButton
-            onClick={() => handleDeleteClick(params.row)}
-            size="small"
-            color="error"
-          >
-            <Trash2 size={20} />
-          </IconButton>
-          <IconButton onClick={()=>handleLocations(params.row)} size ="small">
-            <LocateFixed size ={20} />
-          </IconButton>
-        </Stack>
-      ),
-    },
+    actionsColumn((row) => [
+      { label: "Edit", icon: Edit, onClick: () => handleEdit(row) },
+      {
+        label: "Delete",
+        icon: Trash2,
+        color: "error",
+        onClick: () => handleDeleteClick(row),
+      },
+      {
+        label: "Assign Locations",
+        icon: LocateFixed,
+        onClick: () => handleLocations(row),
+      },
+    ]),
   ];
 
   return (
-    <Box pt={2}>
-      <Stack direction="row" justifyContent="left" alignItems="center" mb={2}>
-        <Typography pr={3} variant="h4">
-          Menu Management
-        </Typography>
-        <AddButton onClick={handleCreate}>
-          <Plus />
-        </AddButton>
-      </Stack>
-
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <DataGrid
-        rows={menus}
-        columns={columns}
-        loading={loading}
-        getRowId={(row) => row.menu_id}
-        autoHeight
-        disableSelectionOnClick
-        sx={{
-          bgcolor: "background.paper",
-          "& .MuiDataGrid-cell": {
-            display: "flex",
-            alignItems: "center",
-          },
-          "& .MuiDataGrid-cell:focus": {
-            outline: "none",
-          },
-        }}
-      />
-
+    <ManagementPage
+      title="Menu Management"
+      addLabel="Add New Menu Type"
+      onAdd={handleCreate}
+      error={error}
+      onErrorClose={() => setError(null)}
+      gridProps={{
+        rows: menus,
+        columns,
+        loading,
+        getRowId: (row) => row.menu_id,
+      }}
+    >
       <Dialog
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
@@ -346,7 +298,7 @@ const MenuManagement = () => {
           availableLocations={locationsList}
         />
       </Dialog>
-    </Box>
+    </ManagementPage>
   );
 };
 

@@ -6,34 +6,18 @@ import {
   Typography,
   Button,
   IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemButton,
   Box,
   useTheme,
   CircularProgress,
+  Badge,
   Select,
   MenuItem,
   FormControl,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  MenuSquare,
-  LogOut,
   LogIn,
-  Home,
-  Clock,
-  Users,
-  BarChart,
-  Tag,
-  QrCode,
-  Phone,
-  MapPin,
-  Table,
-  Group,
+  ShoppingBag,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -45,6 +29,7 @@ import api from "@/config/api";
 import storage from "@/utils/storage";
 import { LocationOn } from "@mui/icons-material";
 import { useNotification } from "@/contexts/NotificationContext";
+import AppNavigationDrawer from "@/components/AppNavigationDrawer";
 
 const AppBarWithTitle = ({ title }) => {
   const router = useRouter();
@@ -56,9 +41,32 @@ const AppBarWithTitle = ({ title }) => {
     storage.get("branch-location")
   );
   const [allLocations, setAllLocations] = useState([]);
+  const [tableNumber, setTableNumber] = useState("");
+  const [bagItemCount, setBagItemCount] = useState(0);
   const { isAuthenticated, userRole, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
   const isGuest = typeof window !== "undefined" && localStorage.getItem("guest") === "true";
+  const canShowDrawer =
+    !isLoginPage && (isAuthenticated || isGuest);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleCartCountChange = (event) => {
+      setBagItemCount(Number(event.detail?.count) || 0);
+    };
+
+    window.addEventListener("menu-cart-count-changed", handleCartCountChange);
+    return () => {
+      window.removeEventListener("menu-cart-count-changed", handleCartCountChange);
+    };
+  }, []);
+
+  // The app bar stays mounted across client-side navigation, so re-read the
+  // table number on each route change (e.g. after the QR login saves it)
+  useEffect(() => {
+    setTableNumber(localStorage.getItem("tableNumber") || "");
+  }, [pathname]);
 
   useEffect(() => {
     const fetchAllLocations = async () => {
@@ -85,7 +93,7 @@ const AppBarWithTitle = ({ title }) => {
       }
     };
     fetchAllLocations();
-  }, [isAuthenticated, userRole, loading, notifyError, notifyInfo]);
+  }, [isAuthenticated, userRole, notifyError, notifyInfo]);
 
   // useEffect(() => {
   //   // Listen for auth changes
@@ -99,9 +107,15 @@ const AppBarWithTitle = ({ title }) => {
   //   };
   // }, []);
   
-const handleLogout = async () => {
-  await logoutUser(true); // true = redirect to login
+const handleLogout = () => {
+  if (typeof window !== "undefined") {
+    ["guest", "session_id", "guest_oid", "tableNumber", "locationId", "currentBillId"].forEach(
+      (key) => localStorage.removeItem(key)
+    );
+  }
+
   setDrawerOpen(false);
+  logoutUser();
 };
 
   const handleLogin = () => {
@@ -138,77 +152,7 @@ const handleLogout = async () => {
       // setSelectedLocation(previousValue);
     }
   };
-  const menuItems = {
-    customer: [
-      { icon: Home, label: "Home", path: "/" },
-      { icon: Clock, label: "Bills", path: "/dashboard/bills" },
-      { icon: MenuSquare, label: "Menu", path: "/menu/full-menu" },
-      { icon: Users, label: "Orders", path: "/dashboard/orders" },
-      { icon: Phone, label: "Call Server", path: "/dashboard/call-server" },
-    ],
-    staff: [
-      { icon: Home, label: "Home", path: "/" },
-      { icon: Clock, label: "Sessions", path: "/dashboard/sessions" },
-      { icon: Table, label: "Tables", path: "/dashboard/tables" },
-      { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
-      { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes" },
-    ],
-    admin: [
-      { icon: Home, label: "Home", path: "/" },
-      { icon: Clock, label: "Sessions", path: "/dashboard/sessions" },
-      { icon: Table, label: "Tables", path: "/dashboard/tables" },
-      { icon: MapPin,label: "Manage Locations",path: "/location/menu-location",},
-      { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
-      { icon: MenuIcon, label: "Manage Menu Items", path: "/admin/menu-items" },
-      { icon: Group, label: "Manage Menu Categories", path: "/admin/menu-categories" },
-      { icon: Users, label: "Manage Staff", path: "/admin/staff" },
-      { icon: Tag, label: "Manage Tags", path: "/tags/tag-management" },
-      { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes" },
-      { icon: BarChart, label: "Analytics", path: "/analytics/analytic-page" },
-    ],
-  };
-
   const effectiveRole = userRole || (isGuest ? "customer" : null);
- console.log(effectiveRole)
-  const renderMenuList = () => (
-    <List
-      sx={{
-        width: 320,
-        pt: 3,
-      }}
-    >
-      {effectiveRole &&
-        menuItems[effectiveRole].map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <ListItemButton
-              key={index}
-              onClick={() => handleNavigation(item.path)}
-              sx={{
-                cursor: "pointer",
-                py: 3,
-                "& .MuiListItemIcon-root": {
-                  minWidth: 56,
-                  "& svg": {
-                    width: 24,
-                    height: 24,
-                  },
-                },
-                "& .MuiListItemText-primary": {
-                  fontSize: "1.1rem",
-                  fontWeight: 500,
-                },
-              }}
-            >
-              <ListItemIcon>
-                <Icon />
-              </ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          );
-        })}
-    </List>
-  );
 
   return (
     <AppBar
@@ -227,22 +171,23 @@ const handleLogout = async () => {
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "start",
-            gap: 1,
-            flex: "1 1 0",
+            justifyContent: "flex-start",
+            gap: { xs: 2, sm: 3},
+            flex: "0 0 auto",
+            minWidth: 0,
           }}
         >
-          {(isAuthenticated  || isGuest) && (
+          {canShowDrawer && (
             <IconButton
               color="inherit"
               aria-label="menu"
               onClick={() => setDrawerOpen(true)}
-              sx={{ p: { xs: 1, sm: 1.5 } }}
+              sx={{ p: { xs: 1, sm: 1.5 }, flexShrink: 0,}}
             >
               <MenuIcon />
             </IconButton>
           )}
-          <Typography
+          {/* <Typography
             variant="h6"
             component="div"
             sx={{
@@ -253,7 +198,7 @@ const handleLogout = async () => {
             }}
           >
             {title}
-          </Typography>
+          </Typography> */}
         </Box>
 
         <Box
@@ -284,9 +229,70 @@ const handleLogout = async () => {
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
-            gap: 2,
+            gap: { xs: 0.5, sm: 2 },
           }}
         >
+          {(isGuest || userRole === "customer") && tableNumber && (
+            <Box
+              aria-label={`Table ${tableNumber}`}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: { xs: 1, sm: 1.5 },
+                py: 0.5,
+                borderRadius: 2,
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                backgroundColor: "rgba(255, 255, 255, 0.12)",
+                color: "inherit",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: { xs: "0.9rem", sm: "0.875rem" },
+                  fontWeight: 600,
+                  letterSpacing: "0.02em",
+                  lineHeight: 1.4,
+                }}
+              >
+                Table {tableNumber}
+              </Typography>
+            </Box>
+          )}
+
+          {(isGuest || userRole === "customer") && pathname === "/menu/full-menu" && (
+            <IconButton
+              color="inherit"
+              aria-label={`Shopping bag, ${bagItemCount} ${bagItemCount === 1 ? "item" : "items"}`}
+              disabled={bagItemCount === 0}
+              onClick={() =>
+                window.dispatchEvent(new Event("menu-cart-open"))
+              }
+              sx={{
+                color: "white",
+                "&.Mui-disabled": { color: "white" },
+              }}
+            >
+              <Badge
+                badgeContent={bagItemCount}
+                showZero
+                sx={{
+                  "& .MuiBadge-badge": {
+                    backgroundColor: "white",
+                    color: theme.palette.primary.main,
+                    border: `1.5px solid ${theme.palette.primary.main}`,
+                    fontWeight: 700,
+                  },
+                }}
+              >
+                <ShoppingBag size={25} />
+              </Badge>
+            </IconButton>
+          )}
+
           {/* Location Dropdown - Only visible for staff and admin */}
           {isAuthenticated &&
             (userRole === "staff" || userRole === "admin") && (
@@ -342,15 +348,11 @@ const handleLogout = async () => {
               </FormControl>
             )}
 
-          {!isLoginPage && (
+          {!isLoginPage && !isAuthenticated && !isGuest && (
             <Button
               color="inherit"
-              onClick={
-                isAuthenticated
-                  ? handleLogout
-                  : () => handleNavigation("/auth/login")
-              }
-              endIcon={isAuthenticated ? <LogOut /> : <LogIn />}
+              onClick={() => handleNavigation("/auth/login")}
+              endIcon={<LogIn />}
               sx={{
                 minWidth: { xs: 56, sm: "auto" },
                 px: { xs: 2, sm: 2.5 },
@@ -362,24 +364,21 @@ const handleLogout = async () => {
               }}
             >
               <Typography sx={{ display: { xs: "none", sm: "block" } }}>
-                {isAuthenticated || isGuest ? "Logout" : "Login"}
+                Login
               </Typography>
             </Button>
           )}
         </Box>
 
-        <Drawer
-          anchor="left"
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          sx={{
-            "& .MuiDrawer-paper": {
-              top: { xs: 56, sm: 64 },
-            },
-          }}
-        >
-          {renderMenuList()}
-        </Drawer>
+        {canShowDrawer && (
+          <AppNavigationDrawer
+            open={drawerOpen}
+            role={effectiveRole}
+            onClose={() => setDrawerOpen(false)}
+            onNavigate={handleNavigation}
+            onLogout={handleLogout}
+          />
+        )}
       </Toolbar>
     {loading && (
       <Box
