@@ -165,7 +165,7 @@ namespace back_end.Migrations
                     b.Property<DateTime?>("Ended_At")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("First_Order_At")
+                    b.Property<DateTime?>("First_Order_At")
                         .HasColumnType("datetime(6)");
 
                     b.Property<int>("Location_Id")

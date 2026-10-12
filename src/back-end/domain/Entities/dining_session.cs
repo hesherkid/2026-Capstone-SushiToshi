@@ -19,7 +19,7 @@ namespace back_end.domain.Entities
 
     public DateTime? Ended_At { get; set; }
 
-    public DateTime First_Order_At { get; set; } = DateTime.Now;
+    public DateTime? First_Order_At { get; set; }
 
     [ForeignKey(nameof(Table))]
     public int? Table_Id { get; set; }

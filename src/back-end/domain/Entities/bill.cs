@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.SignalR;
 using back_end.domain.enums;
 
 namespace back_end.domain.Entities
@@ -29,7 +28,7 @@ namespace back_end.domain.Entities
 
         public BillStatus Status { get; set; } = BillStatus.Open;
 
-        public DateTime Created_At { get; set; } = DateTime.Now;
+        public DateTime Created_At { get; set; } = DateTime.UtcNow;
 
         public DateTime? Closed_At { get; set; }
 

@@ -93,6 +93,11 @@ namespace back_end.Controllers
                     userId = parsedUserId;
                 }
 
+                var now = DateTime.UtcNow;
+
+                // First order of the session only; later orders leave it unchanged
+                session.First_Order_At ??= now;
+
                 var newOrder = new SessionOrder
                 {
                     session_id = order_data.Session_Id,
@@ -100,7 +105,7 @@ namespace back_end.Controllers
                     User_Id = userId,
                     User_Name = userName,
                     Status = OrderStatus.Pending,
-                    Created_At = DateTime.UtcNow
+                    Created_At = now
                 };
                 _context.SessionOrders.Add(newOrder);
                 await _context.SaveChangesAsync();
@@ -322,20 +327,32 @@ namespace back_end.Controllers
         [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CompleteOrderItem(
-            int item_id
-        )
+        public async Task<IActionResult> CompleteOrderItem(int order_id, int item_id)
         {
             try
             {
-                var item = await _context.OrderItems.FirstOrDefaultAsync(or => or.Order_Item_Id == item_id);
-                if (item is null)
-                {
-                    return NotFound("Item in a Order was not found");
-                }
+                var order = await _context.SessionOrders
+                    .Include(o => o.OrderItems)
+                    .FirstOrDefaultAsync(o => o.Order_Id == order_id);
+                if (order is null) return NotFound("Order not found");
+
+                var item = order.OrderItems.FirstOrDefault(oi => oi.Order_Item_Id == item_id);
+                if (item is null) return NotFound("Item not found in this order");
+
+                if (item.Order_Item_Status != OrderStatus.Processing)
+                    return BadRequest("Only approved (Processing) items can be delivered");
+
+                var now = DateTime.UtcNow;
                 item.Order_Item_Status = OrderStatus.Delivered;
-                item.Completed_At = DateTime.UtcNow;
-                _context.OrderItems.Update(item);
+                item.Completed_At = now;
+
+                // Last outstanding item delivered -> the order is done
+                if (!order.OrderItems.Any(oi => oi.Order_Item_Status == OrderStatus.Processing))
+                {
+                    order.Status = OrderStatus.Delivered;
+                    order.Completed_At = now;
+                }
+
                 await _context.SaveChangesAsync();
                 var response = new OrderItemResponseDTO
                 {
@@ -352,7 +369,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting Orders");
+                _logger.LogError(ex, "Error completing order item {ItemId}", item_id);
                 return StatusCode(500, "Internal Server Error");
             }
         }
@@ -384,14 +401,17 @@ namespace back_end.Controllers
                     return BadRequest("Only approved orders can be marked as completed");
                 }
 
-                order.Status = OrderStatus.Delivered;
-                order.Completed_At = DateTime.UtcNow;
+                var now = DateTime.UtcNow;
 
-                foreach (var item in order.OrderItems)
+                // Only items still outstanding
+                foreach (var item in order.OrderItems.Where(i => i.Order_Item_Status == OrderStatus.Processing))
                 {
                     item.Order_Item_Status = OrderStatus.Delivered;
-                    item.Completed_At = DateTime.UtcNow;
+                    item.Completed_At = now;
                 }
+
+                order.Status = OrderStatus.Delivered;
+                order.Completed_At = now;
 
                 _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
