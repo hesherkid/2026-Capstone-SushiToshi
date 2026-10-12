@@ -11,6 +11,7 @@ namespace back_end.Services.Analytics
             services.AddScoped<IItemPerformanceService, ItemPerformanceService>();
             services.AddScoped<IBrowsingBehaviorService, BrowsingBehaviorService>();
             services.AddScoped<IOrderTimingService, OrderTimingService>();
+            services.AddScoped<ITableTurnoverService, TableTurnoverService>();
 
             return services;
         }
