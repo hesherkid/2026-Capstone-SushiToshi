@@ -17,8 +17,6 @@ import {
   Input,
   TextField,
 } from "@mui/material";
-// TODO: Fix depcrecated DataGrid import
-import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import {
   Plus,
   Edit,
@@ -27,26 +25,14 @@ import {
   AlertTriangle,
   Image as ImageIcon,
 } from "lucide-react";
-import { styled } from "@mui/material/styles";
 import MenuAssignmentDialog from "@/components/admin/MenuAssignmentDialog";
 import TagChip from "@/components/tags/TagChip";
 import TagsDialog from "@/components/admin/TagsDialog";
 import CategoryManagementDialog from "@/components/admin/CategoryManagementDialog";
 import api from "@/config/api";
+import ManagementPage from "@/components/common/ManagementPage";
+import { actionsColumn } from "@/components/common/RowActions";
 
-const AddButton = styled(IconButton)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.main,
-  color: "white",
-  padding: theme.spacing(1),
-  minWidth: "auto",
-  "&:hover": {
-    backgroundColor: theme.palette.primary.dark,
-  },
-  "& svg": {
-    width: 20,
-    height: 20,
-  },
-}));
 
 const MenuItemManagement = () => {
   const [items, setItems] = useState([]);
@@ -177,18 +163,15 @@ const MenuItemManagement = () => {
       field: "item_Image_Url",
       headerName: "Image",
       width: 100,
+      sortable: false,
+      filterable: false,
       renderCell: (params) =>
         params.value ? (
           <Box
             component="img"
             src={params.value}
             alt={params.row.name}
-            sx={{
-              width: 60,
-              height: 60,
-              objectFit: "cover",
-              borderRadius: 1,
-            }}
+            sx={{ width: 60, height: 60, objectFit: "cover", borderRadius: 1 }}
           />
         ) : (
           <Box
@@ -205,8 +188,6 @@ const MenuItemManagement = () => {
             <ImageIcon size={24} color="grey" />
           </Box>
         ),
-      sortable: false,
-      filterable: false,
     },
     {
       field: "name",
@@ -215,16 +196,18 @@ const MenuItemManagement = () => {
       minWidth: 200,
     },
     {
-      field: "category",
+      field: "category_Id",
       headerName: "Category",
       flex: 1,
       minWidth: 150,
-      valueGetter: (params) => {
-        const category = categories.find(
-          (c) => c.category_id === params.row.category_id
-        );
-        return category?.name || "";
-      },
+      type: "singleSelect",
+      valueOptions: categories.map((cat) => ({
+        value: cat.category_id,
+        label: cat.category_name,
+      })),
+      renderCell: (params) =>
+        categories.find((c) => c.category_id === params.value)
+          ?.category_name || "(No category)",
     },
     {
       field: "description",
@@ -232,7 +215,7 @@ const MenuItemManagement = () => {
       flex: 2,
       minWidth: 300,
       renderCell: (params) => (
-        <Box>
+        <Box sx={{ py: 1 }}>
           <Typography variant="body2" sx={{ mb: 1 }}>
             {params.row.description}
           </Typography>
@@ -244,8 +227,7 @@ const MenuItemManagement = () => {
               alignItems: "center",
             }}
           >
-            {params.row.menuItemTags?.map((tag) => (
-
+            {params.row.tags?.map((tag) => (
               <TagChip
                 key={`tag-${tag.tag_id}`}
                 tag={tag}
@@ -258,6 +240,7 @@ const MenuItemManagement = () => {
             ))}
             <IconButton
               size="small"
+              aria-label="Manage Tags"
               onClick={() => {
                 setSelectedItem(params.row);
                 setTagDialogOpen(true);
@@ -269,36 +252,23 @@ const MenuItemManagement = () => {
         </Box>
       ),
     },
-    {
-      field: "actions",
-      headerName: "Actions",
-      width: 150,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <IconButton onClick={() => handleEdit(params.row)} size="small">
-            <Edit size={20} />
-          </IconButton>
-          <IconButton
-            onClick={() => {
-              setSelectedItem(params.row);
-              setAssignmentDialogOpen(true);
-            }}
-            size="small"
-          >
-            <MenuIcon size={20} />
-          </IconButton>
-          <IconButton
-            onClick={() => handleDelete(params.row)}
-            size="small"
-            color="error"
-          >
-            <Trash2 size={20} />
-          </IconButton>
-        </Stack>
-      ),
-      sortable: false,
-      filterable: false,
-    },
+    actionsColumn((row) => [
+      { label: "Edit", icon: Edit, onClick: () => handleEdit(row) },
+      {
+        label: "Assign to Menus",
+        icon: MenuIcon,
+        onClick: () => {
+          setSelectedItem(row);
+          setAssignmentDialogOpen(true);
+        },
+      },
+      {
+        label: "Delete",
+        icon: Trash2,
+        color: "error",
+        onClick: () => handleDelete(row),
+      },
+    ]),
   ];
 
   const ItemForm = () => {
@@ -507,250 +477,25 @@ const MenuItemManagement = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="50vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack
-        direction="row"
-        justifyContent="left"
-        alignItems="center"
-        mb={3}
-        spacing={2}
-      >
-        <Typography variant="h4">Menu Items</Typography>
-        <AddButton onClick={handleCreate}>
-          <Plus />
-        </AddButton>
-      </Stack>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <Box sx={{ width: "100%", height: 600 }}>
-        <DataGrid
-          rows={items}
-          columns={[
-            {
-              field: "item_Image_Url",
-              headerName: "Image",
-              width: 100,
-              renderCell: (params) =>
-                params.value ? (
-                  <Box
-                    component="img"
-                    src={params.value}
-                    alt={params.row.name}
-                    sx={{
-                      width: 60,
-                      height: 60,
-                      objectFit: "cover",
-                      borderRadius: 1,
-                    }}
-                  />
-                ) : (
-                  <Box
-                    sx={{
-                      width: 60,
-                      height: 60,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor: "grey.100",
-                      borderRadius: 1,
-                    }}
-                  >
-                    <ImageIcon size={24} color="grey" />
-                  </Box>
-                ),
-              sortable: false,
-              filterable: false,
-            },
-            {
-              field: "name",
-              headerName: "Name",
-              flex: 1,
-              minWidth: 200,
-              align: "center",
-              headerAlign: "left",
-              renderCell: (params) => (
-                <Box
-                  sx={{ display: "flex", alignItems: "center", height: "100%" }}
-                >
-                  <Typography>{params.value}</Typography>
-                </Box>
-              ),
-            },
-{
-  field: "category_Id",  // Changed from category_id to category_Id (capital I)
-  headerName: "Category",
-  flex: 1,
-  minWidth: 150,
-  align: "center",
-  headerAlign: "left",
-  type: "singleSelect",
-  valueOptions: [
-    { value: "", label: "All Categories" },
-    ...categories.map((cat) => ({
-      value: cat.category_id,
-      label: cat.category_name,
-    })),
-  ],
-  renderCell: (params) => {
-    const category = categories.find(
-      (c) => c.category_id === params.value
-    );
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          height: "100%",
-        }}
-      >
-        <Typography>{category?.category_name || "(No category)"}</Typography>
-      </Box>
-    );
-  },
-},
-            {
-              field: "description",
-              headerName: "Description & Tags",
-              flex: 2,
-              minWidth: 300,
-              renderCell: (params) => {    
-                return (
-                  <Box sx={{ py: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      {params.row.description}
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 0.5,
-                        alignItems: "center",
-                      }}
-                    >
-                      {params.row.tags?.map((tag) => (
-                        <TagChip
-                          key={`tag-${tag.tag_id}`}
-                          tag={tag}
-                          isActionChip={true}
-                          isUsedFor="menu-item"
-                          onToggle={() =>
-                            handleTagAction(
-                              params.row.item_id,
-                              tag.tag_id,
-                              "remove"
-                            )
-                          }
-                        />
-                      ))}
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedItem(params.row);
-                          setTagDialogOpen(true);
-                        }}
-                      >
-                        <Plus size={16} />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                );
-              },
-            },
-            {
-              field: "actions",
-              headerName: "Actions",
-              width: 150,
-              align: "center",
-              headerAlign: "left",
-              renderCell: (params) => (
-                <Box
-                  sx={{ display: "flex", alignItems: "center", height: "100%" }}
-                >
-                  <Stack direction="row" spacing={1}>
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(params.row);
-                      }}
-                      size="small"
-                    >
-                      <Edit size={20} />
-                    </IconButton>
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedItem(params.row);
-                        setAssignmentDialogOpen(true);
-                      }}
-                      size="small"
-                    >
-                      <MenuIcon size={20} />
-                    </IconButton>
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(params.row);
-                      }}
-                      size="small"
-                      color="error"
-                    >
-                      <Trash2 size={20} />
-                    </IconButton>
-                  </Stack>
-                </Box>
-              ),
-            },
-          ]}
-          getRowId={(row) => row.item_id}
-          getRowHeight={() => "auto"}
-          autoHeight
-          density="comfortable"
-          disableRowSelectionOnClick
-          slots={{
-            toolbar: GridToolbar,
-          }}
-          slotProps={{
-            toolbar: {
-              showQuickFilter: true,
-            },
-          }}
-          initialState={{
-            pagination: {
-              paginationModel: { pageSize: 10 },
-            },
-          }}
-          pageSizeOptions={[10, 25, 50]}
-          sx={{
-            "& .MuiDataGrid-cell:focus": {
-              outline: "none",
-            },
-            "& .MuiDataGrid-row": {
-              minHeight: "100px",
-            },
-          }}
-        />
-      </Box>
-
+    <ManagementPage
+      title="Menu Items"
+      addLabel="Add New Menu Item"
+      onAdd={handleCreate}
+      error={error}
+      onErrorClose={() => setError(null)}
+      success={successMessage}
+      onSuccessClose={() => setSuccessMessage("")}
+      gridProps={{
+        rows: items,
+        columns,
+        loading,
+        getRowId: (row) => row.item_id,
+        getRowHeight: () => "auto",
+        density: "comfortable",
+        sx: { "& .MuiDataGrid-row": { minHeight: "100px !important" } },
+      }}
+    >
       <ItemForm />
 
       <TagsDialog
@@ -801,7 +546,7 @@ const MenuItemManagement = () => {
         selectedCategory={selectedCategory}
         onSuccess={fetchData}
       />
-    </Box>
+    </ManagementPage>
   );
 };
 

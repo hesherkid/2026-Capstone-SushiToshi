@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
-  Box,
   Typography,
-  CircularProgress,
   Alert,
-  IconButton,
+  CircularProgress,
   Stack,
   Dialog,
   DialogTitle,
@@ -12,9 +10,10 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
-import { DataGrid, GridToolbar } from "@mui/x-data-grid";
-import { Edit, Trash2, Plus, AlertTriangle } from "lucide-react";
+import { Edit, Trash2, AlertTriangle } from "lucide-react";
 import api from "@/config/api";
+import ManagementPage from "@/components/common/ManagementPage";
+import { actionsColumn } from "@/components/common/RowActions";
 
 const CategoryList = ({ onEditCategory, onCreateCategory }) => {
   const [categories, setCategories] = useState([]);
@@ -108,83 +107,41 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
       width: 110,
       type: "number",
     },
-    {
-      field: "actions",
-      headerName: "Actions",
-      width: 140,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <IconButton
-            onClick={() => {
-              // Map row fields to dialog expected props
-              const row = params.row;
-              onEditCategory?.({
-                ...row,
-                name: row.category_name,
-                tot_limit: row.total_limit,
-              });
-            }}
-            size="small"
-          >
-            <Edit size={20} />
-          </IconButton>
-          <IconButton
-            onClick={() => handleDeleteClick(params.row)}
-            size="small"
-            color="error"
-          >
-            <Trash2 size={20} />
-          </IconButton>
-        </Stack>
-      ),
-      sortable: false,
-      filterable: false,
-    },
+    actionsColumn((row) => [
+      {
+        label: "Edit",
+        icon: Edit,
+        // Map row fields to dialog expected props
+        onClick: () =>
+          onEditCategory?.({
+            ...row,
+            name: row.category_name,
+            tot_limit: row.total_limit,
+          }),
+      },
+      {
+        label: "Delete",
+        icon: Trash2,
+        color: "error",
+        onClick: () => handleDeleteClick(row),
+      },
+    ]),
   ];
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="40vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-        <Typography variant="h4">Categories</Typography>
-        <IconButton color="primary" onClick={() => onCreateCategory?.()}>
-          <Plus />
-        </IconButton>
-      </Stack>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      <DataGrid
-        rows={categories}
-        columns={columns}
-        getRowId={(row) => row.category_id}
-        autoHeight
-        disableRowSelectionOnClick
-        slots={{ toolbar: GridToolbar }}
-        slotProps={{ toolbar: { showQuickFilter: true } }}
-        initialState={{
-          pagination: { paginationModel: { pageSize: 10 } },
-        }}
-        pageSizeOptions={[10, 25, 50]}
-        sx={{
-          "& .MuiDataGrid-cell:focus": { outline: "none" },
-        }}
-      />
-
+    <ManagementPage
+      title="Categories"
+      addLabel="Add New Category"
+      onAdd={() => onCreateCategory?.()}
+      error={deleteDialogOpen ? null : error}
+      onErrorClose={() => setError(null)}
+      gridProps={{
+        rows: categories,
+        columns,
+        loading,
+        getRowId: (row) => row.category_id,
+      }}
+    >
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
@@ -221,7 +178,7 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </ManagementPage>
   );
 };
 

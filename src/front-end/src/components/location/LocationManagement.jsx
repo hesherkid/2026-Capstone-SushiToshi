@@ -1,22 +1,18 @@
 import { useState, useEffect } from "react";
-import { DataGrid } from "@mui/x-data-grid";
 import {
-  Box,
   Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton,
   Typography,
-  Stack,
-  Alert,
 } from "@mui/material";
-import { Edit, Delete, Plus, Menu, AlertTriangle, Trash2 } from "lucide-react";
-import { styled } from "@mui/material/styles";
+import { Edit, Menu, AlertTriangle, Trash2 } from "lucide-react";
 import LocationForm from "@/components/location/LocationForm";
 import MenuAssignmentForm from "@/components/location/MenuAssignmentForm";
 import api from "@/config/api";
+import ManagementPage from "@/components/common/ManagementPage";
+import { actionsColumn } from "@/components/common/RowActions";
 
 const LocationManagement = () => {
   const [locations, setLocations] = useState([]);
@@ -182,89 +178,45 @@ const LocationManagement = () => {
     }
   };
 
-  const AddButton = styled(IconButton)(({ theme }) => ({
-    backgroundColor: theme.palette.primary.main,
-    color: "white",
-    padding: theme.spacing(1),
-    minWidth: "auto",
-    "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
-    },
-    "& svg": {
-      width: 20,
-      height: 20,
-    },
-  }));
 
   const columns = [
     { field: "location_Id", headerName: "ID", width: 90 },
     { field: "name", headerName: "Name", width: 200 },
     { field: "address_one", headerName: "Address 1", width: 200 },
-    {
-      field: "actions",
-      headerName: "Actions",
-      width: 150,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <IconButton onClick={() => handleEdit(params.row)} size="small">
-            <Edit size={20} />
-          </IconButton>
-          <IconButton
-            onClick={() => handleDeleteClick(params.row)}
-            size="small"
-            color="error"
-          >
-            <Trash2 size={20} />
-          </IconButton>
-          <IconButton
-            onClick={() => {
-              setSelectedLocation(params.row);
-              setIsMenuFormOpen(true);
-            }}
-            size="small"
-            color="primary"
-          >
-            <Menu size={20} />
-          </IconButton>
-        </Stack>
-      ),
-    },
+    actionsColumn((row) => [
+      { label: "Edit", icon: Edit, onClick: () => handleEdit(row) },
+      {
+        label: "Delete",
+        icon: Trash2,
+        color: "error",
+        onClick: () => handleDeleteClick(row),
+      },
+      {
+        label: "Assign Menus",
+        icon: Menu,
+        color: "primary",
+        onClick: () => {
+          setSelectedLocation(row);
+          setIsMenuFormOpen(true);
+        },
+      },
+    ]),
   ];
 
   return (
-    <Box pt={2}>
-      <Stack direction="row" justifyContent="left" alignItems="center" mb={2}>
-        <Typography pr={3} variant="h4">
-          Location Management
-        </Typography>
-        <AddButton onClick={handleCreate}>
-          <Plus />
-        </AddButton>
-      </Stack>
-
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <DataGrid
-        rows={locations}
-        columns={columns}
-        loading={loading}
-        getRowId={(row) => row.location_Id}
-        disableSelectionOnClick
-        sx={{
-          bgcolor: "background.paper",
-          "& .MuiDataGrid-cell": {
-            display: "flex",
-            alignItems: "center",
-          },
-          "& .MuiDataGrid-cell:focus": {
-            outline: "none",
-          },
-        }}
-      />
+    <ManagementPage
+      title="Location Management"
+      addLabel="Add New Location"
+      onAdd={handleCreate}
+      error={error}
+      onErrorClose={() => setError(null)}
+      gridProps={{
+        rows: locations,
+        columns,
+        loading,
+        getRowId: (row) => row.location_Id,
+      }}
+    >
 
       <Dialog
         open={isFormOpen}
@@ -324,7 +276,7 @@ const LocationManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </ManagementPage>
   );
 };
 

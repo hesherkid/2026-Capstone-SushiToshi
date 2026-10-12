@@ -3,11 +3,29 @@
 import React, { useEffect, useState } from "react";
 import { decodeToken, isTokenExpired } from "@/config/auth";
 import { getAuthToken } from "@/utils/auth";
-import AppBarWithTitle from "@/components/AppBarWithTitle";
 import { useRouter } from "next/navigation";
 import { api } from '@/config/api'
 import useAuth from "@/hooks/useAuth";
 import { loginUser } from "@/utils/auth";
+
+const isGuestAccount = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  if (localStorage.getItem("guest") === "true") {
+    return true;
+  }
+
+  const token = getAuthToken();
+  if (!token || isTokenExpired(token)) {
+    return false;
+  }
+
+  const claims = decodeToken(token);
+  const email = (claims?.email || claims?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || "").toLowerCase();
+  return email === "guestemail@email.com";
+};
 
 const HomePage = () => {
   const [userName, setUserName] = useState(null);
@@ -35,7 +53,7 @@ useEffect(() => {
         setSelectedLocation(response.data[0].name);
       }
       
-      // ✅ Use response.data instead of selectedLocation
+      // Use response.data instead of selectedLocation
       const locationId = Number(localStorage.getItem("locationId"));
       const filteredLocation = response.data.find(loc => loc.location_Id === locationId);
       console.log('Filtered location:', filteredLocation);
@@ -76,7 +94,7 @@ useEffect(() => {
       }
 
       // Check if guest mode
-      if (!name && localStorage.getItem("guest") === "true") {
+      if (!name && isGuestAccount()) {
         guestMode = true;
         name = "Guest";
       }
@@ -88,6 +106,12 @@ useEffect(() => {
 
     init();
   }, [userEmail]);
+
+  useEffect(() => {
+    if (isGuestAccount()) {
+      router.replace("/menu/full-menu");
+    }
+  }, [router, userEmail]);
 
   const handleContinueAsGuest = async() => {
     const response = await loginUser(guestEmail,guestPassword);
@@ -118,12 +142,14 @@ useEffect(() => {
   };
 
   if (!ready) return null;
+  if (isGuestAccount()) {
+    return null;
+  }
 
   const showGuestButton = !userName && !isGuest;
 
   return (
 <div>
-      {(userName || isGuest) && <AppBarWithTitle />}
 
       <div
         style={{
@@ -140,8 +166,6 @@ useEffect(() => {
         <p style={{ color: "#555", fontSize: "1.1rem", marginBottom: "2rem" }}>
           All You Can Eat Authentic Japanese Food.
         </p>
-
-
 
         {/* Show join table section for both guests AND logged-in users */}
         {(isGuest || userName) && (
