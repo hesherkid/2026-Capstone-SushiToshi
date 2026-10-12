@@ -12,6 +12,7 @@ import {
 import { Search } from "lucide-react";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import CartDrawer from "@/components/menu/CartDrawer";
+import TrackedItem from "@/components/menu/TrackedItem";
 import useMenuSearch from "@/components/menu/searchUtils";
 import api from "@/config/api";
 import publicApi from "@/config/publicApi";
@@ -626,15 +627,21 @@ const FullMenu = () => {
                     }}
                   >
                     {items.map((item) => (
-                      <MenuItemCard
+                      // Records how long the card is on screen (browsing behavior analytics)
+                      <TrackedItem
                         key={`item-${category.category_id}-${item.item_id}`}
-                        item={item}
-                        categoryId={category.category_id}
-                        quantity={
-                          quantities[category.category_id]?.[item.item_id] || 0
-                        }
-                        onQuantityChange={handleQuantityChange}
-                      />
+                        itemId={item.item_id}
+                        sessionId={sessionId}
+                      >
+                        <MenuItemCard
+                          item={item}
+                          categoryId={category.category_id}
+                          quantity={
+                            quantities[category.category_id]?.[item.item_id] || 0
+                          }
+                          onQuantityChange={handleQuantityChange}
+                        />
+                      </TrackedItem>
                     ))}
                   </Box>
                 </Box>

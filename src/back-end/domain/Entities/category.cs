@@ -15,7 +15,7 @@ namespace back_end.domain.Entities
         public string Category_name { get; set; } = string.Empty;
 
         [Required]
-        
+
         public string Description { get; set; } = string.Empty;
 
         public string? image_url { get; set; }
@@ -33,7 +33,7 @@ namespace back_end.domain.Entities
 
         public int senior_limit { get; set; } = 0;
 
-        public int total_limit { get; set; } = 0;
+        public int total_limit { get; set; } = 0; // TODO: is this a typo? should it be tot_limit or is there a table limit?
 
         public ICollection<Menu_Item> MenuItems { get; set; } = new List<Menu_Item>();
     }

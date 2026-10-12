@@ -23,11 +23,6 @@ namespace back_end.domain.Entities
         public int Total_Units_Ordered { get; set; }
 
         public DateTime LastOrdered { get; set; }
-        public DateTime LastViewedAt { get; set; }
-
-        public int Total_Views { get; set; }
-
-        public int Total_View_Seconds { get; set; }
 
         public bool Is_Add_On { get; set; }
 
@@ -44,8 +39,6 @@ namespace back_end.domain.Entities
         public Menu Menu { get; set; } = null!;
 
         public Menu_Item MenuItem { get; set; } = null!;
-
-
     }
 
 }

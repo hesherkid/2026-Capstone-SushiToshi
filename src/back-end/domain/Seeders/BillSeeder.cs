@@ -38,13 +38,14 @@ namespace back_end.domain.Seeders
           .Include(s => s.Table)
           .Include(s => s.TableGroup)
               .ThenInclude(tg => tg.Tables)
-          .Where(s => s.Ended_At == null)
           .OrderBy(s => s.Session_Id)
           .ToList();
-      
+
+      // Bills for every session, open and past. Orders and order items are created per bill, so
+      // past sessions need bills too, or analytics has no sales history before today.
       if (!sessions.Any())
       {
-        _logger.LogWarning("No active dining sessions found to create bills for.");
+        _logger.LogWarning("No dining sessions found to create bills for.");
         return;
       }
 
@@ -52,7 +53,7 @@ namespace back_end.domain.Seeders
       var userUsageCount = new Dictionary<int, int>();
       var userIds = _userSeedData.Keys.ToList();
 
-      var sessionsToProcess = sessions.Take(20).ToList();
+      var sessionsToProcess = sessions;
 
       foreach (var s in sessionsToProcess)
       {
@@ -152,17 +153,20 @@ namespace back_end.domain.Seeders
       }
       // Ensure unused users get bills too (distributed across sessions)
       var unusedUsers = _userSeedData.Keys.Where(oid => !userUsageCount.ContainsKey(oid)).ToList();
-    
-      if (unusedUsers.Any() && sessions.Any())
+
+      // These bills are Open and stamped "now", so they only belong on sessions that are still open.
+      var openSessions = sessions.Where(s => s.Ended_At == null).ToList();
+
+      if (unusedUsers.Any() && openSessions.Any())
       {
         int sessionIndex = 0;
-        
+
         foreach (var oid in unusedUsers)
         {
-          // Rotate through sessions
-          var session = sessions[sessionIndex % sessions.Count];
+          // Rotate through open sessions
+          var session = openSessions[sessionIndex % openSessions.Count];
           sessionIndex++;
-          
+
           var info = _userSeedData[oid];
           var name = (!string.IsNullOrEmpty(info.GivenName) || !string.IsNullOrEmpty(info.Surname)
               ? $"{info.GivenName} {info.Surname}".Trim()
@@ -181,11 +185,11 @@ namespace back_end.domain.Seeders
             Created_At = DateTime.UtcNow.AddMinutes(_rng.Next(1, 60)),
             Closed_At = null
           };
-            
+
           _context.Bills.Add(bill);
           created++;
-          }
         }
+      }
 
       var totalOpen = _context.Bills.Count(b => b.Status == BillStatus.Open);
       var totalClosed = _context.Bills.Count(b => b.Status == BillStatus.Closed);
@@ -201,26 +205,26 @@ namespace back_end.domain.Seeders
 
       foreach (var bill in closedOrCancelledBills)
       {
-          foreach (var order in bill.Orders)
+        foreach (var order in bill.Orders)
+        {
+          // If order is not delivered or cancelled, set to delivered
+          if (order.Status == OrderStatus.Pending ||
+              order.Status == OrderStatus.Processing)
           {
-              // If order is not delivered or cancelled, set to delivered
-              if (order.Status == OrderStatus.Pending ||
-                  order.Status == OrderStatus.Processing)
-              {
-                  order.Status = OrderStatus.Delivered;
-              }
-
-              foreach (var item in order.OrderItems)
-              {
-                  // If item is not delivered or cancelled, set to delivered
-                  if (item.Order_Item_Status == OrderStatus.Pending ||
-                      item.Order_Item_Status == OrderStatus.Processing)
-                  {
-                      item.Order_Item_Status = OrderStatus.Delivered;
-                      item.Completed_At = DateTime.UtcNow;
-                  }
-              }
+            order.Status = OrderStatus.Delivered;
           }
+
+          foreach (var item in order.OrderItems)
+          {
+            // If item is not delivered or cancelled, set to delivered
+            if (item.Order_Item_Status == OrderStatus.Pending ||
+                item.Order_Item_Status == OrderStatus.Processing)
+            {
+              item.Order_Item_Status = OrderStatus.Delivered;
+              item.Completed_At = DateTime.UtcNow;
+            }
+          }
+        }
       }
     }
   }

@@ -142,7 +142,7 @@ const MenuAssignmentDialog = ({
         err.response.data ||
           (editingAssignment
             ? "Failed to update assignment"
-            : "Failed to create assignment")
+            : "Failed to create assignment"),
       );
     } finally {
       setSubmitting(false);
@@ -157,7 +157,7 @@ const MenuAssignmentDialog = ({
     }
     // Otherwise, check if this menu is already assigned
     return !assignments.some(
-      (assignment) => assignment.menu_Id === menu.menu_id
+      (assignment) => assignment.menu_Id === menu.menu_id,
     );
   });
 
@@ -236,7 +236,7 @@ const MenuAssignmentDialog = ({
                           onClick={() =>
                             handleDeleteAssignment(
                               assignment.menu_Id, // FIXED: capital I
-                              selectedItem.item_id
+                              selectedItem.item_id,
                             )
                           }
                         >
@@ -307,7 +307,7 @@ const MenuAssignmentDialog = ({
                 >
                   <MenuItem value="available">Available</MenuItem>
                   <MenuItem value="unavailable">Unavailable</MenuItem>
-                  <MenuItem value="discontinued">Discontinued</MenuItem>
+                  <MenuItem value="seasonal">Seasonal</MenuItem>
                 </Select>
               </FormControl>
             </Stack>

@@ -1,159 +1,26 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using Microsoft.AspNetCore.Mvc;
 using back_end.DTO.Analytics;
-using Microsoft.AspNetCore.Http.Features;
 using back_end.Helpers;
 
 
 namespace back_end.controllers
 {
+    /// TODO:Analytics endpoints not yet moved to their own controller and service table turnover, order timing. 
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/analytics")] // literal so renaming or splitting this class can't change the URLs
+    [Authorize(Roles = "Admin")]
     public class AnalyticsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _config;
         private readonly ILogger<AnalyticsController> _logger;
 
-        public AnalyticsController(ApplicationDbContext context, IConfiguration config, ILogger<AnalyticsController> logger)
+        public AnalyticsController(ApplicationDbContext context, ILogger<AnalyticsController> logger)
         {
             _context = context;
-            _config = config;
             _logger = logger;
-        }
-
-        /// <summary>
-        /// Retrieves performance metrics for all menu items showing total units sold.
-        /// </summary>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing performance data with date range and item statistics.
-        /// Returns HTTP 200 (OK) with item performance metrics on success.
-        /// Returns HTTP 404 (Not Found) if no performance data is available.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns item performance metrics with date range and sales data</response>
-        /// <response code="404">If no item performance data is found</response>
-        /// <response code="500">If an internal error occurs while retrieving metrics</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     GET /api/analytics/item-performance
-        ///
-        /// Returns performance data including:
-        /// - Date range (earliest and latest order completion dates)
-        /// - For each menu item:
-        ///   - Item ID and name
-        ///   - Total units sold across all orders
-        /// 
-        /// Items with zero sales are included in the results.
-        /// The date range represents the period covered by completed orders.
-        /// </remarks>
-        [HttpGet("item-performance")]
-        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-
-        public async Task<IActionResult> GetItemPerformance()
-        {
-            try
-            {
-                var item_performance = await _context.MenuItems.GroupJoin(
-                    _context.OrderItems,
-                    menu => menu.item_id,
-                    order => order.Item_Id,
-                    (menu, orders) => new
-                    {
-                        menu.item_id,
-                        menu.Name,
-                        TotalUnitsSold = orders.Sum(o => (int?)o.Quantity) ?? 0
-                    })
-                .ToListAsync();
-
-                if (item_performance == null || item_performance.Count == 0)
-                {
-                    return NotFound(new { message = "No item performance data found." });
-                }
-
-                var date_period_max = await _context.OrderItems.MaxAsync(o => o.Completed_At);
-                var date_period_min = await _context.OrderItems.MinAsync(o => o.Completed_At);
-
-                return Ok(new { date_period_min, date_period_max, item_performance });
-
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Retrieves browsing behavior metrics for menu items showing total views and view duration.
-        /// </summary>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of browsing behavior data objects.
-        /// Returns HTTP 200 (OK) with browsing metrics on success.
-        /// Returns HTTP 404 (Not Found) if no browsing data is available.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns browsing behavior metrics for all menu items</response>
-        /// <response code="404">If no browsing behavior data is found</response>
-        /// <response code="500">If an internal error occurs while retrieving metrics</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     GET /api/analytics/browsing-behavior
-        ///
-        /// Returns aggregated metrics across all menu assignments showing:
-        /// - Item ID and name
-        /// - Total view duration in seconds
-        /// - Total number of views across all menus
-        /// 
-        /// Data is aggregated from all MenuItemAssignments, combining statistics
-        /// for the same item across different menus.
-        /// </remarks>
-        [HttpGet("browsing-behavior")]
-        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetBrowsingBehavior()
-        {
-            try
-            {
-                var browsingData = await _context.MenuItemAssignments
-                    .Join(
-                        _context.MenuItems,
-                        assignment => assignment.Item_Id,
-                        menuItem => menuItem.item_id,
-                        (assignment, menuItem) => new
-                        {
-                            assignment.Item_Id,
-                            menuItem.Name,
-                            assignment.Total_View_Seconds,
-                            assignment.Total_Views,
-                            assignment.Menu_Id
-                        })
-                    .GroupBy(x => new { x.Item_Id, x.Name })
-                    .Select(g => new
-                    {
-                        item_id = g.Key.Item_Id,
-                        name = g.Key.Name,
-                        total_view_seconds = g.Sum(x => x.Total_View_Seconds),
-                        total_views = g.Sum(x => x.Total_Views) 
-                    })
-                    .ToListAsync();
-
-                if (browsingData == null || browsingData.Count == 0)
-                {
-                    return NotFound(new { message = "No browsing behavior data found." });
-                }
-
-                return Ok(browsingData);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
-            }
         }
 
         /// <summary>
@@ -197,7 +64,7 @@ namespace back_end.controllers
                 // Filter out bills with null Closed_At because we need to group by Closed_At date/time
                 var filteredBills = _context.Bills
                     .Where(b => b.Closed_At.HasValue);
-                    // .Where(b => (b.Senior_Count + b.Adult_Count + b.Child_Count) == partySize);
+                // .Where(b => (b.Senior_Count + b.Adult_Count + b.Child_Count) == partySize);
 
                 // Daily turnover query
                 var dailyTurnover = await filteredBills
