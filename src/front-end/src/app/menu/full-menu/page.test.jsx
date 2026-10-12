@@ -124,24 +124,24 @@ describe('FullMenu guest flow', () => {
 
     expect(screen.getByRole('button', { name: 'Full Menu' })).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Full Menu (2)' })
+      await screen.findByRole('heading', { name: 'Viewing Full Menu 2 items' })
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Appetizers' }));
-    expect(screen.getByText('Appetizers (1)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Appetizers 1 items' })).toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: 'Full Menu (2)' })
+      screen.queryByRole('heading', { name: 'Viewing Full Menu 2 items' })
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Salmon Roll')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Full Menu' }));
     expect(screen.getByRole('heading', { name: 'Miso Soup' })).toBeInTheDocument();
     expect(screen.getByText('Salmon Roll')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Full Menu (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Viewing Full Menu 2 items' })).toBeInTheDocument();
 
     fireEvent(window, new Event('menu-cart-open'));
     const cartDrawer = await screen.findByRole('dialog');
-    expect(within(cartDrawer).getByRole('heading', { name: 'Your Bag' })).toBeInTheDocument();
+    expect(within(cartDrawer).getByRole('heading', { name: 'Your Order' })).toBeInTheDocument();
     expect(within(cartDrawer).getByRole('heading', { name: 'Miso Soup' })).toBeInTheDocument();
     expect(within(cartDrawer).getByText('Qty 1')).toBeInTheDocument();
     expect(within(cartDrawer).queryByRole('button', { name: 'Add one Miso Soup' })).not.toBeInTheDocument();

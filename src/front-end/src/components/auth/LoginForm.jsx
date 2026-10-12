@@ -31,10 +31,10 @@ const LoginFormContent = () => {
   const guestEmail = "guestemail@email.com";
   const guestPassword = "GuestUser!";
 
-  const [formData, setFormData] = useState({
-    email: process.env.NEXT_PUBLIC_DEFAULT_EMAIL || "",
-    password: process.env.NEXT_PUBLIC_DEFAULT_PASSWORD || "",
-  });
+  // Email/password are uncontrolled and read on submit. Re-rendering the form on
+  // every keystroke makes iOS Safari repeatedly offer to save the password.
+  const defaultEmail = process.env.NEXT_PUBLIC_DEFAULT_EMAIL || "";
+  const defaultPassword = process.env.NEXT_PUBLIC_DEFAULT_PASSWORD || "";
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -173,15 +173,6 @@ const LoginFormContent = () => {
     );
   };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-  };
-
   // --------------------------------------------------
   // EMAIL / PASSWORD LOGIN
   // --------------------------------------------------
@@ -189,12 +180,17 @@ const LoginFormContent = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    // Read before setLoading disables the inputs (disabled fields are left out of FormData)
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
+
     setLoading(true);
     setError("");
     setNeedsVerification(false);
 
     try {
-      const response = await loginUser(formData.email, formData.password);
+      const response = await loginUser(email, password);
 
       if (!response.access_token) {
         throw new Error("Login succeeded but no access token was returned.");
@@ -427,12 +423,13 @@ const LoginFormContent = () => {
 
         {/* Email */}
         <TextField
+          id="login-email"
           label="Email Address"
           name="email"
           type="email"
-          value={formData.email}
-          onChange={handleChange}
-          autoComplete="email"
+          defaultValue={defaultEmail}
+          autoComplete="username"
+          inputProps={{ autoCapitalize: "none", autoCorrect: "off", spellCheck: false }}
           required
           fullWidth
           disabled={loading}
@@ -440,11 +437,11 @@ const LoginFormContent = () => {
 
         {/* Password */}
         <TextField
+          id="login-password"
           label="Password"
           name="password"
           type="password"
-          value={formData.password}
-          onChange={handleChange}
+          defaultValue={defaultPassword}
           autoComplete="current-password"
           required
           fullWidth
@@ -485,28 +482,28 @@ const LoginFormContent = () => {
             "Sign In"
           )}
         </Button>
-
-        {googleClientID && (
-          <Divider>
-            <Typography variant="body2" color="text.secondary">
-              or
-            </Typography>
-          </Divider>
-        )}
-
-        {googleClientID && (
-          <GoogleOAuthProvider clientId={googleClientID}>
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => {
-                  setError("Google login failed.");
-                }}
-              />
-            </Box>
-          </GoogleOAuthProvider>
-        )}
       </Box>
+
+      {googleClientID && (
+        <Divider sx={{ width: "100%" }}>
+          <Typography variant="body2" color="text.secondary">
+            or
+          </Typography>
+        </Divider>
+      )}
+
+      {googleClientID && (
+        <GoogleOAuthProvider clientId={googleClientID}>
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => {
+                setError("Google login failed.");
+              }}
+            />
+          </Box>
+        </GoogleOAuthProvider>
+      )}
     </AuthCard >
   );
 };
