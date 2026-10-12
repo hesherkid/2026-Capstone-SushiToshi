@@ -60,7 +60,6 @@ namespace back_end.Services.Analytics
         public const int MinTop = 1;
         public const int MaxTop = 25;
 
-        /// <summary>Restaurant time zone for day boundaries. Configure "Analytics:TimeZoneId" in appsettings if different from the server's default time zone.</summary>
         public static TimeZoneInfo GetTimeZone(IConfiguration config)
         {
             var id = config["Analytics:TimeZoneId"];
@@ -73,10 +72,6 @@ namespace back_end.Services.Analytics
                 ? AnalyticsResult<T>.Invalid("top", $"top must be between {MinTop} and {MaxTop}")
                 : null;
 
-        /// <summary>
-        /// Resolves the date range and checks the location exists.
-        /// Throws if the configured time zone is unknown (a server problem, reported as 500).
-        /// </summary>
         public static async Task<AnalyticsResult<AnalyticsWindow>> ResolveWindowAsync(
             ApplicationDbContext context,
             IConfiguration config,
@@ -113,12 +108,6 @@ namespace back_end.Services.Analytics
             return AnalyticsResult<AnalyticsWindow>.Ok(new AnalyticsWindow(period, timeZone, location));
         }
 
-        /// <summary>
-        /// Items to report: everything in <paramref name="alwaysInclude"/> (items with activity in the
-        /// window, even if unavailable or off the menu now) plus everything orderable right now (not
-        /// Unavailable, on an active menu, at the location when given). Items that are unavailable now 
-        /// and had no activity are left out, because availability history isn't stored.
-        /// </summary>
         public static async Task<ItemCatalog> LoadCatalogAsync(
             ApplicationDbContext context,
             int? locationId,
@@ -149,7 +138,6 @@ namespace back_end.Services.Analytics
                 .Select(x => new CandidateItem(x.item_id, x.Name, x.Category_id, x.CategoryName, x.Status, x.CurrentlyAvailable))
                 .ToList();
 
-            // Tags in a separate query; simpler SQL than a nested collection.
             var candidateIds = items.Select(i => i.ItemId).ToList();
             var tagsByItem = (await context.MenuItemTags
                     .AsNoTracking()
@@ -180,12 +168,32 @@ namespace back_end.Services.Analytics
             TimeZone = period.TimeZoneId
         };
 
-        /// <summary>part / whole as a percent to 1 decimal place. Null when whole is 0.</summary>
         public static decimal? Percent(int part, int whole) =>
             whole == 0 ? null : Math.Round(part * 100m / whole, 1, MidpointRounding.AwayFromZero);
 
-        /// <summary>Seconds per view to 1 decimal place. Null when there are no views.</summary>
         public static decimal? SecondsPerView(int seconds, int views) =>
             views == 0 ? null : Math.Round((decimal)seconds / views, 1, MidpointRounding.AwayFromZero);
+
+        public static DurationSummaryDTO Durations(IEnumerable<double> seconds)
+        {
+            var sorted = seconds.Where(s => s >= 0).OrderBy(s => s).ToList();
+            if (sorted.Count == 0) return new DurationSummaryDTO();
+
+            var mid = sorted.Count / 2;
+            var median = sorted.Count % 2 == 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+            return new DurationSummaryDTO
+            {
+                Count = sorted.Count,
+                AverageMinutes = ToMinutes(sorted.Average()),
+                MedianMinutes = ToMinutes(median)
+            };
+        }
+
+        public static DateTime ToLocal(DateTime utc, TimeZoneInfo timeZone) =>
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), timeZone);
+
+        private static decimal ToMinutes(double seconds) =>
+            Math.Round((decimal)seconds / 60m, 1, MidpointRounding.AwayFromZero);
     }
 }

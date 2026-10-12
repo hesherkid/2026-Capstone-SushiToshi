@@ -48,14 +48,6 @@ namespace back_end.Controllers
         /// - Was_Available records whether the item could be ordered at the time of the view.
         /// - Rate limited per sign-in token (policy "views").
         /// </remarks>
-        /// <response code="204">View recorded</response>
-        /// <response code="400">Invalid body</response>
-        /// <response code="401">Not signed in, or the token has no user id</response>
-        /// <response code="403">The caller is not part of this session</response>
-        /// <response code="404">Session not found, or the item is not on the session's menu</response>
-        /// <response code="409">The session has ended</response>
-        /// <response code="429">Too many views from this sign-in</response>
-        /// <response code="500">Unexpected server error</response>
         [HttpPost]
         [EnableRateLimiting(ViewTrackingRules.RateLimitPolicy)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

@@ -133,59 +133,6 @@ namespace back_end.controllers
         }
 
 
-
-        [HttpGet("order-timing/{location_id}")]
-        [ProducesResponseType(typeof(TableTurnOverResponseDTO), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetOrderTimingMetrics(
-            string location_id
-        )
-        {
-            try
-            {
-                // Use ClaimsHelpers for user identification
-                string userIdString = ClaimsHelpers.GetUserId(User);
-
-                // Get user's location from claims (if available)
-                // string? locationIdStr = User.FindFirst("location_id")?.Value;
-                string locationIdStr = location_id;
-                int? locationId = null;
-                if (int.TryParse(locationIdStr, out var locId))
-                    locationId = locId;
-
-                if (locationId == null)
-                {
-                    return BadRequest("Cannot determine user location from claims.");
-                }
-
-                var orderTiming = await _context.DiningSessions
-                    .Where(ds => ds.Location_Id == locationId)
-                    .Select(ds => new
-                    {
-                        sessionId = ds.Session_Id,
-                        TimeToFirstOrderSeconds = EF.Functions.DateDiffSecond(ds.Started_At, ds.First_Order_At)
-                    }).Take(25)
-                    .ToListAsync();
-
-                var dailyAverageTiming = await _context.DiningSessions
-                    .GroupBy(ds => ds.Started_At.Date)
-                    .Select(g => new
-                    {
-                        Day = g.Key,
-                        AverageTimeToFirstOrderSeconds = g.Average(ds => EF.Functions.DateDiffSecond(ds.Started_At, ds.First_Order_At))
-                    })
-                    .ToListAsync();
-
-                return Ok(new { orderTiming, dailyAverageTiming });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error retrieving order timing metrics: {ex.Message}");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
-            }
-        }
-
         [HttpGet("max-party-size")]
         public async Task<IActionResult> GetMaxPartySize()
         {

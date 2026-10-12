@@ -18,7 +18,6 @@ namespace back_end.Services.Analytics
 
     public interface IBrowsingBehaviorService
     {
-        /// <summary>What diners look at, what they order after looking, and what they look at but don't order.</summary>
         Task<AnalyticsResult<BrowsingBehaviorResponseDTO>> GetAsync(BrowsingBehaviorQuery query);
     }
 
@@ -58,7 +57,6 @@ namespace back_end.Services.Analytics
             var endUtc = period.EndUtc;
             const int minSeconds = ViewTrackingRules.MinQualifyingSeconds;
 
-            // Views that started in the window. Half-open range: >= start AND < end.
             var windowViews = _context.MenuItemViews
                 .AsNoTracking()
                 .Where(v => v.Viewed_At >= startUtc && v.Viewed_At < endUtc);
@@ -77,7 +75,6 @@ namespace back_end.Services.Analytics
                 .Select(g => new { ItemId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.ItemId, x => x.Count);
 
-            // One row per (item, session): the unit for conversion and ordered-vs-not view time.
             var viewPairs = await countedViews
                 .GroupBy(v => new { v.Item_Id, v.Session_Id })
                 .Select(g => new
@@ -90,7 +87,6 @@ namespace back_end.Services.Analytics
                 })
                 .ToListAsync();
 
-            // Which viewed (item, session) pairs the same session ordered (Delivered).
             var orderedPairs = await _context.OrderItems
                 .AsNoTracking()
                 .Where(oi => oi.Order_Item_Status == OrderStatus.Delivered
@@ -103,11 +99,9 @@ namespace back_end.Services.Analytics
             var orderedUnitsByPair = orderedPairs.ToDictionary(p => (p.ItemId, p.SessionId), p => p.Units);
             bool PairOrdered(int itemId, int sessionId) => orderedUnitsByPair.ContainsKey((itemId, sessionId));
 
-            // Items to report: anything viewed in the window (including short views), plus anything orderable now.
             var viewedItemIds = viewPairs.Select(p => p.ItemId).Concat(shortViewsByItem.Keys);
             var catalog = await AnalyticsQueries.LoadCatalogAsync(_context, query.LocationId, viewedItemIds);
 
-            // Per-item metrics, in memory (menu-sized lists).
             var pairsByItem = viewPairs.ToLookup(p => p.ItemId);
 
             var rows = catalog.Filter(query.CategoryId, query.TagId)
@@ -143,14 +137,12 @@ namespace back_end.Services.Analytics
                 })
                 .ToList();
 
-            // Lists.
             var viewed = rows
                 .Where(r => r.Views > 0)
                 .OrderByDescending(r => r.Views)
                 .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            // Competition ranking: ties share a rank, the next rank skips (1, 2, 2, 4).
             for (var i = 0; i < viewed.Count; i++)
             {
                 viewed[i].ViewRank = i > 0 && viewed[i].Views == viewed[i - 1].Views
@@ -163,12 +155,10 @@ namespace back_end.Services.Analytics
                 .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            // Least viewed comes from what's left after most viewed, so the two lists never repeat an item.
             var leastCount = Math.Min(top, Math.Max(0, viewed.Count - top));
             var viewedNotOrdered = viewed.Where(r => r.OrderingSessions == 0).ToList();
             var neverViewed = unviewedRows.Where(r => r.CurrentlyAvailable).ToList();
 
-            // Summary over the filtered items only.
             var includedIds = rows.Select(r => r.ItemId).ToHashSet();
             var includedPairs = viewPairs.Where(p => includedIds.Contains(p.ItemId)).ToList();
             var includedOrdered = includedPairs.Where(p => PairOrdered(p.ItemId, p.SessionId)).ToList();

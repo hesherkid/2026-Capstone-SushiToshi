@@ -24,10 +24,8 @@ namespace back_end.Services.Analytics
 
         public AnalyticsResultStatus Status { get; }
 
-        /// <summary>The report. Only set when Status is Ok.</summary>
         public T? Value { get; }
 
-        /// <summary>Query parameter the error belongs to (for example "top" or "from"). Only set when Status is Invalid.</summary>
         public string ErrorKey { get; }
 
         public string ErrorMessage { get; }
@@ -43,7 +41,6 @@ namespace back_end.Services.Analytics
         public static AnalyticsResult<T> NotFound(string errorMessage) =>
             new(AnalyticsResultStatus.NotFound, default, string.Empty, errorMessage);
 
-        /// <summary>Passes a failure on as a result of another type. Throws if this result is Ok.</summary>
         public AnalyticsResult<TOther> AsError<TOther>()
         {
             if (IsOk)
