@@ -52,8 +52,6 @@ const AppBarWithTitle = ({ title }) => {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    setTableNumber(localStorage.getItem("tableNumber") || "");
-
     const handleCartCountChange = (event) => {
       setBagItemCount(Number(event.detail?.count) || 0);
     };
@@ -63,6 +61,12 @@ const AppBarWithTitle = ({ title }) => {
       window.removeEventListener("menu-cart-count-changed", handleCartCountChange);
     };
   }, []);
+
+  // The app bar stays mounted across client-side navigation, so re-read the
+  // table number on each route change (e.g. after the QR login saves it)
+  useEffect(() => {
+    setTableNumber(localStorage.getItem("tableNumber") || "");
+  }, [pathname]);
 
   useEffect(() => {
     const fetchAllLocations = async () => {
@@ -89,7 +93,7 @@ const AppBarWithTitle = ({ title }) => {
       }
     };
     fetchAllLocations();
-  }, [isAuthenticated, userRole, loading, notifyError, notifyInfo]);
+  }, [isAuthenticated, userRole, notifyError, notifyInfo]);
 
   // useEffect(() => {
   //   // Listen for auth changes
@@ -149,7 +153,6 @@ const handleLogout = () => {
     }
   };
   const effectiveRole = userRole || (isGuest ? "customer" : null);
- console.log(effectiveRole)
 
   return (
     <AppBar
@@ -229,7 +232,7 @@ const handleLogout = () => {
             gap: { xs: 0.5, sm: 2 },
           }}
         >
-          {isGuest && tableNumber && (
+          {(isGuest || userRole === "customer") && tableNumber && (
             <Box
               aria-label={`Table ${tableNumber}`}
               sx={{
@@ -260,7 +263,7 @@ const handleLogout = () => {
             </Box>
           )}
 
-          {isGuest && pathname === "/menu/full-menu" && (
+          {(isGuest || userRole === "customer") && pathname === "/menu/full-menu" && (
             <IconButton
               color="inherit"
               aria-label={`Shopping bag, ${bagItemCount} ${bagItemCount === 1 ? "item" : "items"}`}
@@ -268,8 +271,23 @@ const handleLogout = () => {
               onClick={() =>
                 window.dispatchEvent(new Event("menu-cart-open"))
               }
+              sx={{
+                color: "white",
+                "&.Mui-disabled": { color: "white" },
+              }}
             >
-              <Badge badgeContent={bagItemCount} color="secondary" showZero>
+              <Badge
+                badgeContent={bagItemCount}
+                showZero
+                sx={{
+                  "& .MuiBadge-badge": {
+                    backgroundColor: "white",
+                    color: theme.palette.primary.main,
+                    border: `1.5px solid ${theme.palette.primary.main}`,
+                    fontWeight: 700,
+                  },
+                }}
+              >
                 <ShoppingBag size={25} />
               </Badge>
             </IconButton>

@@ -214,9 +214,11 @@ const MenuItemCard = ({
                   aria-label={`Remove one ${item.name}`}
                   onClick={() => onQuantityChange(categoryId, item.item_id, -1)}
                   sx={{
-                    minWidth: 36,
-                    width: 36,
-                    height: 36,
+                    minWidth: 40,
+                    width: 40,
+                    height: 40,
+                    minHeight: 40,
+                    p: 0,
                     borderColor: "#C01E2E",
                     color: "#C01E2E",
                     fontSize: "1.1rem",
@@ -241,9 +243,11 @@ const MenuItemCard = ({
                   aria-label={`Add one ${item.name}`}
                   onClick={() => onQuantityChange(categoryId, item.item_id, 1)}
                   sx={{
-                    minWidth: 36,
-                    width: 36,
-                    height: 36,
+                    minWidth: 40,
+                    width: 40,
+                    height: 40,
+                    minHeight: 40,
+                    p: 0,
                     borderColor: "#C01E2E",
                     color: "#C01E2E",
                     fontSize: "1.1rem",

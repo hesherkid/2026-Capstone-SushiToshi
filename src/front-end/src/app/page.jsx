@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { decodeToken, isTokenExpired } from "@/config/auth";
 import { getAuthToken } from "@/utils/auth";
-import AppBarWithTitle from "@/components/AppBarWithTitle";
 import { useRouter } from "next/navigation";
 import { api } from '@/config/api'
 import useAuth from "@/hooks/useAuth";
@@ -151,7 +150,6 @@ useEffect(() => {
 
   return (
 <div>
-      {(userName || isGuest) && <AppBarWithTitle />}
 
       <div
         style={{
