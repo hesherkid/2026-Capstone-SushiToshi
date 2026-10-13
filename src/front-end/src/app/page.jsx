@@ -136,11 +136,6 @@ useEffect(() => {
     router.push(`/join?location=${selectedLocation}&table=${tableNumber.trim()}`);
   };
 
-  const handleGuestLogout = () => {
-    localStorage.clear();
-    window.location.reload();
-  };
-
   if (!ready) return null;
   if (isGuestAccount()) {
     return null;
@@ -289,25 +284,6 @@ useEffect(() => {
                   </button>
                 </div>
               </>
-            )}
-
-            {/* Only show logout for guests */}
-            {isGuest && (
-              <div style={{ marginTop: "1.5rem" }}>
-                <button
-                  onClick={handleGuestLogout}
-                  style={{
-                    backgroundColor: "#d32f2f",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "10px 22px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Logout as Guest
-                </button>
-              </div>
             )}
           </div>
         )}

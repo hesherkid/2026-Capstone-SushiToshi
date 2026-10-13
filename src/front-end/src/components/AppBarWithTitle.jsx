@@ -348,7 +348,7 @@ const handleLogout = () => {
               </FormControl>
             )}
 
-          {!isLoginPage && !isAuthenticated && !isGuest && (
+          {!loading && !isLoginPage && !isAuthenticated && !isGuest && (
             <Button
               color="inherit"
               onClick={() => handleNavigation("/auth/login")}

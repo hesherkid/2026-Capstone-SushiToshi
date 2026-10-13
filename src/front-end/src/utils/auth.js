@@ -147,8 +147,7 @@ export const logoutUser = () => {
   localStorage.removeItem("tokenExpiresAt");
   localStorage.removeItem("user");
 
-  notifyAuthChange();
-
+  //notifyAuthChange();
   window.location.href = "/auth/login";
 };
 
