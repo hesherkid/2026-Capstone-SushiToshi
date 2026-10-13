@@ -28,6 +28,10 @@ namespace back_end.domain.Entities
 
         public DateTime? Completed_At { get; set; }
 
+        public DateTime? Approved_At { get; set; }
+
+        public int? Approved_By { get; set; }
+
         public DiningSession DiningSession { get; set; } = null!;
         public Billing Bill { get; set; } = null!;
         public User? User { get; set; }

@@ -22,7 +22,6 @@ public class OrderControllerTests : IDisposable
 
     public OrderControllerTests()
     {
-        // Setup in-memory database
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
@@ -31,7 +30,6 @@ public class OrderControllerTests : IDisposable
         _mockLogger = new Mock<ILogger<OrderController>>();
         _controller = new OrderController(_context, _mockLogger.Object);
 
-        // Setup test data
         SeedTestData();
     }
 
@@ -92,6 +90,53 @@ public class OrderControllerTests : IDisposable
         };
     }
 
+    private SessionOrder SeedOrder(OrderStatus orderStatus, params OrderStatus[] itemStatuses)
+    {
+        if (!_context.MenuItems.Any())
+        {
+            _context.Menus.Add(new Menu
+            {
+                Menu_id = 1,
+                Name = "Dinner",
+                Description = "Dinner",
+                Start_time = new TimeOnly(16, 0),
+                End_time = new TimeOnly(22, 0),
+                Is_active = true
+            });
+            _context.Categories.Add(new Category { Category_id = 1, Category_name = "Nigiri", Description = "Nigiri" });
+            _context.MenuItems.Add(new Menu_Item
+            {
+                item_id = 1,
+                Name = "Salmon Nigiri",
+                Description = "Salmon",
+                Category_id = 1,
+                Status = MenuItemStatus.Available
+            });
+        }
+
+        var order = new SessionOrder
+        {
+            session_id = 1,
+            Bill_Id = 1,
+            Status = orderStatus,
+            Created_At = DateTime.UtcNow.AddMinutes(-10),
+            Approved_At = orderStatus == OrderStatus.Pending ? null : DateTime.UtcNow.AddMinutes(-8),
+            OrderItems = itemStatuses.Select(s => new OrderItems
+            {
+                Menu_Id = 1,
+                Item_Id = 1,
+                Quantity = 1,
+                Price_At_Time = 0m,
+                Order_Item_Status = s
+            }).ToList()
+        };
+
+        _context.SessionOrders.Add(order);
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+        return order;
+    }
+
     [Fact]
     public async Task CreateOrder_ValidData_CreatesOrder()
     {
@@ -133,7 +178,7 @@ public class OrderControllerTests : IDisposable
 
         var orderCreateDto = new OrderCreateDTO
         {
-            Session_Id = 999, // Non-existent session
+            Session_Id = 999,
             Bill_Id = 1
         };
 
@@ -153,7 +198,7 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 1,
-            Bill_Id = 999 // Non-existent bill
+            Bill_Id = 999
         };
 
         // Act
@@ -178,7 +223,7 @@ public class OrderControllerTests : IDisposable
             Adult_Count = 2,
             Child_Count = 0,
             Total_Count = 2,
-            Status = BillStatus.Paid, // Closed bill
+            Status = BillStatus.Paid,
             Created_At = DateTime.UtcNow
         };
 
@@ -254,7 +299,7 @@ public class OrderControllerTests : IDisposable
         // Arrange
         SetupUserClaims("123");
 
-        // Act - Create 3 orders
+        // Act
         for (int i = 0; i < 3; i++)
         {
             var orderCreateDto = new OrderCreateDTO
@@ -280,7 +325,7 @@ public class OrderControllerTests : IDisposable
     [Fact]
     public async Task CreateOrder_WithRealLoginClaims_StoresEmailAsUserName()
     {
-        // Arrange - mirrors AuthController.cs lines 309–312 (Name = Email, no given/family name)
+        // Arrange
         var claims = new List<Claim>
     {
         new Claim(ClaimTypes.NameIdentifier, "123"),
@@ -299,8 +344,127 @@ public class OrderControllerTests : IDisposable
         // Act
         var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
 
-        // Assert - current known behavior; update if real names are added to the token see TODO on Auth controller
+        // Assert
         var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
         order!.User_Name.Should().Be("customer@example.com");
+    }
+
+    [Fact]
+    public async Task CompleteOrderItem_DeliversOnlyThatItem_OrderStaysProcessing()
+    {
+        // Arrange
+        var order = SeedOrder(OrderStatus.Processing, OrderStatus.Processing, OrderStatus.Processing);
+        var itemId = order.OrderItems.First().Order_Item_Id;
+
+        // Act
+        var result = await _controller.CompleteOrderItem(order.Order_Id, itemId);
+
+        // Assert
+        var dto = result.Should().BeOfType<OkObjectResult>().Subject
+            .Value.Should().BeOfType<OrderItemResponseDTO>().Subject;
+        dto.Status.Should().Be(OrderStatus.Delivered);
+        dto.Completed_At.Should().NotBeNull();
+
+        var saved = await _context.SessionOrders.Include(o => o.OrderItems)
+            .SingleAsync(o => o.Order_Id == order.Order_Id);
+        saved.Status.Should().Be(OrderStatus.Processing);
+        saved.Completed_At.Should().BeNull();
+        saved.OrderItems.Count(i => i.Order_Item_Status == OrderStatus.Processing).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CompleteOrderItem_LastOutstandingItem_CompletesOrder()
+    {
+        // Arrange
+        var order = SeedOrder(OrderStatus.Processing,
+            OrderStatus.Delivered, OrderStatus.Processing, OrderStatus.Cancelled);
+        var lastId = order.OrderItems.Single(i => i.Order_Item_Status == OrderStatus.Processing).Order_Item_Id;
+
+        // Act
+        await _controller.CompleteOrderItem(order.Order_Id, lastId);
+
+        // Assert
+        var saved = await _context.SessionOrders.Include(o => o.OrderItems)
+            .SingleAsync(o => o.Order_Id == order.Order_Id);
+        var lastItem = saved.OrderItems.Single(i => i.Order_Item_Id == lastId);
+        saved.Status.Should().Be(OrderStatus.Delivered);
+        saved.Completed_At.Should().Be(lastItem.Completed_At);
+    }
+
+    [Fact]
+    public async Task CompleteOrderItem_PendingItem_ReturnsBadRequest()
+    {
+        // Arrange
+        var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
+
+        // Act
+        var result = await _controller.CompleteOrderItem(order.Order_Id, order.OrderItems.First().Order_Item_Id);
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task CompleteOrderItem_ItemFromAnotherOrder_ReturnsNotFound()
+    {
+        // Arrange
+        var orderA = SeedOrder(OrderStatus.Processing, OrderStatus.Processing);
+        var orderB = SeedOrder(OrderStatus.Processing, OrderStatus.Processing);
+
+        // Act
+        var result = await _controller.CompleteOrderItem(orderA.Order_Id, orderB.OrderItems.First().Order_Item_Id);
+
+        // Assert
+        result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task CompleteOrder_PendingOrder_ReturnsBadRequest()
+    {
+        // Arrange
+        var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
+
+        // Act
+        var result = await _controller.CompleteOrder(order.Order_Id);
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task CreateOrder_SetsFirstOrderAt_OnlyOnFirstOrder()
+    {
+        // Arrange
+        SetupUserClaims("123");
+
+        // Act
+        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+        var first = (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At;
+
+        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+        var after = (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At;
+
+        // Assert
+        first.Should().NotBeNull();
+        after.Should().Be(first);
+    }
+
+    [Fact]
+    public async Task ApproveOrder_SetsApprovedAtAndApprover()
+    {
+        // Arrange
+        SetupUserClaims("42");
+        var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
+
+        // Act
+        var result = await _controller.ApproveOrder(order.Order_Id);
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+        var saved = await _context.SessionOrders.SingleAsync(o => o.Order_Id == order.Order_Id);
+        saved.Status.Should().Be(OrderStatus.Processing);
+        saved.Approved_At.Should().NotBeNull();
+        saved.Approved_At!.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        saved.Approved_By.Should().Be(42);
     }
 }

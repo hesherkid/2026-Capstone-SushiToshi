@@ -60,4 +60,16 @@ namespace back_end.DTO.Analytics
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
     }
+
+    public class DurationSummaryDTO
+    {
+        [JsonPropertyName("count")]
+        public int Count { get; set; }
+
+        [JsonPropertyName("average_minutes")]
+        public decimal? AverageMinutes { get; set; }
+
+        [JsonPropertyName("median_minutes")]
+        public decimal? MedianMinutes { get; set; }
+    }
 }

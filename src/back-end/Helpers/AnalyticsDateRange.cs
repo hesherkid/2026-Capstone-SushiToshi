@@ -11,11 +11,6 @@ namespace back_end.Helpers
         Custom
     }
 
-    /// <summary>
-    /// A resolved reporting window.
-    /// FromLocal / ToLocal are inclusive restaurant-local calendar dates (what the UI shows)
-    /// StartUtc is inclusive, EndUtc is exclusive (what the database query uses)
-    /// </summary>
     public sealed record ResolvedDateRange(
         AnalyticsRangePreset Preset,
         DateOnly FromLocal,
@@ -24,15 +19,12 @@ namespace back_end.Helpers
         DateTime EndUtc,
         string TimeZoneId);
 
-    /// <summary>
-    /// Turns a range preset (or a custom from/to) into UTC query bounds based on the
-    /// restaurant's local day. Pure and side-effect free so it can be unit tested by
-    /// passing a fixed "now".
-    /// </summary>
     public static class AnalyticsDateRange
     {
-        /// <summary>Mountain Time (MST/MDT). Override with appsettings "Analytics:TimeZoneId".</summary>
         public const string DefaultTimeZoneId = "America/Edmonton";
+
+        public static readonly TimeZoneInfo RestaurantTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById(DefaultTimeZoneId);
 
         public const int MaxCustomRangeDays = 366;
 
@@ -152,18 +144,9 @@ namespace back_end.Helpers
         private static bool TryParseDate(string? value, out DateOnly date) =>
             DateOnly.TryParseExact(value, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
-        private static DateTime LocalMidnightToUtc(DateOnly localDate, TimeZoneInfo timeZone)
-        {
-            var localMidnight = localDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-
-            // Mountain Time changes clocks at 02:00, so midnight is always valid there.
-            // This guard only matters if the configured zone shifts at midnight.
-            if (timeZone.IsInvalidTime(localMidnight))
-            {
-                localMidnight = localMidnight.AddHours(1);
-            }
-
-            return TimeZoneInfo.ConvertTimeToUtc(localMidnight, timeZone);
-        }
+        private static DateTime LocalMidnightToUtc(DateOnly localDate, TimeZoneInfo timeZone) =>
+                    TimeZoneInfo.ConvertTimeToUtc(
+                        localDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified),
+                        timeZone);
     }
 }
