@@ -1,5 +1,9 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect, devices } = require('@playwright/test');
+
+// iPhone viewport/UA/touch without `defaultBrowserType: 'webkit'`, which can't be
+// set inside a describe (it forces a new worker). Runs in whichever project is selected.
+const { defaultBrowserType: _ignored, ...iPhone12 } = devices['iPhone 12'];
 
 test.describe('QR Code Generation E2E', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +13,8 @@ test.describe('QR Code Generation E2E', () => {
 
   test('should display login page', async ({ page }) => {
     // Check if login page is displayed
-    await expect(page.getByRole('heading', { name: /login/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /start your order/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign In', exact: true })).toBeVisible();
   });
 
   test('admin can navigate to QR codes page after login', async ({ page }) => {
@@ -93,9 +98,7 @@ test.describe('Customer Ordering Flow E2E', () => {
 });
 
 test.describe('Mobile QR Code Scanning', () => {
-  test.use({
-    ...require('@playwright/test').devices['iPhone 12']
-  });
+  test.use(iPhone12);
 
   test('QR code page is responsive on mobile', async ({ page }) => {
     await page.goto('/admin/qr-codes');
