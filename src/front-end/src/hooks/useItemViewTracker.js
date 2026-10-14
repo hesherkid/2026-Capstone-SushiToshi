@@ -19,7 +19,7 @@ export const sendItemView = ({ sessionId, itemId, seconds }) => {
   const token = localStorage.getItem("authToken");
   if (!token) return;
 
-  fetch(`${API_BASE_URL}/menu-item-views`, {
+  fetch(`${API_BASE_URL}/api/menu-item-views`, {
     method: "POST",
     keepalive: true,
     headers: {
