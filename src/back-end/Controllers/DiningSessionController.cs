@@ -979,8 +979,17 @@ namespace back_end.controllers
 
       try
       {
-        var table_id = request.TableId;
         var location_id = request.LocationId;
+        // The QR code / join URL carries the table NUMBER shown on the table, not the database Table_Id
+        var table = await _context.Tables
+            .FirstOrDefaultAsync(t => t.table_number == request.TableId
+                                    && t.Location_Id == location_id
+                                    && t.is_active);
+        if (table == null)
+        {
+            return NotFound(new { message = $"Table {request.TableId} was not found at this location." });
+        }
+        var table_id = table.Table_Id;
         var userIdString = ClaimsHelpers.GetUserId(User);
         if (request.GuestName.ToLower() != "guest" )
         {
@@ -1011,11 +1020,18 @@ namespace back_end.controllers
               .Select(ds => ds.Session_Id)
               .FirstOrDefaultAsync();
         }
+
         //Find the next available empty session for the table
         // if (!_context.DiningSessions.Any(ds => (ds.Ended_At == null && ds.Table_Id == table_id && ds.Location_Id == location_id) ))
         // {
         //   return NotFound(new { message = "No active session found for the specified table" });
         // }
+
+        // No open session for this table (or its group): stop before inserting a participant for session 0
+        if (sessionId == 0)
+        {
+          return NotFound(new { message = "No active session found for this table. Please ask staff to start one." });
+        }
         var returnedSession= new AddGuestParticipantResponseDTO
         {
           SessionId = 0,
