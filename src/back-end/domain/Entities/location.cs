@@ -32,6 +32,8 @@ namespace back_end.domain.Entities
     public ICollection<DiningSession> DiningSessions { get; set; } = new List<DiningSession>();
     public ICollection<TableEntity> Tables { get; set; } = new List<TableEntity>();
     public ICollection<TableGroup> TableGroups { get; set; } = new List<TableGroup>();
-  }
+    public ICollection<MenuItemAssignment> MenuItemAssignments { get; set; } = new List<MenuItemAssignment>();
+
+    }
 
 }

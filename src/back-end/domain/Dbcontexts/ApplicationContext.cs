@@ -54,8 +54,27 @@ namespace back_end.domain.DbContexts
             modelBuilder.Entity<MenuItemTag>()
                 .HasKey(mit => new { mit.Menu_item_id, mit.Tag_id });
 
-            modelBuilder.Entity<MenuItemAssignment>()
-                .HasKey(mia => new { mia.Menu_Id, mia.Item_Id });
+            modelBuilder.Entity<MenuItemAssignment>(entity =>
+            {
+                entity.HasKey(a => a.Assignment_Id);
+                entity.HasIndex(a => a.Menu_Id).HasDatabaseName("IX_menu_item_assignment_menu_id");
+
+
+                // MariaDB treats NULLs as distinct in unique indexes, so index a computed
+                // column instead; this allows only one default row per menu + item
+                entity.Property(a => a.Location_Key)
+                    .HasComputedColumnSql("IFNULL(location_id, 0)", stored: true);
+
+                entity.HasIndex(a => new { a.Menu_Id, a.Item_Id, a.Location_Key })
+                    .IsUnique()
+                    .HasDatabaseName("UX_assignment_menu_item_location");
+
+                entity.HasOne(a => a.Location)
+                    .WithMany(l => l.MenuItemAssignments)
+                    .HasForeignKey(a => a.Location_Id)
+                    .OnDelete(DeleteBehavior.Cascade);   // deleting a location removes its overrides
+            });
+
 
             modelBuilder.Entity<MenuLocations>()
                 .HasKey(ml => new { ml.Menu_Id, ml.Location_Id });

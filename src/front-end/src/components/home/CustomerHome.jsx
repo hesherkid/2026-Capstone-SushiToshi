@@ -45,7 +45,6 @@ useEffect(() => {
       setLoading(true);
       const response = await api.get("/location");
       setLocations(response.data);
-      console.log(`Locations: ${JSON.stringify(response.data, null, 2)}`);
       
       // Auto-select first location if only one exists
       if (response.data && response.data.length === 1) {

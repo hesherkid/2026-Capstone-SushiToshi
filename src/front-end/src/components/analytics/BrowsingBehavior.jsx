@@ -16,13 +16,6 @@ import {
   Paper,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableSortLabel,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -30,6 +23,16 @@ import {
 } from "@mui/material";
 import api from "@/config/api";
 import storage from "@/utils/storage";
+import ReportItemsGrid, {
+  nullableNumberColumn,
+  rankColumn,
+} from "@/components/analytics/ReportItemsGrid";
+import {
+  ExportMenu,
+  downloadCsv,
+  exportFileName,
+  printReport,
+} from "@/components/analytics/ReportExport";
 
 const TOP_N = 5;
 const MIN_VIEWS_OPTIONS = [5, 10, 20, 50];
@@ -99,22 +102,7 @@ const getErrorMessage = (err) => {
   );
 };
 
-// Numbers that can be null - sort below every real value.
-const byNumber = (field) => (a, b) =>
-  (a[field] ?? -1) - (b[field] ?? -1) || a.name.localeCompare(b.name);
-
-const SORTERS = {
-  view_rank: (a, b) =>
-    (a.view_rank ?? Infinity) - (b.view_rank ?? Infinity) ||
-    a.name.localeCompare(b.name),
-  name: (a, b) => a.name.localeCompare(b.name),
-  category_name: (a, b) =>
-    a.category_name.localeCompare(b.category_name) ||
-    a.name.localeCompare(b.name),
-  views: byNumber("views"),
-  average_view_seconds: byNumber("average_view_seconds"),
-  conversion_rate: byNumber("conversion_rate"),
-};
+const byName = (a, b) => a.name.localeCompare(b.name);
 
 // Badges for item current state.
 const StatusChips = ({ item }) => (
@@ -134,69 +122,138 @@ const StatusChips = ({ item }) => (
   </>
 );
 
-const ItemTable = ({ title, caption, items, columns, emptyText, onSelect }) => (
-  <>
-    <Typography variant="h6" gutterBottom={!caption}>
-      {title}
-    </Typography>
-    {caption && (
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        {caption}
-      </Typography>
-    )}
-    <TableContainer component={Paper}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Item</TableCell>
-            {columns.map((col) => (
-              <TableCell key={col.label} align="right">
-                {col.label}
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={columns.length + 1}>{emptyText}</TableCell>
-            </TableRow>
-          ) : (
-            items.map((item) => (
-              <TableRow
-                key={item.item_id}
-                hover
-                sx={{ cursor: "pointer" }}
-                onClick={() => onSelect(item.item_id)}
-              >
-                <TableCell>
-                  {item.name}
-                  <StatusChips item={item} />
-                </TableCell>
-                {columns.map((col) => (
-                  <TableCell key={col.label} align="right">
-                    {col.value(item)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  </>
+// Columns shared by several tables. Screen shows "#3", "12s" and "40%"; the CSV gets plain numbers.
+const NAME_COL = {
+  field: "name",
+  headerName: "Item",
+  flex: 1,
+  minWidth: 180,
+  renderCell: (params) => (
+    <>
+      {params.value}
+      <StatusChips item={params.row} />
+    </>
+  ),
+};
+const RANK_COL = rankColumn("view_rank");
+const VIEWS_COL = {
+  field: "views",
+  headerName: "Views",
+  type: "number",
+  width: 90,
+};
+const AVG_VIEW_COL = nullableNumberColumn(
+  "average_view_seconds",
+  "Avg view (s)",
+  secs,
+);
+const CONVERSION_COL = nullableNumberColumn(
+  "conversion_rate",
+  "Conversion (%)",
+  pct,
+);
+const ORDERED_BY_COL = {
+  field: "ordering_sessions",
+  headerName: "Ordered by (tables)",
+  type: "number",
+  width: 150,
+};
+const UNAVAILABLE_VIEWS_COL = {
+  field: "unavailable_views",
+  headerName: "Views while unavailable",
+  type: "number",
+  width: 190,
+};
+const NOW_COL = {
+  field: "available_now",
+  headerName: "Now",
+  width: 120,
+  valueGetter: (_value, row) =>
+    row.currently_available ? "Available" : "Unavailable",
+};
+
+// Short report tables: item name first, then the given columns, with an export button.
+const ItemTable = ({ items, columns, ...props }) => (
+  <ReportItemsGrid
+    compact
+    report="browsing-behavior"
+    rows={items}
+    columns={[NAME_COL, ...columns]}
+    {...props}
+  />
 );
 
-// Columns shared by several tables
-const RANK_COL = { label: "Rank", value: (i) => `#${i.view_rank}` };
-const VIEWS_COL = { label: "Views", value: (i) => i.views };
-const AVG_VIEW_COL = {
-  label: "Avg view",
-  value: (i) => secs(i.average_view_seconds),
+// Same wording as StatusChips, as text so it also lands in the CSV.
+const itemStatus = (item) => {
+  if (!item.currently_available) return "Not available now";
+  if (item.status === "Seasonal") return "Seasonal";
+  return "Available";
 };
-const CONVERSION_COL = {
-  label: "Conversion",
-  value: (i) => pct(i.conversion_rate),
+
+// "All items" grid columns.
+const ALL_ITEMS_COLUMNS = [
+  RANK_COL,
+  { field: "name", headerName: "Item", flex: 1, minWidth: 180 },
+  {
+    field: "availability",
+    headerName: "Status",
+    width: 160,
+    valueGetter: (_value, row) => itemStatus(row),
+    renderCell: (params) =>
+      params.value === "Available" ? (
+        params.value
+      ) : (
+        <Chip label={params.value} size="small" variant="outlined" />
+      ),
+  },
+  { field: "category_name", headerName: "Category", flex: 1, minWidth: 140 },
+  VIEWS_COL,
+  AVG_VIEW_COL,
+  CONVERSION_COL,
+];
+
+// ---------- Export ----------
+
+// Names of the selected category and tag filters, for the top of the CSV.
+const filterNames = (data, categoryId, tagId) => ({
+  category:
+    data.filters?.categories?.find((c) => String(c.id) === String(categoryId))
+      ?.name ?? "All categories",
+  tag:
+    data.filters?.tags?.find((t) => String(t.tag_id) === String(tagId))?.name ??
+    "All tags",
+});
+
+// The report's period, location and item filters, then its summary figures.
+const buildSummaryRows = (data, filters) => {
+  const summary = data.summary;
+  return [
+    ["Report", "Browsing behavior"],
+    ["Period", describeRange(data.range)],
+    ["Location", data.location?.name ?? "All locations"],
+    ["Category", filters.category],
+    ["Tag", filters.tag],
+    ["High views starts at", summary.min_views],
+    [],
+    ["Measure", "Value"],
+    ["Views counted", summary.total_views],
+    ["Tables that viewed items", summary.viewing_sessions],
+    ["Items viewed", summary.items_viewed],
+    ["Items considered", summary.items_considered],
+    [
+      `Short views left out (under ${summary.min_view_seconds} seconds)`,
+      summary.short_views_excluded,
+    ],
+    ["Conversion (%)", summary.conversion_rate],
+    [
+      "Average view when ordered (seconds)",
+      summary.average_view_seconds_ordered,
+    ],
+    [
+      "Average view when not ordered (seconds)",
+      summary.average_view_seconds_not_ordered,
+    ],
+  ];
 };
 
 // Hydration-safe browser reads: the server render and the first client render both see the
@@ -230,7 +287,6 @@ const BrowsingBehavior = () => {
   const [minViews, setMinViews] = useState(10);
 
   const [selectedItemId, setSelectedItemId] = useState(null);
-  const [sort, setSort] = useState({ field: "view_rank", direction: "asc" });
 
   // Last finished request. Loading is derived from it, so state is only set in request callbacks.
   const [result, setResult] = useState({ key: null, data: null, error: null });
@@ -295,21 +351,6 @@ const BrowsingBehavior = () => {
   const items = data?.items ?? [];
   const selectedItem = items.find((i) => i.item_id === selectedItemId) ?? null;
 
-  const sortedItems = useMemo(() => {
-    const sorter = SORTERS[sort.field] ?? SORTERS.view_rank;
-    const copy = [...items];
-    copy.sort(sorter);
-    if (sort.direction === "desc") copy.reverse();
-    return copy;
-  }, [items, sort]);
-
-  const handleSort = (field) =>
-    setSort((prev) => ({
-      field,
-      direction:
-        prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-    }));
-
   const handleRangeChange = (_event, value) => {
     if (!value) return;
     setRangePreset(value);
@@ -321,14 +362,42 @@ const BrowsingBehavior = () => {
 
   const summary = data?.summary;
 
+  const exportOptions = data && [
+    {
+      label: "Summary (CSV)",
+      description: "The figures at the top of this report",
+      onClick: () =>
+        downloadCsv(
+          exportFileName("browsing-behavior", "summary", data.range),
+          buildSummaryRows(data, filterNames(data, categoryId, tagId)),
+        ),
+    },
+    {
+      label: "Print or save as PDF",
+      description: "The whole report, without the filters",
+      onClick: printReport,
+    },
+  ];
+
   return (
     <Box sx={{ p: 1 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Browsing behavior
-      </Typography>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{ mb: 1 }}
+      >
+        <Typography variant="h4" component="h1">
+          Browsing behavior
+        </Typography>
+        {data && !error && !loading && (
+          <ExportMenu label="Export report" options={exportOptions} />
+        )}
+      </Stack>
 
-      {/* ---------- Filters ---------- */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      {/* ---------- Filters (not printed) ---------- */}
+      <Paper sx={{ p: 2, mb: 3, displayPrint: "none" }}>
         <Stack spacing={2}>
           <ToggleButtonGroup
             value={rangePreset}
@@ -467,7 +536,7 @@ const BrowsingBehavior = () => {
             <Autocomplete
               size="small"
               sx={{ minWidth: 240, flexGrow: 1 }}
-              options={[...items].sort(SORTERS.name)}
+              options={[...items].sort(byName)}
               getOptionLabel={(option) => option.name}
               isOptionEqualToValue={(option, value) =>
                 option.item_id === value.item_id
@@ -486,7 +555,12 @@ const BrowsingBehavior = () => {
 
       {/* ---------- Status ---------- */}
       {loading && (
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{ mb: 2, displayPrint: "none" }}
+        >
           <CircularProgress size={20} />
           <Typography>Loading browsing behavior…</Typography>
         </Stack>
@@ -545,6 +619,8 @@ const BrowsingBehavior = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <ItemTable
+                range={data.range}
+                selectedItemId={selectedItemId}
                 title="Most viewed"
                 items={data.most_viewed}
                 columns={[RANK_COL, VIEWS_COL]}
@@ -554,6 +630,8 @@ const BrowsingBehavior = () => {
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <ItemTable
+                range={data.range}
+                selectedItemId={selectedItemId}
                 title="Least viewed (excluding zero views)"
                 items={data.least_viewed}
                 columns={[RANK_COL, VIEWS_COL]}
@@ -567,23 +645,20 @@ const BrowsingBehavior = () => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <ItemTable
+                range={data.range}
+                selectedItemId={selectedItemId}
                 title={`Top ${TOP_N} viewed and ordered`}
                 caption="Tables that viewed the item and ordered it."
                 items={data.top_viewed_and_ordered}
-                columns={[
-                  VIEWS_COL,
-                  {
-                    label: "Ordered by",
-                    value: (i) => `${i.ordering_sessions} tables`,
-                  },
-                  CONVERSION_COL,
-                ]}
+                columns={[VIEWS_COL, ORDERED_BY_COL, CONVERSION_COL]}
                 emptyText="No table ordered an item it viewed in this period."
                 onSelect={setSelectedItemId}
               />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <ItemTable
+                range={data.range}
+                selectedItemId={selectedItemId}
                 title={`Top ${TOP_N} viewed but not ordered`}
                 caption={`${data.viewed_not_ordered.length} items in total were viewed but not ordered.`}
                 items={data.top_viewed_not_ordered}
@@ -597,6 +672,8 @@ const BrowsingBehavior = () => {
           {/* ---------- Low conversion, high views ---------- */}
           <Box sx={{ mb: 3 }}>
             <ItemTable
+              range={data.range}
+              selectedItemId={selectedItemId}
               title="Low conversion with high views"
               caption={`Items with at least ${summary.min_views} views, lowest conversion first.`}
               items={data.low_conversion_high_views}
@@ -633,107 +710,30 @@ const BrowsingBehavior = () => {
           {/* ---------- Unavailable views ---------- */}
           <Box sx={{ mb: 3 }}>
             <ItemTable
+              range={data.range}
+              selectedItemId={selectedItemId}
               title="Views of unavailable items"
               caption="Viewed while the item couldn't be ordered."
               items={data.unavailable_views}
-              columns={[
-                {
-                  label: "Views while unavailable",
-                  value: (i) => i.unavailable_views,
-                },
-                {
-                  label: "Now",
-                  value: (i) =>
-                    i.currently_available ? "Available" : "Unavailable",
-                },
-              ]}
+              columns={[UNAVAILABLE_VIEWS_COL, NOW_COL]}
               emptyText="No unavailable items were viewed in this period."
               onSelect={setSelectedItemId}
             />
           </Box>
 
           {/* ---------- All items ---------- */}
-          <Typography variant="h6" gutterBottom>
-            All items
-          </Typography>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  {[
-                    { field: "view_rank", label: "Rank" },
-                    { field: "name", label: "Item" },
-                    { field: "category_name", label: "Category" },
-                    { field: "views", label: "Views", align: "right" },
-                    {
-                      field: "average_view_seconds",
-                      label: "Avg view",
-                      align: "right",
-                    },
-                    {
-                      field: "conversion_rate",
-                      label: "Conversion",
-                      align: "right",
-                    },
-                  ].map((col) => (
-                    <TableCell key={col.field} align={col.align}>
-                      <TableSortLabel
-                        active={sort.field === col.field}
-                        direction={
-                          sort.field === col.field ? sort.direction : "asc"
-                        }
-                        onClick={() => handleSort(col.field)}
-                      >
-                        {col.label}
-                      </TableSortLabel>
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6}>
-                      No items match these filters. Try another category, tag or
-                      date range.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sortedItems.map((item) => (
-                    <TableRow
-                      key={item.item_id}
-                      hover
-                      selected={item.item_id === selectedItemId}
-                      onClick={() => setSelectedItemId(item.item_id)}
-                      sx={{
-                        cursor: "pointer",
-                        ...(item.views === 0 &&
-                          item.currently_available && {
-                            bgcolor: "warning.light",
-                          }),
-                      }}
-                    >
-                      <TableCell>
-                        {item.view_rank ? `#${item.view_rank}` : "None"}
-                      </TableCell>
-                      <TableCell>
-                        {item.name}
-                        <StatusChips item={item} />
-                      </TableCell>
-                      <TableCell>{item.category_name}</TableCell>
-                      <TableCell align="right">{item.views}</TableCell>
-                      <TableCell align="right">
-                        {secs(item.average_view_seconds)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {pct(item.conversion_rate)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <ReportItemsGrid
+            report="browsing-behavior"
+            range={data.range}
+            rows={items}
+            columns={ALL_ITEMS_COLUMNS}
+            selectedItemId={selectedItemId}
+            onSelect={setSelectedItemId}
+            highlightRow={(item) =>
+              item.views === 0 && item.currently_available
+            }
+            emptyText="No items match these filters. Try another category, tag or date range."
+          />
         </Box>
       )}
     </Box>

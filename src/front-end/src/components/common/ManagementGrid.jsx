@@ -12,7 +12,7 @@ export const ManagementGrid = ({
   // display: "flex" makes DataGrid vertically center cell content (and reset its line-height)
   const flexColumns = useMemo(
     () => columns.map((column) => ({ display: "flex", ...column })),
-    [columns]
+    [columns],
   );
 
   return (

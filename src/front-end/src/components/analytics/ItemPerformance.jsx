@@ -16,13 +16,6 @@ import {
   Paper,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableSortLabel,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -30,6 +23,15 @@ import {
 } from "@mui/material";
 import api from "@/config/api";
 import storage from "@/utils/storage";
+import ReportItemsGrid, {
+  rankColumn,
+} from "@/components/analytics/ReportItemsGrid";
+import {
+  ExportMenu,
+  downloadCsv,
+  exportFileName,
+  printReport,
+} from "@/components/analytics/ReportExport";
 
 const TOP_N = 5;
 
@@ -93,18 +95,7 @@ const getErrorMessage = (err) => {
   );
 };
 
-const SORTERS = {
-  rank: (a, b) =>
-    (a.rank ?? Infinity) - (b.rank ?? Infinity) || a.name.localeCompare(b.name),
-  name: (a, b) => a.name.localeCompare(b.name),
-  category_name: (a, b) =>
-    a.category_name.localeCompare(b.category_name) ||
-    a.name.localeCompare(b.name),
-  units_sold: (a, b) =>
-    a.units_sold - b.units_sold || a.name.localeCompare(b.name),
-  add_on_units: (a, b) =>
-    a.add_on_units - b.add_on_units || a.name.localeCompare(b.name),
-};
+const byName = (a, b) => a.name.localeCompare(b.name);
 
 // Badges for item current state. No longer available items are shown because they sold in this period.
 const StatusChips = ({ item }) => (
@@ -124,94 +115,123 @@ const StatusChips = ({ item }) => (
   </>
 );
 
-const AddOnTable = ({ items, days, onSelect }) => (
-  <>
-    <Typography variant="h6">Add-on items</Typography>
-    <Typography variant="body2" color="text.secondary" gutterBottom>
-      Sorted by how many days each item was added on, then by add-on units.
-    </Typography>
-    <TableContainer component={Paper}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Item</TableCell>
-            <TableCell align="right">Days added on</TableCell>
-            <TableCell align="right">Add-on units</TableCell>
-            <TableCell align="right">Share of item's units</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={4}>No add-on sales in this period.</TableCell>
-            </TableRow>
-          ) : (
-            items.map((item) => (
-              <TableRow
-                key={item.item_id}
-                hover
-                sx={{ cursor: "pointer" }}
-                onClick={() => onSelect(item.item_id)}
-              >
-                <TableCell>
-                  {item.name}
-                  <StatusChips item={item} />
-                </TableCell>
-                <TableCell align="right">
-                  {item.add_on_days} of {days}
-                </TableCell>
-                <TableCell align="right">{item.add_on_units}</TableCell>
-                <TableCell align="right">{item.add_on_share}%</TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  </>
-);
+// Same wording as StatusChips, as text so it also lands in the CSV.
+const itemStatus = (item) => {
+  if (!item.currently_available) return "No longer available";
+  if (item.status === "Seasonal") return "Seasonal";
+  return "Available";
+};
 
-const RankTable = ({ title, items, emptyText, onSelect }) => (
-  <>
-    <Typography variant="h6" gutterBottom>
-      {title}
-    </Typography>
-    <TableContainer component={Paper}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Rank</TableCell>
-            <TableCell>Item</TableCell>
-            <TableCell align="right">Units sold</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={3}>{emptyText}</TableCell>
-            </TableRow>
-          ) : (
-            items.map((item) => (
-              <TableRow
-                key={item.item_id}
-                hover
-                sx={{ cursor: "pointer" }}
-                onClick={() => onSelect(item.item_id)}
-              >
-                <TableCell>#{item.rank}</TableCell>
-                <TableCell>
-                  {item.name}
-                  <StatusChips item={item} />
-                </TableCell>
-                <TableCell align="right">{item.units_sold}</TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  </>
-);
+// "All items" grid columns. Screen shows "#3" and "12.5%"; the CSV gets plain numbers.
+const ALL_ITEMS_COLUMNS = [
+  rankColumn("rank"),
+  { field: "name", headerName: "Item", flex: 1, minWidth: 180 },
+  {
+    field: "availability",
+    headerName: "Status",
+    width: 170,
+    valueGetter: (_value, row) => itemStatus(row),
+    renderCell: (params) =>
+      params.value === "Available" ? (
+        params.value
+      ) : (
+        <Chip label={params.value} size="small" variant="outlined" />
+      ),
+  },
+  { field: "category_name", headerName: "Category", flex: 1, minWidth: 140 },
+  { field: "units_sold", headerName: "Units sold", type: "number", width: 110 },
+  {
+    field: "add_on_units",
+    headerName: "Add-on units",
+    type: "number",
+    width: 120,
+  },
+  {
+    field: "share_of_units",
+    headerName: "Share (%)",
+    type: "number",
+    width: 110,
+    renderCell: (params) => `${params.value}%`,
+  },
+];
+
+// Item name with its status badges. The CSV gets the name only; the All items grid has a Status column.
+const NAME_COLUMN = {
+  field: "name",
+  headerName: "Item",
+  flex: 1,
+  minWidth: 180,
+  renderCell: (params) => (
+    <>
+      {params.value}
+      <StatusChips item={params.row} />
+    </>
+  ),
+};
+
+// Top / bottom 5 tables.
+const RANK_TABLE_COLUMNS = [
+  rankColumn("rank"),
+  NAME_COLUMN,
+  { field: "units_sold", headerName: "Units sold", type: "number", width: 110 },
+];
+
+// Add-on table. Screen shows "3 of 7"; the CSV gets the number of days, with the total in the header.
+const addOnColumns = (days) => [
+  NAME_COLUMN,
+  {
+    field: "add_on_days",
+    headerName: `Days added on (of ${days})`,
+    type: "number",
+    width: 170,
+    renderCell: (params) => `${params.value} of ${days}`,
+  },
+  {
+    field: "add_on_units",
+    headerName: "Add-on units",
+    type: "number",
+    width: 120,
+  },
+  {
+    field: "add_on_share",
+    headerName: "Share of item's units (%)",
+    type: "number",
+    width: 190,
+    renderCell: (params) => `${params.value}%`,
+  },
+];
+
+// ---------- Export ----------
+
+// Names of the selected category and tag filters, for the top of the CSV.
+const filterNames = (data, categoryId, tagId) => ({
+  category:
+    data.filters?.categories?.find((c) => String(c.id) === String(categoryId))
+      ?.name ?? "All categories",
+  tag:
+    data.filters?.tags?.find((t) => String(t.tag_id) === String(tagId))?.name ??
+    "All tags",
+});
+
+// The report's period, location and item filters, then its summary figures.
+const buildSummaryRows = (data, filters) => {
+  const summary = data.summary;
+  return [
+    ["Report", "Item performance"],
+    ["Period", describeRange(data.range)],
+    ["Location", data.location?.name ?? "All locations"],
+    ["Category", filters.category],
+    ["Tag", filters.tag],
+    [],
+    ["Measure", "Value"],
+    ["Days in period", data.range.days],
+    ["Units sold", summary.total_units_sold],
+    ["Add-on units", summary.total_add_on_units],
+    ["Items considered", summary.items_considered],
+    ["Items with sales", summary.items_with_sales],
+    ["Items with no sales", summary.items_with_zero_sales],
+  ];
+};
 
 // Hydration-safe browser reads: the server render and the first client render both see the
 // "server" value, then React switches to the real value. Avoids a server/client markup mismatch.
@@ -245,7 +265,6 @@ const ItemPerformance = () => {
 
   // Table + item finder
   const [selectedItemId, setSelectedItemId] = useState(null);
-  const [sort, setSort] = useState({ field: "rank", direction: "asc" });
 
   // Last finished request. Loading is derived from it, so state is only set in request callbacks.
   const [result, setResult] = useState({ key: null, data: null, error: null });
@@ -309,21 +328,6 @@ const ItemPerformance = () => {
   const items = data?.items ?? [];
   const selectedItem = items.find((i) => i.item_id === selectedItemId) ?? null;
 
-  const sortedItems = useMemo(() => {
-    const sorter = SORTERS[sort.field] ?? SORTERS.rank;
-    const copy = [...items]; // never sort state in place
-    copy.sort(sorter);
-    if (sort.direction === "desc") copy.reverse();
-    return copy;
-  }, [items, sort]);
-
-  const handleSort = (field) =>
-    setSort((prev) => ({
-      field,
-      direction:
-        prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-    }));
-
   const handleRangeChange = (_event, value) => {
     if (!value) return; // ToggleButtonGroup sends null when the active button is clicked again
     setRangePreset(value);
@@ -335,14 +339,42 @@ const ItemPerformance = () => {
 
   const summary = data?.summary;
 
+  const exportOptions = data && [
+    {
+      label: "Summary (CSV)",
+      description: "The figures at the top of this report",
+      onClick: () =>
+        downloadCsv(
+          exportFileName("item-performance", "summary", data.range),
+          buildSummaryRows(data, filterNames(data, categoryId, tagId)),
+        ),
+    },
+    {
+      label: "Print or save as PDF",
+      description: "The whole report, without the filters",
+      onClick: printReport,
+    },
+  ];
+
   return (
     <Box sx={{ p: 1 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Item performance
-      </Typography>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{ mb: 1 }}
+      >
+        <Typography variant="h4" component="h1">
+          Item performance
+        </Typography>
+        {data && !error && !loading && (
+          <ExportMenu label="Export report" options={exportOptions} />
+        )}
+      </Stack>
 
-      {/* ---------- Filters ---------- */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      {/* ---------- Filters (not printed) ---------- */}
+      <Paper sx={{ p: 2, mb: 3, displayPrint: "none" }}>
         <Stack spacing={2}>
           <ToggleButtonGroup
             value={rangePreset}
@@ -463,7 +495,7 @@ const ItemPerformance = () => {
             <Autocomplete
               size="small"
               sx={{ minWidth: 240, flexGrow: 1 }}
-              options={[...items].sort(SORTERS.name)}
+              options={[...items].sort(byName)}
               getOptionLabel={(option) => option.name}
               isOptionEqualToValue={(option, value) =>
                 option.item_id === value.item_id
@@ -482,7 +514,12 @@ const ItemPerformance = () => {
 
       {/* ---------- Status ---------- */}
       {loading && (
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{ mb: 2, displayPrint: "none" }}
+        >
           <CircularProgress size={20} />
           <Typography>Loading item performance…</Typography>
         </Stack>
@@ -533,19 +570,29 @@ const ItemPerformance = () => {
           {/* ---------- Best / worst ---------- */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <RankTable
+              <ReportItemsGrid
+                compact
                 title={`Top ${TOP_N} items`}
-                items={data.best}
-                emptyText="No items sold in this period."
+                report="item-performance"
+                range={data.range}
+                rows={data.best}
+                columns={RANK_TABLE_COLUMNS}
+                selectedItemId={selectedItemId}
                 onSelect={setSelectedItemId}
+                emptyText="No items sold in this period."
               />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
-              <RankTable
+              <ReportItemsGrid
+                compact
                 title={`Bottom ${TOP_N} items (with sales)`}
-                items={data.worst}
-                emptyText={`Fewer than ${TOP_N * 2} items sold, so every seller already appears in the top list.`}
+                report="item-performance"
+                range={data.range}
+                rows={data.worst}
+                columns={RANK_TABLE_COLUMNS}
+                selectedItemId={selectedItemId}
                 onSelect={setSelectedItemId}
+                emptyText={`Fewer than ${TOP_N * 2} items sold, so every seller already appears in the top list.`}
               />
             </Grid>
           </Grid>
@@ -576,92 +623,31 @@ const ItemPerformance = () => {
 
           {/* ---------- Add-ons ---------- */}
           <Box sx={{ mb: 3 }}>
-            <AddOnTable
-              items={data.add_ons}
-              days={data.range.days}
+            <ReportItemsGrid
+              compact
+              title="Add-on items"
+              caption="Sorted by how many days each item was added on, then by add-on units."
+              report="item-performance"
+              range={data.range}
+              rows={data.add_ons}
+              columns={addOnColumns(data.range.days)}
+              selectedItemId={selectedItemId}
               onSelect={setSelectedItemId}
+              emptyText="No add-on sales in this period."
             />
           </Box>
 
           {/* ---------- All items ---------- */}
-          <Typography variant="h6" gutterBottom>
-            All items
-          </Typography>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  {[
-                    { field: "rank", label: "Rank" },
-                    { field: "name", label: "Item" },
-                    { field: "category_name", label: "Category" },
-                    {
-                      field: "units_sold",
-                      label: "Units sold",
-                      align: "right",
-                    },
-                    {
-                      field: "add_on_units",
-                      label: "Add-on units",
-                      align: "right",
-                    },
-                  ].map((col) => (
-                    <TableCell key={col.field} align={col.align}>
-                      <TableSortLabel
-                        active={sort.field === col.field}
-                        direction={
-                          sort.field === col.field ? sort.direction : "asc"
-                        }
-                        onClick={() => handleSort(col.field)}
-                      >
-                        {col.label}
-                      </TableSortLabel>
-                    </TableCell>
-                  ))}
-                  <TableCell align="right">Share</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6}>
-                      No items match these filters. Try another category, tag or
-                      date range.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sortedItems.map((item) => (
-                    <TableRow
-                      key={item.item_id}
-                      hover
-                      selected={item.item_id === selectedItemId}
-                      onClick={() => setSelectedItemId(item.item_id)}
-                      sx={{
-                        cursor: "pointer",
-                        ...(item.units_sold === 0 && {
-                          bgcolor: "warning.light",
-                        }),
-                      }}
-                    >
-                      <TableCell>
-                        {item.rank ? `#${item.rank}` : "None"}
-                      </TableCell>
-                      <TableCell>
-                        {item.name}
-                        <StatusChips item={item} />
-                      </TableCell>
-                      <TableCell>{item.category_name}</TableCell>
-                      <TableCell align="right">{item.units_sold}</TableCell>
-                      <TableCell align="right">{item.add_on_units}</TableCell>
-                      <TableCell align="right">
-                        {item.share_of_units}%
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <ReportItemsGrid
+            report="item-performance"
+            range={data.range}
+            rows={items}
+            columns={ALL_ITEMS_COLUMNS}
+            selectedItemId={selectedItemId}
+            onSelect={setSelectedItemId}
+            highlightRow={(item) => item.units_sold === 0}
+            emptyText="No items match these filters. Try another category, tag or date range."
+          />
         </Box>
       )}
     </Box>

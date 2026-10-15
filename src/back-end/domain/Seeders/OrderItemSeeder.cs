@@ -39,7 +39,7 @@ namespace back_end.domain.Seeders
                                   .ToDictionary(g => g.Key, g => g.ToList());
 
             // Lookup current prices from MenuItemAssignments (need MenuId and ItemId and Price)
-            var assignments = _context.MenuItemAssignments.ToList();
+            var assignments = _context.MenuItemAssignments.Where(a => a.Location_Id == null).ToList();
             var priceLookup = assignments.ToDictionary(a => (a.Menu_Id, a.Item_Id), a => a.Price);
 
             int created = 0;

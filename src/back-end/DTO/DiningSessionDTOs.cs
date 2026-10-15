@@ -62,7 +62,8 @@ namespace back_end.DTO.DiningSessionDTOs
   public class SessionMenuResponseDTO
   {
     public int Menu_Id { get; set; }
-  }
+    public int Location_Id { get; set; }
+    }
 
   public class ListDiningSessionsRequestDTO
   {

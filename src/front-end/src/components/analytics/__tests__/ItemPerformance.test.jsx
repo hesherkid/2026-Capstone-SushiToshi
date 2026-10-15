@@ -25,6 +25,31 @@ jest.mock("@/utils/storage", () => ({
   },
 }));
 
+jest.mock("@mui/x-data-grid", () => {
+  if (typeof global.TextEncoder === "undefined") {
+    const { TextEncoder, TextDecoder } = jest.requireActual("util");
+    Object.assign(global, { TextEncoder, TextDecoder });
+  }
+  const actual = jest.requireActual("@mui/x-data-grid");
+  const React = jest.requireActual("react");
+  return {
+    ...actual,
+    DataGrid: (props) =>
+      React.createElement(actual.DataGrid, {
+        ...props,
+        disableVirtualization: true,
+      }),
+  };
+});
+
+if (typeof window.ResizeObserver === "undefined") {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 const ENDPOINT = "analytics/item-performance";
 
 //  Test data (matches ItemPerformanceResponseDTO)
@@ -111,8 +136,6 @@ const buildResponse = (overrides = {}) => ({
   ...overrides,
 });
 
-//  Helpers
-
 const lastParams = () => api.get.mock.calls.at(-1)[1].params;
 
 const renderLoaded = async () => {
@@ -122,10 +145,15 @@ const renderLoaded = async () => {
   return user;
 };
 
-const allItemsTable = () => {
-  const tables = screen.getAllByRole("table");
-  return tables[tables.length - 1];
-};
+const grid = (title) => screen.getByRole("grid", { name: title });
+const allItemsGrid = () => grid("All items");
+
+const dataRows = (gridElement) =>
+  within(gridElement)
+    .getAllByRole("row")
+    .filter((row) => row.hasAttribute("data-id"));
+
+const cell = (row, field) => row.querySelector(`[data-field="${field}"]`);
 
 describe("ItemPerformance", () => {
   beforeEach(() => {
@@ -190,18 +218,17 @@ describe("ItemPerformance", () => {
     it("shows the top items with their rank and units", async () => {
       await renderLoaded();
 
-      const topTable = screen.getByText("Top 5 items").nextElementSibling;
-      const rows = within(topTable).getAllByRole("row");
-      expect(rows[1]).toHaveTextContent("#1");
-      expect(rows[1]).toHaveTextContent("Salmon");
-      expect(rows[1]).toHaveTextContent("12");
+      const [first] = dataRows(grid("Top 5 items"));
+      expect(cell(first, "rank")).toHaveTextContent("#1");
+      expect(cell(first, "name")).toHaveTextContent("Salmon");
+      expect(cell(first, "units_sold")).toHaveTextContent("12");
     });
 
     it("explains an empty bottom list when every seller is already in the top list", async () => {
       await renderLoaded();
 
       expect(
-        screen.getByText(
+        within(grid("Bottom 5 items (with sales)")).getByText(
           /Fewer than 10 items sold, so every seller already appears in the top list/i,
         ),
       ).toBeInTheDocument();
@@ -226,12 +253,10 @@ describe("ItemPerformance", () => {
     it("shows add-on items with how many days they were added on", async () => {
       await renderLoaded();
 
-      const addOnTable = screen
-        .getByText("Add-on items")
-        .parentElement.querySelector("table");
-      expect(within(addOnTable).getByText("Mochi")).toBeInTheDocument();
-      expect(within(addOnTable).getByText("2 of 7")).toBeInTheDocument();
-      expect(within(addOnTable).getByText("100%")).toBeInTheDocument();
+      const [mochiRow] = dataRows(grid("Add-on items"));
+      expect(cell(mochiRow, "name")).toHaveTextContent("Mochi");
+      expect(cell(mochiRow, "add_on_days")).toHaveTextContent("2 of 7");
+      expect(cell(mochiRow, "add_on_share")).toHaveTextContent("100%");
     });
 
     it("shows a message when there are no add-on sales", async () => {
@@ -239,7 +264,9 @@ describe("ItemPerformance", () => {
       await renderLoaded();
 
       expect(
-        screen.getByText("No add-on sales in this period."),
+        within(grid("Add-on items")).getByText(
+          "No add-on sales in this period.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -255,8 +282,22 @@ describe("ItemPerformance", () => {
       await renderLoaded();
 
       expect(
-        screen.getByText(/No items match these filters/i),
+        within(allItemsGrid()).getByText(/No items match these filters/i),
       ).toBeInTheDocument();
+    });
+
+    it("shows each item's status in the all items table", async () => {
+      await renderLoaded();
+
+      const rows = dataRows(allItemsGrid());
+      const statusOf = (name) =>
+        cell(
+          rows.find((row) => cell(row, "name").textContent === name),
+          "availability",
+        );
+      expect(statusOf("Salmon")).toHaveTextContent("Available");
+      expect(statusOf("Tuna")).toHaveTextContent("No longer available");
+      expect(statusOf("Seasonal Roll")).toHaveTextContent("Seasonal");
     });
   });
 
@@ -393,7 +434,7 @@ describe("ItemPerformance", () => {
     it("shows rank and share when a sold item is selected", async () => {
       const user = await renderLoaded();
 
-      await user.click(within(allItemsTable()).getByText("Salmon"));
+      await user.click(within(allItemsGrid()).getByText("Salmon"));
 
       expect(
         screen.getByText(/Rank #1 of 3 items with sales/),
@@ -406,7 +447,7 @@ describe("ItemPerformance", () => {
     it("includes add-on details for add-on items", async () => {
       const user = await renderLoaded();
 
-      await user.click(within(allItemsTable()).getByText("Mochi"));
+      await user.click(within(allItemsGrid()).getByText("Mochi"));
 
       expect(
         screen.getByText(/4 units \(100%\) were add-ons, on 2 of 7 days/),
@@ -416,10 +457,20 @@ describe("ItemPerformance", () => {
     it("explains when a selected item is no longer available", async () => {
       const user = await renderLoaded();
 
-      await user.click(within(allItemsTable()).getByText("Tuna"));
+      await user.click(within(allItemsGrid()).getByText("Tuna"));
 
       expect(
         screen.getByText(/no longer available but sold during this period/i),
+      ).toBeInTheDocument();
+    });
+
+    it("selects an item when a row in a short list is clicked", async () => {
+      const user = await renderLoaded();
+
+      await user.click(within(grid("Top 5 items")).getByText("Tuna"));
+
+      expect(
+        screen.getByText(/Rank #2 of 3 items with sales/),
       ).toBeInTheDocument();
     });
 
@@ -447,29 +498,85 @@ describe("ItemPerformance", () => {
   });
 
   describe("Sorting", () => {
-    it("sorts all items by rank by default, with unranked items last", async () => {
+    it("lists all items in rank order by default, with unranked items last", async () => {
       await renderLoaded();
 
-      const rows = within(allItemsTable()).getAllByRole("row");
-      expect(rows[1]).toHaveTextContent("Salmon");
-      expect(rows[rows.length - 1]).toHaveTextContent("Seasonal Roll");
+      const rows = dataRows(allItemsGrid());
+      expect(cell(rows[0], "name")).toHaveTextContent("Salmon");
+      expect(cell(rows.at(-1), "name")).toHaveTextContent("Seasonal Roll");
+      expect(cell(rows.at(-1), "rank")).toHaveTextContent("None");
     });
 
     it("toggles units sold between ascending and descending", async () => {
       const user = await renderLoaded();
-      const sortButton = within(allItemsTable()).getByRole("button", {
-        name: "Units sold",
+      const header = within(allItemsGrid()).getByRole("columnheader", {
+        name: /Units sold/,
       });
 
-      await user.click(sortButton);
-      expect(within(allItemsTable()).getAllByRole("row")[1]).toHaveTextContent(
+      await user.click(header);
+      expect(cell(dataRows(allItemsGrid())[0], "name")).toHaveTextContent(
         "Seasonal Roll",
       );
 
-      await user.click(sortButton);
-      expect(within(allItemsTable()).getAllByRole("row")[1]).toHaveTextContent(
+      await user.click(header);
+      expect(cell(dataRows(allItemsGrid())[0], "name")).toHaveTextContent(
         "Salmon",
       );
+    });
+  });
+
+  describe("Export report", () => {
+    let downloads;
+
+    beforeEach(() => {
+      downloads = [];
+      URL.createObjectURL = jest.fn(() => "blob:report");
+      URL.revokeObjectURL = jest.fn();
+      jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(function recordDownload() {
+          downloads.push(this.download);
+        });
+      window.print = jest.fn();
+    });
+
+    afterEach(() => {
+      HTMLAnchorElement.prototype.click.mockRestore();
+    });
+
+    it("downloads the summary as a CSV named after the report and period", async () => {
+      const user = await renderLoaded();
+
+      await user.click(screen.getByRole("button", { name: "Export report" }));
+      await user.click(
+        screen.getByRole("menuitem", { name: /Summary \(CSV\)/ }),
+      );
+
+      expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+      expect(downloads).toEqual([
+        "item-performance_summary_2026-09-30_to_2026-10-06.csv",
+      ]);
+    });
+
+    it("opens the print dialog for Print or save as PDF", async () => {
+      const user = await renderLoaded();
+
+      await user.click(screen.getByRole("button", { name: "Export report" }));
+      await user.click(
+        screen.getByRole("menuitem", { name: /Print or save as PDF/ }),
+      );
+
+      await waitFor(() => expect(window.print).toHaveBeenCalled());
+    });
+
+    it("hides Export report until results have loaded", async () => {
+      api.get.mockReturnValue(new Promise(() => {}));
+      render(<ItemPerformance />);
+
+      await screen.findByText(/Loading item performance/i);
+      expect(
+        screen.queryByRole("button", { name: "Export report" }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -571,6 +678,19 @@ describe("ItemPerformance", () => {
       expect(
         screen.getByRole("combobox", { name: /find an item/i }),
       ).toBeInTheDocument();
+    });
+
+    it("labels every table with its title", async () => {
+      await renderLoaded();
+
+      for (const title of [
+        "Top 5 items",
+        "Bottom 5 items (with sales)",
+        "Add-on items",
+        "All items",
+      ]) {
+        expect(grid(title)).toBeInTheDocument();
+      }
     });
   });
 });

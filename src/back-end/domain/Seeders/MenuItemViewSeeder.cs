@@ -35,6 +35,7 @@ namespace back_end.domain.Seeders
 
             var itemsByMenu = _context.MenuItemAssignments
                 .AsNoTracking()
+                .Where(a => a.Location_Id == null)
                 .Select(a => new { a.Menu_Id, a.Item_Id })
                 .ToList()
                 .GroupBy(a => a.Menu_Id)
