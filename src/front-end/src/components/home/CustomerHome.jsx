@@ -118,8 +118,7 @@ useEffect(() => {
   }
 
   return (
-<div>
-
+    <div>
       <div
         style={{
           padding: "3rem 2rem",
@@ -136,76 +135,6 @@ useEffect(() => {
           All You Can Eat Authentic Japanese Food.
         </p>
 
-        {/* Show join table section for both guests AND logged-in users */}
-        {(isGuest || userName) && (
-          <div style={{ marginTop: "2rem" }}>
-            {localStorage.getItem("tableNumber") ? (
-              <>
-                <h3>Welcome To {selectedLocationName} </h3>
-                <h3>
-                  You're seated at table: {localStorage.getItem("tableNumber")}
-                  {/* {localStorage.getItem("locationId") && ` at location ${localStorage.getItem("locationId")}`} */}
-                </h3>
-                <div style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "1rem",
-                  marginTop: "1rem"
-                }}>
-                  <button
-                    // onClick={() => {
-                    //   localStorage.removeItem("tableNumber");
-                    //   localStorage.removeItem("locationId");
-                    //   window.location.reload();
-                    //   handleJoinTable
-                    // }}
-                    onClick={() => {
-                      const locationId = localStorage.getItem("locationId");
-                      const tableNum = localStorage.getItem("tableNumber");
-                      
-                      if (locationId && tableNum) {
-                        router.push(`/join?location=${locationId}&table=${tableNum}`);
-                      }
-                    }}
-                    style={{
-                      backgroundColor: "#388e3c",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "8px 16px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Join Session
-                  </button>
-                  <button
-                    onClick={() => {
-                      // localStorage.removeItem("tableNumber");
-                      // localStorage.removeItem("locationId");
-                      window.location.reload();
-                    }}
-                    style={{
-                      backgroundColor: "#f57c00",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "8px 16px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Change Table
-                  </button>
-                </div>
-
-
-              </>
-            ) : (
-              <>
-                
-              </>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
