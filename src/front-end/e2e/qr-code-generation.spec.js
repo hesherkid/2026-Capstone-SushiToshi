@@ -78,17 +78,19 @@ test.describe('QR Code Generation E2E', () => {
 });
 
 test.describe('Customer Ordering Flow E2E', () => {
-  test('customer can access start-session page', async ({ page }) => {
-    // Simulate QR code scan by navigating to session URL
-    await page.goto('/start-session?locationId=1&tableNumber=5');
+  // QR codes encode /auth/login?locationId=X&tableNumber=Y (see QrGeneratorService.cs)
+  test('customer can access the QR landing page', async ({ page }) => {
+    // Simulate QR code scan by navigating to the URL the QR code encodes
+    await page.goto('/auth/login?locationId=1&tableNumber=5');
+    await page.waitForLoadState('networkidle');
 
-    // Check if the page loads (authentication might redirect)
-    // await expect(page).toHaveURL(/start-session/);
+    await expect(page).toHaveURL(/\/auth\/login/);
   });
 
   test('session parameters are preserved in URL', async ({ page }) => {
     // Navigate with session parameters
-    await page.goto('/start-session?locationId=1&tableNumber=5');
+    await page.goto('/auth/login?locationId=1&tableNumber=5');
+    await page.waitForLoadState('networkidle');
 
     // Verify URL contains parameters
     const url = page.url();
