@@ -69,6 +69,14 @@ namespace back_end.domain.Seeders
                     }
                     else status = OrderStatus.Delivered;
 
+                    DateTime? approvedAt = status == OrderStatus.Pending
+                        ? null
+                        : time.AddMinutes(_rng.Next(1, 7));
+
+                    DateTime? completedAt = status == OrderStatus.Delivered
+                        ? approvedAt!.Value.AddMinutes(_rng.Next(10, 26))
+                        : null;
+
                     var order = new SessionOrder
                     {
                         session_id = bill.Session_Id,
@@ -77,7 +85,8 @@ namespace back_end.domain.Seeders
                         User_Name = $"{userInfo.GivenName} {userInfo.Surname}".Trim(),
                         Status = status,
                         Created_At = time,
-                        Completed_At = status == OrderStatus.Delivered ? time.AddMinutes(_rng.Next(15, 31)) : null
+                        Approved_At = approvedAt,
+                        Completed_At = completedAt
                     };
 
                     _context.SessionOrders.Add(order);
