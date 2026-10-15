@@ -58,7 +58,7 @@ namespace back_end.Services.Analytics
 
             var salesRows =
                 from oi in salesQuery
-                join a in _context.MenuItemAssignments
+                join a in _context.MenuItemAssignments.Where(a => a.Location_Id == null)
                     on new { MenuId = oi.Menu_Id, ItemId = oi.Item_Id }
                     equals new { MenuId = a.Menu_Id, ItemId = a.Item_Id } into assignments
                 from a in assignments.DefaultIfEmpty()
