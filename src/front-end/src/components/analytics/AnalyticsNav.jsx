@@ -34,7 +34,12 @@ const AnalyticsNav = () => {
       variant="scrollable"
       scrollButtons="auto"
       allowScrollButtonsMobile
-      sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}
+      sx={{
+        borderBottom: 1,
+        borderColor: "divider",
+        mb: 2,
+        displayPrint: "none",
+      }}
     >
       {ANALYTICS_PAGES.map((page) => (
         <Tab

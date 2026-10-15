@@ -25,9 +25,32 @@ jest.mock("@/utils/storage", () => ({
   },
 }));
 
-const ENDPOINT = "analytics/browsing-behavior";
+jest.mock("@mui/x-data-grid", () => {
+  if (typeof global.TextEncoder === "undefined") {
+    const { TextEncoder, TextDecoder } = jest.requireActual("util");
+    Object.assign(global, { TextEncoder, TextDecoder });
+  }
+  const actual = jest.requireActual("@mui/x-data-grid");
+  const React = jest.requireActual("react");
+  return {
+    ...actual,
+    DataGrid: (props) =>
+      React.createElement(actual.DataGrid, {
+        ...props,
+        disableVirtualization: true,
+      }),
+  };
+});
 
-//  Test data (matches BrowsingBehaviorResponseDTO)
+if (typeof window.ResizeObserver === "undefined") {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+const ENDPOINT = "analytics/browsing-behavior";
 
 const makeItem = (overrides) => ({
   item_id: 0,
@@ -52,7 +75,6 @@ const makeItem = (overrides) => ({
   ...overrides,
 });
 
-// Viewed by 3 tables, 2 ordered it
 const salmon = makeItem({
   item_id: 1,
   name: "Salmon",
@@ -68,7 +90,6 @@ const salmon = makeItem({
   average_view_seconds_not_ordered: 7.5,
 });
 
-// Viewed, never ordered, some views while unavailable, unavailable now
 const tuna = makeItem({
   item_id: 2,
   name: "Tuna",
@@ -85,7 +106,6 @@ const tuna = makeItem({
   unavailable_views: 2,
 });
 
-// Viewed once and ordered
 const mochi = makeItem({
   item_id: 3,
   name: "Mochi",
@@ -102,7 +122,6 @@ const mochi = makeItem({
   average_view_seconds_ordered: 20,
 });
 
-// Orderable, never viewed
 const seasonalRoll = makeItem({
   item_id: 4,
   name: "Seasonal Roll",
@@ -155,8 +174,6 @@ const buildResponse = (overrides = {}) => ({
   ...overrides,
 });
 
-//  Helpers
-
 const lastParams = () => api.get.mock.calls.at(-1)[1].params;
 
 const renderLoaded = async () => {
@@ -166,14 +183,18 @@ const renderLoaded = async () => {
   return user;
 };
 
-const tableUnder = (title) =>
-  screen.getByText(title).parentElement.querySelector("table");
+const grid = (title) => screen.getByRole("grid", { name: title });
+const allItemsGrid = () => grid("All items");
 
-const allItemsTable = () => {
-  const tables = screen.getAllByRole("table");
-  return tables[tables.length - 1];
-  page;
-};
+const dataRows = (gridElement) =>
+  within(gridElement)
+    .getAllByRole("row")
+    .filter((row) => row.hasAttribute("data-id"));
+
+const cell = (row, field) => row.querySelector(`[data-field="${field}"]`);
+
+const rowFor = (gridElement, name) =>
+  within(gridElement).getByText(name).closest('[role="row"]');
 
 describe("BrowsingBehavior", () => {
   beforeEach(() => {
@@ -250,17 +271,17 @@ describe("BrowsingBehavior", () => {
     it("shows the most viewed items with rank and views", async () => {
       await renderLoaded();
 
-      const rows = within(tableUnder("Most viewed")).getAllByRole("row");
-      expect(rows[1]).toHaveTextContent("Salmon");
-      expect(rows[1]).toHaveTextContent("#1");
-      expect(rows[1]).toHaveTextContent("6");
+      const [first] = dataRows(grid("Most viewed"));
+      expect(cell(first, "name")).toHaveTextContent("Salmon");
+      expect(cell(first, "view_rank")).toHaveTextContent("#1");
+      expect(cell(first, "views")).toHaveTextContent("6");
     });
 
     it("explains an empty least viewed list when every viewed item is already in most viewed", async () => {
       await renderLoaded();
 
       expect(
-        screen.getByText(
+        within(grid("Least viewed (excluding zero views)")).getByText(
           /Fewer than 10 items were viewed, so every viewed item already appears in Most viewed/i,
         ),
       ).toBeInTheDocument();
@@ -269,19 +290,18 @@ describe("BrowsingBehavior", () => {
     it("shows viewed and ordered items with tables and conversion", async () => {
       await renderLoaded();
 
-      const rows = within(tableUnder("Top 5 viewed and ordered")).getAllByRole(
-        "row",
-      );
-      expect(rows[1]).toHaveTextContent("Salmon");
-      expect(rows[1]).toHaveTextContent("2 tables");
-      expect(rows[1]).toHaveTextContent("66.7%");
+      const [first] = dataRows(grid("Top 5 viewed and ordered"));
+      expect(cell(first, "name")).toHaveTextContent("Salmon");
+      expect(cell(first, "ordering_sessions")).toHaveTextContent("2");
+      expect(cell(first, "conversion_rate")).toHaveTextContent("66.7%");
     });
 
     it("shows viewed but not ordered items and the total count", async () => {
       await renderLoaded();
 
-      const table = tableUnder("Top 5 viewed but not ordered");
-      expect(within(table).getByText("Tuna")).toBeInTheDocument();
+      expect(
+        within(grid("Top 5 viewed but not ordered")).getByText("Tuna"),
+      ).toBeInTheDocument();
       expect(
         screen.getByText("1 items in total were viewed but not ordered."),
       ).toBeInTheDocument();
@@ -296,7 +316,9 @@ describe("BrowsingBehavior", () => {
         ),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("No item reached 10 views in this period."),
+        within(grid("Low conversion with high views")).getByText(
+          "No item reached 10 views in this period.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -310,10 +332,9 @@ describe("BrowsingBehavior", () => {
     it("shows views made while an item was unavailable", async () => {
       await renderLoaded();
 
-      const table = tableUnder("Views of unavailable items");
-      const row = within(table).getByText("Tuna").closest("tr");
-      expect(row).toHaveTextContent("2");
-      expect(row).toHaveTextContent("Unavailable");
+      const row = rowFor(grid("Views of unavailable items"), "Tuna");
+      expect(cell(row, "unavailable_views")).toHaveTextContent("2");
+      expect(cell(row, "available_now")).toHaveTextContent("Unavailable");
     });
 
     it("badges seasonal and not-available-now items", async () => {
@@ -328,11 +349,10 @@ describe("BrowsingBehavior", () => {
     it("shows a dash instead of 0 for items with nothing to calculate", async () => {
       await renderLoaded();
 
-      const row = within(allItemsTable())
-        .getByText("Seasonal Roll")
-        .closest("tr");
-      expect(row).toHaveTextContent("None");
-      expect(within(row).getAllByText("-")).toHaveLength(2);
+      const row = rowFor(allItemsGrid(), "Seasonal Roll");
+      expect(cell(row, "view_rank")).toHaveTextContent("None");
+      expect(cell(row, "average_view_seconds")).toHaveTextContent("-");
+      expect(cell(row, "conversion_rate")).toHaveTextContent("-");
     });
 
     it("shows a message when no items match the filters", async () => {
@@ -350,7 +370,7 @@ describe("BrowsingBehavior", () => {
       await renderLoaded();
 
       expect(
-        screen.getByText(/No items match these filters/i),
+        within(allItemsGrid()).getByText(/No items match these filters/i),
       ).toBeInTheDocument();
     });
   });
@@ -479,7 +499,7 @@ describe("BrowsingBehavior", () => {
     it("shows rank, tables and conversion when a viewed item is selected", async () => {
       const user = await renderLoaded();
 
-      await user.click(within(allItemsTable()).getByText("Salmon"));
+      await user.click(within(allItemsGrid()).getByText("Salmon"));
 
       expect(screen.getByText(/Rank #1 of 3 viewed items/)).toBeInTheDocument();
       expect(
@@ -492,7 +512,7 @@ describe("BrowsingBehavior", () => {
     it("mentions views made while the item was unavailable", async () => {
       const user = await renderLoaded();
 
-      await user.click(within(allItemsTable()).getByText("Tuna"));
+      await user.click(within(allItemsGrid()).getByText("Tuna"));
 
       expect(screen.getByText(/2 views while unavailable/)).toBeInTheDocument();
     });
@@ -509,7 +529,7 @@ describe("BrowsingBehavior", () => {
       const user = await renderLoaded();
 
       await user.click(
-        within(tableUnder("Top 5 viewed and ordered")).getByText("Mochi"),
+        within(grid("Top 5 viewed and ordered")).getByText("Mochi"),
       );
 
       expect(screen.getByText(/Rank #3 of 3 viewed items/)).toBeInTheDocument();
@@ -529,27 +549,27 @@ describe("BrowsingBehavior", () => {
   });
 
   describe("Sorting", () => {
-    it("sorts all items by rank by default, with unviewed items last", async () => {
+    it("lists all items in rank order by default, with unviewed items last", async () => {
       await renderLoaded();
 
-      const rows = within(allItemsTable()).getAllByRole("row");
-      expect(rows[1]).toHaveTextContent("Salmon");
-      expect(rows[rows.length - 1]).toHaveTextContent("Seasonal Roll");
+      const rows = dataRows(allItemsGrid());
+      expect(cell(rows[0], "name")).toHaveTextContent("Salmon");
+      expect(cell(rows.at(-1), "name")).toHaveTextContent("Seasonal Roll");
     });
 
     it("toggles views between ascending and descending", async () => {
       const user = await renderLoaded();
-      const sortButton = within(allItemsTable()).getByRole("button", {
-        name: "Views",
+      const header = within(allItemsGrid()).getByRole("columnheader", {
+        name: /^Views/,
       });
 
-      await user.click(sortButton);
-      expect(within(allItemsTable()).getAllByRole("row")[1]).toHaveTextContent(
+      await user.click(header);
+      expect(cell(dataRows(allItemsGrid())[0], "name")).toHaveTextContent(
         "Seasonal Roll",
       );
 
-      await user.click(sortButton);
-      expect(within(allItemsTable()).getAllByRole("row")[1]).toHaveTextContent(
+      await user.click(header);
+      expect(cell(dataRows(allItemsGrid())[0], "name")).toHaveTextContent(
         "Salmon",
       );
     });
@@ -558,17 +578,72 @@ describe("BrowsingBehavior", () => {
       const user = await renderLoaded();
 
       await user.click(
-        within(allItemsTable()).getByRole("button", { name: "Conversion" }),
+        within(allItemsGrid()).getByRole("columnheader", {
+          name: /Conversion/,
+        }),
       );
 
-      const rows = within(allItemsTable()).getAllByRole("row");
-      expect(rows[1]).toHaveTextContent("Seasonal Roll");
-      expect(rows[2]).toHaveTextContent("Tuna");
-      expect(rows[rows.length - 1]).toHaveTextContent("Mochi");
+      const rows = dataRows(allItemsGrid());
+      expect(cell(rows[0], "name")).toHaveTextContent("Seasonal Roll");
+      expect(cell(rows[1], "name")).toHaveTextContent("Tuna");
+      expect(cell(rows.at(-1), "name")).toHaveTextContent("Mochi");
+    });
+  });
+
+  describe("Export report", () => {
+    let downloads;
+
+    beforeEach(() => {
+      downloads = [];
+      URL.createObjectURL = jest.fn(() => "blob:report");
+      URL.revokeObjectURL = jest.fn();
+      jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(function recordDownload() {
+          downloads.push(this.download);
+        });
+      window.print = jest.fn();
+    });
+
+    afterEach(() => {
+      HTMLAnchorElement.prototype.click.mockRestore();
+    });
+
+    it("downloads the summary as a CSV named after the report and period", async () => {
+      const user = await renderLoaded();
+
+      await user.click(screen.getByRole("button", { name: "Export report" }));
+      await user.click(
+        screen.getByRole("menuitem", { name: /Summary \(CSV\)/ }),
+      );
+
+      expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+      expect(downloads).toEqual([
+        "browsing-behavior_summary_2026-09-30_to_2026-10-06.csv",
+      ]);
+    });
+
+    it("opens the print dialog for Print or save as PDF", async () => {
+      const user = await renderLoaded();
+
+      await user.click(screen.getByRole("button", { name: "Export report" }));
+      await user.click(
+        screen.getByRole("menuitem", { name: /Print or save as PDF/ }),
+      );
+
+      await waitFor(() => expect(window.print).toHaveBeenCalled());
     });
   });
 
   describe("Error handling", () => {
+    beforeEach(() => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      console.error.mockRestore();
+    });
+
     it("shows validation messages from the API", async () => {
       api.get.mockRejectedValue({
         response: {
@@ -660,6 +735,22 @@ describe("BrowsingBehavior", () => {
       expect(
         screen.getByRole("combobox", { name: /find an item/i }),
       ).toBeInTheDocument();
+    });
+
+    it("labels every table with its title", async () => {
+      await renderLoaded();
+
+      for (const title of [
+        "Most viewed",
+        "Least viewed (excluding zero views)",
+        "Top 5 viewed and ordered",
+        "Top 5 viewed but not ordered",
+        "Low conversion with high views",
+        "Views of unavailable items",
+        "All items",
+      ]) {
+        expect(grid(title)).toBeInTheDocument();
+      }
     });
   });
 });

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { decodeToken, isTokenExpired } from "@/config/auth";
 import { getAuthToken } from "@/utils/auth";
 import { useRouter } from "next/navigation";
-import { api } from '@/config/api'
+import { api } from "@/config/api";
 import useAuth from "@/hooks/useAuth";
 import { loginUser } from "@/utils/auth";
 
@@ -23,7 +23,13 @@ const isGuestAccount = () => {
   }
 
   const claims = decodeToken(token);
-  const email = (claims?.email || claims?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || "").toLowerCase();
+  const email = (
+    claims?.email ||
+    claims?.[
+      "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+    ] ||
+    ""
+  ).toLowerCase();
   return email === "guestemail@email.com";
 };
 
@@ -34,45 +40,43 @@ const HomePage = () => {
   const [tableNumber, setTableNumber] = useState("");
   const [locations, setLocations] = useState([]); // ← Changed from location to locations
   const [selectedLocation, setSelectedLocation] = useState(""); // ← Added this state
-  const [selectedLocationName , setSelectedLocationName] = useState("")
+  const [selectedLocationName, setSelectedLocationName] = useState("");
   const [loading, setLoading] = useState(false); // ← Added loading state
   const router = useRouter();
   const { isAuthenticated: isAuthenticatedHook, userEmail } = useAuth();
 
+  useEffect(() => {
+    const getLocation = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/location");
+        setLocations(response.data);
 
-useEffect(() => {
-  const getLocation = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/location");
-      setLocations(response.data);
-      console.log(`Locations: ${JSON.stringify(response.data, null, 2)}`);
-      
-      // Auto-select first location if only one exists
-      if (response.data && response.data.length === 1) {
-        setSelectedLocation(response.data[0].name);
+        // Auto-select first location if only one exists
+        if (response.data && response.data.length === 1) {
+          setSelectedLocation(response.data[0].name);
+        }
+
+        // Use response.data instead of selectedLocation
+        const locationId = Number(localStorage.getItem("locationId"));
+        const filteredLocation = response.data.find(
+          (loc) => loc.location_Id === locationId,
+        );
+        console.log("Filtered location:", filteredLocation);
+
+        // If you want to set it in state
+        if (filteredLocation) {
+          setSelectedLocationName(filteredLocation.name);
+        }
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      // Use response.data instead of selectedLocation
-      const locationId = Number(localStorage.getItem("locationId"));
-      const filteredLocation = response.data.find(loc => loc.location_Id === locationId);
-      console.log('Filtered location:', filteredLocation);
-      
-      // If you want to set it in state
-      if (filteredLocation) {
-        setSelectedLocationName(filteredLocation.name);
-      }
-      
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  getLocation();
-}, []);
-
+    getLocation();
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -85,11 +89,12 @@ useEffect(() => {
         const claims = decodeToken(token);
         if (claims) {
           // Try to get name from different possible claim fields
-          name = claims.name || 
-                 claims.given_name || 
-                 claims.email?.split('@')[0] || 
-                 userEmail?.split('@')[0] ||
-                 "User";
+          name =
+            claims.name ||
+            claims.given_name ||
+            claims.email?.split("@")[0] ||
+            userEmail?.split("@")[0] ||
+            "User";
         }
       }
 
@@ -113,8 +118,8 @@ useEffect(() => {
     }
   }, [router, userEmail]);
 
-  const handleContinueAsGuest = async() => {
-    const response = await loginUser(guestEmail,guestPassword);
+  const handleContinueAsGuest = async () => {
+    const response = await loginUser(guestEmail, guestPassword);
 
     console.log("AfterLogin");
     router.push("/");
@@ -133,7 +138,9 @@ useEffect(() => {
       alert("Please enter a table number.");
       return;
     }
-    router.push(`/join?location=${selectedLocation}&table=${tableNumber.trim()}`);
+    router.push(
+      `/join?location=${selectedLocation}&table=${tableNumber.trim()}`,
+    );
   };
 
   if (!ready) return null;
@@ -144,8 +151,7 @@ useEffect(() => {
   const showGuestButton = !userName && !isGuest;
 
   return (
-<div>
-
+    <div>
       <div
         style={{
           padding: "3rem 2rem",
@@ -154,7 +160,13 @@ useEffect(() => {
           textAlign: "center",
         }}
       >
-        <h1 style={{ fontSize: "2.2rem", marginBottom: "0.5rem", fontWeight: "600" }}>
+        <h1
+          style={{
+            fontSize: "2.2rem",
+            marginBottom: "0.5rem",
+            fontWeight: "600",
+          }}
+        >
           Welcome to Sushi Toshi{userName ? `, ${userName}` : ""}!
         </h1>
 
@@ -172,12 +184,14 @@ useEffect(() => {
                   You're seated at table: {localStorage.getItem("tableNumber")}
                   {/* {localStorage.getItem("locationId") && ` at location ${localStorage.getItem("locationId")}`} */}
                 </h3>
-                <div style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "1rem",
-                  marginTop: "1rem"
-                }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "1rem",
+                    marginTop: "1rem",
+                  }}
+                >
                   <button
                     // onClick={() => {
                     //   localStorage.removeItem("tableNumber");
@@ -188,9 +202,11 @@ useEffect(() => {
                     onClick={() => {
                       const locationId = localStorage.getItem("locationId");
                       const tableNum = localStorage.getItem("tableNumber");
-                      
+
                       if (locationId && tableNum) {
-                        router.push(`/join?location=${locationId}&table=${tableNum}`);
+                        router.push(
+                          `/join?location=${locationId}&table=${tableNum}`,
+                        );
                       }
                     }}
                     style={{
@@ -222,13 +238,11 @@ useEffect(() => {
                     Change Table
                   </button>
                 </div>
-
-
               </>
             ) : (
               <>
                 <h3>Join a Table</h3>
-                
+
                 {/* Location Picker */}
                 <select
                   value={selectedLocation}
@@ -246,14 +260,26 @@ useEffect(() => {
                 >
                   <option value="">Select Location</option>
                   {locations.map((location) => (
-                    <option key={location.location_Id} value={location.location_Id}>
-                      {location.name || location.address || `Location ${location.location_number}`}
+                    <option
+                      key={location.location_Id}
+                      value={location.location_Id}
+                    >
+                      {location.name ||
+                        location.address ||
+                        `Location ${location.location_number}`}
                     </option>
                   ))}
                 </select>
 
                 {/* Table Number Input */}
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", justifyContent: "center" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    justifyContent: "center",
+                  }}
+                >
                   <input
                     type="number"
                     placeholder="Table #"
@@ -272,12 +298,18 @@ useEffect(() => {
                     onClick={handleJoinTable}
                     disabled={!selectedLocation || !tableNumber.trim()}
                     style={{
-                      backgroundColor: selectedLocation && tableNumber.trim() ? "#388e3c" : "#ccc",
+                      backgroundColor:
+                        selectedLocation && tableNumber.trim()
+                          ? "#388e3c"
+                          : "#ccc",
                       color: "white",
                       border: "none",
                       borderRadius: "8px",
                       padding: "10px 22px",
-                      cursor: selectedLocation && tableNumber.trim() ? "pointer" : "not-allowed",
+                      cursor:
+                        selectedLocation && tableNumber.trim()
+                          ? "pointer"
+                          : "not-allowed",
                     }}
                   >
                     Join Table
