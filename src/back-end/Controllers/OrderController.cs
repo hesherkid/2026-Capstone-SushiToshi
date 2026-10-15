@@ -559,6 +559,7 @@ namespace back_end.Controllers
                 //Retrieve the order
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
+                    .Include(o => o.DiningSession)
                     .FirstOrDefaultAsync(o => o.Order_Id == orderId);
 
                 //Check if order exists
@@ -597,21 +598,31 @@ namespace back_end.Controllers
                 // The User_Id field in the order can be null for guest users
 
                 //Add items to order
+                var session = order.DiningSession;
+                var itemIds = items.Select(i => i.Item_Id).ToList();
+                var menuRows = await _context.MenuItemAssignments
+                    .ForLocation(session.Menu_Id, session.Location_Id)
+                    .Where(a => itemIds.Contains(a.Item_Id))
+                    .ToListAsync();
+
                 foreach (var item in items)
                 {
-                    _logger.LogInformation("Adding item {ItemId} qty {Qty} price {Price}",
-                        item.Item_Id, item.Quantity, item.Price_At_Time);
+                    var assignment = menuRows.EffectiveFor(session.Menu_Id, item.Item_Id, session.Location_Id);
+                    if (assignment == null || assignment.Status != MenuItemStatus.Available)
+                    {
+                        return BadRequest(new { message = $"Item {item.Item_Id} is not available at this location" });
+                    }
 
                     order.OrderItems.Add(new OrderItems
                     {
-                        Menu_Id = order.DiningSession?.Menu_Id ?? 1, //FIXME: Defaulting to 1 if DiningSession or Menu_Id is null. Only works if DiningSession has loaded. Line 538 that loads the order should include the DiningSession, currently only includes items. 
-                        //TODO: either add lazy loading for DiningSession or include it when fetching the order.
+                        Menu_Id = session.Menu_Id,
                         Item_Id = item.Item_Id,
                         Quantity = item.Quantity,
-                        Price_At_Time = item.Price_At_Time, //FIXME: This should reflect the price at the time of ordering, ensure it's correctly set.
+                        Price_At_Time = assignment.Is_Add_On ? assignment.Price : 0m,   // server decides, client price is ignored
                         Order_Item_Status = OrderStatus.Pending
                     });
                 }
+
 
 
                 _logger.LogInformation("💾 Saving changes...");
@@ -879,8 +890,10 @@ namespace back_end.Controllers
                     completedAt = o.Completed_At,
                     items = o.OrderItems.Select(oi =>
                     {
-                        var assignment = oi.MenuItem?.MenuAssignments
-                            .FirstOrDefault(ma => ma.Menu_Id == oi.Menu_Id && ma.Item_Id == oi.Item_Id);
+                        var assignment = oi
+                            .MenuItem?
+                            .MenuAssignments
+                            .EffectiveFor(oi.Menu_Id, oi.Item_Id, o.DiningSession.Location_Id);
                         bool isAddOn = assignment?.Is_Add_On ?? false;
 
                         return new
@@ -1061,8 +1074,10 @@ namespace back_end.Controllers
                     .Where(o => o.session_id == sessionId &&
                                 (!bill_id.HasValue || o.Bill_Id == bill_id.Value) &&
                                 (isStaff || !userId.HasValue || o.User_Id == userId))
+                    .Include(o => o.Bill)
                     .Include(o => o.OrderItems)
                         .ThenInclude(or => or.MenuItem)
+                            .ThenInclude(mi => mi.MenuAssignments)
                     .OrderBy(o => o.Created_At)
                     .ToListAsync();
 
@@ -1079,8 +1094,10 @@ namespace back_end.Controllers
                     orderTotal = o.OrderItems.Sum(or =>
                     {
                         // Get menu assignment for this item
-                        var assignment = or.MenuItem?.MenuAssignments
-                            .FirstOrDefault(ma => ma.Menu_Id == or.Menu_Id && ma.Item_Id == or.Item_Id);
+                        var assignment = or
+                            .MenuItem?
+                            .MenuAssignments
+                            .EffectiveFor(or.Menu_Id, or.Item_Id, session.Location_Id);
 
                         // Only count price if it's an add-on item
                         bool isAddOn = assignment?.Is_Add_On ?? false;
@@ -1092,8 +1109,10 @@ namespace back_end.Controllers
                     items = o.OrderItems.Select(oi =>
                     {
                         // Get menu assignment for this specific item
-                        var assignment = oi.MenuItem?.MenuAssignments
-                            .FirstOrDefault(ma => ma.Menu_Id == oi.Menu_Id && ma.Item_Id == oi.Item_Id);
+                        var assignment = oi
+                            .MenuItem?
+                            .MenuAssignments
+                            .EffectiveFor(oi.Menu_Id, oi.Item_Id, session.Location_Id);
 
                         bool isAddOn = assignment?.Is_Add_On ?? false;
 
@@ -1259,9 +1278,11 @@ namespace back_end.Controllers
                     completedAt = o.Completed_At,
                     items = o.OrderItems.Select(i =>
                     {
-                        // Get menu assignment for this item
-                        var assignment = i.MenuItem?.MenuAssignments
-                            .FirstOrDefault(ma => ma.Menu_Id == i.Menu_Id && ma.Item_Id == i.Item_Id);
+                        // Get menu assignment for this item at this session's location
+                        var assignment = i
+                            .MenuItem?
+                            .MenuAssignments
+                            .EffectiveFor(i.Menu_Id, i.Item_Id, o.DiningSession.Location_Id);
 
                         bool isAddOn = assignment?.Is_Add_On ?? false;
 

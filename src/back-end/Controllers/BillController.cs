@@ -646,14 +646,18 @@ namespace back_end.controllers
             (bill.Tot_Count * pricing.ToddlerBasePrice);
 
         // Get all add-on items for this bill
+        var menuId = bill.DiningSession.Menu_Id;
+        var locationId = bill.DiningSession.Location_Id;
         var addOnItems = await _context.OrderItems
           .Include(oi => oi.SessionOrder)
           .Include(oi => oi.MenuItem)
           .Where(oi =>
               oi.SessionOrder.Bill_Id == _bill_id &&
               oi.SessionOrder.Status != OrderStatus.Cancelled &&
-              _context.MenuItemAssignments
-                  .Any(mia => mia.Item_Id == oi.Item_Id && mia.Is_Add_On == true)
+              _context.MenuItemAssignments.Any(mia =>
+                mia.Menu_Id == menuId && mia.Item_Id == oi.Item_Id &&
+                (mia.Location_Id == null || mia.Location_Id == locationId) &&
+                mia.Is_Add_On)
           )
           .Select(oi => new BillAddOnItem
           {
