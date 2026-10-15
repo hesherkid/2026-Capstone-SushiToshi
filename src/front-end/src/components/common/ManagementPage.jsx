@@ -34,7 +34,7 @@ export const ManagementPage = ({
   }, [success]);
 
   return (
-    <Box sx={{ p: 3, ...sx }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, ...sx }}>
       <ManagementHeader
         title={title}
         addLabel={addLabel}
