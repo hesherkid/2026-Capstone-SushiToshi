@@ -187,18 +187,6 @@ const handleLogout = () => {
               <MenuIcon />
             </IconButton>
           )}
-          {/* <Typography
-            variant="h6"
-            component="div"
-            sx={{
-              fontSize: { xs: "1rem", sm: "1.25rem" },
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {title}
-          </Typography> */}
         </Box>
 
         <Box
@@ -206,11 +194,12 @@ const handleLogout = () => {
             display: "flex",
             alignItems: "center",
             gap: 2,
+            pl: 1.8,
           }}
         >
           <Image
             src="/images/logo.png"
-            alt="Logo"
+            alt="Sushi Toshi"
             width={115}
             height={70}
             style={{
