@@ -55,7 +55,7 @@ describe('FullMenu guest flow', () => {
       }
 
       if (url.includes('/DiningSession/session-menu/42')) {
-        return Promise.resolve({ status: 200, data: { menu_id: 7 } });
+        return Promise.resolve({ status: 200, data: { menu_id: 7, location_Id: 3 } });
       }
 
       if (url.includes('/Category')) {
@@ -107,6 +107,14 @@ describe('FullMenu guest flow', () => {
       expect(screen.getByText('Miso Soup')).toBeInTheDocument();
     });
 
+    // Items are requested for the session's location
+    expect(publicApi.get).toHaveBeenCalledWith('/Menu/7/item', {
+      params: { locationId: 3 },
+    });
+    // ...and the API client for logged-in users isn't used for guests
+    expect(api.get).not.toHaveBeenCalled();
+
+
     expect(
       screen.getByText(/there is no open bill for this session yet/i)
     ).toBeInTheDocument();
@@ -150,5 +158,55 @@ describe('FullMenu guest flow', () => {
     expect(
       within(cartDrawer).getByRole('button', { name: 'Place Order (1 item, 1 unit)' })
     ).toBeDisabled();
+  });
+
+  it('shows the location price for add-on items', async () => {
+    // Wrap the default mock: the item price depends on the locationId sent
+    const baseMock = publicApi.get.getMockImplementation();
+    publicApi.get.mockImplementation((url, config) => {
+      if (url.includes('/Menu/7/item')) {
+        const atLocation3 = config?.params?.locationId === 3;
+        return Promise.resolve({
+          status: 200,
+          data: [
+            {
+              item_id: 13,
+              name: 'Wagyu Nigiri',
+              description: 'Premium add-on',
+              price: atLocation3 ? 9 : 6, // location override vs default
+              is_add_on: true,            // price is only shown for add-ons
+              category_id: 2,
+              category: 'Sushi Rolls',
+              tags: [],
+              item_image_url: '',
+            },
+          ],
+        });
+      }
+      return baseMock(url, config);
+    });
+
+    render(<FullMenu />);
+
+    expect(await screen.findByText('Wagyu Nigiri')).toBeInTheDocument();
+    expect(screen.getByText('$9')).toBeInTheDocument();
+    expect(screen.queryByText('$6')).not.toBeInTheDocument();
+  });
+
+  it('falls back to default prices when the session has no location', async () => {
+    const baseMock = publicApi.get.getMockImplementation();
+    publicApi.get.mockImplementation((url, config) => {
+      if (url.includes('/DiningSession/session-menu/42')) {
+        return Promise.resolve({ status: 200, data: { menu_id: 7 } }); // no location
+      }
+      return baseMock(url, config);
+    });
+
+    render(<FullMenu />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Miso Soup')).toBeInTheDocument();
+    });
+    expect(publicApi.get).toHaveBeenCalledWith('/Menu/7/item', { params: {} });
   });
 });
