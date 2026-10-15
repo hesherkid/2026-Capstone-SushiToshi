@@ -45,7 +45,7 @@ const AppBarWithTitle = ({ title }) => {
   const [bagItemCount, setBagItemCount] = useState(0);
   const { isAuthenticated, userRole, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
-  const isGuest = typeof window !== "undefined" && localStorage.getItem("guest") === "true";
+  const [isGuest, setIsGuest] = useState(false);
   const canShowDrawer =
     !isLoginPage && (isAuthenticated || isGuest);
 
@@ -63,9 +63,10 @@ const AppBarWithTitle = ({ title }) => {
   }, []);
 
   // The app bar stays mounted across client-side navigation, so re-read the
-  // table number on each route change (e.g. after the QR login saves it)
+  // table number and guest flag on each route change (e.g. after the QR login saves them)
   useEffect(() => {
     setTableNumber(localStorage.getItem("tableNumber") || "");
+    setIsGuest(localStorage.getItem("guest") === "true");
   }, [pathname]);
 
   useEffect(() => {
