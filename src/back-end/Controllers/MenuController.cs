@@ -348,7 +348,7 @@ namespace back_end.Controllers
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<object>>> GetItemsByMenu(int menu)
+        public async Task<ActionResult<IEnumerable<object>>> GetItemsByMenu(int menu, [FromQuery] int? locationId)
         {
             try
             {
@@ -362,14 +362,16 @@ namespace back_end.Controllers
                 else
                 {
                     //Get all details, category and tags for all menu items
-                    var itemInfo = await _context.MenuItemAssignments
-                            .Where(m => m.Menu_Id == menu && m.Status == MenuItemStatus.Available)
-                            .Include(m => m.MenuItem)
-                                .ThenInclude(me => me.Category)
-                            .Include(m => m.MenuItem)
-                                .ThenInclude(me => me.MenuItemTags)
-                                .ThenInclude(me => me.Tag)
+                    var rows = await _context.MenuItemAssignments
+                            .ForLocation(menu, locationId)
+                            .Include(m => m.MenuItem).ThenInclude(me => me.Category)
+                            .Include(m => m.MenuItem).ThenInclude(me => me.MenuItemTags).ThenInclude(me => me.Tag)
                             .ToListAsync();
+
+                    // Resolve first, THEN filter, so an "Unavailable" override hides the item at that location only
+                    var itemInfo = rows.Effective()
+                            .Where(m => m.Status == MenuItemStatus.Available)
+                            .ToList();
 
                     //Arrange details into a user friendly fashion
                     //Only takes tag name and color

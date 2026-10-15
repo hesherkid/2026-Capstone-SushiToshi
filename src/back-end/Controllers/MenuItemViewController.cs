@@ -98,7 +98,9 @@ namespace back_end.Controllers
 
                 var assignment = await _context.MenuItemAssignments
                     .AsNoTracking()
-                    .Where(a => a.Menu_Id == session.Menu_Id && a.Item_Id == request.ItemId)
+                    .ForLocation(session.Menu_Id, session.Location_Id)
+                    .Where(a => a.Item_Id == request.ItemId)
+                    .OrderBy(a => a.Location_Id == null)          // override first
                     .Select(a => new { a.Status, ItemStatus = a.MenuItem.Status })
                     .FirstOrDefaultAsync();
 

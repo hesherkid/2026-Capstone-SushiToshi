@@ -72,6 +72,14 @@ namespace back_end.Controllers
                     return BadRequest("Add-on items must have a price greater than 0");
                 }
 
+                if (assignmentData.Location_Id != null && 
+                    !await _context.MenuItemAssignments.AnyAsync(a => a.Menu_Id == assignmentData.Menu_Id && a.Item_Id == assignmentData.Item_Id 
+                    && a.Location_Id == null))
+                {
+                    return BadRequest("Add the item to the menu (default price) before adding a location price");
+                }
+
+
                 var assignment = new MenuItemAssignment
                 {
                     Menu_Id = assignmentData.Menu_Id,
@@ -84,12 +92,17 @@ namespace back_end.Controllers
                     Tot_Limit = assignmentData.Tot_Limit ?? 0,
                     Status = assignmentData.Status,
                     Is_Add_On = assignmentData.Is_Add_on,
+                    Location_Id = assignmentData.Location_Id,
                 };
 
                 await _context.MenuItemAssignments.AddAsync(assignment);
                 await _context.SaveChangesAsync();
                 return Ok(assignment);
 
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UX_assignment_menu_item_location") == true)
+            {
+                return Conflict("A price for this item already exists for that location");
             }
             catch (Exception ex)
             {
@@ -144,12 +157,16 @@ namespace back_end.Controllers
         public async Task<IActionResult> Update_Menu_Item_Assignment(
             int menu_id,
             int item_id,
-            MenuAssignmentUpdateDTO updateData
+            MenuAssignmentUpdateDTO updateData,
+            [FromQuery] int? locationId
         )
         {
             try
             {
-                var assignment = await _context.MenuItemAssignments.Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == item_id).FirstOrDefaultAsync();
+                var assignment = await _context.MenuItemAssignments
+                    .Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == item_id && mia.Location_Id == locationId)
+                    .FirstOrDefaultAsync();
+
                 if (assignment == null)
                 {
                     return NotFound("Menu Assignment was not found.");
@@ -255,17 +272,20 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete_Menu_Item_Assignment(
             int menu_id,
-            int Item_id
+            int Item_id,
+            [FromQuery] int? locationId
         )
         {
             try
             {
-                var assignment = await _context.MenuItemAssignments.Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == Item_id).FirstOrDefaultAsync();
-                if (assignment == null)
+                var rows = await _context.MenuItemAssignments
+                    .Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == Item_id && (locationId == null || mia.Location_Id == locationId))   // default → remove overrides too
+                    .ToListAsync();
+                if (rows.Count == 0)
                 {
                     return NotFound("Menu Assignment for deletion was not found");
                 }
-                _context.Remove(assignment);
+                _context.RemoveRange(rows);
                 await _context.SaveChangesAsync();
                 return Ok("Menu Assignment was deleted Successfully");
             }
@@ -344,6 +364,7 @@ namespace back_end.Controllers
                         Total_Units_Ordered = 0,
                         Is_Add_On = element.Is_Add_On,
                         Status = element.Status,
+                        Location_Id = element.Location_Id,
                     });
                 }
                 _context.AddRange(newAssignment);

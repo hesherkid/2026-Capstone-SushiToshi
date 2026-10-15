@@ -18,6 +18,8 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public int? Child_Limit { get; set; } = 0;
         public int? Senior_Limit { get; set; } = 0;
         public int? Tot_Limit { get; set; } = 0;
+        public int? Location_Id { get; set; }   // null = default for all locations
+
 
     }
 

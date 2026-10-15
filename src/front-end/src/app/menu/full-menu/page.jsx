@@ -29,6 +29,7 @@ const FullMenu = () => {
   const [error, setError] = useState(null);
   const [selectedBillId, setSelectedBillId] = useState("");
   const [menuId, setMenuId] = useState("");
+  const [locationId, setLocationId] = useState(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -254,6 +255,9 @@ const FullMenu = () => {
             return;
           }
 
+          // Location decides which prices this table sees
+          const loc = Number(raw.location_Id ?? raw.location_id ?? raw.locationId ?? raw.Location_Id);
+          setLocationId(Number.isNaN(loc) || loc < 1 ? null : loc);
           setMenuId(getMenuID);
 
         } else {
@@ -274,11 +278,12 @@ const FullMenu = () => {
     fetchMenu();
   }, [sessionId]);
 
-  //When you have the menuID call to get current menu
+  //When you have the menuID call to get current menu (prices depend on location)
   useEffect(() => {
     if (!menuId) return;
-    fetchMenuItems(null, menuId);
-  }, [menuId]);
+    fetchMenuItems(null, menuId, locationId);
+  }, [menuId, locationId]);
+
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -308,15 +313,17 @@ const FullMenu = () => {
     fetchCategories();
   }, []);
 
-  const fetchMenuItems = async (categoryId, menu_id) => {
+  const fetchMenuItems = async (categoryId, menu_id, location_id = null) => {
     //Make sure the menu ID is valid or if we already loaded the menu items
     if (!menu_id || menuItems[categoryId]) return;
 
     const apiClient = isGuest() ? publicApi : api;
 
     try {
-      //Call GetItemsByMenu and check if it's in an array
-      const response = await apiClient.get(`/Menu/${menu_id}/item`);
+      //Call GetItemsByMenu with the session's location so location prices apply
+      const response = await apiClient.get(`/Menu/${menu_id}/item`, {
+        params: location_id ? { locationId: location_id } : {},
+      });
       const items = Array.isArray(response.data) ? response.data : [];
 
       //Clean up the field names so it's the same everywhere on the page
