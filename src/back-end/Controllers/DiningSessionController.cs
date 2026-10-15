@@ -842,7 +842,8 @@ namespace back_end.controllers
 
         return Ok(new SessionMenuResponseDTO
         {
-          Menu_Id = session.Menu_Id
+          Menu_Id = session.Menu_Id,
+          Location_Id = session.Location_Id
         });
       }
       catch (Exception ex)
