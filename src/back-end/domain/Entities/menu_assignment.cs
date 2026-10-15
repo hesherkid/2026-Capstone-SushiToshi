@@ -7,8 +7,9 @@ namespace back_end.domain.Entities
     [Table("menu_item_assignment")]
     public class MenuItemAssignment
     {
-        //Composite Key
-        //Foreign Key to Menu ID
+        [Key]
+        [Column("assignment_id")]
+        public int Assignment_Id { get; set; }          // new primary key (the old composite key can't include a nullable column)
 
         [Column("menu_id")]
         [ForeignKey(nameof(Menu))]
@@ -17,6 +18,16 @@ namespace back_end.domain.Entities
         [Column("item_id")]
         [ForeignKey(nameof(MenuItem))]
         public int Item_Id { get; set; }
+
+        // NULL = default price for all locations; a value = override for that location
+        [Column("location_id")]
+        [ForeignKey(nameof(Location))]
+        public int? Location_Id { get; set; }
+
+        // Database-computed IFNULL(location_id, 0); used only by the unique index
+        [Column("location_key")]
+        public int Location_Key { get; private set; }
+
 
         public decimal Price { get; set; }
 
@@ -39,6 +50,8 @@ namespace back_end.domain.Entities
         public Menu Menu { get; set; } = null!;
 
         public Menu_Item MenuItem { get; set; } = null!;
+        public Locations? Location { get; set; }
+
     }
 
 }
