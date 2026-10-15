@@ -27,6 +27,20 @@ import {
 } from "@mui/material";
 import { X, Edit, Trash2 } from "lucide-react";
 
+const ALL_LOCATIONS = ""; // "" in the form = default row (location_id null)
+
+const emptyForm = {
+  menu_id: "",
+  location_id: ALL_LOCATIONS,
+  price: "0",
+  is_add_on: false,
+  status: "available",
+  adult_limit: 0,
+  child_limit: 0,
+  senior_limit: 0,
+  tot_limit: 0,
+};
+
 const MenuAssignmentDialog = ({
   open,
   onClose,
@@ -35,56 +49,87 @@ const MenuAssignmentDialog = ({
   onSuccess,
   initialAssignments = [],
 }) => {
-  const [formData, setFormData] = useState({
-    menu_id: "",
-    price: "0",
-    is_add_on: false,
-    status: "available",
-    adult_limit: 0,
-    child_limit: 0,
-    senior_limit: 0,
-    tot_limit: 0,
-  });
+  const [formData, setFormData] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [assignments, setAssignments] = useState(initialAssignments);
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [error, setError] = useState(null);
+  const [locations, setLocations] = useState([]);
+
+  const loadAssignments = async () => {
+    const response = await api.get(`/menuItem/${selectedItem.item_id}`);
+    const assignmentsData = response.data.menuAssignments || [];
+    setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
+  };
 
   useEffect(() => {
-    const fetchAssignments = async () => {
-      if (!selectedItem) return;
-      try {
-        const response = await api.get(`/menuItem/${selectedItem.item_id}`);
-        const assignmentsData = response.data.menuAssignments || [];
-        setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError("Failed to fetch assignments");
-        setAssignments([]);
-      }
-    };
-    fetchAssignments();
+    if (!selectedItem) return;
+    loadAssignments().catch((err) => {
+      console.error("Fetch error:", err);
+      setError("Failed to fetch assignments");
+      setAssignments([]);
+    });
   }, [selectedItem]);
+
+  // Locations for the "Location" dropdown
+  useEffect(() => {
+    if (!open) return;
+    api
+      .get("/Location")
+      .then((res) =>
+        setLocations(
+          (Array.isArray(res.data) ? res.data : []).map((l) => ({
+            location_id: l.location_Id ?? l.location_id,
+            name: l.name ?? l.Name,
+          })),
+        ),
+      )
+      .catch((err) => console.error("Location fetch error:", err));
+  }, [open]);
 
   useEffect(() => {
     if (editingAssignment) {
       setFormData({
-        menu_id: editingAssignment.menu_Id, // FIXED: capital I
+        menu_id: editingAssignment.menu_Id,
+        location_id: editingAssignment.location_Id ?? ALL_LOCATIONS,
         price: editingAssignment.price.toString(),
-        is_add_on: editingAssignment.is_Add_On === true, // FIXED: capital A and O
+        is_add_on: editingAssignment.is_Add_On === true,
         status: (editingAssignment.status || "Available").toLowerCase(),
-        adult_limit: editingAssignment.adult_Limit || 0, // FIXED: capital L
+        adult_limit: editingAssignment.adult_Limit || 0,
         child_limit: editingAssignment.child_limit || 0,
         senior_limit: editingAssignment.senior_limit || 0,
-        tot_limit: editingAssignment.tot_Limit || 0, // FIXED: capital L
+        tot_limit: editingAssignment.tot_Limit || 0,
       });
     }
   }, [editingAssignment]);
 
-  const handleDeleteAssignment = async (menuId, itemId) => {
+  const locationName = (id) =>
+    id == null
+      ? "All locations"
+      : locations.find((l) => l.location_id === id)?.name ?? `Location ${id}`;
+
+  // ?locationId=X for an override row, nothing for the default row
+  const locationQuery = (locId) => (locId != null ? `?locationId=${locId}` : "");
+
+  const handleDeleteAssignment = async (assignment) => {
+    const isDefault = assignment.location_Id == null;
+    if (
+      isDefault &&
+      !window.confirm(
+        "Removing the default also removes all location prices for this menu. Continue?",
+      )
+    ) {
+      return;
+    }
     try {
-      await api.delete(`/menuassignment/${menuId}/${itemId}`);
-      setAssignments((prev) => prev.filter((a) => a.menu_Id !== menuId)); // FIXED: capital I
+      await api.delete(
+        `/menuassignment/${assignment.menu_Id}/${selectedItem.item_id}${locationQuery(assignment.location_Id)}`,
+      );
+      setAssignments((prev) =>
+        isDefault
+          ? prev.filter((a) => a.menu_Id !== assignment.menu_Id) // default + its overrides
+          : prev.filter((a) => a.assignment_Id !== assignment.assignment_Id),
+      );
       resetForm();
     } catch (err) {
       setError("Failed to delete assignment");
@@ -92,16 +137,7 @@ const MenuAssignmentDialog = ({
   };
 
   const resetForm = () => {
-    setFormData({
-      menu_id: "",
-      price: "",
-      is_add_on: false,
-      status: "available",
-      adult_limit: 0,
-      child_limit: 0,
-      senior_limit: 0,
-      tot_limit: 0,
-    });
+    setFormData({ ...emptyForm, price: "" });
     setEditingAssignment(null);
   };
 
@@ -110,7 +146,7 @@ const MenuAssignmentDialog = ({
     setSubmitting(true);
     try {
       const url = editingAssignment
-        ? `/menuassignment/${editingAssignment.menu_Id}/${selectedItem.item_id}` // FIXED: menu_Id
+        ? `/menuassignment/${editingAssignment.menu_Id}/${selectedItem.item_id}${locationQuery(editingAssignment.location_Id)}`
         : "/menuassignment";
 
       await api({
@@ -119,7 +155,11 @@ const MenuAssignmentDialog = ({
         data: {
           menu_id: parseInt(formData.menu_id),
           item_id: selectedItem.item_id,
-          price: parseFloat(formData.price),
+          location_id:
+            formData.location_id === ALL_LOCATIONS
+              ? null
+              : parseInt(formData.location_id),
+          price: parseFloat(formData.price) || 0,
           adult_limit: parseInt(formData.adult_limit) || 0,
           child_limit: parseInt(formData.child_limit) || 0,
           senior_limit: parseInt(formData.senior_limit) || 0,
@@ -130,36 +170,66 @@ const MenuAssignmentDialog = ({
       });
 
       // Refetch assignments to ensure we have complete data with menu objects
-      const response = await api.get(`/menuItem/${selectedItem.item_id}`);
-      const assignmentsData = response.data.menuAssignments || [];
-      setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
+      await loadAssignments();
 
       resetForm();
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error("Submit error:", err);
+      const data = err.response?.data;
       setError(
-        err.response.data ||
-          (editingAssignment
-            ? "Failed to update assignment"
-            : "Failed to create assignment"),
+        typeof data === "string"
+          ? data
+          : data?.message ??
+              data?.title ??
+              (editingAssignment
+                ? "Failed to update assignment"
+                : "Failed to create assignment"),
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  // FIXED: Better filtering logic
+  // Does this menu + location already have a row?
+  const hasRow = (menuId, locId) =>
+    assignments.some(
+      (a) => a.menu_Id === menuId && (a.location_Id ?? null) === locId,
+    );
+
+  const selectedLocId =
+    formData.location_id === ALL_LOCATIONS ? null : Number(formData.location_id);
+
+  // Default row: menus without one yet.
+  // Location row: menus that HAVE a default but no row for that location yet.
   const availableMenus = menus.filter((menu) => {
-    // If we're editing, allow the current menu
     if (editingAssignment && editingAssignment.menu_Id === menu.menu_id) {
       return true;
     }
-    // Otherwise, check if this menu is already assigned
-    return !assignments.some(
-      (assignment) => assignment.menu_Id === menu.menu_id,
-    );
+    if (selectedLocId == null) {
+      return !hasRow(menu.menu_id, null);
+    }
+    return hasRow(menu.menu_id, null) && !hasRow(menu.menu_id, selectedLocId);
   });
+
+  // Picking a location + menu copies the default row's values into the form
+  useEffect(() => {
+    if (editingAssignment || selectedLocId == null || !formData.menu_id) return;
+    const def = assignments.find(
+      (a) => a.menu_Id === Number(formData.menu_id) && a.location_Id == null,
+    );
+    if (!def) return;
+    setFormData((prev) => ({
+      ...prev,
+      price: def.price.toString(),
+      is_add_on: def.is_Add_On === true,
+      status: (def.status || "Available").toLowerCase(),
+      adult_limit: def.adult_Limit || 0,
+      child_limit: def.child_limit || 0,
+      senior_limit: def.senior_limit || 0,
+      tot_limit: def.tot_Limit || 0,
+    }));
+  }, [formData.menu_id, formData.location_id]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -202,6 +272,7 @@ const MenuAssignmentDialog = ({
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ color: "white" }}>Menu</TableCell>
+                    <TableCell sx={{ color: "white" }}>Location</TableCell>
                     <TableCell sx={{ color: "white" }}>Price</TableCell>
                     <TableCell sx={{ color: "white" }}>Status</TableCell>
                     <TableCell sx={{ color: "white" }}>Add-on</TableCell>
@@ -211,13 +282,28 @@ const MenuAssignmentDialog = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {assignments.map((assignment) => (
-                    <TableRow key={assignment.menu_Id}>
+                    {[...assignments]
+                    .sort(
+                      (a, b) =>
+                        a.menu_Id - b.menu_Id ||
+                        (a.location_Id ?? 0) - (b.location_Id ?? 0),
+                    )
+                    .map((assignment) => (
+                    <TableRow
+                      key={assignment.assignment_Id}
+                      selected={editingAssignment?.assignment_Id === assignment.assignment_Id}
+                    >
                       <TableCell>
-                        {/* FIXED: Use the nested menu object directly */}
                         {assignment.menu?.name || "Unknown Menu"}
                       </TableCell>
-                      <TableCell>${assignment.price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {assignment.location_Id == null ? (
+                          <strong>All locations</strong>
+                        ) : (
+                          locationName(assignment.location_Id)
+                        )}
+                      </TableCell>
+                      <TableCell>${Number(assignment.price).toFixed(2)}</TableCell>
                       <TableCell>{assignment.status}</TableCell>
                       <TableCell>
                         {assignment.is_Add_On ? "Yes" : "No"}
@@ -233,12 +319,12 @@ const MenuAssignmentDialog = ({
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() =>
-                            handleDeleteAssignment(
-                              assignment.menu_Id, // FIXED: capital I
-                              selectedItem.item_id,
-                            )
+                          title={
+                            assignment.location_Id == null
+                              ? "Remove from menu"
+                              : "Reset to default price"
                           }
+                          onClick={() => handleDeleteAssignment(assignment)}
                         >
                           <Trash2 size={16} />
                         </IconButton>
@@ -259,6 +345,28 @@ const MenuAssignmentDialog = ({
           </Typography>
 
           <Stack spacing={2}>
+                        <FormControl fullWidth>
+              <InputLabel>Location</InputLabel>
+              <Select
+                value={formData.location_id}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    location_id: e.target.value,
+                    menu_id: "", // menu choices depend on the location
+                  }))
+                }
+                label="Location"
+                disabled={Boolean(editingAssignment)}
+              >
+                <MenuItem value={ALL_LOCATIONS}>All locations (default)</MenuItem>
+                {locations.map((loc) => (
+                  <MenuItem key={loc.location_id} value={loc.location_id}>
+                    {loc.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <FormControl fullWidth required>
               <InputLabel>Menu</InputLabel>
               <Select
@@ -273,12 +381,7 @@ const MenuAssignmentDialog = ({
                   <MenuItem key={menu.menu_id} value={menu.menu_id}>
                     {menu.name}
                   </MenuItem>
-                ))}
-                {editingAssignment && (
-                  <MenuItem value={editingAssignment.menu_Id}>
-                    {editingAssignment.menu?.name}
-                  </MenuItem>
-                )}
+                ))}                
               </Select>
             </FormControl>
 
@@ -411,9 +514,12 @@ const MenuAssignmentDialog = ({
                   <CircularProgress size={24} />
                 ) : editingAssignment ? (
                   "Update Assignment"
+                ) : selectedLocId != null ? (
+                  "Add Location Price"
                 ) : (
                   "Add Assignment"
                 )}
+
               </Button>
             </Stack>
           </Stack>
