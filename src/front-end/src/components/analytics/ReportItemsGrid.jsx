@@ -81,6 +81,7 @@ const ReportItemsGrid = ({
         </Typography>
       )}
       <ManagementGrid
+        aria-label={title}
         rows={rows}
         columns={columns}
         getRowId={(row) => row.item_id}
