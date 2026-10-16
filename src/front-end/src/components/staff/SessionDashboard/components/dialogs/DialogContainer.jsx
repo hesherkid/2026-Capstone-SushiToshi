@@ -2,27 +2,36 @@ import { useSession } from "../../context/SessionContext";
 import NewSessionDialog from "./NewSessionDialog";
 import AddTableDialog from "./AddTableDialog";
 import NewBillDialog from "./NewBillDialog";
+import SessionDetailDialog from "./SessionDetailDialog";
+import ConfirmDialog from "./ConfirmDialog";
 
 const DialogContainer = () => {
   const { dialogState, closeDialog } = useSession();
+  const { type, data } = dialogState;
 
   return (
     <>
-      <NewSessionDialog
-        open={dialogState?.newSession || false}
-        onClose={() => closeDialog("newSession")}
-      />
+      <SessionDetailDialog />
+
+      <NewSessionDialog open={type === "newSession"} onClose={closeDialog} />
 
       <AddTableDialog
-        open={dialogState?.addTable || false}
-        sessionId={dialogState?.currentSessionId}
-        onClose={() => closeDialog("addTable")}
+        open={type === "addTable"}
+        sessionId={data}
+        onClose={closeDialog}
       />
 
       <NewBillDialog
-        open={dialogState?.newBill || false}
-        sessionId={dialogState?.currentSessionId}
-        onClose={() => closeDialog("newBill")}
+        open={type === "newBill"}
+        sessionId={data}
+        onClose={closeDialog}
+      />
+
+      {/* data: { title, message, confirmLabel, onConfirm } */}
+      <ConfirmDialog
+        open={type === "confirm"}
+        {...(type === "confirm" ? data : {})}
+        onClose={closeDialog}
       />
     </>
   );

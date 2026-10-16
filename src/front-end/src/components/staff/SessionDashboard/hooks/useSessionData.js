@@ -1,84 +1,90 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
 import storage from "@/utils/storage";
 
-export const useSessionData = (updateTrigger = 0) => {
+const POLL_INTERVAL_MS = 10000;
+
+const NO_LOCATION_ERROR =
+  "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page.";
+
+// Active sessions and their pending service requests for the selected location.
+// With `live`, both refresh every 10s while the tab is visible.
+export const useSessionData = ({ live = false } = {}) => {
   const [sessions, setSessions] = useState([]);
-  const [dashboardSummary, setDashboardSummary] = useState({
-    total_active_sessions: 0,
-    total_tables_in_use: 0,
-    total_active_bills: 0,
-    total_active_participants: 0,
-  });
+  const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchSessions = useCallback(async () => {
-    try {
-      const storedLocationId = storage.get("branch-location");
-      if (!storedLocationId) {
-        const isGuest = localStorage.getItem("guest") === "true";
-        if(! isGuest){
-          setError(
-            "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page."
-          );
-          console.error(
-            "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page."
-          );
-      }
-
-        return [];
-      }
-      console.log(storedLocationId)
-      const response = await api.get(
-        `/Dashboard/sessions?locationId=${storedLocationId}`
-      );
-
-      if (response.status === 204) {
-        setError("No active dining sessions found.");
-        throw new Error("No active dining sessions found.");
-      }
-
-      if (response.status !== 200) {
-        setError("Failed to fetch sessions");
-        throw new Error("Failed to fetch sessions");
-      }
-      const data = response.data;
-      setSessions(data);
-    } catch (err) {
-      console.error(err);
-      console.log(err);
+  // `silent` skips the loading overlay so background polls don't flash the grid
+  const fetchSessions = useCallback(async ({ silent = false } = {}) => {
+    const locationId = storage.get("branch-location");
+    if (!locationId) {
+      if (localStorage.getItem("guest") !== "true") setError(NO_LOCATION_ERROR);
+      setIsLoading(false);
+      return;
     }
-  }, []);
 
-  const fetchDashboardSummary = useCallback(async () => {
+    if (!silent) setIsLoading(true);
     try {
-      const response = await api.get("/Dashboard/summary");
-      if (response.status !== 200) throw new Error("Failed to fetch summary");
-      const data = response.data;
-      setDashboardSummary(data);
+      const [sessionsRes, requestsRes] = await Promise.all([
+        api.get(`/Dashboard/sessions?locationId=${locationId}`),
+        api.get("/ServiceRequest/pending"),
+      ]);
+
+      // 204 means no active sessions at this location
+      const active = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
+      const sessionIds = new Set(active.map((s) => s.session_Id));
+      const pending = (Array.isArray(requestsRes.data) ? requestsRes.data : [])
+        .filter((r) => sessionIds.has(r.session_id));
+
+      setSessions(active);
+      setRequests(pending);
+      setError(null);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching sessions:", err);
+      setError("Failed to load sessions");
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      await Promise.all([fetchSessions(), fetchDashboardSummary()]);
-      setIsLoading(false);
-    };
+    fetchSessions({ silent: true });
+    if (!live) return;
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchSessions({ silent: true });
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [live, fetchSessions]);
 
-    loadData();
-  }, [fetchSessions, fetchDashboardSummary, updateTrigger]);
+  const requestsBySession = useMemo(() => {
+    const grouped = {};
+    for (const request of requests) {
+      (grouped[request.session_id] ??= []).push(request);
+    }
+    return grouped;
+  }, [requests]);
+
+  const sessionSummary = useMemo(
+    () => ({
+      activeSessions: sessions.length,
+      tablesInUse: sessions.reduce(
+        (sum, s) => sum + (s.table_Numbers?.length || 0),
+        0
+      ),
+      pendingRequests: requests.length,
+    }),
+    [sessions, requests]
+  );
 
   return {
     sessions,
-    dashboardSummary,
+    requests,
+    requestsBySession,
+    sessionSummary,
     isLoading,
     error,
+    setError,
     fetchSessions,
-    fetchDashboardSummary,
   };
 };

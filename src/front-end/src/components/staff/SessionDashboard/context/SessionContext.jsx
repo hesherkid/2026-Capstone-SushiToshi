@@ -1,12 +1,6 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-} from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import { useSessionData } from "../hooks/useSessionData";
 import { useSessionActions } from "../hooks/useSessionActions";
-import api from "@/config/api";
 
 const SessionContext = createContext(null);
 
@@ -18,229 +12,106 @@ export const useSession = () => {
   return context;
 };
 
-export const SessionProvider = ({ children }) => {
-  const [updateTrigger, setUpdateTrigger] = useState(0);
-  const [dialogState, setDialogState] = useState({
-    newSession: false,
-    addTable: false,
-    addTableGroup: false,
-    newBill: false,
-    currentSessionId: null,
-  });
+// `live` polls sessions and service requests; the bills page uses the provider only for its dialogs
+export const SessionProvider = ({ children, live = false }) => {
+  const sessionData = useSessionData({ live });
+  const { fetchSessions } = sessionData;
+  const [dialogState, setDialogState] = useState({ type: null, data: null });
+  // Kept apart from dialogState so New Bill / confirm dialogs can open on top of it
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const selectedSession =
+    sessionData.sessions.find((s) => s.session_Id === selectedSessionId) ??
+    null;
 
-  const triggerUpdate = useCallback(() => {
-    setUpdateTrigger((prev) => prev + 1);
-  }, []);
+  const refreshData = useCallback(
+    () => fetchSessions({ silent: true }),
+    [fetchSessions]
+  );
 
-  const {
-    sessions,
-    dashboardSummary,
-    isLoading: dataLoading,
-    error,
-    fetchSessions,
-    fetchDashboardSummary,
-  } = useSessionData(updateTrigger);
+  // Actions with triggerSuccess refresh the session list when they succeed
+  const actions = useSessionActions(refreshData);
+  const { clearActionError } = actions;
 
-  // useSessionActions now handles success callbacks internally
-  const {
-    // State
-    actionError,
-    isLoading: actionLoading,
-
-    // Dining session operations
-    createDiningSession,
-    listDiningSessions,
-    getDiningSessionDetail,
-    closeDiningSession,
-    addTableToSession,
-    addTableGroupToSession,
-    removeTableFromSession,
-    removeTableGroupFromSession,
-    getActiveSessionId,
-    getSessionMenuId,
-
-    // Session operations
-    fetchActiveSessions,
-    fetchSessionById,
-    fetchSessionByTable,
-
-    // Table operations
-    listEmptyTables,
-
-    // Table group operations
-    fetchAvailableTableGroups,
-
-    // Bill operations
-    createBill: baseCreateBill,
-    getBills,
-    getBillSummary,
-    closeBill: baseCloseBill,
-
-    // Utilities
-    clearActionError,
-  } = useSessionActions(async () => {
-    // This callback runs after successful actions
-    await Promise.all([fetchSessions(), fetchDashboardSummary()]);
-    triggerUpdate();
-  });
-
-  // Combined loading state
-  const isLoading = dataLoading || actionLoading;
+  // The API helpers return null on failure (and show the error notification)
+  const succeeded = (result) => result !== null && result !== undefined;
 
   const createSession = useCallback(
     async (menuId, locationId, tableId, tableGroupId, tableAssignmentType) => {
-      try {
+      const sessionData = {
+        Menu_Id: menuId,
+        Location_Id: locationId,
+        AssignmentType: tableAssignmentType,
+      };
 
-        const sessionData = {
-          Menu_Id: menuId,
-          Location_Id: locationId,
-          // TableGroup_Id: tableGroupId,
-          AssignmentType: tableAssignmentType
-        };
-
-        if (tableAssignmentType === "table" && tableId) {
-          sessionData.Table_Id = tableId;
-        } else if (tableAssignmentType === "tableGroup" && tableGroupId) {
-          sessionData.TableGroup_Id = tableGroupId;
-        }
-        console.log(`session Data: ${sessionData.TableGroup_Id}`)
-
-        // Use the notification-enabled action
-        const result = await createDiningSession(sessionData);
-        
-        return result !== null && result !== undefined;
-      } catch (error) {
-        console.error("Error creating session:", error);
-        throw error;
+      if (tableAssignmentType === "table" && tableId) {
+        sessionData.Table_Id = tableId;
+      } else if (tableAssignmentType === "tableGroup" && tableGroupId) {
+        sessionData.TableGroup_Id = tableGroupId;
       }
+
+      return succeeded(await actions.createDiningSession(sessionData));
     },
-    [createDiningSession]
+    [actions.createDiningSession]
   );
 
-  const addTable = async (sessionId, tableId) => {
-    const result = await addTableToSession(sessionId, tableId);
-    return result !== null && result !== undefined;
-  };
+  const addTable = async (sessionId, tableId) =>
+    succeeded(await actions.addTableToSession(sessionId, tableId));
 
-  const addTableGroup = async (sessionId, tableGroupId) => {
-    const result = await addTableGroupToSession(sessionId, tableGroupId);
-    return result !== null && result !== undefined;
-  };
+  const addTableGroup = async (sessionId, tableGroupId) =>
+    succeeded(await actions.addTableGroupToSession(sessionId, tableGroupId));
 
-  const removeTable = async (sessionId, tableId) => {
-    const result = await removeTableFromSession(sessionId, tableId);
-    return result !== null && result !== undefined;
-  };
+  const removeTable = async (sessionId, tableId) =>
+    succeeded(await actions.removeTableFromSession(sessionId, tableId));
 
-  const removeTableGroup = async (sessionId, tableGroupId) => {
-    const result = await removeTableGroupFromSession(sessionId, tableGroupId);
-    return result !== null && result !== undefined;
-  };
+  const removeTableGroup = async (sessionId, tableGroupId) =>
+    succeeded(
+      await actions.removeTableGroupFromSession(sessionId, tableGroupId)
+    );
 
-  const createBill = async (sessionId, billData) => {
-    const result = await baseCreateBill(sessionId, billData);
-    return result !== null && result !== undefined;
-  };
+  const createBill = async (sessionId, billData) =>
+    succeeded(await actions.createBill(sessionId, billData));
 
-  const closeBill = async (sessionId, billId) => {
-    const result = await baseCloseBill(sessionId, billId);
-    return result !== null && result !== undefined;
-  };
+  const closeBill = async (sessionId, billId) =>
+    succeeded(await actions.closeBill(sessionId, billId));
 
-  const endSession = async (sessionId) => {
-    try {
-      const result = await closeDiningSession(sessionId);
-      if (result === null || result === undefined) {
-        throw new Error("Failed to close session");
-      }
-      return result;
-    } catch (error) {
-      console.error("Error in endSession wrapper:", error);
-      throw error;
-    }
-  };
+  const endSession = async (sessionId) =>
+    succeeded(await actions.closeDiningSession(sessionId));
 
-  const openDialog = useCallback((dialogName, sessionId = null) => {
-    // console.log("Dialog session: ", sessionId);
-    setDialogState((prev) => ({
-      ...prev,
-      [dialogName]: true,
-      currentSessionId: sessionId,
-    }));
+  const openDialog = useCallback((type, data = null) => {
+    setDialogState({ type, data });
   }, []);
 
-  const closeDialog = useCallback(
-    (dialogName) => {
-      setDialogState((prev) => ({
-        ...prev,
-        [dialogName]: false,
-        currentSessionId: null,
-      }));
-      clearActionError();
-    },
-    [clearActionError]
-  );
+  const closeDialog = useCallback(() => {
+    setDialogState({ type: null, data: null });
+    clearActionError();
+  }, [clearActionError]);
 
   const value = {
-    // Data state
-    sessions,
-    dashboardSummary,
-    isLoading,
-    error,
-    actionError,
+    ...actions,
+    ...sessionData,
+    // isLoading is the data fetch; isSaving is an action in progress
+    isLoading: sessionData.isLoading,
+    isSaving: actions.isLoading,
+    refreshData,
 
     // Dialog state
     dialogState,
     openDialog,
     closeDialog,
+    selectedSession,
+    openSession: setSelectedSessionId,
+    closeSession: () => setSelectedSessionId(null),
 
-    // Data fetching
-    fetchSessions,
-    fetchDashboardSummary,
-
-    // Dining session operations (backward compatible wrappers)
+    // Wrappers that return true/false
     createSession,
     addTable,
     addTableGroup,
     removeTable,
     removeTableGroup,
-    endSession,
-
-    // Direct access to all useSessionActions functions
-    createDiningSession,
-    listDiningSessions,
-    getDiningSessionDetail,
-    closeDiningSession,
-    addTableToSession,
-    addTableGroupToSession,
-    removeTableFromSession,
-    removeTableGroupFromSession,
-    getActiveSessionId,
-    getSessionMenuId,
-
-    // Session operations
-    fetchActiveSessions,
-    fetchSessionById,
-    fetchSessionByTable,
-
-    // Table operations
-    listEmptyTables,
-
-    // Table group operations
-    fetchAvailableTableGroups,
-
-    // Bill operations
     createBill,
-    getBills,
-    getBillSummary,
     closeBill,
-
-    // Utilities
-    clearActionError,
-    triggerUpdate,
+    endSession,
   };
-
-  // console.log("SessionProvider initialized – createBill:", typeof createBill);
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

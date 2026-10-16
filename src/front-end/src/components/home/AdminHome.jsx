@@ -6,7 +6,6 @@ import {
   Clock,
   Table,
   ClipboardList,
-  Receipt,
   Bell,
   Users,
   QrCode,
@@ -32,10 +31,9 @@ const shortcutSections = (pendingRequests) => [
   {
     title: "Service",
     items: [
-      { title: "Sessions", description: "Live dining sessions and table requests", href: "/dashboard/sessions", icon: Clock, badge: pendingRequests },
+      { title: "Sessions", description: "Live dining sessions, table requests and bills", href: "/dashboard/sessions", icon: Clock, badge: pendingRequests },
       { title: "Tables", description: "Table status and availability", href: "/dashboard/tables", icon: Table },
       { title: "Orders", description: "Incoming orders for the kitchen", href: "/staff/dashboard/orders", icon: ClipboardList },
-      { title: "Bills", description: "Open, split and close bills", href: "/dashboard/bills", icon: Receipt },
     ],
   },
   {

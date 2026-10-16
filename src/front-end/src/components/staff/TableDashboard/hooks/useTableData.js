@@ -1,113 +1,101 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import api from "@/config/api";
 import storage from "@/utils/storage";
+
+const NO_LOCATION_ERROR =
+  "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page.";
+
+export const TABLE_STATUS = {
+  AVAILABLE: "available",
+  IN_SESSION: "inSession",
+  INACTIVE: "inactive",
+};
+
+// /TableEntity/empty lists active tables with no open session (directly or via their group),
+// so an active table missing from it is in session.
+const getTableStatus = (table, emptyIds) => {
+  if (!table.is_active) return TABLE_STATUS.INACTIVE;
+  return emptyIds.has(table.table_Id)
+    ? TABLE_STATUS.AVAILABLE
+    : TABLE_STATUS.IN_SESSION;
+};
 
 export const useTableData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [tables, setTables] = useState([]);
-  const [tableGroups, setTableGroups] = useState([]);
-  const [tableSummary, setTableSummary] = useState({
-    total_tables: 0,
-    active_tables: 0,
-    tables_in_use: 0,
-    available_tables: 0,
-  });
-
-  const fetchTables = useCallback(async () => {
-    try {
-      const storedLocationId = storage.get("branch-location");
-      if (!storedLocationId) {
-        setError(
-          "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page."
-        );
-        console.error(
-          "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page."
-        );
-
-        return [];
-      }
-
-      const response = await api.get(
-        `/TableEntity?locationId=${storedLocationId}`
-      );
-      if (response.status === 200) {
-        setTables(response.data);
-
-        return response.data;
-      }
-    } catch (err) {
-      setError("Failed to fetch tables");
-      console.error("Error fetching tables:", err);
-      return [];
-    }
-  }, []);
-
-  const fetchTableGroups = useCallback(async () => {
-    try {
-      const storedLocationId = storage.get("branch-location");
-      if (!storedLocationId) {
-        setError(
-          "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page."
-        );
-        console.error(
-          "Invalid location. Make sure you have selected a location in the navigation bar dropdown at the top of the page."
-        );
-
-        return [];
-      }
-
-      const response = await api.get(
-        `/TableGroup?locationId=${storedLocationId}`
-      );
-      if (response.status === 200) {
-        setTableGroups(response.data);
-        // console.log("Table Group Data", response.data);
-        return response.data;
-      }
-    } catch (err) {
-      setError("Failed to fetch table groups");
-      console.error("Error fetching table groups:", err);
-      return [];
-    }
-  }, []);
-
-  const fetchTableSummary = useCallback(async () => {
-    try {
-      const [tablesData, emptyTablesData] = await Promise.all([
-        api.get("/TableEntity"),
-        api.get("/TableEntity/empty"),
-      ]);
-
-      const allTables = tablesData.data || [];
-      const emptyTables = emptyTablesData.data || [];
-
-      setTableSummary({
-        total_tables: allTables.length,
-        active_tables: allTables.filter((t) => t.is_active).length,
-        tables_in_use: allTables.length - emptyTables.length,
-        available_tables: emptyTables.length,
-      });
-    } catch (err) {
-      console.error("Error fetching table summary:", err);
-    }
-  }, []);
+  const [rawTables, setRawTables] = useState([]);
+  const [rawGroups, setRawGroups] = useState([]);
+  const [emptyIds, setEmptyIds] = useState(new Set());
 
   const fetchAllData = useCallback(async () => {
+    const locationId = storage.get("branch-location");
+    if (!locationId) {
+      setError(NO_LOCATION_ERROR);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
-      await Promise.all([
-        fetchTables(),
-        fetchTableGroups(),
-        fetchTableSummary(),
+      const [tablesRes, groupsRes, emptyRes] = await Promise.all([
+        api.get(`/TableEntity?locationId=${locationId}`),
+        api.get(`/TableGroup?locationId=${locationId}`),
+        api.get(`/TableEntity/empty?locationId=${locationId}`),
       ]);
+      setRawTables(tablesRes.data || []);
+      setRawGroups(groupsRes.data || []);
+      setEmptyIds(new Set((emptyRes.data || []).map((t) => t.table_Id)));
     } catch (err) {
+      console.error("Error fetching table data:", err);
       setError("Failed to load table data");
     } finally {
       setIsLoading(false);
     }
-  }, [fetchTables, fetchTableGroups, fetchTableSummary]);
+  }, []);
+
+  const tables = useMemo(() => {
+    const groupNames = new Map(
+      rawGroups.map((g) => [g.tableGroup_Id, g.group_Name])
+    );
+    return rawTables.map((table) => ({
+      ...table,
+      status: getTableStatus(table, emptyIds),
+      group_Name: groupNames.get(table.tableGroup_Id) ?? null,
+    }));
+  }, [rawTables, rawGroups, emptyIds]);
+
+  const tableGroups = useMemo(
+    () =>
+      rawGroups.map((group) => {
+        const groupTables = group.tables || [];
+        const inSession = groupTables.some(
+          (t) => getTableStatus(t, emptyIds) === TABLE_STATUS.IN_SESSION
+        );
+        let status = TABLE_STATUS.AVAILABLE;
+        if (!group.is_Active) status = TABLE_STATUS.INACTIVE;
+        else if (inSession) status = TABLE_STATUS.IN_SESSION;
+
+        return {
+          ...group,
+          status,
+          total_seats: groupTables.reduce((sum, t) => sum + t.seat_count, 0),
+        };
+      }),
+    [rawGroups, emptyIds]
+  );
+
+  const tableSummary = useMemo(
+    () => ({
+      total: tables.length,
+      available: tables.filter((t) => t.status === TABLE_STATUS.AVAILABLE)
+        .length,
+      inSession: tables.filter((t) => t.status === TABLE_STATUS.IN_SESSION)
+        .length,
+      inactive: tables.filter((t) => t.status === TABLE_STATUS.INACTIVE).length,
+    }),
+    [tables]
+  );
 
   return {
     isLoading,
@@ -116,9 +104,6 @@ export const useTableData = () => {
     tables,
     tableGroups,
     tableSummary,
-    fetchTables,
-    fetchTableGroups,
-    fetchTableSummary,
     fetchAllData,
   };
 };

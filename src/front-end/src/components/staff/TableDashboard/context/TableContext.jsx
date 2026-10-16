@@ -28,9 +28,9 @@ export const TableProvider = ({ children }) => {
     setActionError(null);
   };
 
+  // Leaves actionError alone so a failed confirm action can still show its error
   const closeDialog = () => {
     setDialogState({ type: null, data: null });
-    setActionError(null);
   };
 
   const refreshData = async () => {

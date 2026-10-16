@@ -82,9 +82,11 @@ describe("Home page dashboards", () => {
     expect(within(alert).getByText("Need more soy sauce")).toBeInTheDocument();
     expect(within(alert).queryByText("Table 9")).not.toBeInTheDocument();
 
-    for (const name of ["Sessions", "Tables", "Orders", "Bills"]) {
+    for (const name of ["Sessions", "Tables", "Orders"]) {
       expect(screen.getByRole("link", { name: new RegExp(`^${name}`) })).toBeInTheDocument();
     }
+    // Bills are managed from the session dialog, not a separate page
+    expect(screen.queryByRole("link", { name: /^Bills/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Analytics Overview/ })).not.toBeInTheDocument();
   });
 
