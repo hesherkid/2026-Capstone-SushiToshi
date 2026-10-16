@@ -1,6 +1,6 @@
 # Testing Documentation - 2026 C#Capstone - Sushi Toshi
 
-> **CI Update (2026-10-08):** GitHub Actions workflow rebuilt for this fork. CI now runs on `main` only (PRs + pushes) plus a manual "Run workflow" button. Frontend requires Node.js 20.9+ (CI uses Node 22). E2E tests run in CI after merges to `main` and on manual runs (Chromium only, not a required check). Codecov has been removed. QR code generation uses SkiaSharp (not System.Drawing). See [CI/CD Pipeline](https://claude.ai/chat/ac7329a5-d6e8-4f73-ba5d-6f90f211b858#cicd-pipeline).
+> **CI Update (2026-10-08):** GitHub Actions workflow rebuilt for this fork. CI now runs on `main` only (PRs + pushes) plus a manual "Run workflow" button. Frontend requires Node.js 20.9+ (CI uses Node 22). E2E tests run in CI on every PR (Chromium only) a required check. Codecov has been removed. QR code generation uses SkiaSharp (not System.Drawing). See [CI/CD Pipeline](https://claude.ai/chat/ac7329a5-d6e8-4f73-ba5d-6f90f211b858#cicd-pipeline).
 
 > **Recent Update (2025-11-10):** All test compilation errors have been fixed. Backend tests updated to use `User_Oid`/`User_Name` instead of `User_Id` to match the current authentication model. BillController tests updated to include `IPricingService` dependency. All 101 backend tests and 87 frontend tests are now passing.
 
@@ -327,7 +327,7 @@ npm test -- --testNamePattern="should render"
 
 ### End-to-End Tests
 
-> **E2E tests run in CI** after merges to `main` and on manual runs - not on PRs, and they are not a required check. Run them locally before opening a PR that changes critical flows (QR codes, ordering, login).
+> **E2E tests run in CI** on every PR and are a required check. Run them locally before opening a PR.
 
 #### Prerequisites
 
