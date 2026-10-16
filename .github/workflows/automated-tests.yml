@@ -67,12 +67,11 @@ jobs:
         run: npm run build
 
   # End-to-end tests against the full app: database + API + website.
-  # Runs after merges to main and from "Run workflow" - NOT on PRs, and NOT a required check.
+  # Runs on every PR, after merges to main and from "Run workflow". Is a required check.
   e2e-tests:
     name: E2E tests - Playwright, Chromium
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
-    if: github.event_name != 'pull_request'
     timeout-minutes: 30
 
     services:
