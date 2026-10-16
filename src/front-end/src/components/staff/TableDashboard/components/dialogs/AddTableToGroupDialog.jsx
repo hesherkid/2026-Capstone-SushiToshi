@@ -15,6 +15,7 @@ import {
   Chip,
 } from "@mui/material";
 import { useTable } from "../../context/TableContext";
+import { TABLE_STATUS } from "../../hooks/useTableData";
 import api from "@/config/api";
 
 const AddTableToGroupDialog = ({ open, group }) => {
@@ -26,28 +27,12 @@ const AddTableToGroupDialog = ({ open, group }) => {
 
   useEffect(() => {
     if (open && group) {
-      // Filter tables that are not in any group and are active
-      const available = tables.filter((t) => !t.tableGroup_Id && t.is_active);
-
-      // Filter tables in active sessions
-      const filterTables = async () => {
-        const filtered = await Promise.all(
-          available.map(async (table) => {
-            try {
-              const response = await api.post(
-                `/TableEntity/${table.table_Id}/active-session`
-              );
-              return response.data.success ? table : null;
-            } catch (error) {
-              console.error(error);
-              return null;
-            }
-          })
-        );
-        setAvailableTables(filtered.filter((table) => table !== null));
-      };
-
-      filterTables();
+      // Ungrouped tables that are active and not in a session
+      setAvailableTables(
+        tables.filter(
+          (t) => !t.tableGroup_Id && t.status === TABLE_STATUS.AVAILABLE
+        )
+      );
     }
   }, [open, group, tables]);
 
