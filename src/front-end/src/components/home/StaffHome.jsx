@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Box, Typography, Alert } from "@mui/material";
-import { Clock, Table, ClipboardList, Receipt, Bell, Users } from "lucide-react";
+import { Clock, Table, ClipboardList, Bell, Users } from "lucide-react";
 import StatCard from "@/components/home/StatCard";
 import ShortcutCard from "@/components/home/ShortcutCard";
 import ServiceRequestAlerts from "@/components/home/ServiceRequestAlerts";
@@ -18,10 +18,9 @@ export const StaffHome = ({ userEmail }) => {
     useRestaurantOverview({ includeOrders: true });
 
   const shortcuts = [
-    { title: "Sessions", description: "Seat guests and manage dining sessions", href: "/dashboard/sessions", icon: Clock, badge: requests.length },
+    { title: "Sessions", description: "Seat guests, manage sessions and bills", href: "/dashboard/sessions", icon: Clock, badge: requests.length },
     { title: "Tables", description: "Table status and availability", href: "/dashboard/tables", icon: Table },
     { title: "Orders", description: "Incoming orders for the kitchen", href: "/staff/dashboard/orders", icon: ClipboardList, badge: orders.length },
-    { title: "Bills", description: "Open, split and close bills", href: "/dashboard/bills", icon: Receipt },
   ];
 
   return (

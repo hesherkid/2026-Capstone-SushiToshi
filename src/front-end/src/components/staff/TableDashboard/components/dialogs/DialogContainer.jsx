@@ -4,6 +4,7 @@ import EditTableDialog from "./EditTableDialog";
 import NewTableGroupDialog from "./NewTableGroupDialog";
 import EditTableGroupDialog from "./EditTableGroupDialog";
 import AddTableToGroupDialog from "./AddTableToGroupDialog";
+import ConfirmDialog from "./ConfirmDialog";
 
 const DialogContainer = () => {
   const { dialogState } = useTable();
@@ -23,6 +24,10 @@ const DialogContainer = () => {
       <AddTableToGroupDialog
         open={dialogState.type === "addTableToGroup"}
         group={dialogState.data}
+      />
+      <ConfirmDialog
+        open={dialogState.type === "confirm"}
+        data={dialogState.data}
       />
     </>
   );
