@@ -91,10 +91,9 @@ describe("Table dashboard", () => {
 
     // StatCard renders the count before its label
     const availableCard = screen
-      .getAllByText("Available")
-      .find((el) => el.closest(".MuiCard-root"))
+      .getByText("Tables Available")
       .closest(".MuiCard-root");
-    expect(availableCard).toHaveTextContent("2Available");
+    expect(availableCard).toHaveTextContent("2Tables Available");
 
     fireEvent.click(screen.getByRole("button", { name: "Available" }));
     await waitFor(() => expect(screen.queryByText("Table 2")).not.toBeInTheDocument());
