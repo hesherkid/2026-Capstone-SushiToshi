@@ -144,7 +144,7 @@ namespace back_end.Controllers
             if (limit < 1 || limit > 100) return BadRequest("limit must be between 1 and 100");
 
             var q = _context.Users.AsNoTracking()
-                .Where(u => u.Role == UserRoles.Customer);
+                .Where(u => u.Role == UserRoles.Customer && u.Status != UserStatus.Deleted);
 
             var users = await q
                 .OrderByDescending(u => u.Created_at)
@@ -165,6 +165,41 @@ namespace back_end.Controllers
                 .ToListAsync();
             return Ok(users);
         }
+
+        // DELETE: /api/staff/customers/5
+        // Delete a customer account by Admin only.
+        // Orders, session history and service requests still reference the user, so the row is kept
+        // but anonymised: personal details and sign-in methods are removed and it's marked Deleted.
+        [HttpDelete("customers/{user_id:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteCustomer(int user_id)
+        {
+            var user = await FindCustomer(user_id);
+            if (user == null) return NotFound("Customer not found");
+
+            user.Email = $"deleted-{user.User_id}@deleted.invalid";
+            user.First_name = "Deleted";
+            user.Last_name = "Customer";
+            user.Password_hash = null;
+            user.GoogleSocial = null;
+            user.Is_email_confirmed = false;
+            user.Location_id = null;
+            user.Status = UserStatus.Deleted;
+
+            // Outstanding email verification / password reset links stop working
+            var tokens = _context.AuthActionTokens.Where(t => t.UserId == user_id);
+            _context.AuthActionTokens.RemoveRange(tokens);
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // Customer accounts only, excluding ones already deleted
+        private Task<User?> FindCustomer(int user_id) =>
+            _context.Users.FirstOrDefaultAsync(u =>
+                u.User_id == user_id &&
+                u.Role == UserRoles.Customer &&
+                u.Status != UserStatus.Deleted);
 
         // GET: /api/staff/5
         // Get details of a specific staff/admin user.

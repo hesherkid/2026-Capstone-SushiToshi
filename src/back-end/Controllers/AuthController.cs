@@ -432,6 +432,15 @@ namespace back_end.controllers
 
                 if (existingUser != null)
                 {
+                    // Same rule as password login: deactivated accounts can't sign in
+                    if (existingUser.Status != UserStatus.Active)
+                    {
+                        return StatusCode(403, new
+                        {
+                            message = "Account is not active"
+                        });
+                    }
+
                     // Existing user - update info if needed
                     user = existingUser;
 
