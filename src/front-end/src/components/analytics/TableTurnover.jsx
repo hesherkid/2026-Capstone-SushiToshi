@@ -1,4 +1,5 @@
 "use client";
+
 import {
   useEffect,
   useMemo,
@@ -20,7 +21,6 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-
 import { useTheme } from "@mui/material/styles";
 import { Bar } from "react-chartjs-2";
 import {
@@ -281,7 +281,7 @@ const SeatingsByHourChart = ({ hours, measure, peak, chartRef }) => {
   };
 
   return (
-    <Box sx={{ height: 300 }}>
+    <Box sx={{ position: "relative", height: 300 }}>
       <Bar
         id="seatings-by-hour-chart"
         ref={chartRef}
@@ -351,7 +351,7 @@ const VisitLengthChart = ({ buckets, timeLimit, chartRef }) => {
   };
 
   return (
-    <Box sx={{ height: 300 }}>
+    <Box sx={{ position: "relative", height: 300 }}>
       <Bar
         id="visit-length-chart"
         ref={chartRef}

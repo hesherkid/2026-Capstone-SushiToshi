@@ -44,7 +44,7 @@ jest.mock("@mui/x-data-grid", () => {
 
 jest.mock("react-chartjs-2", () => {
   const React = jest.requireActual("react");
-  const Bar = React.forwardRef(function MockBar(props, ref) {
+  function Bar({ ref, ...props }) {
     React.useImperativeHandle(ref, () => ({
       canvas: document.createElement("canvas"),
     }));
@@ -57,7 +57,7 @@ jest.mock("react-chartjs-2", () => {
       "data-values": JSON.stringify(dataset.data),
       "data-colors": JSON.stringify(dataset.backgroundColor),
     });
-  });
+  }
   return { __esModule: true, Bar };
 });
 
