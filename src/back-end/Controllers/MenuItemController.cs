@@ -502,52 +502,119 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Delete_Menu_item(
-            int item_id
-        )
+        public async Task<IActionResult> Delete_Menu_item(int item_id)
         {
             try
             {
-                var item = await _context.MenuItems.FirstAsync(mi => mi.item_id == item_id);
-                if (item is null)
+                var item = await _context.MenuItems
+                    .FirstOrDefaultAsync(mi => mi.item_id == item_id);
+
+                if (item == null)
                 {
-                    return NotFound("Item was Not found");
+                    return NotFound(new { message = "Menu item not found." });
                 }
-                if (item.MenuAssignments.Count > 0)
+
+                // Prevent deletion if assigned to any menu.
+                var hasAssignments = await _context.Set<MenuItemAssignment>()
+                    .AnyAsync(a => a.Item_Id == item_id);
+
+                if (hasAssignments)
                 {
-                    return BadRequest("Can not Delete Item if there are Items Ordered Check Orders");
-                }
-                var backendRoot = _env.ContentRootPath; // .../src/back-end
-                var frontEndFolder = Path.GetFullPath(
-                    Path.Combine(backendRoot, "..", "front-end", "public", "menu-items")
-                );
-                if (item.image_url != null)
-                {
-                    string fileName = Path.GetFileName(item.image_url);
-                    var ImagePath = Path.Combine(frontEndFolder, fileName);
-                    if (!System.IO.File.Exists(ImagePath))
+                    return Conflict(new
                     {
-                        return BadRequest(ImagePath);
+                        message = "Cannot delete this item because it is assigned to a menu. Remove its menu assignments first."
+                    });
+                }
+
+                // Remove tag associations.
+                var tags = await _context.Set<MenuItemTag>()
+                    .Where(t => t.Menu_item_id == item_id)
+                    .ToListAsync();
+
+                _context.RemoveRange(tags);
+
+                // Remember image path before deleting the item.
+                string? imagePath = null;
+
+                if (!string.IsNullOrWhiteSpace(item.image_url))
+                {
+                    var fileName = Path.GetFileName(item.image_url);
+                    var imageFolder = Path.GetFullPath(
+                        Path.Combine(
+                            _env.ContentRootPath,
+                            "..",
+                            "front-end",
+                            "public",
+                            "menu-items"
+                        )
+                    );
+
+                    imagePath = Path.Combine(imageFolder, fileName);
+                }
+
+                // Delete the database record.
+                _context.MenuItems.Remove(item);
+
+                await _context.SaveChangesAsync();
+
+                // Delete image only after successful database deletion.
+                if (imagePath != null && System.IO.File.Exists(imagePath))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(imagePath);
                     }
-                    else
+                    catch (IOException ex)
                     {
-                        System.IO.File.Delete(ImagePath);
+                        _logger.LogWarning(
+                            ex,
+                            "Menu item {ItemId} deleted, but image removal failed.",
+                            item_id
+                        );
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "No permission to delete image for item {ItemId}.",
+                            item_id
+                        );
                     }
                 }
 
-                _context.Remove(item);
-                await _context.SaveChangesAsync();
-                return Ok("Image Was Deleted");
+                return Ok(new
+                {
+                    message = "Menu item deleted successfully.",
+                    item_id
+                });
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Database error deleting menu item {ItemId}",
+                    item_id
+                );
+
+                return Conflict(new
+                {
+                    message = "Cannot delete this item because another database record references it."
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error Deleting the File selected");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(
+                    ex,
+                    "Error deleting menu item {ItemId}",
+                    item_id
+                );
+
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while deleting the menu item."
+                });
             }
-
         }
-
-
 
         /// <summary>
         /// Updates the status of a menu item.
