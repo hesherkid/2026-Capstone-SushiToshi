@@ -1,12 +1,14 @@
 using Microsoft.Extensions.Logging;
 using back_end.domain.Entities;
 using back_end.domain.DbContexts;
+using back_end.Helpers;
 
 namespace back_end.domain.Seeders
 {
   /// <summary>
   /// Seeder for dining_sessions table.
-  /// Creates mix of active and historical sessions with either individual tables or table groups per location.
+  /// Creates mix of active and historical sessions with either individual tables or table groups per location,
+  /// plus busy evenings where tables seat several parties in a row. 
   /// </summary>
   public class DiningSessionSeeder : ISeeder
   {
@@ -139,18 +141,116 @@ namespace back_end.domain.Seeders
           sessions.Add(session);
         }
 
+        sessions.AddRange(CreateTurnoverEvenings(location, tables, tableGroups, menus, now));
+
         allSessions.AddRange(sessions);
+
 
         var activeCount = sessions.Count(s => s.Ended_At == null);
         var historicalCount = sessions.Count(s => s.Ended_At != null);
-        // _logger.LogInformation($"Added {sessions.Count} dining sessions for {location.Name} ({activeCount} active, {historicalCount} historical)");
       }
 
       _context.DiningSessions.AddRange(allSessions);
 
       var totalActive = allSessions.Count(s => s.Ended_At == null);
       var totalHistorical = allSessions.Count(s => s.Ended_At != null);
-      // _logger.LogInformation($"Total: {allSessions.Count} dining sessions across {locations.Count} locations ({totalActive} active, {totalHistorical} historical)");
     }
+    /// <summary>
+    /// Creates busy evenings where the same tables seat two or three parties in a row.
+    /// The random historical sessions above are spread over 90 days and many tables, so the
+    /// same table almost never has two sessions on one day. Without these evenings the
+    /// "time between parties" figures in the Table Turnover report would always be empty.
+    /// Each session still gets bills (party size), orders and order items from the later seeders.
+    /// </summary>
+    private List<DiningSession> CreateTurnoverEvenings(
+        Locations location,
+        List<TableEntity> tables,
+        List<TableGroup> tableGroups,
+        List<Menu> menus,
+        DateTime now)
+    {
+      var sessions = new List<DiningSession>();
+
+      var menu = menus.FirstOrDefault(m => m.Name == "All Day Menu") ?? menus[0];
+
+      var timeZone = AnalyticsDateRange.RestaurantTimeZone;
+      var today = TimeZoneInfo.ConvertTimeFromUtc(now, timeZone).Date;
+      int[] daysAgoList = { 1, 2, 4, 6, 10, 15 };
+
+      for (int evening = 0; evening < daysAgoList.Length; evening++)
+      {
+        var day = today.AddDays(-daysAgoList[evening]);
+
+        // Single tables: 4 tables, 3 parties each
+        var tablesTonight = tables.OrderBy(_ => _rng.Next()).Take(4).ToList();
+
+        for (int t = 0; t < tablesTonight.Count; t++)
+        {
+          var firstSeatingHour = (evening == 0 && t == 1) ? 15 : 17;
+          var seatedAt = day.AddHours(firstSeatingHour).AddMinutes(_rng.Next(0, 31));
+
+          for (int party = 0; party < 3; party++)
+          {
+            var visitMinutes = _rng.Next(60, 96); // 60-95 minutes, a few over the 90 minute limit
+            var leftAt = seatedAt.AddMinutes(visitMinutes);
+
+            sessions.Add(new DiningSession
+            {
+              Menu_Id = menu.Menu_id,
+              Location_Id = location.Location_Id,
+              Started_At = ToUtc(seatedAt, timeZone),
+              First_Order_At = ToUtc(seatedAt.AddMinutes(_rng.Next(5, 20)), timeZone),
+              Ended_At = ToUtc(leftAt, timeZone),
+              Table_Id = tablesTonight[t].Table_Id
+            });
+
+            seatedAt = leftAt.AddMinutes(GapBeforeNextParty(evening, t, party));
+          }
+        }
+
+        // One table group: 2 large parties back to back
+        if (tableGroups.Any())
+        {
+          var group = tableGroups[_rng.Next(tableGroups.Count)];
+          var seatedAt = day.AddHours(17).AddMinutes(_rng.Next(0, 31));
+
+          for (int party = 0; party < 2; party++)
+          {
+            var leftAt = seatedAt.AddMinutes(_rng.Next(80, 111)); // big groups stay longer
+
+            sessions.Add(new DiningSession
+            {
+              Menu_Id = menu.Menu_id,
+              Location_Id = location.Location_Id,
+              Started_At = ToUtc(seatedAt, timeZone),
+              First_Order_At = ToUtc(seatedAt.AddMinutes(_rng.Next(5, 20)), timeZone),
+              Ended_At = ToUtc(leftAt, timeZone),
+              TableGroup_Id = group.TableGroup_Id
+            });
+
+            seatedAt = leftAt.AddMinutes(_rng.Next(10, 31)); // groups take longer to reset
+          }
+        }
+      }
+
+      return sessions;
+    }
+
+    /// <summary>
+    /// Minutes between one party leaving and the next being seated at the same table.
+    /// Mostly 5-25 minutes. On the most recent evening, two tables get special cases
+    /// so the report's notes can be shown:
+    /// - an overlap: the next party is seated 10 minutes before the last one was closed out
+    /// - a long gap: the table sits empty for 2.5 hours (more than the 120 minute cut-off)
+    /// </summary>
+    private int GapBeforeNextParty(int evening, int table, int party)
+    {
+      if (evening == 0 && table == 0 && party == 0) return -10;  // overlap
+      if (evening == 0 && table == 1 && party == 0) return 150;  // long gap
+      return _rng.Next(5, 26);
+    }
+
+    private static DateTime ToUtc(DateTime local, TimeZoneInfo timeZone) =>
+        TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), timeZone);
   }
 }

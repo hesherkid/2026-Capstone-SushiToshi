@@ -255,7 +255,7 @@ const OrdersByHourChart = ({ hours, peakHour, chartRef }) => {
   };
 
   return (
-    <Box sx={{ height: 300 }}>
+    <Box sx={{ position: "relative", height: 300 }}>
       <Bar
         ref={chartRef}
         data={chartData}
