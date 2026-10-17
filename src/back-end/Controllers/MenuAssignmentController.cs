@@ -72,8 +72,8 @@ namespace back_end.Controllers
                     return BadRequest("Add-on items must have a price greater than 0");
                 }
 
-                if (assignmentData.Location_Id != null && 
-                    !await _context.MenuItemAssignments.AnyAsync(a => a.Menu_Id == assignmentData.Menu_Id && a.Item_Id == assignmentData.Item_Id 
+                if (assignmentData.Location_Id != null &&
+                    !await _context.MenuItemAssignments.AnyAsync(a => a.Menu_Id == assignmentData.Menu_Id && a.Item_Id == assignmentData.Item_Id
                     && a.Location_Id == null))
                 {
                     return BadRequest("Add the item to the menu (default price) before adding a location price");

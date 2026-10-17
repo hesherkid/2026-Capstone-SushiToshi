@@ -388,6 +388,7 @@ namespace back_end.Controllers
                             adult = m.MenuItem.Category.adult_limit,
                             senior = m.MenuItem.Category.senior_limit,
                             child = m.MenuItem.Category.child_limit,
+                            toddler = LimitRules.EffectToddler(m.MenuItem.Category.toddler_limit, m.MenuItem.Category.child_limit),
                             total = m.MenuItem.Category.total_limit,
                         },
                         isAddOn = m.Is_Add_On,

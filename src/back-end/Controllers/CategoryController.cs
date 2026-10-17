@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using back_end.domain.DbContexts; // Ensure this is the correct namespace for ApplicationDbContext
+using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.DTO.Category;
 using Microsoft.AspNetCore.Authorization;
+using back_end.Helpers;
 
 namespace back_end.Controllers
 {
@@ -70,6 +71,7 @@ namespace back_end.Controllers
         /// </returns>
         /// <response code="200">Returns the newly created category</response>
         /// <response code="409">If a category with the same name already exists</response>
+        /// <response code="400">If the provided limits are invalid</response>
         /// <response code="500">If an internal error occurs while creating the category</response>
         /// <remarks>
         /// Sample request:
@@ -78,43 +80,37 @@ namespace back_end.Controllers
         ///     {
         ///         "name": "Appetizers",
         ///         "description": "Starter dishes and small plates",
-        ///         "adult_Limit": 100,
-        ///         "child_Limit": 50,
-        ///         "senior_Limit": 75,
-        ///         "total_Limit": 200
+        ///         "adult_limit": 6,
+        ///         "child_limit": 4,
+        ///         "senior_limit": 5,
+        ///         "toddler_limit": 2,
+        ///         "total_limit": 0
         ///     }
         ///
         /// Creates a new category with the provided information.
         /// Category names must be unique.
         /// Last viewed timestamp is automatically set to current UTC time.
+        /// A limit of 0 means unlimited, except toddler_limit: 0 means "same as child_limit".
+        /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total
+        /// (total is an optional hard ceiling for the table).
         /// </remarks>
-         [Authorize(Policy = "adminOnly")]
+        [Authorize(Policy = "adminOnly")]
         [HttpPost]
         [ProducesResponseType(typeof(Category), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreateCategory(CreateCategory category)
         {
             try
             {
-                // Validation logic for limits
-                if (category.Adult_Limit < 0)
-                    return BadRequest("Adult_Limit cannot be negative.");
-                if (category.Child_Limit < 0)
-                    return BadRequest("Child_Limit cannot be negative.");
-                if (category.Senior_Limit < 0)
-                    return BadRequest("Senior_Limit cannot be negative.");
-                if (category.Total_Limit < 0)
-                    return BadRequest("Total_Limit cannot be negative.");
-                if (category.Child_Limit > category.Adult_Limit || category.Child_Limit > category.Total_Limit)
-                    return BadRequest("Child_Limit cannot be greater than Adult_Limit or Total_Limit.");
-                if (category.Senior_Limit > category.Adult_Limit || category.Senior_Limit > category.Total_Limit)
-                    return BadRequest("Senior_Limit cannot be greater than Adult_Limit or Total_Limit.");
+                var error = LimitRules.Validate(category.Adult_Limit, category.Child_Limit, category.Senior_Limit, category.Toddler_Limit, category.Total_Limit);
+                if (error != null) return BadRequest(error);
 
                 var newCategory = await _context.Categories.FirstOrDefaultAsync(c => c.Category_name == category.Name);
                 if (newCategory != null)
                 {
-                    return BadRequest("Category with the same name already exists.");
+                    return Conflict("Category with the same name already exists.");
                 }
 
                 var categoryEntity = new Category
@@ -124,6 +120,7 @@ namespace back_end.Controllers
                     adult_limit = category.Adult_Limit,
                     child_limit = category.Child_Limit,
                     senior_limit = category.Senior_Limit,
+                    toddler_limit = category.Toddler_Limit,
                     total_limit = category.Total_Limit,
                     last_viewed_at = DateTime.UtcNow
                 };
@@ -208,21 +205,26 @@ namespace back_end.Controllers
         ///     {
         ///         "name": "Appetizers",
         ///         "description": "Starter dishes and small plates",
-        ///         "adult_Limit": 100,
-        ///         "child_Limit": 50,
-        ///         "senior_Limit": 75,
-        ///         "total_Limit": 200
+        ///         "adult_limit": 6,
+        ///         "child_limit": 4,
+        ///         "senior_limit": 5,
+        ///         "toddler_limit": 2,
+        ///         "total_limit": 0
         ///     }
         ///
         /// Updates the category information and limits.
         /// Name and description are optional - if not provided, existing values are retained.
         /// Last viewed timestamp is automatically updated to current UTC time.
+        /// A limit of 0 means unlimited, except toddler_limit: 0 means "same as child_limit".
+        /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total
+        /// (total is an optional hard ceiling for the table).
         /// </remarks>
-         [Authorize(Policy = "adminOnly")]
+        [Authorize(Policy = "adminOnly")]
         [HttpPut("update_category/{_categoryId}")]
         [ProducesResponseType(typeof(Category), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UpdateCategory(int _categoryId, UpdateCategory updatedCategory)
         {
             try
@@ -235,27 +237,24 @@ namespace back_end.Controllers
                     return NotFound("Category not found.");
                 }
 
-                // Validation logic moved here
-                if (updatedCategory.Adult_Limit < 0)
-                    return BadRequest("Adult_Limit cannot be negative.");
-                if (updatedCategory.Child_Limit < 0)
-                    return BadRequest("Child_Limit cannot be negative.");
-                if (updatedCategory.Senior_Limit < 0)
-                    return BadRequest("Senior_Limit cannot be negative.");
-                if (updatedCategory.Total_Limit < 0)
-                    return BadRequest("Total_Limit cannot be negative.");
-                if (updatedCategory.Child_Limit > updatedCategory.Adult_Limit || updatedCategory.Child_Limit > updatedCategory.Total_Limit)
-                    return BadRequest("Child_Limit cannot be greater than Adult_Limit or Total_Limit.");
-                if (updatedCategory.Senior_Limit > updatedCategory.Adult_Limit || updatedCategory.Senior_Limit > updatedCategory.Total_Limit)
-                    return BadRequest("Senior_Limit cannot be greater than Adult_Limit or Total_Limit.");
+                var adult = updatedCategory.Adult_Limit ?? existingCategory.adult_limit;
+                var child = updatedCategory.Child_Limit ?? existingCategory.child_limit;
+                var senior = updatedCategory.Senior_Limit ?? existingCategory.senior_limit;
+                var toddler = updatedCategory.Toddler_Limit ?? existingCategory.toddler_limit;
+                var total = updatedCategory.Total_Limit ?? existingCategory.total_limit;
 
+
+                var error = LimitRules.Validate(adult, child, senior, toddler, total);
+                if (error != null) return BadRequest(error);
+
+                existingCategory.adult_limit = adult;
+                existingCategory.child_limit = child;
+                existingCategory.senior_limit = senior;
+                existingCategory.toddler_limit = toddler;
+                existingCategory.total_limit = total;
+                existingCategory.last_viewed_at = DateTime.UtcNow;
                 existingCategory.Category_name = updatedCategory.Name ?? existingCategory.Category_name;
                 existingCategory.Description = updatedCategory.Description ?? existingCategory.Description;
-                existingCategory.adult_limit = updatedCategory.Adult_Limit;
-                existingCategory.child_limit = updatedCategory.Child_Limit;
-                existingCategory.senior_limit = updatedCategory.Senior_Limit;
-                existingCategory.total_limit = updatedCategory.Total_Limit;
-                existingCategory.last_viewed_at = DateTime.UtcNow;
                 _context.Categories.Update(existingCategory);
                 await _context.SaveChangesAsync();
                 return Ok(existingCategory);
@@ -290,7 +289,7 @@ namespace back_end.Controllers
         /// Permanently removes the category from the database.
         /// This may affect menu items associated with this category depending on cascade settings.
         /// </remarks>
-         [Authorize(Policy = "adminOnly")]
+        [Authorize(Policy = "adminOnly")]
         [HttpDelete("delete_category/{_categoryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -374,7 +373,7 @@ namespace back_end.Controllers
             }
         }
 
-         /// <summary>
+        /// <summary>
         /// Tracks a view event for a specific category, recording view duration and incrementing view count.
         /// </summary>
         /// <param name="_categoryId">The unique identifier of the category</param>
@@ -400,7 +399,7 @@ namespace back_end.Controllers
         /// - Adds view_seconds to total view duration
         /// - Updates last viewed timestamp to current UTC time
         /// </remarks>
-         [Authorize(Policy = "staffOnly")]
+        [Authorize(Policy = "staffOnly")]
         [HttpPost("track_viewed/{_categoryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -439,9 +438,9 @@ namespace back_end.Controllers
 
         //This endpoint is in the python project with notes that it needs parameters to be added to menu item model, comment out as 
         // it is not being used and would cause errors if called but included for future implementation.
-        
+
         // [HttpPut("reorder-items{_categoryId}")]
-        
+
 
         // public async Task<IActionResult> ReorderMenuItems(int categoryId, [FromBody] List<int> itemIds)
         // {
@@ -485,6 +484,6 @@ namespace back_end.Controllers
         //     }
         // }
 
-        
+
     }
 }

@@ -13,14 +13,21 @@ namespace back_end.DTO.Category
     {
         [JsonPropertyName("name")]
         public string? Name { get; set; }
+
         [JsonPropertyName("description")]
         public string? Description { get; set; }
+
         [JsonPropertyName("adult_limit")]
         public int Adult_Limit { get; set; }
+
         [JsonPropertyName("child_limit")]
         public int Child_Limit { get; set; }
+
         [JsonPropertyName("senior_limit")]
         public int Senior_Limit { get; set; }
+
+        [JsonPropertyName("toddler_limit")]
+        public int Toddler_Limit { get; set; }
 
         [JsonPropertyName("total_limit")]
         public int Total_Limit { get; set; }
@@ -30,15 +37,23 @@ namespace back_end.DTO.Category
     {
         [JsonPropertyName("name")]
         public string? Name { get; set; }
+
         [JsonPropertyName("description")]
         public string? Description { get; set; }
+
         [JsonPropertyName("adult_limit")]
-        public int Adult_Limit { get; set; }
-        [JsonPropertyName("total_limit")]
-        public int Total_Limit { get; set; }
+        public int? Adult_Limit { get; set; }
+
         [JsonPropertyName("child_limit")]
-        public int Child_Limit { get; set; }
+        public int? Child_Limit { get; set; }
+
         [JsonPropertyName("senior_limit")]
-        public int Senior_Limit { get; set; }
+        public int? Senior_Limit { get; set; }
+
+        [JsonPropertyName("toddler_limit")]
+        public int? Toddler_Limit { get; set; }
+
+        [JsonPropertyName("total_limit")]
+        public int? Total_Limit { get; set; }
     }
 }

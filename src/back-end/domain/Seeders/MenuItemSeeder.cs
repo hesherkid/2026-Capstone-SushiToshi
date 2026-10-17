@@ -91,12 +91,12 @@ namespace back_end.domain.Seeders
             _logger.LogInformation($"MENU ITEMS FOUND: {menuItems.Count}");
             var categoryConfigs = new Dictionary<string, CategoryConfig>
             {
-                ["Sushi Rolls"] = new CategoryConfig { RegularPrice = 12.99m, AdultLimit = 4, ChildLimit = 3, SeniorLimit = 3, TotLimit = 2 },
-                ["Nigiri"] = new CategoryConfig { RegularPrice = 8.99m, AdultLimit = 6, ChildLimit = 4, SeniorLimit = 5, TotLimit = 2 },
-                ["Sashimi"] = new CategoryConfig { RegularPrice = 14.99m, AdultLimit = 3, ChildLimit = 2, SeniorLimit = 2, TotLimit = 1 },
-                ["Appetizers"] = new CategoryConfig { RegularPrice = 7.99m, AdultLimit = 3, ChildLimit = 2, SeniorLimit = 2, TotLimit = 1 },
-                ["Hot Dishes"] = new CategoryConfig { RegularPrice = 15.99m, AdultLimit = 2, ChildLimit = 1, SeniorLimit = 1, TotLimit = 1 },
-                ["Desserts"] = new CategoryConfig { RegularPrice = 6.99m, AdultLimit = 2, ChildLimit = 2, SeniorLimit = 2, TotLimit = 1 }
+                ["Sushi Rolls"] = new CategoryConfig { RegularPrice = 12.99m, AdultLimit = 0, ChildLimit = 0, SeniorLimit = 0, TotLimit = 0 },
+                ["Nigiri"] = new CategoryConfig { RegularPrice = 8.99m, AdultLimit = 0, ChildLimit = 0, SeniorLimit = 0, TotLimit = 0 },
+                ["Sashimi"] = new CategoryConfig { RegularPrice = 14.99m, AdultLimit = 0, ChildLimit = 0, SeniorLimit = 0, TotLimit = 0 },
+                ["Appetizers"] = new CategoryConfig { RegularPrice = 7.99m, AdultLimit = 0, ChildLimit = 0, SeniorLimit = 0, TotLimit = 0 },
+                ["Hot Dishes"] = new CategoryConfig { RegularPrice = 15.99m, AdultLimit = 0, ChildLimit = 0, SeniorLimit = 0, TotLimit = 0 },
+                ["Desserts"] = new CategoryConfig { RegularPrice = 6.99m, AdultLimit = 0, ChildLimit = 0, SeniorLimit = 0, TotLimit = 0 }
             };
 
             foreach (var config in categoryConfigs.Values)
@@ -124,6 +124,7 @@ namespace back_end.domain.Seeders
                         Menu_Id = menu.Menu_id,
                         Item_Id = item.item_id,
                         Price = price,
+                        Full_Price = price,
                         Adult_Limit = categoryConfig.AdultLimit,
                         Child_limit = categoryConfig.ChildLimit,
                         Senior_limit = categoryConfig.SeniorLimit,
