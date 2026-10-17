@@ -15,6 +15,7 @@ using back_end.DTO.StaffDTOs;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
+using back_end.Helpers;
 
 namespace back_end.Controllers
 {
@@ -134,38 +135,6 @@ namespace back_end.Controllers
             return Ok(users);
         }
 
-        [HttpGet("customers")]
-        [Authorize(Roles = "Admin,Staff")]
-        public async Task<ActionResult<IEnumerable<UserResponseDTO>>> ListCustomers(
-            [FromQuery] int skip = 0,
-            [FromQuery] int limit = 100)
-        {
-            if (skip < 0) return BadRequest("skip must be >= 0");
-            if (limit < 1 || limit > 100) return BadRequest("limit must be between 1 and 100");
-
-            var q = _context.Users.AsNoTracking()
-                .Where(u => u.Role == UserRoles.Customer);
-
-            var users = await q
-                .OrderByDescending(u => u.Created_at)
-                .Skip(skip)
-                .Take(limit)
-                .Select(u => new UserResponseDTO
-                {
-                    User_id = u.User_id,
-                    Email = u.Email,
-                    First_name = u.First_name,
-                    Last_name = u.Last_name,
-                    Role = u.Role,
-                    Status = u.Status,
-                    Created_at = u.Created_at,
-                    Last_Interaction_at = u.Last_Interaction_at,
-                    Is_email_confirmed = u.Is_email_confirmed
-                })
-                .ToListAsync();
-            return Ok(users);
-        }
-
         // GET: /api/staff/5
         // Get details of a specific staff/admin user.
         [HttpGet("{user_id:int}")]
@@ -187,17 +156,17 @@ namespace back_end.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<UserResponseDTO>> UpdateStaff(int user_id, [FromBody] StaffMemberUpdateDTO user_data)
         {
-            // var user = await _context.Users
-            //     .Where(x => x.User_id == user_id &&
-            //                 (x.Role == UserRoles.Staff || x.Role == UserRoles.Admin))
-            //     .FirstOrDefaultAsync();
-            var currentUserId = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            var user = await _context.Users
-                .Where(x => x.User_id == user_id)
-                .FirstOrDefaultAsync();
+            // Staff and admin accounts only, so this can't turn a customer into staff
+            var user = await FindStaff(user_id);
 
             if (user == null) return NotFound("Staff user not found");
+
+            // Stops an admin locking themselves out by demoting or deactivating their own account
+            bool isSelf = ClaimsHelpers.GetUserId(User) == user_id.ToString();
+            if (isSelf && (user_data.Role != user.Role || user_data.Status != user.Status))
+            {
+                return BadRequest("You can't change the role or status of your own account");
+            }
 
             if (!string.IsNullOrWhiteSpace(user_data.Email))
             {
@@ -225,6 +194,32 @@ namespace back_end.Controllers
             await _context.SaveChangesAsync();
             return Ok(ToResponse(user));
         }
+
+        // PUT: /api/staff/5/status
+        // Deactivate or reactivate a staff/admin account by Admin only. Inactive accounts can't log in.
+        [HttpPut("{user_id:int}/status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateStaffStatus(int user_id, [FromBody] AccountStatusUpdateDTO request)
+        {
+            if (request.Status != UserStatus.Active && request.Status != UserStatus.Inactive)
+                return BadRequest("Status must be Active or Inactive");
+
+            // Stops an admin locking themselves out
+            if (ClaimsHelpers.GetUserId(User) == user_id.ToString())
+                return BadRequest("You can't change the status of your own account");
+
+            var user = await FindStaff(user_id);
+            if (user == null) return NotFound("Staff user not found");
+
+            user.Status = request.Status;
+            await _context.SaveChangesAsync();
+            return Ok(ToResponse(user));
+        }
+
+        private Task<User?> FindStaff(int user_id) =>
+            _context.Users.FirstOrDefaultAsync(u =>
+                u.User_id == user_id &&
+                (u.Role == UserRoles.Staff || u.Role == UserRoles.Admin));
 
         // POST: /api/staff/5/change-password
         // Change a staff user's password by Admin only.
@@ -334,17 +329,6 @@ namespace back_end.Controllers
 
         }
 
-        private static UserResponseDTO ToResponse(User u) => new UserResponseDTO
-        {
-            User_id = u.User_id,
-            Email = u.Email,
-            First_name = u.First_name,
-            Last_name = u.Last_name,
-            Role = u.Role,
-            Status = u.Status,
-            Created_at = u.Created_at,
-            Last_Interaction_at = u.Last_Interaction_at,
-            Is_email_confirmed = u.Is_email_confirmed
-        };
+        private static UserResponseDTO ToResponse(User u) => UserResponseDTO.From(u);
     }
 }

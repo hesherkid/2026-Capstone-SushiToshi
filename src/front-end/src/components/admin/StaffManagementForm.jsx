@@ -11,6 +11,7 @@ import {
   CircularProgress,
   Paper,
   Typography,
+  FormHelperText,
 } from "@mui/material";
 import { UserPlus, Save } from "lucide-react";
 import api from "@/config/api";
@@ -21,6 +22,8 @@ const StaffManagementForm = ({
   isLoading = false,
   error = null,
   mode = "create",
+  // True when an admin edits their own account; the API won't let them change their own role
+  lockRole = false,
 }) => {
   const [locations, setLocations] = useState([]);
   const [formData, setFormData] = useState({
@@ -28,7 +31,8 @@ const StaffManagementForm = ({
     password: "",
     first_name: initialData?.first_name || "",
     last_name: initialData?.last_name || "",
-    role: initialData?.role || "staff",
+    // The API returns "Admin"/"Staff"; the dropdown options are lowercase
+    role: initialData?.role?.toLowerCase() || "staff",
     status: initialData?.status || "active",
     location_Id: initialData?.location_Id || initialData?.location_id || "",
   });
@@ -135,7 +139,7 @@ const StaffManagementForm = ({
             fullWidth
           />
 
-          <FormControl fullWidth required>
+          <FormControl fullWidth required disabled={lockRole}>
             <InputLabel>Role</InputLabel>
             <Select
               name="role"
@@ -146,6 +150,9 @@ const StaffManagementForm = ({
               <MenuItem value="staff">Staff</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
             </Select>
+            {lockRole && (
+              <FormHelperText>You can't change your own role</FormHelperText>
+            )}
           </FormControl>
 
           <FormControl fullWidth>

@@ -168,6 +168,7 @@ describe("Home page dashboards", () => {
     expect(screen.getByRole("link", { name: /Analytics Overview/ })).toHaveAttribute("href", "/analytics/analytic-page");
     expect(screen.getByRole("link", { name: /Menu Items/ })).toHaveAttribute("href", "/admin/menu-items");
     expect(screen.getByRole("link", { name: /^Staff/ })).toHaveAttribute("href", "/admin/staff");
+    expect(screen.getByRole("link", { name: /^Customers/ })).toHaveAttribute("href", "/admin/customers");
     expect(await screen.findByText("1 table needs help")).toBeInTheDocument();
   });
 });

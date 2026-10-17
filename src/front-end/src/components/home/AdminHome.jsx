@@ -12,6 +12,7 @@ import {
   MapPin,
   Menu as MenuIcon,
   Group,
+  Contact,
   Tag,
   UserCog,
   BarChart,
@@ -45,6 +46,7 @@ const shortcutSections = (pendingRequests) => [
       { title: "Menu Categories", description: "Categories and order limits", href: "/admin/menu-categories", icon: Group },
       { title: "Tags", description: "Dietary and allergen tags", href: "/tags/tag-management", icon: Tag },
       { title: "Staff", description: "Accounts, roles and passwords", href: "/admin/staff", icon: UserCog },
+      { title: "Customers", description: "Registered customer accounts", href: "/admin/customers", icon: Contact },
     ],
   },
   {
