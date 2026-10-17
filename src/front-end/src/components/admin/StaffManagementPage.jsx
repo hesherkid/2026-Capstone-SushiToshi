@@ -23,6 +23,8 @@ const StaffManagementPage = () => {
   const [staffToDeactivate, setStaffToDeactivate] = useState(null);
   const { userRole, userEmail } = useAuth();
   const isAdmin = userRole === "admin";
+  const isSelf = (staff) =>
+    !!userEmail && staff?.email?.toLowerCase() === userEmail.toLowerCase();
   const fetchStaff = async () => {
     try {
       setLoading(true);
@@ -107,13 +109,15 @@ const StaffManagementPage = () => {
 
       await fetchStaff();
       setFormOpen(false);
-      setSuccessMessage("Staff member updated successfully");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
       setSelectedStaff(null);
       setEditMode(false);
+      setSuccessMessage("Staff member updated successfully");
+    } catch (err) {
+      // Keep the form in edit mode so the admin can fix and resubmit
+      const detail = err.response?.data;
+      setError(typeof detail === "string" && detail ? detail : err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -171,9 +175,7 @@ const StaffManagementPage = () => {
                   ? setStaffToDeactivate(staff)
                   : handleStatusChange(staff, "Active")
             : undefined,
-          isSelf: (staff) =>
-            !!userEmail &&
-            staff.email?.toLowerCase() === userEmail.toLowerCase(),
+          isSelf,
         }),
         loading,
         getRowId: (row) => row.user_id,
@@ -191,6 +193,7 @@ const StaffManagementPage = () => {
           isLoading={submitting}
           error={error}
           mode={editMode ? "edit" : "create"}
+          lockRole={editMode && isSelf(selectedStaff)}
         />
       </Dialog>
 

@@ -107,6 +107,39 @@ public class StaffControllerTests : IDisposable
         (await _context.Users.FindAsync(4))!.Role.Should().Be(UserRoles.Customer);
     }
 
+    [Theory]
+    [InlineData(UserRoles.Staff, UserStatus.Active)]    // demote self
+    [InlineData(UserRoles.Admin, UserStatus.Inactive)]  // deactivate self
+    public async Task UpdateStaff_WontLetAnAdminChangeTheirOwnRoleOrStatus(UserRoles role, UserStatus status)
+    {
+        var result = await _controller.UpdateStaff(SignedInAdminId, new StaffMemberUpdateDTO
+        {
+            FirstName = "Changed",
+            Role = role,
+            Status = status,
+        });
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        var self = await _context.Users.FindAsync(SignedInAdminId);
+        self!.Role.Should().Be(UserRoles.Admin);
+        self.Status.Should().Be(UserStatus.Active);
+        self.First_name.Should().Be("Ada");
+    }
+
+    [Fact]
+    public async Task UpdateStaff_LetsAnAdminEditTheirOwnName()
+    {
+        var result = await _controller.UpdateStaff(SignedInAdminId, new StaffMemberUpdateDTO
+        {
+            FirstName = "Adele",
+            Role = UserRoles.Admin,
+            Status = UserStatus.Active,
+        });
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        (await _context.Users.FindAsync(SignedInAdminId))!.First_name.Should().Be("Adele");
+    }
+
     [Fact]
     public async Task UpdateStaff_StillUpdatesStaffAccounts()
     {

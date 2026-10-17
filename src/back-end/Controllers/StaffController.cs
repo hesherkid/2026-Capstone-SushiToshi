@@ -161,6 +161,13 @@ namespace back_end.Controllers
 
             if (user == null) return NotFound("Staff user not found");
 
+            // Stops an admin locking themselves out by demoting or deactivating their own account
+            bool isSelf = ClaimsHelpers.GetUserId(User) == user_id.ToString();
+            if (isSelf && (user_data.Role != user.Role || user_data.Status != user.Status))
+            {
+                return BadRequest("You can't change the role or status of your own account");
+            }
+
             if (!string.IsNullOrWhiteSpace(user_data.Email))
             {
                 var newEmail = user_data.Email.Trim().ToLowerInvariant();

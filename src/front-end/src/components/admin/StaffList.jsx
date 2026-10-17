@@ -7,16 +7,21 @@ import { actionsColumn } from "@/components/common/RowActions";
 export const isActiveAccount = (user) =>
   String(user?.status).toLowerCase() === "active";
 
-const getStatusColor = (status) => {
-  switch (String(status).toLowerCase()) {
-    case "active":
-      return "success";
-    case "inactive":
-      return "error";
-    default:
-      return "default";
-  }
+const STATUS_COLORS = {
+  active: "success",
+  inactive: "default",
+  suspended: "warning",
+  deleted: "error",
 };
+
+// Status pill shared by the staff and customer management pages
+export const AccountStatusChip = ({ status }) => (
+  <Chip
+    label={status}
+    color={STATUS_COLORS[String(status).toLowerCase()] ?? "default"}
+    size="small"
+  />
+);
 
 // Column definitions for the staff management page.
 // onToggleStatus is only passed for admins; isSelf hides it on the signed-in admin's own row.
@@ -55,13 +60,7 @@ export const getStaffColumns = ({ onEdit, onChangePassword, onToggleStatus, isSe
     field: "status",
     headerName: "Status",
     flex: 1,
-    renderCell: (params) => (
-      <Chip
-        label={params.value}
-        color={getStatusColor(params.value)}
-        size="small"
-      />
-    ),
+    renderCell: ({ value }) => <AccountStatusChip status={value} />,
   },
   actionsColumn((row) => [
     { label: "Edit User", icon: Edit, onClick: () => onEdit(row) },

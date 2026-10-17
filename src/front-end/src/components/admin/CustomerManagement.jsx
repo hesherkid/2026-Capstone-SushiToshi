@@ -17,19 +17,12 @@ import { actionsColumn } from "@/components/common/RowActions";
 import StatCard from "@/components/home/StatCard";
 import { statsGrid } from "@/components/home/homeLayout";
 import { formatDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
-import { isActiveAccount } from "@/components/admin/StaffList";
+import { isActiveAccount, AccountStatusChip } from "@/components/admin/StaffList";
 import { useAuth } from "@/hooks/useAuth";
 
 // /customers returns at most 100 per call
 const PAGE_LIMIT = 100;
 const NEW_CUSTOMER_DAYS = 30;
-
-const STATUS_COLORS = {
-  active: "success",
-  inactive: "default",
-  suspended: "warning",
-  deleted: "error",
-};
 
 const daysAgo = (days) => Date.now() - days * 24 * 60 * 60 * 1000;
 
@@ -70,13 +63,7 @@ export const getCustomerColumns = ({ onDeactivate, onReactivate, onDelete } = {}
     headerName: "Status",
     flex: 0.8,
     minWidth: 110,
-    renderCell: ({ value }) => (
-      <Chip
-        label={value}
-        color={STATUS_COLORS[String(value).toLowerCase()] ?? "default"}
-        size="small"
-      />
-    ),
+    renderCell: ({ value }) => <AccountStatusChip status={value} />,
   },
   {
     field: "created_at",
