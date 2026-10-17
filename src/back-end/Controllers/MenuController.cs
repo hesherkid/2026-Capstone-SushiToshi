@@ -24,7 +24,7 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
-
+        //TODO: this has no front end implementation yet, DTO is also commented out.
         [Authorize(Policy = "staffOnly")]
         [HttpPost("createmenu")]
         [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
@@ -48,7 +48,7 @@ namespace back_end.Controllers
                 var newMenu = new Menu
                 {
                     Name = item_data.Name,
-                    Description = item_data.Description,
+                    Description = item_data.Description ?? string.Empty,
                     Start_time = item_data.Start_Time ?? new TimeOnly(0, 0, 1),
                     End_time = item_data.End_Time ?? new TimeOnly(23, 59, 59),
                     Is_active = item_data.Is_Active

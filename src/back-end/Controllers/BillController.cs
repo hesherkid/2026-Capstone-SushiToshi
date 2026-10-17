@@ -86,7 +86,7 @@ namespace back_end.controllers
         var session = await _context.DiningSessions
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(ds => ds.Session_Id == _session_id);
 
         if (session == null)
@@ -221,7 +221,7 @@ namespace back_end.controllers
         var session = await _context.DiningSessions
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(ds => ds.Session_Id == _session_id);
 
         if (session == null)
@@ -242,8 +242,7 @@ namespace back_end.controllers
             tableInSession = true;
           }
           // Check if it's in the table group
-          else if (session.TableGroup_Id.HasValue &&
-                   session.TableGroup.Tables.Any(t => t.Table_Id == _table_id.Value))
+          else if (session.TableGroup?.Tables.Any(t => t.Table_Id == _table_id.Value) == true)
           {
             tableInSession = true;
           }
@@ -317,7 +316,7 @@ namespace back_end.controllers
                 .ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.TableGroup)
-                    .ThenInclude(tg => tg.Tables)
+                    .ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
 
         if (bill == null)
@@ -384,7 +383,7 @@ namespace back_end.controllers
                 .ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.TableGroup)
-                    .ThenInclude(tg => tg.Tables)
+                    .ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
 
         if (bill == null)
@@ -469,7 +468,7 @@ namespace back_end.controllers
                 .ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.TableGroup)
-                    .ThenInclude(tg => tg.Tables)
+                    .ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
 
         if (bill == null)
@@ -564,7 +563,7 @@ namespace back_end.controllers
         var bills = await _context.Bills
             .Include(b => b.DiningSession.Table)
             .Include(b => b.DiningSession.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Join(
                 _context.SessionParticipants,
                 bill => bill.Session_Id,
@@ -627,7 +626,7 @@ namespace back_end.controllers
         var bill = await _context.Bills
             .Include(b => b.DiningSession.Table)
             .Include(b => b.DiningSession.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
 
         if (bill == null)

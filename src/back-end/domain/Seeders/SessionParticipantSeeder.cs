@@ -17,7 +17,7 @@ namespace back_end.domain.Seeders
         private readonly ILogger<SessionParticipantSeeder> _logger;
         private readonly Random _rng = new();
 
-        private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData;
+        private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData = new();
 
         public SessionParticipantSeeder(ApplicationDbContext context, ILogger<SessionParticipantSeeder> logger)
         {

@@ -27,7 +27,7 @@ namespace back_end.Helpers
             return string.IsNullOrWhiteSpace(name) ? "Unknown" : name;
         }
 
-        public static string? GetUserRole(ClaimsPrincipal user)
+        public static string? GetUserRole(ClaimsPrincipal? user)
         {
             return user?.Claims
                 .FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "roles")
