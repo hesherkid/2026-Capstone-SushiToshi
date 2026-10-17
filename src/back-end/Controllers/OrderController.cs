@@ -858,7 +858,7 @@ namespace back_end.Controllers
                         .ThenInclude(ds => ds.Table)
                     .Include(o => o.DiningSession)
                         .ThenInclude(ds => ds.TableGroup)
-                            .ThenInclude(tg => tg.Tables)
+                            .ThenInclude(tg => tg!.Tables)
                     .Include(o => o.Bill)
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.MenuItem)
@@ -882,7 +882,7 @@ namespace back_end.Controllers
                     billId = o.Bill_Id,
                     locationId = o.DiningSession.Location_Id,
                     tableNumbers = o.DiningSession.Table_Id.HasValue
-                        ? new[] { o.DiningSession.Table.table_number }
+                        ? new[] { o.DiningSession.Table!.table_number }
                         : o.DiningSession.TableGroup?.Tables?.Select(t => t.table_number).ToArray() ?? Array.Empty<int>(),
                     userName = o.User_Name,
                     status = o.Status.ToString(),
@@ -891,7 +891,7 @@ namespace back_end.Controllers
                     items = o.OrderItems.Select(oi =>
                     {
                         var assignment = oi
-                            .MenuItem?
+                            .MenuItem
                             .MenuAssignments
                             .EffectiveFor(oi.Menu_Id, oi.Item_Id, o.DiningSession.Location_Id);
                         bool isAddOn = assignment?.Is_Add_On ?? false;

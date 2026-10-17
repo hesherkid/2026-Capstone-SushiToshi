@@ -33,7 +33,7 @@ namespace back_end.domain.Seeders
     private readonly MenuItemViewSeeder _menuItemViewSeeder;
 
     private readonly Dictionary<string, (string DisplayName, string GivenName, string Surname)> _userSeedData;
-    private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userIdSeedData;
+    private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userIdSeedData = new();
 
     public DatabaseSeeder(
         ApplicationDbContext context,

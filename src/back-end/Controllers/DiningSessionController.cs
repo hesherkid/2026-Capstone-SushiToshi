@@ -87,149 +87,149 @@ namespace back_end.controllers
         [FromBody] CreateSessionRequestDTO sessionData)
 
     {
-        try
+      try
+      {
+        var menu = await _context.Menus.Where(m => m.Menu_id == sessionData.Menu_Id).FirstOrDefaultAsync();
+        if (menu == null) return BadRequest("Menu Does not Exist");
+
+        var location = await _context.Locations.Where(l => l.Location_Id == sessionData.Location_Id).FirstOrDefaultAsync();
+        if (location == null) return BadRequest("Location Does not Exist");
+
+        string assignmentType = sessionData.AssignmentType?.ToLower() ?? "none";
+        int? tableId = null;
+        int? tableGroupId = null;
+        List<int> tableNumbers = new();
+
+        if (assignmentType == "table")
         {
-            var menu = await _context.Menus.Where(m => m.Menu_id == sessionData.Menu_Id).FirstOrDefaultAsync();
-            if (menu == null) return BadRequest("Menu Does not Exist");
+          if (!sessionData.Table_Id.HasValue)
+            return BadRequest("Table_Id is required when assignmentType is 'table'");
 
-            var location = await _context.Locations.Where(l => l.Location_Id == sessionData.Location_Id).FirstOrDefaultAsync();
-            if (location == null) return BadRequest("Location Does not Exist");
+          var table = await _context.Tables
+              .FirstOrDefaultAsync(t => t.Table_Id == sessionData.Table_Id.Value && t.is_active);
 
-            string assignmentType = sessionData.AssignmentType?.ToLower() ?? "none";
-            int? tableId = null;
-            int? tableGroupId = null;
-            List<int> tableNumbers = new();
+          if (table == null) return BadRequest($"Table: {sessionData.Table_Id} not found or inactive");
+          if (table.Location_Id != sessionData.Location_Id)
+            return BadRequest($"Table belongs to a different location");
 
-            if (assignmentType == "table")
+          var existingSession = await _context.DiningSessions
+              .FirstOrDefaultAsync(d => d.Ended_At == null && d.Table_Id == table.Table_Id);
+
+          if (existingSession != null)
+          {
+            var existingParticipant = await _context.SessionParticipants
+                .FirstOrDefaultAsync(p => p.Session_Id == existingSession.Session_Id &&
+                                      p.User_Id == sessionData.Request_By_User_Id);
+
+            if (existingParticipant == null)
             {
-                if (!sessionData.Table_Id.HasValue)
-                    return BadRequest("Table_Id is required when assignmentType is 'table'");
-
-                var table = await _context.Tables
-                    .FirstOrDefaultAsync(t => t.Table_Id == sessionData.Table_Id.Value && t.is_active);
-
-                if (table == null) return BadRequest($"Table: {sessionData.Table_Id} not found or inactive");
-                if (table.Location_Id != sessionData.Location_Id)
-                    return BadRequest($"Table belongs to a different location");
-
-                var existingSession = await _context.DiningSessions
-                    .FirstOrDefaultAsync(d => d.Ended_At == null && d.Table_Id == table.Table_Id);
-
-                if (existingSession != null)
-                {
-                    var existingParticipant = await _context.SessionParticipants
-                        .FirstOrDefaultAsync(p => p.Session_Id == existingSession.Session_Id &&
-                                              p.User_Id == sessionData.Request_By_User_Id);
-
-                    if (existingParticipant == null)
-                    {
-                        _context.SessionParticipants.Add(new SessionParticipant
-                        {
-                            Session_Id = existingSession.Session_Id,
-                            User_Id = sessionData.Request_By_User_Id,
-                            User_Name = sessionData.Request_By_Name ?? "Guest",
-                            Joined_At = DateTime.UtcNow
-                        });
-                        await _context.SaveChangesAsync();
-                    }
-
-                    return Ok(new
-                    {
-                        message = $"Joined existing session at table {table.Table_Id}",
-                        session_Id = existingSession.Session_Id
-                    });
-                }
-
-                tableId = table.Table_Id;
-                tableNumbers.Add(table.table_number);
-            }
-            else if (assignmentType == "tablegroup")
-            {
-                if (!sessionData.TableGroup_Id.HasValue)
-                    return BadRequest("TableGroup_Id is required when assignmentType is 'table_group'");
-
-                var tableGroup = await _context.TableGroups
-                    .Include(tg => tg.Tables)
-                    .FirstOrDefaultAsync(tg => tg.TableGroup_Id == sessionData.TableGroup_Id.Value && tg.Is_Active);
-
-                if (tableGroup == null)
-                    return BadRequest($"Table group: {sessionData.TableGroup_Id} not found or inactive");
-                if (tableGroup.Location_Id != sessionData.Location_Id)
-                    return BadRequest($"Table group belongs to a different location");
-
-                var tableIds = tableGroup.Tables.Select(t => t.Table_Id).ToList();
-                var checkIfTablesInActiveSession = await _context.DiningSessions
-                    .AnyAsync(d => d.Ended_At == null &&
-                                  (d.Table_Id.HasValue && tableIds.Contains(d.Table_Id.Value) ||
-                                  d.TableGroup_Id.HasValue && d.TableGroup.Tables.Any(t => tableIds.Contains(t.Table_Id))));
-
-                if (checkIfTablesInActiveSession)
-                    return BadRequest($"One or more tables in table group {tableGroup.TableGroup_Id} are currently in another active dining session");
-
-                tableGroupId = tableGroup.TableGroup_Id;
-                tableNumbers = tableGroup.Tables.Select(t => t.table_number).ToList();
-            }
-            else if (assignmentType != "none")
-            {
-                return BadRequest("Invalid assignmentType. Must be 'table', 'table_group', or 'none'");
+              _context.SessionParticipants.Add(new SessionParticipant
+              {
+                Session_Id = existingSession.Session_Id,
+                User_Id = sessionData.Request_By_User_Id,
+                User_Name = sessionData.Request_By_Name ?? "Guest",
+                Joined_At = DateTime.UtcNow
+              });
+              await _context.SaveChangesAsync();
             }
 
-            var newSession = new DiningSession
+            return Ok(new
             {
-                Menu_Id = sessionData.Menu_Id,
-                Location_Id = sessionData.Location_Id,
-                Table_Id = tableId,
-                TableGroup_Id = tableGroupId,
-                Started_At = DateTime.UtcNow
+              message = $"Joined existing session at table {table.Table_Id}",
+              session_Id = existingSession.Session_Id
+            });
+          }
+
+          tableId = table.Table_Id;
+          tableNumbers.Add(table.table_number);
+        }
+        else if (assignmentType == "tablegroup")
+        {
+          if (!sessionData.TableGroup_Id.HasValue)
+            return BadRequest("TableGroup_Id is required when assignmentType is 'table_group'");
+
+          var tableGroup = await _context.TableGroups
+              .Include(tg => tg.Tables)
+              .FirstOrDefaultAsync(tg => tg.TableGroup_Id == sessionData.TableGroup_Id.Value && tg.Is_Active);
+
+          if (tableGroup == null)
+            return BadRequest($"Table group: {sessionData.TableGroup_Id} not found or inactive");
+          if (tableGroup.Location_Id != sessionData.Location_Id)
+            return BadRequest($"Table group belongs to a different location");
+
+          var tableIds = tableGroup.Tables.Select(t => t.Table_Id).ToList();
+          var checkIfTablesInActiveSession = await _context.DiningSessions
+              .AnyAsync(d => d.Ended_At == null &&
+                            (d.Table_Id.HasValue && tableIds.Contains(d.Table_Id.Value) ||
+                            d.TableGroup_Id.HasValue && d.TableGroup!.Tables.Any(t => tableIds.Contains(t.Table_Id))));
+
+          if (checkIfTablesInActiveSession)
+            return BadRequest($"One or more tables in table group {tableGroup.TableGroup_Id} are currently in another active dining session");
+
+          tableGroupId = tableGroup.TableGroup_Id;
+          tableNumbers = tableGroup.Tables.Select(t => t.table_number).ToList();
+        }
+        else if (assignmentType != "none")
+        {
+          return BadRequest("Invalid assignmentType. Must be 'table', 'table_group', or 'none'");
+        }
+
+        var newSession = new DiningSession
+        {
+          Menu_Id = sessionData.Menu_Id,
+          Location_Id = sessionData.Location_Id,
+          Table_Id = tableId,
+          TableGroup_Id = tableGroupId,
+          Started_At = DateTime.UtcNow
+        };
+
+        ValidateTableAssignment(newSession);
+        _context.Add<DiningSession>(newSession);
+        await _context.SaveChangesAsync();
+
+        // var newDiningSession = await _context.DiningSessions
+        //     .OrderByDescending(s => s.Session_Id)
+        //     .FirstOrDefaultAsync();
+
+        if (sessionData.Request_By_User_Id != null && sessionData.Request_By_Name == "Guest")
+        {
+          var alreadyExists = _context.SessionParticipants
+              .Any(sp => sp.Session_Id == newSession.Session_Id && sp.User_Id == sessionData.Request_By_User_Id);
+
+          if (!alreadyExists)
+          {
+            var guestParticipant = new SessionParticipant
+            {
+              Session_Id = newSession.Session_Id,
+              User_Id = sessionData.Request_By_User_Id,
+              User_Name = "Guest",
+              Joined_At = DateTime.UtcNow
             };
 
-            ValidateTableAssignment(newSession);
-            _context.Add<DiningSession>(newSession);
+            _context.SessionParticipants.Add(guestParticipant);
             await _context.SaveChangesAsync();
-
-            var newDiningSession = await _context.DiningSessions
-                .OrderByDescending(s => s.Session_Id)
-                .FirstOrDefaultAsync();
-
-            if (sessionData.Request_By_User_Id != null && sessionData.Request_By_Name == "Guest")
-            {
-                var alreadyExists = _context.SessionParticipants
-                    .Any(sp => sp.Session_Id == newDiningSession.Session_Id && sp.User_Id == sessionData.Request_By_User_Id);
-
-                if (!alreadyExists)
-                {
-                    var guestParticipant = new SessionParticipant
-                    {
-                        Session_Id = newDiningSession.Session_Id,
-                        User_Id = sessionData.Request_By_User_Id,
-                        User_Name = "Guest",
-                        Joined_At = DateTime.UtcNow
-                    };
-
-                    _context.SessionParticipants.Add(guestParticipant);
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            return Ok(new DiningSessionResponseDTO
-            {
-                Session_Id = newSession.Session_Id,
-                Menu_Id = newSession.Menu_Id,
-                Started_at = newSession.Started_At,
-                Ended_at = newSession.Ended_At,
-                First_Order_Time = newSession.First_Order_At,
-                Table_Numbers = tableNumbers,
-                Active_Participants = 0
-            });
+          }
         }
-        catch (ValidationException vex)
+
+        return Ok(new DiningSessionResponseDTO
         {
-            return BadRequest(vex.Message);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
-        }
+          Session_Id = newSession.Session_Id,
+          Menu_Id = newSession.Menu_Id,
+          Started_at = newSession.Started_At,
+          Ended_at = newSession.Ended_At,
+          First_Order_Time = newSession.First_Order_At,
+          Table_Numbers = tableNumbers,
+          Active_Participants = 0
+        });
+      }
+      catch (ValidationException vex)
+      {
+        return BadRequest(vex.Message);
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+      }
     }
 
     /// <summary>
@@ -267,7 +267,7 @@ namespace back_end.controllers
         var query = _context.DiningSessions.Where(ds => ds.Location_Id == location)
             .Include(s => s.Table)
             .Include(s => s.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(s => s.Participants)
             .AsQueryable();
 
@@ -348,7 +348,7 @@ namespace back_end.controllers
             .Include(s => s.Bills)
             .Include(s => s.Table)
             .Include(s => s.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(s => s.Orders)
             .FirstOrDefaultAsync(s => s.Session_Id == session_id);
 
@@ -546,7 +546,7 @@ namespace back_end.controllers
             .AnyAsync(d => d.Ended_At == null &&
                           d.Session_Id != session_id &&
                           (d.Table_Id.HasValue && tableIds.Contains(d.Table_Id.Value) ||
-                           d.TableGroup_Id.HasValue && d.TableGroup.Tables.Any(t => tableIds.Contains(t.Table_Id))));
+                           d.TableGroup_Id.HasValue && d.TableGroup!.Tables.Any(t => tableIds.Contains(t.Table_Id))));
 
         if (checkIfTablesInActiveSession)
         {
@@ -774,34 +774,34 @@ namespace back_end.controllers
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetMostRecentActiveSessionId()
     {
-        try
-        {
-            var userIdString = ClaimsHelpers.GetUserId(User);
+      try
+      {
+        var userIdString = ClaimsHelpers.GetUserId(User);
 
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
-                return Unauthorized(new { message = "User not authenticated or invalid user ID" });
+        if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
+          return Unauthorized(new { message = "User not authenticated or invalid user ID" });
 
-            var latestSessionId = await _context.DiningSessions
-                .Join(_context.SessionParticipants,
-                    ds => ds.Session_Id,
-                    sp => sp.Session_Id,
-                    (ds, sp) => new { ds, sp })
-                .Where(x => x.sp.User_Id == userId &&
-                            x.ds.Ended_At == null)
-                .OrderByDescending(x => x.ds.Started_At)
-                .Select(x => x.ds.Session_Id)
-                .FirstOrDefaultAsync();
+        var latestSessionId = await _context.DiningSessions
+            .Join(_context.SessionParticipants,
+                ds => ds.Session_Id,
+                sp => sp.Session_Id,
+                (ds, sp) => new { ds, sp })
+            .Where(x => x.sp.User_Id == userId &&
+                        x.ds.Ended_At == null)
+            .OrderByDescending(x => x.ds.Started_At)
+            .Select(x => x.ds.Session_Id)
+            .FirstOrDefaultAsync();
 
-            if (latestSessionId == 0)
-                return NotFound(new { message = "No active session found" });
+        if (latestSessionId == 0)
+          return NotFound(new { message = "No active session found" });
 
-            return Ok(new { session_id = latestSessionId });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving latest active session");
-            return StatusCode(500, new { message = "Internal server error", error = ex.Message });
-        }
+        return Ok(new { session_id = latestSessionId });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error retrieving latest active session");
+        return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+      }
     }
 
     /// <summary>
@@ -891,7 +891,7 @@ namespace back_end.controllers
             .Include(ds => ds.Bills)
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Participants)
             .FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
 
@@ -932,6 +932,7 @@ namespace back_end.controllers
       }
     }
 
+    //FIXME: why is there two version of this endpoint?
     [HttpPost("AddGuestParticipant")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -940,35 +941,36 @@ namespace back_end.controllers
     public async Task<IActionResult> AddGuestParticipant([FromBody] GuestParticipantDTOs dto)
     {
 
-        //Find the next available empty session
-        var session = await _context.DiningSessions
-            .FirstOrDefaultAsync(s => s.Session_Id == dto.Session_Id && s.Ended_At == null);
+      //Find the next available empty session
+      var session = await _context.DiningSessions
+          .FirstOrDefaultAsync(s => s.Session_Id == dto.Session_Id && s.Ended_At == null);
 
-        if (session == null)
-            return NotFound(new { message = "Session not found or already closed" });
+      if (session == null)
+        return NotFound(new { message = "Session not found or already closed" });
 
-        //Check if guest is already in this session
-        bool alreadyJoined = await _context.SessionParticipants
-            .AnyAsync(sp => sp.Session_Id == dto.Session_Id && sp.User_Id == dto.User_Id);
-        if (alreadyJoined)
-            return BadRequest(new { message = "Guest already joined this session" });
+      //Check if guest is already in this session
+      bool alreadyJoined = await _context.SessionParticipants
+          .AnyAsync(sp => sp.Session_Id == dto.Session_Id && sp.User_Id == dto.User_Id);
+      if (alreadyJoined)
+        return BadRequest(new { message = "Guest already joined this session" });
 
-        //Add guest with default name and a new session and Oid
-        var guest = new SessionParticipant
-        {
-            Session_Id = dto.Session_Id,
-            User_Name = "Guest",
-            User_Id = dto.User_Id,
-            Joined_At = DateTime.UtcNow
-        };
+      //Add guest with default name and a new session and Oid
+      var guest = new SessionParticipant
+      {
+        Session_Id = dto.Session_Id,
+        User_Name = "Guest",
+        User_Id = dto.User_Id,
+        Joined_At = DateTime.UtcNow
+      };
 
-        _context.SessionParticipants.Add(guest);
-        await _context.SaveChangesAsync();
+      _context.SessionParticipants.Add(guest);
+      await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Guest added successfully" });
+      return Ok(new { message = "Guest added successfully" });
     }
 
-    [HttpPost("addguestparticipant/v2")]
+    // FIXME: Consider consolidating this with the original AddGuestParticipant endpoint to avoid duplicate logic.
+    [HttpPost("AddGuestParticipant/v2")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -987,58 +989,68 @@ namespace back_end.controllers
                                     && t.is_active);
         if (table == null)
         {
-            return NotFound(new { message = $"Table {request.TableId} was not found at this location." });
+          return NotFound(new { message = $"Table {request.TableId} was not found at this location." });
         }
         var table_id = table.Table_Id;
-        var userIdString = ClaimsHelpers.GetUserId(User);
-        if (request.GuestName.ToLower() != "guest" )
+
+        // Resolve the participant's user id once, as an int, for both paths
+        int participantUserId;
+        if (!string.Equals(request.GuestName, "guest", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
-            {
-              return Unauthorized(new { message = "User not authenticated or invalid user ID" });
-            }
+          if (!int.TryParse(ClaimsHelpers.GetUserId(User), out participantUserId))
+          {
+            return Unauthorized(new { message = "User not authenticated or invalid user ID" });
+          }
         }
         else
         {
-            //Assign a temporary negative user id for guest users
-            userIdString = _context.Users.Where(u => u.Email == "guestemail@email.com").Select(u => u.User_id.ToString()).FirstOrDefault();
-        }
-        var SessionParticipant = new SessionParticipant();
-        int sessionId = 0;
-        if (_context.TableGroups.Any(tg => tg.Tables.Any(t => t.Table_Id == table_id && tg.Location_Id == location_id && tg.Is_Active)))
-        {
-          int TableGroupNumber = _context.Tables.Where(t => t.Table_Id == table_id && t.Location_Id == location_id && t.is_active)
-              .Select(t => t.TableGroup_Id ?? 0)
-              .FirstOrDefault();
-          sessionId = await _context.DiningSessions.Where(ds => ds.Ended_At == null && ds.TableGroup_Id == TableGroupNumber && ds.Location_Id == location_id)
-              .Select(ds => ds.Session_Id)
+          // Guests share the seeded guest account
+          var guestUserId = await _context.Users
+              .Where(u => u.Email == "guestemail@email.com")
+              .Select(u => (int?)u.User_id)
               .FirstOrDefaultAsync();
-        }
-        else
-        {
-          sessionId = await _context.DiningSessions.Where(ds => ds.Ended_At == null && ds.Table_Id == table_id && ds.Location_Id == location_id)
-              .Select(ds => ds.Session_Id)
-              .FirstOrDefaultAsync();
+
+          if (guestUserId is null)
+          {
+            return StatusCode(500, new { message = "Guest user account is not configured." });
+          }
+          participantUserId = guestUserId.Value;
         }
 
-        //Find the next available empty session for the table
-        // if (!_context.DiningSessions.Any(ds => (ds.Ended_At == null && ds.Table_Id == table_id && ds.Location_Id == location_id) ))
-        // {
-        //   return NotFound(new { message = "No active session found for the specified table" });
-        // }
+        int sessionId;
+        if (await _context.TableGroups.AnyAsync(tg => tg.Tables.Any(t => t.Table_Id == table_id && tg.Location_Id == location_id && tg.Is_Active)))
+        {
+          int tableGroupNumber = await _context.Tables
+              .Where(t => t.Table_Id == table_id && t.Location_Id == location_id && t.is_active)
+              .Select(t => t.TableGroup_Id ?? 0)
+              .FirstOrDefaultAsync();
+
+          sessionId = await _context.DiningSessions
+              .Where(ds => ds.Ended_At == null && ds.TableGroup_Id == tableGroupNumber && ds.Location_Id == location_id)
+              .Select(ds => ds.Session_Id)
+              .FirstOrDefaultAsync();
+        }
+        else
+        {
+          sessionId = await _context.DiningSessions
+              .Where(ds => ds.Ended_At == null && ds.Table_Id == table_id && ds.Location_Id == location_id)
+              .Select(ds => ds.Session_Id)
+              .FirstOrDefaultAsync();
+        }
 
         // No open session for this table (or its group): stop before inserting a participant for session 0
         if (sessionId == 0)
         {
           return NotFound(new { message = "No active session found for this table. Please ask staff to start one." });
         }
-        var returnedSession= new AddGuestParticipantResponseDTO
+
+        var returnedSession = new AddGuestParticipantResponseDTO
         {
-          SessionId = 0,
+          SessionId = sessionId,
         };
-        if (_context.SessionParticipants.Any(sp => sp.Session_Id == sessionId && sp.User_Id.ToString() == userIdString))
+
+        if (await _context.SessionParticipants.AnyAsync(sp => sp.Session_Id == sessionId && sp.User_Id == participantUserId))
         {
-          returnedSession.SessionId = sessionId;
           return Ok(new { returnedSession, message = "Guest participant already in session", sessionId = sessionId });
         }
 
@@ -1046,22 +1058,22 @@ namespace back_end.controllers
         {
           Session_Id = sessionId,
           User_Name = await _context.Users
-              .Where(u => u.User_id == int.Parse(userIdString))
+              .Where(u => u.User_id == participantUserId)
               .Select(u => u.Email)
               .FirstOrDefaultAsync(),
-          User_Id = int.Parse(userIdString),
+          User_Id = participantUserId,
           Joined_At = DateTime.UtcNow
         };
         await _context.SessionParticipants.AddAsync(newParticipant);
         await _context.SaveChangesAsync();
-        returnedSession.SessionId = sessionId;
-        return Ok(new { returnedSession,message = "Guest participant added successfully" });
+
+        return Ok(new { returnedSession, message = "Guest participant added successfully" });
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message }); 
+        _logger.LogError(ex, "Error adding guest participant");
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
-
     }
   }
 

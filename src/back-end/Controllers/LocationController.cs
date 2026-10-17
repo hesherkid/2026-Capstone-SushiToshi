@@ -418,15 +418,15 @@ namespace back_end.Controllers
     /// Removes the association between the specified menu and location.
     /// The menu itself is not deleted, only its assignment to this location.
     /// </remarks>
-     [Authorize(Policy = "adminOnly")]
+    [Authorize(Policy = "adminOnly")]
     [HttpDelete("{location_id}/menus/{menu_id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Remove_Menu_From_Location(
-        int location_id,
-        int menu_id
-    )
+       int location_id,
+       int menu_id
+   )
     {
       try
       {
@@ -631,7 +631,7 @@ namespace back_end.Controllers
         var query = _context.DiningSessions
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Participants)
             .Where(ds => ds.Location_Id == location_id);
 
@@ -658,7 +658,7 @@ namespace back_end.Controllers
               first_Order_At = ds.First_Order_At,
               table_Numbers = ds.Table != null
                     ? new List<int> { ds.Table.table_number }
-                    : ds.TableGroup.Tables.Select(t => t.table_number).ToList(),
+                    : ds.TableGroup!.Tables.Select(t => t.table_number).ToList(),
               active_Participants = ds.Participants.Count
             })
             .ToListAsync();

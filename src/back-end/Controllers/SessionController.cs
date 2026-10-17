@@ -75,12 +75,12 @@ namespace back_end.Controllers
         var sessions = await _context.DiningSessions
           .Include(s => s.Table)
           .Include(s => s.TableGroup)
-              .ThenInclude(tg => tg.Tables)
+              .ThenInclude(tg => tg!.Tables)
           .Include(s => s.Participants)
           .Include(s => s.Location)
           .OrderByDescending(s => s.Started_At)
           .ToListAsync();
-        
+
         var sessionDtos = sessions.Select(s => new DiningSessionResponseDTO
         {
           Session_Id = s.Session_Id,
@@ -93,8 +93,8 @@ namespace back_end.Controllers
           Table_Numbers = GetTableNumbers(s),
           Active_Participants = s.Participants.Count(p => p.Left_At == null)
         }).ToList();
-    
-    return Ok(sessionDtos);
+
+        return Ok(sessionDtos);
       }
       catch (Exception ex)
       {
@@ -102,7 +102,7 @@ namespace back_end.Controllers
         return StatusCode(500, "Internal Server Error");
       }
     }
-    
+
 
     // GET: api/session/{id}
     /// <summary>Gets a dining session with users, menu, orders, and table assignments.</summary>
@@ -123,7 +123,7 @@ namespace back_end.Controllers
                 // .ThenInclude(se => se.User) removed for Oauth
                 .Include(s => s.Table)
                 .Include(s => s.TableGroup)
-                    .ThenInclude(tg => tg.Tables)
+                    .ThenInclude(tg => tg!.Tables)
                 .Include(s => s.Orders)
                     .ThenInclude(so => so.OrderItems)
                 .FirstOrDefaultAsync();
@@ -197,7 +197,7 @@ namespace back_end.Controllers
                             // .ThenInclude(se => se.User) removed for Oauth
                             .Include(s => s.Table)
                             .Include(s => s.TableGroup)
-                                .ThenInclude(tg => tg.Tables)
+                                .ThenInclude(tg => tg!.Tables)
                             .ToListAsync();
 
         //Keep all key information
@@ -247,13 +247,13 @@ namespace back_end.Controllers
                     .Include(s => s.Menu)
                     .Include(s => s.Table)
                     .Include(s => s.TableGroup)
-                        .ThenInclude(tg => tg.Tables)
+                        .ThenInclude(tg => tg!.Tables)
                     .Include(s => s.Participants)
                     // .ThenInclude(p => p.User) removed for Oauth
                     .Where(s => s.Ended_At == null)
                     .Where(s => s.Table_Id == table ||
                                (s.TableGroup_Id.HasValue &&
-                                s.TableGroup.Tables.Any(t => t.Table_Id == table)))
+                                s.TableGroup!.Tables.Any(t => t.Table_Id == table)))
                     .FirstOrDefaultAsync();
 
         //Check if there's an active Dining Session
@@ -316,7 +316,7 @@ namespace back_end.Controllers
                                 .ThenInclude(se => se.Table)
                             .Include(s => s.DiningSession)
                                 .ThenInclude(se => se.TableGroup)
-                                    .ThenInclude(tg => tg.Tables)
+                                    .ThenInclude(tg => tg!.Tables)
                             .Where(s => s.DiningSession.Ended_At == null)
                             .Select(s => s.DiningSession)
                             .FirstOrDefaultAsync();

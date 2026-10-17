@@ -97,7 +97,7 @@ namespace back_end.controllers
             .Include(ds => ds.Location)
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Bills)
             .Include(ds => ds.Participants)
             .Where(ds => ds.Ended_At == null);
@@ -195,7 +195,7 @@ namespace back_end.controllers
         var query = _context.DiningSessions
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Location)
             .Where(ds => ds.Ended_At == null);
 
@@ -249,7 +249,7 @@ namespace back_end.controllers
         int total_active_participants = await participantsQuery.CountAsync();
 
         // Get location name if filtering by location
-        string locationName = null;
+        string? locationName = null;
         if (locationId.HasValue)
         {
           var location = await _context.Locations

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using back_end.domain.enums;
+using back_end.Helpers;
 
 namespace back_end.Controllers
 {
@@ -67,7 +68,7 @@ namespace back_end.Controllers
         var session = await _context.DiningSessions
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+              .ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(ds => ds.Session_Id == session_id && ds.Ended_At == null);
 
         if (session is null)
@@ -75,8 +76,12 @@ namespace back_end.Controllers
           return NotFound("The Session Id was not found");
         }
 
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.User_id == int.Parse(userId));
+        if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
+        {
+          return Unauthorized(new { message = "User ID not found in claims." });
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.User_id == userId);
         if (user is null)
         {
           return BadRequest("Issue in processing your request");
@@ -98,11 +103,9 @@ namespace back_end.Controllers
           // Session has a single table assigned
           tableId = session.Table_Id.Value;
         }
-        else if (session.TableGroup_Id.HasValue && session.TableGroup.Tables.Any())
+        else if (session.TableGroup is { Tables.Count: > 0 } group)
         {
-          // Session has a table group - use the first table in the group
-          // Or you could allow the user to specify which table in the DTO
-          tableId = session.TableGroup.Tables.FirstOrDefault()?.Table_Id;
+          tableId = group.Tables.First().Table_Id;
         }
 
         if (!tableId.HasValue)
@@ -115,7 +118,7 @@ namespace back_end.Controllers
           Session_Id = session.Session_Id,
           Table_Id = tableId.Value,
           Request_By = user.User_id,
-          Notes = request_data.Notes,
+          Notes = request_data.Notes ?? string.Empty,
           Status = ServiceRequestStatus.Pending
         };
 
@@ -172,32 +175,57 @@ namespace back_end.Controllers
     {
       try
       {
-        var sessionRequest = await _context.ServiceRequests
+        var serviceRequest = await _context.ServiceRequests
+            .Include(sr => sr.Table)
             .FirstOrDefaultAsync(sr => sr.request_id == request_id);
 
-        if (sessionRequest is null)
+        if (serviceRequest is null)
         {
-          return NotFound("The service request was not found");
+          return NotFound(new { mesage = "The service request was not found" });
         }
 
-        sessionRequest.Status = ServiceRequestStatus.Completed;
+        if (serviceRequest is null)
+        {
+          return NotFound(new { message = "The service request was not found" });
+        }
 
-        var claimedByUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var claimedByUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.User_id == int.Parse(claimedByUserId));
+        if (serviceRequest.Status == ServiceRequestStatus.Completed)
+        {
+          return Conflict(new { message = "The service request is already completed" });
+        }
 
-        sessionRequest.ClaimedByUser = claimedByUser;
-        sessionRequest.Completed_At = DateTime.UtcNow;
+        if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var claimedByUserId))
+        {
+          return Unauthorized(new { message = "User ID not found in claims." });
+        }
 
-        _context.ServiceRequests.Update(sessionRequest);
+        var now = DateTime.UtcNow;
+        serviceRequest.Claimed_By = claimedByUserId;
+        serviceRequest.Claimed_At ??= now;
+        serviceRequest.Completed_At = now;
+        serviceRequest.Status = ServiceRequestStatus.Completed;
+
         await _context.SaveChangesAsync();
 
-        return Ok(sessionRequest);
+        return Ok(new ServiceRequestResponseDTO
+        {
+          Request_Id = serviceRequest.request_id,
+          Session_Id = serviceRequest.Session_Id,
+          Table_Id = serviceRequest.Table_Id,
+          Requested_By = serviceRequest.Request_By,
+          Claimed_By = serviceRequest.Claimed_By,
+          Status = serviceRequest.Status,
+          Notes = serviceRequest.Notes,
+          Created_At = serviceRequest.Created_At,
+          Claimed_At = serviceRequest.Claimed_At,
+          Completed_at = serviceRequest.Completed_At,
+          Table_Number = serviceRequest.Table?.table_number ?? 0
+        });
       }
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error completing service request");
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
