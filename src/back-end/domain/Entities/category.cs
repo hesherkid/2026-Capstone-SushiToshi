@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using back_end.domain.enums;
 
 namespace back_end.domain.Entities
 {
@@ -36,6 +37,8 @@ namespace back_end.domain.Entities
         public int toddler_limit { get; set; } = 0;
 
         public int total_limit { get; set; } = 0;
+
+        public OverLimitBehavior over_limit_behavior { get; set; } = OverLimitBehavior.Block;
 
         public ICollection<Menu_Item> MenuItems { get; set; } = new List<Menu_Item>();
     }

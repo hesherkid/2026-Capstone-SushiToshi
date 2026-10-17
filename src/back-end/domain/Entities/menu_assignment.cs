@@ -47,6 +47,10 @@ namespace back_end.domain.Entities
 
         public int Tot_Limit { get; set; }
 
+        public OverLimitBehavior Over_Limit_Behavior { get; set; } = OverLimitBehavior.Block;
+
+        public decimal Full_Price { get; set; } = 0m;
+
         public Menu Menu { get; set; } = null!;
 
         public Menu_Item MenuItem { get; set; } = null!;

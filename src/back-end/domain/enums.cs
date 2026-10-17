@@ -44,4 +44,16 @@ namespace back_end.domain.enums
         Paid,
         Cancelled
     }
+
+    public enum OverLimitBehavior
+    {
+        Block,
+        Charge
+    }
+
+    public enum ChargeReason
+    {
+        None,
+        OverLimit
+    }
 }

@@ -27,6 +27,11 @@ namespace back_end.domain.Entities
 
         public DateTime? Completed_At { get; set; }
 
+        public ChargeReason Charge_Reason { get; set; } = ChargeReason.None;
+
+        public int Leftover_Quantity { get; set; } = 0;
+
+        public decimal Leftover_Price_At_Time { get; set; } = 0m;
 
         public SessionOrder SessionOrder { get; set; } = null!;
         public Menu Menu { get; set; } = null!;
