@@ -33,7 +33,9 @@ namespace back_end.domain.Entities
 
         public int senior_limit { get; set; } = 0;
 
-        public int total_limit { get; set; } = 0; // TODO: is this a typo? should it be tot_limit or is there a table limit?
+        public int toddler_limit { get; set; } = 0;
+
+        public int total_limit { get; set; } = 0;
 
         public ICollection<Menu_Item> MenuItems { get; set; } = new List<Menu_Item>();
     }

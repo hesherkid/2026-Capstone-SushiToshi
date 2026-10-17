@@ -57,7 +57,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("auth_action_tokens", (string)null);
+                    b.ToTable("auth_action_tokens");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.Billing", b =>
@@ -104,7 +104,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Session_Id");
 
-                    b.ToTable("bills", (string)null);
+                    b.ToTable("bills");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.Category", b =>
@@ -139,6 +139,9 @@ namespace back_end.Migrations
                     b.Property<int>("senior_limit")
                         .HasColumnType("int");
 
+                    b.Property<int>("toddler_limit")
+                        .HasColumnType("int");
+
                     b.Property<int>("total_limit")
                         .HasColumnType("int");
 
@@ -151,7 +154,7 @@ namespace back_end.Migrations
 
                     b.HasKey("Category_id");
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.DiningSession", b =>
@@ -193,7 +196,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Table_Id");
 
-                    b.ToTable("dining_sessions", null, t =>
+                    b.ToTable("dining_sessions", t =>
                         {
                             t.HasCheckConstraint("CK_DiningSession_TableAssignment", "(Table_Id IS NOT NULL AND TableGroup_Id IS NULL) OR (Table_Id IS NULL AND TableGroup_Id IS NOT NULL) OR (Table_Id IS NULL AND TableGroup_Id IS NULL)");
                         });
@@ -247,7 +250,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("User_id");
 
-                    b.ToTable("locations", (string)null);
+                    b.ToTable("locations");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.Menu", b =>
@@ -277,7 +280,7 @@ namespace back_end.Migrations
 
                     b.HasKey("Menu_id");
 
-                    b.ToTable("menu", (string)null);
+                    b.ToTable("menu");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.MenuItemAssignment", b =>
@@ -347,7 +350,7 @@ namespace back_end.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_assignment_menu_item_location");
 
-                    b.ToTable("menu_item_assignment", (string)null);
+                    b.ToTable("menu_item_assignment");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.MenuItemTag", b =>
@@ -362,7 +365,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Tag_id");
 
-                    b.ToTable("menu_item_tag", (string)null);
+                    b.ToTable("menu_item_tag");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.MenuItemView", b =>
@@ -407,7 +410,7 @@ namespace back_end.Migrations
                     b.HasIndex("Viewed_At", "Location_Id")
                         .HasDatabaseName("IX_menu_item_view_viewed_at_location");
 
-                    b.ToTable("menu_item_view", (string)null);
+                    b.ToTable("menu_item_view");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.MenuLocations", b =>
@@ -422,7 +425,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Location_Id");
 
-                    b.ToTable("menu_location", (string)null);
+                    b.ToTable("menu_location");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.Menu_Item", b =>
@@ -454,7 +457,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Category_id");
 
-                    b.ToTable("menu_item", (string)null);
+                    b.ToTable("menu_item");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.OrderItems", b =>
@@ -494,7 +497,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Order_Key");
 
-                    b.ToTable("order_item", (string)null);
+                    b.ToTable("order_item");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.ServiceRequest", b =>
@@ -544,7 +547,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Table_Id");
 
-                    b.ToTable("service_request", (string)null);
+                    b.ToTable("service_request");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.SessionOrder", b =>
@@ -591,7 +594,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("session_id");
 
-                    b.ToTable("session_order", (string)null);
+                    b.ToTable("session_order");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.SessionParticipant", b =>
@@ -624,7 +627,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("User_Id");
 
-                    b.ToTable("session_participant", (string)null);
+                    b.ToTable("session_participant");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.TableEntity", b =>
@@ -661,7 +664,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("TableGroup_Id");
 
-                    b.ToTable("table_entity", (string)null);
+                    b.ToTable("table_entity");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.TableGroup", b =>
@@ -690,7 +693,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Location_Id");
 
-                    b.ToTable("table_groups", (string)null);
+                    b.ToTable("table_groups");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.Tag", b =>
@@ -713,7 +716,7 @@ namespace back_end.Migrations
 
                     b.HasKey("tag_id");
 
-                    b.ToTable("tag", (string)null);
+                    b.ToTable("tag");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.User", b =>
@@ -773,7 +776,7 @@ namespace back_end.Migrations
 
                     b.HasIndex("Location_id");
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.AuthActionToken", b =>
