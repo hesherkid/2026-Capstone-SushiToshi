@@ -23,6 +23,7 @@ import {
   MapPin,
   Table,
   Group,
+  Contact,
   LogOut,
 } from "lucide-react";
 
@@ -45,12 +46,14 @@ const menuItemsByRole = {
     { icon: Clock, label: "Sessions", path: "/dashboard/sessions" },
     { icon: Table, label: "Tables", path: "/dashboard/tables" },
     { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
-    { icon: Tag, label: "Manage Tags", path: "/tags/tag-management" },
+    // `section` starts a labelled group; `divider` starts an unlabelled one
+    { icon: Tag, label: "Manage Tags", path: "/tags/tag-management", section: "Management" },
     { icon: MenuIcon, label: "Manage Menu Items", path: "/admin/menu-items" },
     { icon: Group, label: "Manage Menu Categories", path: "/admin/menu-categories" },
     { icon: Users, label: "Manage Staff", path: "/admin/staff" },
+    { icon: Contact, label: "Manage Customers", path: "/admin/customers" },
     { icon: MapPin, label: "Manage Locations", path: "/location/menu-location" },
-    { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes" },
+    { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes", divider: true },
     { icon: BarChart, label: "Analytics", path: "/analytics/analytic-page" },
   ],
 };
@@ -69,14 +72,12 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
   >
 
     <List sx={{ width: 320, pt: 5, pl: 2 }}>
-    {(menuItemsByRole[role] || []).map((item, index) => {
+    {(menuItemsByRole[role] || []).map((item) => {
         const Icon = item.icon;
-        const showManageDivider = role === "admin" && index === 4;
-        const showToolsDivider = role === "admin" && index === 9;
 
         return (
         <Box key={item.path}>
-            {showManageDivider && (
+            {item.section && (
             <>
                 <Divider sx={{ my: 2, mr: 2 }} />
                 <Box
@@ -90,12 +91,12 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
                     letterSpacing: "0.08em",
                 }}
                 >
-                Management
+                {item.section}
                 </Box>
             </>
             )}
 
-            {showToolsDivider && (
+            {item.divider && (
             <Divider sx={{ my: 2, mr: 2 }} />
             )}
 
@@ -129,6 +130,7 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
     </List>
 
 
+    {/* Sticky so Logout stays visible when the menu is taller than the screen */}
     <Box
     sx={{
         mt: "auto",
@@ -136,6 +138,10 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
         borderTop: 1,
         borderColor: "divider",
         flexShrink: 0,
+        position: "sticky",
+        bottom: 0,
+        zIndex: 1,
+        bgcolor: "background.paper",
     }}
     >
         <Button

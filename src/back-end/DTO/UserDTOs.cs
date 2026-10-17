@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using back_end.domain;
 using back_end.domain.enums;
+using back_end.domain.Entities;
 
 namespace back_end.DTO.UserDTOs
 {
@@ -52,6 +53,19 @@ namespace back_end.DTO.UserDTOs
         public DateTime Created_at { get; set; }
         public DateTime? Last_Interaction_at { get; set; }
         public bool Is_email_confirmed { get; set; }
+
+        public static UserResponseDTO From(User u) => new UserResponseDTO
+        {
+            User_id = u.User_id,
+            Email = u.Email,
+            First_name = u.First_name,
+            Last_name = u.Last_name,
+            Role = u.Role,
+            Status = u.Status,
+            Created_at = u.Created_at,
+            Last_Interaction_at = u.Last_Interaction_at,
+            Is_email_confirmed = u.Is_email_confirmed
+        };
     }
 
     public class PagedUserResponseDTO
@@ -76,6 +90,13 @@ namespace back_end.DTO.UserDTOs
     {
         [Required, MinLength(8), MaxLength(200)]
         public string New_password { get; set; } = string.Empty;
+    }
+
+    // Admin deactivate/reactivate for staff and customer accounts (Active or Inactive)
+    public class AccountStatusUpdateDTO
+    {
+        [Required]
+        public UserStatus Status { get; set; }
     }
 
 }

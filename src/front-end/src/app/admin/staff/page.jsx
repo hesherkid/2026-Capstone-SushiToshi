@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Box, CircularProgress } from "@mui/material";
 import { useAuth } from "@/hooks/useAuth";
-//import CustomerManagement from "@/components/admin/CustomerManagement";
 
 const StaffManagementPage = dynamic(
   () => import("@/components/admin/StaffManagementPage"),
