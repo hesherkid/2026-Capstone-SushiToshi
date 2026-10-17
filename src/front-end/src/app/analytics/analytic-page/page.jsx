@@ -1,47 +1,6 @@
 "use client";
-import React from "react";
-import { useRouter } from "next/navigation";
-import styles from "@/styles/Analytics.module.css";
+import AnalyticsOverview from "@/components/analytics/AnalyticsOverview";
 
-function AnalyticsPage() {
-  const router = useRouter();
-
-  return (
-    <div className={styles.menuTitleContainer}>
-      <h1 className={styles.menuTitle}>Analytics</h1>
-      <p className={styles.description}>Welcome to the analytics page!</p>
-
-      <div className={styles.categoryList}>
-        <button
-          className={styles.categoryButton}
-          onClick={() => router.push("/analytics/item-performance")}
-        >
-          View Item Performance
-        </button>
-
-        <button
-          className={styles.categoryButton}
-          onClick={() => router.push("/analytics/browsing-behavior")}
-        >
-          View Browsing Behavior
-        </button>
-
-        <button
-          className={styles.categoryButton}
-          onClick={() => router.push("/analytics/order-timing")}
-        >
-          View Order Timing
-        </button>
-
-        <button
-          className={styles.categoryButton}
-          onClick={() => router.push("/analytics/table-turnover")}
-        >
-          View Table Turnover
-        </button>
-      </div>
-    </div>
-  );
+export default function AnalyticsPage() {
+  return <AnalyticsOverview />;
 }
-
-export default AnalyticsPage;
