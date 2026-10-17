@@ -6,6 +6,7 @@ import {
   Users,
   UserCheck,
   UserPlus,
+  UserX,
   Trash2,
 } from "lucide-react";
 import api from "@/config/api";
@@ -16,8 +17,10 @@ import { actionsColumn } from "@/components/common/RowActions";
 import StatCard from "@/components/home/StatCard";
 import { statsGrid } from "@/components/home/homeLayout";
 import { formatDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { isActiveAccount } from "@/components/admin/StaffList";
+import { useAuth } from "@/hooks/useAuth";
 
-// /staff/customers returns at most 100 per call
+// /customers returns at most 100 per call
 const PAGE_LIMIT = 100;
 const NEW_CUSTOMER_DAYS = 30;
 
@@ -33,7 +36,8 @@ const daysAgo = (days) => Date.now() - days * 24 * 60 * 60 * 1000;
 const customerName = (customer) =>
   `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || customer.email;
 
-export const getCustomerColumns = ({ onDelete }) => [
+// Actions are only passed for admins
+export const getCustomerColumns = ({ onDeactivate, onReactivate, onDelete } = {}) => [
   {
     field: "name",
     headerName: "Name",
@@ -95,13 +99,28 @@ export const getCustomerColumns = ({ onDelete }) => [
   actionsColumn(
     (row) => [
       {
+        label: "Deactivate customer",
+        icon: UserX,
+        color: "warning",
+        onClick: () => onDeactivate(row),
+        hidden: !onDeactivate || !isActiveAccount(row),
+      },
+      {
+        label: "Reactivate customer",
+        icon: UserCheck,
+        color: "success",
+        onClick: () => onReactivate(row),
+        hidden: !onReactivate || isActiveAccount(row),
+      },
+      {
         label: "Delete customer",
         icon: Trash2,
         color: "error",
         onClick: () => onDelete(row),
+        hidden: !onDelete,
       },
     ],
-    { width: 90 }
+    { width: 110 }
   ),
 ];
 
@@ -111,7 +130,10 @@ const CustomerManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [customerToDelete, setCustomerToDelete] = useState(null);
+  // { action: "deactivate" | "delete", customer }
+  const [pendingAction, setPendingAction] = useState(null);
+  const { userRole } = useAuth();
+  const isAdmin = userRole === "admin";
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -119,7 +141,7 @@ const CustomerManagement = () => {
     try {
       const all = [];
       for (let skip = 0; ; skip += PAGE_LIMIT) {
-        const response = await api.get("/staff/customers", {
+        const response = await api.get("/customers", {
           params: { skip, limit: PAGE_LIMIT },
         });
         const page = Array.isArray(response.data) ? response.data : [];
@@ -139,19 +161,58 @@ const CustomerManagement = () => {
     fetchCustomers();
   }, [fetchCustomers]);
 
-  const deleteCustomer = async (customer) => {
+  const runAction = async (request, successMessage, failureMessage) => {
     setError(null);
     setSuccess(null);
     try {
-      await api.delete(`/staff/customers/${customer.user_id}`);
-      setSuccess(`${customerName(customer)} has been deleted`);
+      await request();
+      setSuccess(successMessage);
       await fetchCustomers();
     } catch (err) {
-      console.error("Failed to delete customer", err);
+      console.error(failureMessage, err);
       const detail = err.response?.data;
-      setError(typeof detail === "string" && detail ? detail : "Failed to delete customer");
+      setError(typeof detail === "string" && detail ? detail : failureMessage);
     }
   };
+
+  const setStatus = (customer, status) =>
+    api.put(`/customers/${customer.user_id}/status`, { status });
+
+  const reactivate = (customer) =>
+    runAction(
+      () => setStatus(customer, "Active"),
+      `${customerName(customer)} can sign in again`,
+      "Failed to reactivate customer"
+    );
+
+  const confirmPendingAction = () => {
+    const { action, customer } = pendingAction;
+    if (action === "deactivate") {
+      return runAction(
+        () => setStatus(customer, "Inactive"),
+        `${customerName(customer)} has been deactivated`,
+        "Failed to deactivate customer"
+      );
+    }
+    return runAction(
+      () => api.delete(`/customers/${customer.user_id}`),
+      `${customerName(customer)} has been deleted`,
+      "Failed to delete customer"
+    );
+  };
+
+  const confirmText = pendingAction && {
+    deactivate: {
+      title: "Deactivate customer",
+      message: `Deactivate ${customerName(pendingAction.customer)}? They won't be able to sign in until you reactivate them.`,
+      confirmLabel: "Deactivate",
+    },
+    delete: {
+      title: "Delete customer",
+      message: `Delete ${customerName(pendingAction.customer)}? Their name, email and sign-in details are removed. Past orders stay in reports. This can't be undone.`,
+      confirmLabel: "Delete",
+    },
+  }[pendingAction.action];
 
   const activeCount = customers.filter(
     (c) => String(c.status).toLowerCase() === "active"
@@ -191,7 +252,15 @@ const CustomerManagement = () => {
 
       <ManagementGrid
         rows={customers}
-        columns={getCustomerColumns({ onDelete: setCustomerToDelete })}
+        columns={getCustomerColumns(
+          isAdmin
+            ? {
+                onDeactivate: (customer) => setPendingAction({ action: "deactivate", customer }),
+                onReactivate: reactivate,
+                onDelete: (customer) => setPendingAction({ action: "delete", customer }),
+              }
+            : {}
+        )}
         loading={loading}
         getRowId={(row) => row.user_id}
         initialState={{
@@ -202,15 +271,12 @@ const CustomerManagement = () => {
       />
 
       <ConfirmDialog
-        open={!!customerToDelete}
-        title="Delete customer"
-        message={
-          customerToDelete &&
-          `Delete ${customerName(customerToDelete)}? Their name, email and sign-in details are removed. Past orders stay in reports. This can't be undone.`
-        }
-        confirmLabel="Delete"
-        onConfirm={() => deleteCustomer(customerToDelete)}
-        onClose={() => setCustomerToDelete(null)}
+        open={!!pendingAction}
+        title={confirmText?.title}
+        message={confirmText?.message}
+        confirmLabel={confirmText?.confirmLabel}
+        onConfirm={confirmPendingAction}
+        onClose={() => setPendingAction(null)}
       />
     </Box>
   );

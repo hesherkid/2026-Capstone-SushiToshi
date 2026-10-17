@@ -12,20 +12,20 @@ using back_end.DTO.UserDTOs;
 
 namespace back_end.Tests.Controllers;
 
-// Customer management endpoints on StaffController: list and delete
-public class StaffCustomerControllerTests : IDisposable
+// Admin customer management: list, deactivate/reactivate, delete
+public class CustomerControllerTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
-    private readonly StaffController _controller;
+    private readonly CustomerController _controller;
 
-    public StaffCustomerControllerTests()
+    public CustomerControllerTests()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
         _context = new ApplicationDbContext(options);
-        _controller = new StaffController(_context, new Mock<ILogger<StaffController>>().Object);
+        _controller = new CustomerController(_context, new Mock<ILogger<CustomerController>>().Object);
 
         _context.Users.AddRange(
             new User { User_id = 1, Email = "mia@example.com", First_name = "Mia", Last_name = "Chen", Role = UserRoles.Customer, Password_hash = "hash", GoogleSocial = "google-1", Is_email_confirmed = true },
@@ -46,6 +46,50 @@ public class StaffCustomerControllerTests : IDisposable
 
         var customers = (result.Result as OkObjectResult)!.Value as IEnumerable<UserResponseDTO>;
         customers!.Select(c => c.User_id).Should().BeEquivalentTo(new[] { 1, 2 });
+    }
+
+    [Theory]
+    [InlineData(1, UserStatus.Inactive)]
+    [InlineData(2, UserStatus.Active)]
+    public async Task UpdateCustomerStatus_DeactivatesAndReactivates(int userId, UserStatus status)
+    {
+        var result = await _controller.UpdateCustomerStatus(userId, new AccountStatusUpdateDTO { Status = status });
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        (await _context.Users.FindAsync(userId))!.Status.Should().Be(status);
+    }
+
+    [Theory]
+    [InlineData(UserStatus.Deleted)]
+    [InlineData(UserStatus.Suspended)]
+    public async Task UpdateCustomerStatus_RejectsOtherStatuses(UserStatus status)
+    {
+        var result = await _controller.UpdateCustomerStatus(1, new AccountStatusUpdateDTO { Status = status });
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        (await _context.Users.FindAsync(1))!.Status.Should().Be(UserStatus.Active);
+    }
+
+    [Theory]
+    [InlineData(3)]   // already deleted
+    [InlineData(4)]   // staff account
+    [InlineData(99)]  // doesn't exist
+    public async Task UpdateCustomerStatus_OnlyAppliesToCustomers(int userId)
+    {
+        var result = await _controller.UpdateCustomerStatus(userId, new AccountStatusUpdateDTO { Status = UserStatus.Inactive });
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public void CustomerEndpoints_AreAdminOnly()
+    {
+        var authorize = typeof(CustomerController)
+            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
+            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+            .Single();
+
+        authorize.Roles.Should().Be("Admin");
     }
 
     [Fact]

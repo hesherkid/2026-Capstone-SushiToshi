@@ -1,11 +1,14 @@
 import React from "react";
 import { Chip } from "@mui/material";
-import { Edit, Key } from "lucide-react";
+import { Edit, Key, UserX, UserCheck } from "lucide-react";
 import ManagementGrid from "@/components/common/ManagementGrid";
 import { actionsColumn } from "@/components/common/RowActions";
 
+export const isActiveAccount = (user) =>
+  String(user?.status).toLowerCase() === "active";
+
 const getStatusColor = (status) => {
-  switch (status) {
+  switch (String(status).toLowerCase()) {
     case "active":
       return "success";
     case "inactive":
@@ -15,8 +18,9 @@ const getStatusColor = (status) => {
   }
 };
 
-// Column definitions shared by the staff and customer management pages
-export const getStaffColumns = ({ onEdit, onChangePassword }) => [
+// Column definitions for the staff management page.
+// onToggleStatus is only passed for admins; isSelf hides it on the signed-in admin's own row.
+export const getStaffColumns = ({ onEdit, onChangePassword, onToggleStatus, isSelf = () => false }) => [
   {
     field: "name",
     headerName: "Name",
@@ -66,7 +70,21 @@ export const getStaffColumns = ({ onEdit, onChangePassword }) => [
       icon: Key,
       onClick: () => onChangePassword(row),
     },
-  ]),
+    {
+      label: "Deactivate Account",
+      icon: UserX,
+      color: "warning",
+      onClick: () => onToggleStatus(row),
+      hidden: !onToggleStatus || isSelf(row) || !isActiveAccount(row),
+    },
+    {
+      label: "Reactivate Account",
+      icon: UserCheck,
+      color: "success",
+      onClick: () => onToggleStatus(row),
+      hidden: !onToggleStatus || isSelf(row) || isActiveAccount(row),
+    },
+  ], { width: 180 }),
 ];
 
 const StaffList = ({ staff = [], isLoading = false, onEdit, onChangePassword }) => {

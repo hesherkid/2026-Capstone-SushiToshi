@@ -2,10 +2,17 @@ import { render, screen, within, waitFor, fireEvent } from "@testing-library/rea
 import CustomerManagement from "@/components/admin/CustomerManagement";
 import AppNavigationDrawer from "@/components/AppNavigationDrawer";
 import api from "@/config/api";
+import { useAuth } from "@/hooks/useAuth";
 
 jest.mock("@/config/api", () => {
-  const mockApi = { get: jest.fn(), delete: jest.fn() };
+  const mockApi = { get: jest.fn(), put: jest.fn(), delete: jest.fn() };
   return { __esModule: true, default: mockApi, api: mockApi };
+});
+
+jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
+
+beforeEach(() => {
+  useAuth.mockReturnValue({ userRole: "admin", userEmail: "admin@example.com" });
 });
 
 jest.mock("@mui/x-data-grid", () => {
@@ -84,8 +91,8 @@ describe("Customer management", () => {
     render(<CustomerManagement />);
 
     await waitFor(() => expect(statValue("Total Customers")).toBe("101"));
-    expect(api.get).toHaveBeenNthCalledWith(1, "/staff/customers", { params: { skip: 0, limit: 100 } });
-    expect(api.get).toHaveBeenNthCalledWith(2, "/staff/customers", { params: { skip: 100, limit: 100 } });
+    expect(api.get).toHaveBeenNthCalledWith(1, "/customers", { params: { skip: 0, limit: 100 } });
+    expect(api.get).toHaveBeenNthCalledWith(2, "/customers", { params: { skip: 100, limit: 100 } });
   });
 
   it("shows an error when customers can't be loaded", async () => {
@@ -107,6 +114,7 @@ describe("Customer actions", () => {
         customer(2, { first_name: "Sam", last_name: "Lee", status: "Inactive" }),
       ],
     });
+    api.put.mockResolvedValue({ data: {} });
     api.delete.mockResolvedValue({ status: 204 });
   });
 
@@ -116,6 +124,43 @@ describe("Customer actions", () => {
     return dialog;
   };
 
+  it("asks before deactivating an active customer", async () => {
+    render(<CustomerManagement />);
+    await screen.findByText("guest1@example.com");
+
+    expect(within(rowFor("guest1@example.com")).queryByRole("button", { name: "Reactivate customer" })).not.toBeInTheDocument();
+    fireEvent.click(within(rowFor("guest1@example.com")).getByRole("button", { name: "Deactivate customer" }));
+    expect(await screen.findByText(/Deactivate Mia Chen\?/)).toBeInTheDocument();
+    await confirmIn("Deactivate");
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/customers/1/status", { status: "Inactive" })
+    );
+    expect(await screen.findByText("Mia Chen has been deactivated")).toBeInTheDocument();
+  });
+
+  it("reactivates an inactive customer straight away", async () => {
+    render(<CustomerManagement />);
+    await screen.findByText("guest2@example.com");
+
+    fireEvent.click(within(rowFor("guest2@example.com")).getByRole("button", { name: "Reactivate customer" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/customers/2/status", { status: "Active" })
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("hides account actions from anyone who isn't an admin", async () => {
+    useAuth.mockReturnValue({ userRole: "staff", userEmail: "sue@example.com" });
+    render(<CustomerManagement />);
+    await screen.findByText("guest1@example.com");
+
+    for (const name of ["Deactivate customer", "Reactivate customer", "Delete customer"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+  });
+
   it("asks before deleting and explains what is removed", async () => {
     render(<CustomerManagement />);
     await screen.findByText("guest1@example.com");
@@ -124,7 +169,7 @@ describe("Customer actions", () => {
     expect(await screen.findByText(/This can't be undone/)).toBeInTheDocument();
     await confirmIn("Delete");
 
-    await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/staff/customers/1"));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/customers/1"));
     expect(await screen.findByText("Mia Chen has been deleted")).toBeInTheDocument();
   });
 
