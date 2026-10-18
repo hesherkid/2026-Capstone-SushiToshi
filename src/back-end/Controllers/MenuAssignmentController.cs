@@ -36,6 +36,7 @@ namespace back_end.Controllers
         /// </returns>
         /// <response code="200">Returns the newly created menu item assignment</response>
         /// <response code="400">If the request data is invalid</response>
+        /// <response code="409">If there is a conflict, such as a duplicate assignment</response>
         /// <response code="500">If an internal error occurs while creating the assignment</response>
         /// <remarks>
         /// Sample request:
@@ -56,13 +57,19 @@ namespace back_end.Controllers
         ///     }
         ///
         /// Creates a new association between a menu and a menu item.
-        /// Limits default to 0 if not provided. Add-on items must have a price above 0.
+        /// adult_Limit, child_Limit, and senior_Limit are required (0 = unlimited).
+        /// tot_Limit is optional: 0 or omitted = same as child_Limit.
+        /// Rules: child and senior ≤ adult, toddler ≤ child.
+        /// full_Price defaults to price if not provided; over_Limit_Behavior defaults to "Block".
+        /// over_Limit_Behavior "Charge" requires full_Price greater than 0.
+        /// Add-on items must have a price greater than 0.
         /// Item views are recorded separately (POST api/menu-item-views).
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
         [ProducesResponseType(typeof(MenuItemAssignment), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Create_Menu_Item_Assignment(
                    MenuAssignmentCreate assignmentData
@@ -98,9 +105,9 @@ namespace back_end.Controllers
                     Price = assignmentData.Price,
                     Over_Limit_Behavior = behavior,
                     Full_Price = fullPrice,
-                    Adult_Limit = assignmentData.Adult_Limit ?? 0,
-                    Child_limit = assignmentData.Child_Limit ?? 0,
-                    Senior_limit = assignmentData.Senior_Limit ?? 0,
+                    Adult_Limit = assignmentData.Adult_Limit!.Value,
+                    Child_limit = assignmentData.Child_Limit!.Value,
+                    Senior_limit = assignmentData.Senior_Limit!.Value,
                     Tot_Limit = assignmentData.Tot_Limit ?? 0,
                     Status = assignmentData.Status,
                     Is_Add_On = assignmentData.Is_Add_on,
@@ -305,13 +312,12 @@ namespace back_end.Controllers
         ///         "new_menu_name": "Winter Menu 2025"
         ///     }
         ///
-        /// This endpoint requires Admin or Staff role authorization.
-        /// Creates a new menu with the specified name and copies all item assignments (including prices and limits) from the source menu.
-        /// The new menu will be inactive by default.
+        /// Creates a new menu with the specified name and copies all item assignments
+        /// (including prices, limits, full price, and over-limit behavior) from the source menu.
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPost("copy_menu/{source_menu_id}")]
-        [ProducesResponseType(typeof(IEnumerable<MenuItemAssignment>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Copy_Menu_Assignments(
@@ -356,7 +362,12 @@ namespace back_end.Controllers
                 _context.AddRange(newAssignment);
                 await _context.SaveChangesAsync();
 
-                return Ok(newAssignment);
+                return Ok(new
+                {
+                    menu_id = new_menu.Menu_id,
+                    name = new_menu.Name,
+                    assignments_copied = newAssignment.Count
+                });
 
             }
             catch (Exception ex)

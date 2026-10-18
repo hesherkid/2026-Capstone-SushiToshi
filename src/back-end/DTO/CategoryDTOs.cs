@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using back_end.domain.enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace back_end.DTO.Category
 {
@@ -18,14 +19,17 @@ namespace back_end.DTO.Category
         [JsonPropertyName("description")]
         public string? Description { get; set; }
 
+        [Required(ErrorMessage = "Adult limit is required (0 = unlimited)")]
         [JsonPropertyName("adult_limit")]
-        public int Adult_Limit { get; set; }
+        public int? Adult_Limit { get; set; }
 
+        [Required(ErrorMessage = "Child limit is required (0 = unlimited)")]
         [JsonPropertyName("child_limit")]
-        public int Child_Limit { get; set; }
+        public int? Child_Limit { get; set; }
 
+        [Required(ErrorMessage = "Senior limit is required (0 = unlimited)")]
         [JsonPropertyName("senior_limit")]
-        public int Senior_Limit { get; set; }
+        public int? Senior_Limit { get; set; }
 
         [JsonPropertyName("toddler_limit")]
         public int Toddler_Limit { get; set; }

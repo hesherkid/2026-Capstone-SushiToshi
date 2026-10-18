@@ -91,10 +91,12 @@ namespace back_end.Controllers
         /// Creates a new category with the provided information.
         /// Category names must be unique.
         /// Last viewed timestamp is automatically set to current UTC time.
-        /// A limit of 0 means unlimited, except toddler_limit: 0 means "same as child_limit".
-        /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total
-        /// (total is an optional hard ceiling for the table).
-        /// Over limit behavior determines how the system handles situations where the specified limits are exceeded. Accepts "Block" or "Charge".
+        /// adult_limit, child_limit, and senior_limit are required (0 = unlimited).
+        /// toddler_limit is optional: 0 or omitted = same as child_limit.
+        /// total_limit is an optional hard ceiling for the whole table (0 = no ceiling).
+        /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total.
+        /// over_limit_behavior ("Block" or "Charge", default "Block") controls what happens when a limit is exceeded;
+        /// "Charge" bills each item's full_Price from its menu assignment.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
@@ -106,9 +108,9 @@ namespace back_end.Controllers
         {
             try
             {
-                var error = LimitRules.Validate(category.Adult_Limit, category.Child_Limit, category.Senior_Limit, category.Toddler_Limit, category.Total_Limit);
+                var error = LimitRules.Validate(category.Adult_Limit!.Value, category.Child_Limit!.Value,
+                                  category.Senior_Limit!.Value, category.Toddler_Limit, category.Total_Limit);
                 if (error != null) return BadRequest(error);
-
                 var newCategory = await _context.Categories.FirstOrDefaultAsync(c => c.Category_name == category.Name);
                 if (newCategory != null)
                 {
@@ -119,9 +121,9 @@ namespace back_end.Controllers
                 {
                     Category_name = category.Name ?? string.Empty,
                     Description = category.Description ?? string.Empty,
-                    adult_limit = category.Adult_Limit,
-                    child_limit = category.Child_Limit,
-                    senior_limit = category.Senior_Limit,
+                    adult_limit = category.Adult_Limit!.Value,
+                    child_limit = category.Child_Limit!.Value,
+                    senior_limit = category.Senior_Limit!.Value,
                     toddler_limit = category.Toddler_Limit,
                     total_limit = category.Total_Limit,
                     over_limit_behavior = category.Over_Limit_Behavior,
