@@ -3,6 +3,8 @@ import {
   formatDate,
   formatDateTime,
   getSessionDuration,
+  getSessionMinutes,
+  isLongSeating,
   parseUtcDate,
 } from "../sessionHelpers";
 
@@ -44,5 +46,14 @@ describe("session time helpers (Edmonton)", () => {
     jest.useFakeTimers().setSystemTime(new Date("2026-10-18T04:00:00Z"));
 
     expect(getSessionDuration(STARTED_UTC)).toBe("0m");
+  });
+
+  it("flags tables seated longer than 1.5 hours", () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-18T06:00:00Z"));
+
+    expect(getSessionMinutes("2026-10-18T04:30:00")).toBe(90);
+    expect(isLongSeating("2026-10-18T04:30:00")).toBe(false); // exactly 1.5 hours
+    expect(isLongSeating("2026-10-18T04:29:00")).toBe(true);  // 1h 31m
+    expect(isLongSeating(null)).toBe(false);
   });
 });

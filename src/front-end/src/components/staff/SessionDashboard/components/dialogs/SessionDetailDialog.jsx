@@ -20,13 +20,12 @@ import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
 import {
   formatTime,
-  getSessionDuration,
   formatBillStatus,
   getBillStatusColor,
   formatGuestBreakdown,
   sortBillsByStatus,
 } from "../../utils/sessionHelpers";
-import { tableLabel, isOpenBill } from "../SessionColumns";
+import { tableLabel, isOpenBill, SeatedFor } from "../SessionColumns";
 import BillSummaryDialog from "./BillSummaryDialog";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -52,6 +51,7 @@ const SessionDetailDialog = () => {
   const bills = sortBillsByStatus(session?.bills || []);
   const hasOpenBills = bills.some(isOpenBill);
 
+
   return (
     <>
       <Dialog open={!!session} onClose={closeSession} maxWidth="sm" fullWidth>
@@ -67,12 +67,12 @@ const SessionDetailDialog = () => {
               >
                 <Box>
                   <Typography variant="h6" component="span">
-                    Session #{session.session_Id} ·{" "}
+                    Dining Session #{session.session_Id} ·{" "}
                     {tableLabel(session.table_Numbers)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Started {formatTime(session.started_At)} ·{" "}
-                    {getSessionDuration(session.started_At)} ·{" "}
+                    <SeatedFor startedAt={session.started_At} /> ·{" "}
                     {session.active_Participants ?? 0} guest
                     {session.active_Participants === 1 ? "" : "s"}
                   </Typography>
@@ -136,22 +136,22 @@ const SessionDetailDialog = () => {
                         secondaryAction={
                           <Box sx={{ display: "flex", gap: 1 }}>
                             <Tooltip title="View bill summary">
-                              <IconButton
+                              <Button
                                 aria-label={`View ${bill.bill_Name} summary`}
                                 onClick={() => setSummaryBillId(bill.bill_Id)}
                               >
-                                <Receipt size={18} />
-                              </IconButton>
+                                <Receipt />
+                                View Bill Summary
+                              </Button>
                             </Tooltip>
                             {isOpenBill(bill) && (
                               <Button
                                 size="small"
                                 variant="outlined"
-                                color="error"
                                 aria-label={`Close bill ${bill.bill_Name}`}
                                 onClick={() => setBillToClose(bill)}
                               >
-                                Close
+                                Close Bill
                               </Button>
                             )}
                           </Box>

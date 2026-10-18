@@ -224,13 +224,26 @@ export const canRemoveTable = (session, tableNumber) => {
 /**
  * Get session duration
  */
-export const getSessionDuration = (startTime, endTime = null) => {
+// Tables seated longer than this get a warning on the session dashboard
+export const LONG_SEATING_MINUTES = 90;
+
+/**
+ * Whole minutes since a session started (or until it ended), or null if there's no start time
+ */
+export const getSessionMinutes = (startTime, endTime = null) => {
   const start = parseUtcDate(startTime);
-  if (!start) return "—";
+  if (!start) return null;
   const end = endTime ? parseUtcDate(endTime) : new Date();
   // Never negative, even if the device clock is slightly behind the server
-  const diff = Math.max(0, end - start);
-  const minutes = Math.floor(diff / 1000 / 60);
+  return Math.floor(Math.max(0, end - start) / 1000 / 60);
+};
+
+export const isLongSeating = (startTime, endTime = null) =>
+  (getSessionMinutes(startTime, endTime) ?? 0) > LONG_SEATING_MINUTES;
+
+export const getSessionDuration = (startTime, endTime = null) => {
+  const minutes = getSessionMinutes(startTime, endTime);
+  if (minutes === null) return "—";
   const hours = Math.floor(minutes / 60);
 
   if (hours > 0) {
