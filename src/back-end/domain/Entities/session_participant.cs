@@ -18,7 +18,7 @@ namespace back_end.domain.Entities
         [MaxLength(200)]
         public string? User_Name { get; set; }
 
-        public DateTime Joined_At { get; set; } = DateTime.Now;
+        public DateTime Joined_At { get; set; } = DateTime.UtcNow;
 
         public DateTime? Left_At { get; set; }
 

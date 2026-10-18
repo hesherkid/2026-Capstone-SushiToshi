@@ -1,13 +1,35 @@
+// The restaurant's clock. Times are shown in Edmonton time even if a device is set to another zone.
+export const RESTAURANT_TIME_ZONE = "America/Edmonton";
+
+/**
+ * Parse API timestamps as UTC when no timezone is specified.
+ * Assumes timezone-less datetime strings from the API are UTC.
+ */
+export const parseUtcDate = (value) => {
+  if (!value) return null;
+
+  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+
+  const date = new Date(
+    typeof value === "string" && !hasTimezone
+      ? `${value}Z`
+      : value
+  );
+
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 /**
  * Format a date to a readable time string
  */
 export const formatTime = (dateString) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleTimeString("en-US", {
+  const date = parseUtcDate(dateString);
+  if (!date) return "";
+  return date.toLocaleTimeString("en-CA", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: RESTAURANT_TIME_ZONE,
   });
 };
 
@@ -15,15 +37,16 @@ export const formatTime = (dateString) => {
  * Format UTC date to local date and time
  */
 export const formatDateTime = (dateString) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleString("en-US", {
+  const date = parseUtcDate(dateString);
+  if (!date) return "";
+  return date.toLocaleString("en-CA", {
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: RESTAURANT_TIME_ZONE,
   });
 };
 
@@ -32,11 +55,13 @@ export const formatDateTime = (dateString) => {
  */
 export const formatDate = (dateString) => {
   try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString([], {
+    const date = parseUtcDate(dateString);
+    if (!date) return "";
+    return date.toLocaleDateString("en-CA", {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: RESTAURANT_TIME_ZONE,
     });
   } catch (error) {
     console.error("Error formatting date:", error);
@@ -67,9 +92,9 @@ export const formatBillName = (bill) => {
  */
 export const getBillStatusColor = (status) => {
   if (!status) return "default";
-  
+
   const normalizedStatus = status.toUpperCase();
-  
+
   switch (normalizedStatus) {
     case "OPEN":
       return "success";
@@ -88,9 +113,9 @@ export const getBillStatusColor = (status) => {
  */
 export const getStatusColorValue = (status) => {
   if (!status) return "#9e9e9e";
-  
+
   const normalizedStatus = status.toUpperCase();
-  
+
   switch (normalizedStatus) {
     case "OPEN":
       return "#4caf50";  // Green
@@ -116,7 +141,7 @@ export const formatBillStatus = (status) => {
  */
 export const sortBillsByStatus = (bills) => {
   if (!Array.isArray(bills)) return [];
-  
+
   const statusPriority = {
     OPEN: 1,
     CLOSED: 2,
@@ -200,9 +225,11 @@ export const canRemoveTable = (session, tableNumber) => {
  * Get session duration
  */
 export const getSessionDuration = (startTime, endTime = null) => {
-  const start = new Date(startTime);
-  const end = endTime ? new Date(endTime) : new Date();
-  const diff = end - start;
+  const start = parseUtcDate(startTime);
+  if (!start) return "—";
+  const end = endTime ? parseUtcDate(endTime) : new Date();
+  // Never negative, even if the device clock is slightly behind the server
+  const diff = Math.max(0, end - start);
   const minutes = Math.floor(diff / 1000 / 60);
   const hours = Math.floor(minutes / 60);
 
@@ -218,36 +245,36 @@ export const getSessionDuration = (startTime, endTime = null) => {
 export const formatGuestBreakdown = (bill) => {
   if (!bill) return "No guests";
   const parts = [];
-  const adultCount = 
+  const adultCount =
     bill.adult_count ??
-    bill.Adult_Count ?? 
+    bill.Adult_Count ??
     bill.adult_Count ??
     0;
-    
-  const seniorCount = 
+
+  const seniorCount =
     bill.senior_count ??
-    bill.Senior_Count ?? 
-    bill.senior_Count ?? 
+    bill.Senior_Count ??
+    bill.senior_Count ??
     0;
-    
-  const childCount = 
+
+  const childCount =
     bill.child_count ??
-    bill.Child_Count ?? 
-    bill.child_Count ?? 
+    bill.Child_Count ??
+    bill.child_Count ??
     0;
-    
-  const totCount = 
+
+  const totCount =
     bill.tot_count ??
-    bill.Tot_Count ?? 
-    bill.tot_Count ?? 
+    bill.Tot_Count ??
+    bill.tot_Count ??
     0;
-    
-  const totalCount = 
+
+  const totalCount =
     bill.total_count ??
     bill.Total_Guests ??
-    bill.total_Guests ?? 
+    bill.total_Guests ??
     0;
-  
+
   if (adultCount > 0) {
     parts.push(`${adultCount} Adult${adultCount !== 1 ? 's' : ''}`);
   }
@@ -265,7 +292,7 @@ export const formatGuestBreakdown = (bill) => {
   if (parts.length === 0) {
     return `${totalCount} guest${totalCount !== 1 ? 's' : ''}`;
   }
-  
+
   return parts.join(", ");
 };
 

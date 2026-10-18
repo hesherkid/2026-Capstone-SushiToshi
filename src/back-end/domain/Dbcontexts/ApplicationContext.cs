@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using back_end.domain.Entities;
 
 namespace back_end.domain.DbContexts
@@ -155,7 +156,31 @@ namespace back_end.domain.DbContexts
                 .WithMany(u => u.ClaimedServices)
                 .HasForeignKey(sr => sr.Claimed_By)
                 .OnDelete(DeleteBehavior.SetNull);
+            ApplyUtcDateTimes(modelBuilder);
             base.OnModelCreating(modelBuilder);
+        }
+
+        // Every timestamp is stored in UTC, but MySQL hands DateTimes back with no time zone,
+        // so the API sent "2026-10-18T04:25:59" and browsers read it as local time (6-7 hours off in Edmonton).
+        // Reading marks values as UTC so they're sent as "...Z"; saving converts any local time
+        // (e.g. a DateTime.Now default) to UTC so stored values stay consistent.
+        private static readonly ValueConverter<DateTime, DateTime> UtcDateTimeConverter = new(
+            toDb => toDb.Kind == DateTimeKind.Local ? toDb.ToUniversalTime() : toDb,
+            fromDb => DateTime.SpecifyKind(fromDb, DateTimeKind.Utc));
+
+        private static void ApplyUtcDateTimes(ModelBuilder modelBuilder)
+        {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    // Nullable DateTimes get the same converter; EF skips it for nulls
+                    if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                    {
+                        property.SetValueConverter(UtcDateTimeConverter);
+                    }
+                }
+            }
         }
     }
 }

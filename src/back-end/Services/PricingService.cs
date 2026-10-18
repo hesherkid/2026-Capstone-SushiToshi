@@ -1,3 +1,5 @@
+using back_end.Helpers;
+
 namespace back_end.Services
 {
     public class PricingService : IPricingService
@@ -13,11 +15,26 @@ namespace back_end.Services
 
         public PricingInfo GetCurrentPricing()
         {
-            return GetPricingForDate(DateTime.Now);
+            return GetPricingForDate(DateTime.UtcNow);
         }
 
-        public PricingInfo GetPricingForDate(DateTime date)
+        // Timestamps are UTC, but weekday/weekend/holiday depends on the date in Edmonton.
+        // A Thursday 7pm bill is already Friday in UTC, so without this it got weekend prices.
+        public static DateTime ToRestaurantTime(DateTime timestamp)
         {
+            var utc = timestamp.Kind switch
+            {
+                DateTimeKind.Local => timestamp.ToUniversalTime(),
+                DateTimeKind.Utc => timestamp,
+                _ => DateTime.SpecifyKind(timestamp, DateTimeKind.Utc) // stored values are UTC
+            };
+            return TimeZoneInfo.ConvertTimeFromUtc(utc, AnalyticsDateRange.RestaurantTimeZone);
+        }
+
+        public PricingInfo GetPricingForDate(DateTime timestamp)
+        {
+            var date = ToRestaurantTime(timestamp);
+
             // Check if it's a holiday first
             var holidays = _config.GetSection("Pricing:Holiday:Dates").Get<List<string>>() ?? new List<string>();
             var dateStr = date.ToString("yyyy-MM-dd");

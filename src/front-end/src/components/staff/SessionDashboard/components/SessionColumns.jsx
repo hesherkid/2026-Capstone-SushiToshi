@@ -1,7 +1,7 @@
 import { Chip } from "@mui/material";
 import { Eye, ReceiptText, LogOut, Bell } from "lucide-react";
 import { actionsColumn } from "@/components/common/RowActions";
-import { formatTime, getSessionDuration } from "../utils/sessionHelpers";
+import { formatTime, getSessionDuration, parseUtcDate } from "../utils/sessionHelpers";
 
 export const tableLabel = (tableNumbers = []) => {
   if (tableNumbers.length === 0) return "—";
@@ -58,7 +58,7 @@ export const getSessionColumns = (actions) => [
     type: "dateTime",
     flex: 1,
     minWidth: 100,
-    valueGetter: (value) => (value ? new Date(value) : null),
+    valueGetter: (value) => parseUtcDate(value),
     valueFormatter: (value) => (value ? formatTime(value) : ""),
   },
   {

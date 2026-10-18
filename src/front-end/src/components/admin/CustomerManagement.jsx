@@ -16,7 +16,7 @@ import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { actionsColumn } from "@/components/common/RowActions";
 import StatCard from "@/components/home/StatCard";
 import { statsGrid } from "@/components/home/homeLayout";
-import { formatDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { formatDate, parseUtcDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import { isActiveAccount, AccountStatusChip } from "@/components/admin/StaffList";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -71,7 +71,7 @@ export const getCustomerColumns = ({ onDeactivate, onReactivate, onDelete } = {}
     type: "date",
     flex: 0.8,
     minWidth: 120,
-    valueGetter: (value) => (value ? new Date(value) : null),
+    valueGetter: (value) => parseUtcDate(value),
     valueFormatter: (value) => (value ? formatDate(value) : "—"),
   },
   {
@@ -80,7 +80,7 @@ export const getCustomerColumns = ({ onDeactivate, onReactivate, onDelete } = {}
     type: "date",
     flex: 0.8,
     minWidth: 120,
-    valueGetter: (value) => (value ? new Date(value) : null),
+    valueGetter: (value) => parseUtcDate(value),
     valueFormatter: (value) => (value ? formatDate(value) : "—"),
   },
   actionsColumn(
@@ -205,7 +205,7 @@ const CustomerManagement = () => {
     (c) => String(c.status).toLowerCase() === "active"
   ).length;
   const newCount = customers.filter(
-    (c) => c.created_at && new Date(c.created_at).getTime() >= daysAgo(NEW_CUSTOMER_DAYS)
+    (c) => c.created_at && parseUtcDate(c.created_at)?.getTime() >= daysAgo(NEW_CUSTOMER_DAYS)
   ).length;
 
   return (

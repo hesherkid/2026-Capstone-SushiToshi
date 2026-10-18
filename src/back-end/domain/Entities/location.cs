@@ -23,7 +23,7 @@ namespace back_end.domain.Entities
 
     public string Phone_Number { get; set; } = string.Empty;
 
-    public DateTime Created_At { get; set; } = DateTime.Now;
+    public DateTime Created_At { get; set; } = DateTime.UtcNow;
 
 
     public DateTime Updated_At { get; set; }
