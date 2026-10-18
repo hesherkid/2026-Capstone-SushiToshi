@@ -20,6 +20,9 @@ import { useOrderActions } from "@/hooks/useOrderActions";
 //Check if the logged in user is a guest.
 const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
 
+const NOT_SEATED_MESSAGE =
+  "You're not seated at a table yet. Scan the QR code on your table, or ask staff to start your table.";
+
 const FullMenu = () => {
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState({});
@@ -155,7 +158,7 @@ const FullMenu = () => {
         if (sid) {
           setSessionId(parseInt(sid));
         } else {
-          setError("Guest session not found. Please scan your table QR again.");
+          setError(NOT_SEATED_MESSAGE);
         }
         return;
       }
@@ -169,9 +172,14 @@ const FullMenu = () => {
         if (response?.status >= 200 && response.status < 300 && response.data) {
           setSessionId(response.data.session_id ?? response.data);
         } else {
-          setError("No active session found");
+          setError(NOT_SEATED_MESSAGE);
         }
       } catch (err) {
+        // 404: not seated at an active table (e.g. the table's session hasn't been started)
+        if (err.response?.status === 404) {
+          setError(NOT_SEATED_MESSAGE);
+          return;
+        }
         console.error("Error fetching session:", err);
         setError(err.response?.data?.detail || "Error fetching session");
       }
@@ -553,7 +561,7 @@ const FullMenu = () => {
               )}
             </>
           ) : (
-            <Alert severity="info">No active session found</Alert>
+            <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
           )}
           
         </Box>

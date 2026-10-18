@@ -30,6 +30,7 @@ import storage from "@/utils/storage";
 import { LocationOn } from "@mui/icons-material";
 import { useNotification } from "@/contexts/NotificationContext";
 import AppNavigationDrawer from "@/components/AppNavigationDrawer";
+import { TABLE_VISIT_EVENT } from "@/utils/tableVisit";
 
 const AppBarWithTitle = ({ title }) => {
   const router = useRouter();
@@ -63,10 +64,17 @@ const AppBarWithTitle = ({ title }) => {
   }, []);
 
   // The app bar stays mounted across client-side navigation, so re-read the
-  // table number and guest flag on each route change (e.g. after the QR login saves them)
+  // table number and guest flag on each route change (e.g. after the QR login saves them),
+  // and when a table QR code is opened on the current page
   useEffect(() => {
-    setTableNumber(localStorage.getItem("tableNumber") || "");
-    setIsGuest(localStorage.getItem("guest") === "true");
+    const readTableVisit = () => {
+      setTableNumber(localStorage.getItem("tableNumber") || "");
+      setIsGuest(localStorage.getItem("guest") === "true");
+    };
+
+    readTableVisit();
+    window.addEventListener(TABLE_VISIT_EVENT, readTableVisit);
+    return () => window.removeEventListener(TABLE_VISIT_EVENT, readTableVisit);
   }, [pathname]);
 
   useEffect(() => {

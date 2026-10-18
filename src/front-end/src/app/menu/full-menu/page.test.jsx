@@ -199,4 +199,13 @@ describe('FullMenu guest flow', () => {
     });
     expect(api.get).toHaveBeenCalledWith('/Menu/7/item', { params: {} });
   });
+
+  it("tells guests who aren't seated to scan their table's QR code", async () => {
+    localStorage.removeItem("session_id");
+    render(<FullMenu />);
+
+    expect(
+      await screen.findByText(/You're not seated at a table yet/)
+    ).toBeInTheDocument();
+  });
 });

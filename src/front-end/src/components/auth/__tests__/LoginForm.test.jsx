@@ -296,6 +296,19 @@ describe("LoginForm", () => {
     });
   });
 
+  describe("Opening a table QR code", () => {
+    it("shows the scanned table before sign-in and drops the previous visit", () => {
+      localStorage.setItem("tableNumber", "18");
+      localStorage.setItem("session_id", "3");
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=1&tableNumber=4"));
+
+      render(<LoginForm />);
+
+      expect(localStorage.getItem("tableNumber")).toBe("4");
+      expect(localStorage.getItem("session_id")).toBeNull();
+    });
+  });
+
   describe("QR table join after sign-in", () => {
     it("joins the table with the signed-in user's token", async () => {
       const user = userEvent.setup();

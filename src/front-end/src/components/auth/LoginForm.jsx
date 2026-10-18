@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
 import api from "@/config/api";
 import { loginUser, loginAsGuest } from "@/utils/auth";
+import { startTableVisit } from "@/utils/tableVisit";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -42,6 +43,12 @@ const LoginFormContent = () => {
   // Keep the context from the restaurant QR code.
   const locationId = searchParams.get("locationId");
   const tableNumber = searchParams.get("tableNumber");
+
+  // A scanned QR code is a new visit: show its table right away (not the last visit's)
+  // and drop the old session so nothing can order onto it
+  useEffect(() => {
+    startTableVisit({ locationId, tableNumber });
+  }, [locationId, tableNumber]);
 
   // --------------------------------------------------
   // HELPERS
