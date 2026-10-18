@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using back_end.domain.enums;
 
 namespace back_end.DTO.Category
 {
@@ -31,6 +32,9 @@ namespace back_end.DTO.Category
 
         [JsonPropertyName("total_limit")]
         public int Total_Limit { get; set; }
+
+        [JsonPropertyName("over_limit_behavior")]
+        public OverLimitBehavior Over_Limit_Behavior { get; set; } = OverLimitBehavior.Block;
     }
 
     public class UpdateCategory
@@ -55,5 +59,8 @@ namespace back_end.DTO.Category
 
         [JsonPropertyName("total_limit")]
         public int? Total_Limit { get; set; }
+
+        [JsonPropertyName("over_limit_behavior")]
+        public OverLimitBehavior? Over_Limit_Behavior { get; set; }
     }
 }

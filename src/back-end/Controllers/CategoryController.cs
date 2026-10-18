@@ -84,7 +84,8 @@ namespace back_end.Controllers
         ///         "child_limit": 4,
         ///         "senior_limit": 5,
         ///         "toddler_limit": 2,
-        ///         "total_limit": 0
+        ///         "total_limit": 0,
+        ///         "over_limit_behavior": "Block"
         ///     }
         ///
         /// Creates a new category with the provided information.
@@ -93,6 +94,7 @@ namespace back_end.Controllers
         /// A limit of 0 means unlimited, except toddler_limit: 0 means "same as child_limit".
         /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total
         /// (total is an optional hard ceiling for the table).
+        /// Over limit behavior determines how the system handles situations where the specified limits are exceeded. Accepts "Block" or "Charge".
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
@@ -122,6 +124,7 @@ namespace back_end.Controllers
                     senior_limit = category.Senior_Limit,
                     toddler_limit = category.Toddler_Limit,
                     total_limit = category.Total_Limit,
+                    over_limit_behavior = category.Over_Limit_Behavior,
                     last_viewed_at = DateTime.UtcNow
                 };
 
@@ -209,7 +212,8 @@ namespace back_end.Controllers
         ///         "child_limit": 4,
         ///         "senior_limit": 5,
         ///         "toddler_limit": 2,
-        ///         "total_limit": 0
+        ///         "total_limit": 0,
+        ///         "over_limit_behavior": "Block"
         ///     }
         ///
         /// Updates the category information and limits.
@@ -218,6 +222,7 @@ namespace back_end.Controllers
         /// A limit of 0 means unlimited, except toddler_limit: 0 means "same as child_limit".
         /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total
         /// (total is an optional hard ceiling for the table).
+        /// Over limit behavior determines how the system handles situations where the specified limits are exceeded. Accepts Block or Charge.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPut("update_category/{_categoryId}")]
@@ -255,6 +260,7 @@ namespace back_end.Controllers
                 existingCategory.last_viewed_at = DateTime.UtcNow;
                 existingCategory.Category_name = updatedCategory.Name ?? existingCategory.Category_name;
                 existingCategory.Description = updatedCategory.Description ?? existingCategory.Description;
+                existingCategory.over_limit_behavior = updatedCategory.Over_Limit_Behavior ?? existingCategory.over_limit_behavior;
                 _context.Categories.Update(existingCategory);
                 await _context.SaveChangesAsync();
                 return Ok(existingCategory);

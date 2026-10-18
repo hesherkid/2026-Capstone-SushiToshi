@@ -13,13 +13,14 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public int Item_Id { get; set; }
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal Price { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Full price cannot be negative")]
+        public decimal? Full_Price { get; set; }
+        public OverLimitBehavior? Over_Limit_Behavior { get; set; }
         public int? Adult_Limit { get; set; } = 0;
         public int? Child_Limit { get; set; } = 0;
         public int? Senior_Limit { get; set; } = 0;
         public int? Tot_Limit { get; set; } = 0;
         public int? Location_Id { get; set; }   // null = default for all locations
-
-
     }
 
     public class MenuAssignmentCreate : MenuItemAssignmentBaseDTO
@@ -32,6 +33,9 @@ namespace back_end.DTO.MenuItemAssignmentDTO
     {
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal? Price { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Full price cannot be negative")]
+        public decimal? Full_Price { get; set; }
+        public OverLimitBehavior? Over_Limit_Behavior { get; set; }
         public int? Adult_Limit { get; set; }
         public int? Child_Limit { get; set; }
         public int? Senior_Limit { get; set; }
