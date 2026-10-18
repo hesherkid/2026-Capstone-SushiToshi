@@ -31,10 +31,6 @@ namespace back_end.domain.Entities
 
         public decimal Price { get; set; }
 
-        public int Total_Units_Ordered { get; set; }
-
-        public DateTime LastOrdered { get; set; }
-
         public bool Is_Add_On { get; set; }
 
         public MenuItemStatus Status { get; set; }

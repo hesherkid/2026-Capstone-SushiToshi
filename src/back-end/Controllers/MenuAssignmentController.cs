@@ -85,7 +85,6 @@ namespace back_end.Controllers
                     Menu_Id = assignmentData.Menu_Id,
                     Item_Id = assignmentData.Item_Id,
                     Price = assignmentData.Price,
-                    Total_Units_Ordered = assignmentData.Total_Units_Ordered ?? 0,
                     Adult_Limit = assignmentData.Adult_Limit ?? 0,
                     Child_limit = assignmentData.Child_Limit ?? 0,
                     Senior_limit = assignmentData.Senior_Limit ?? 0,
@@ -211,14 +210,6 @@ namespace back_end.Controllers
                 if (updateData.Tot_Limit.HasValue)
                 {
                     assignment.Tot_Limit = updateData.Tot_Limit.Value;
-                }
-                if (updateData.Total_Units_Ordered.HasValue)
-                {
-                    assignment.Total_Units_Ordered = updateData.Total_Units_Ordered.Value;
-                }
-                if (updateData.Last_Ordered_At.HasValue)
-                {
-                    assignment.LastOrdered = DateTime.UtcNow;
                 }
                 if (updateData.Price.HasValue)
                 {
@@ -361,7 +352,6 @@ namespace back_end.Controllers
                         Child_limit = element.Child_limit,
                         Senior_limit = element.Senior_limit,
                         Tot_Limit = element.Tot_Limit,
-                        Total_Units_Ordered = 0,
                         Is_Add_On = element.Is_Add_On,
                         Status = element.Status,
                         Location_Id = element.Location_Id,

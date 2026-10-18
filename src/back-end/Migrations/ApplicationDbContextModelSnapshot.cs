@@ -311,9 +311,6 @@ namespace back_end.Migrations
                         .HasColumnType("int")
                         .HasColumnName("item_id");
 
-                    b.Property<DateTime>("LastOrdered")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<int?>("Location_Id")
                         .HasColumnType("int")
                         .HasColumnName("location_id");
@@ -341,9 +338,6 @@ namespace back_end.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Tot_Limit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Total_Units_Ordered")
                         .HasColumnType("int");
 
                     b.HasKey("Assignment_Id");
