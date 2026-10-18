@@ -20,9 +20,11 @@ import {
   Paper,
   Chip,
 } from "@mui/material";
-import { X, Receipt, Bell } from "lucide-react";
+import { X, Receipt, Bell, Lock } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import api from "@/config/api";
+import { useAuth } from "@/hooks/useAuth";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   formatCurrency,
   formatDateTime,
@@ -32,8 +34,12 @@ import {
   getBillStatusColor,
 } from "../../utils/sessionHelpers";
 
+// Customers see "Ready for Bill" (asks staff to bring it); staff and admins see "Close Bill"
 const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
-  const { getBillSummary } = useSession();
+  const { getBillSummary, closeBill } = useSession();
+  const { userRole } = useAuth();
+  const isStaff = userRole === "staff" || userRole === "admin";
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -136,6 +142,17 @@ const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
     }
   };
 
+  const handleCloseBill = async () => {
+    setError(null);
+    const closed = await closeBill(sessionId, billId);
+    if (closed) {
+      // Reload so the status shows Closed and the button goes away
+      await fetchSummary();
+    } else {
+      setError("Failed to close the bill. Please try again.");
+    }
+  };
+
   const handleClose = () => {
     setSummary(null);
     setError(null);
@@ -187,6 +204,12 @@ const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
+          </Alert>
+        )}
+
+        {isStaff && hasPendingRequest && summary?.status?.toUpperCase() === "OPEN" && (
+          <Alert severity="info" icon={<Bell size={20} />} sx={{ mb: 2 }}>
+            The guests have asked for this bill.
           </Alert>
         )}
 
@@ -422,8 +445,19 @@ const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={handleClose}>Close</Button>
-        {summary?.status?.toUpperCase() === "OPEN" && (
+
+        {summary?.status?.toUpperCase() === "OPEN" && isStaff && (
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => setConfirmCloseOpen(true)}
+            startIcon={<Lock size={16} />}
+          >
+            Close Bill
+          </Button>
+        )}
+
+        {summary?.status?.toUpperCase() === "OPEN" && !isStaff && (
           <Button
             variant="contained"
             onClick={handleRequestBill}
@@ -440,6 +474,15 @@ const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
           </Button>
         )}
       </DialogActions>
+
+      <ConfirmDialog
+        open={confirmCloseOpen}
+        title="Close bill"
+        message={`Close ${summary?.bill_name || "this bill"}? Guests won't be able to order on it.`}
+        confirmLabel="Close Bill"
+        onConfirm={handleCloseBill}
+        onClose={() => setConfirmCloseOpen(false)}
+      />
     </Dialog>
   );
 };

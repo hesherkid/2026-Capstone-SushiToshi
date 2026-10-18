@@ -15,9 +15,23 @@ import {
 import { X } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { validateBillData } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { tableLabel } from "../SessionColumns";
+
+// "Table 3" / "Tables 1, 2" for the dialog title, or null if the table isn't known
+const useBillTableLabel = (sessionId, sessions = []) =>
+  useMemo(() => {
+    // Staff: the session dashboard has every active session's tables
+    const session = sessions.find((s) => s.session_Id === Number(sessionId));
+    if (session?.table_Numbers?.length) return tableLabel(session.table_Numbers);
+
+    // Guests: the table number saved from their QR code
+    const qrTable = typeof window !== "undefined" ? localStorage.getItem("tableNumber") : null;
+    return qrTable ? `Table ${qrTable}` : null;
+  }, [sessionId, sessions]);
 
 const NewBillDialog = ({ open, sessionId, onClose }) => {
-  const { createBill } = useSession();
+  const { createBill, sessions } = useSession();
+  const billTable = useBillTableLabel(sessionId, sessions);
 
   const [formData, setFormData] = useState({
     billName: "",
@@ -45,18 +59,18 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    
+
     // Remove leading zeros from number fields
     let sanitizedValue = value;
     if (['adultCount', 'childCount', 'seniorCount', 'totCount'].includes(name)) {
       sanitizedValue = value.replace(/^0+(?=\d)/, '');
     }
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]: sanitizedValue,
     }));
-    
+
     setError((prev) => {
       if (!prev || !prev[name]) return prev || {};
       const { [name]: _, ...rest } = prev;
@@ -114,7 +128,7 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle>
-        Create New Bill
+        {billTable ? `Create New Bill for ${billTable}` : "Create New Bill"}
         <IconButton
           onClick={handleClose}
           sx={{ position: "absolute", right: 8, top: 8 }}
@@ -249,9 +263,9 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
           <Button onClick={handleClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button 
+          <Button
             type="submit"
-            variant="contained" 
+            variant="contained"
             disabled={submitting}
             startIcon={submitting && <CircularProgress size={16} />}
           >

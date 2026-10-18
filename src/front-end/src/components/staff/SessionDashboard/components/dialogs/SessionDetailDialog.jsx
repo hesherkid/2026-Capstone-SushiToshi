@@ -27,7 +27,6 @@ import {
 } from "../../utils/sessionHelpers";
 import { tableLabel, isOpenBill, SeatedFor } from "../SessionColumns";
 import BillSummaryDialog from "./BillSummaryDialog";
-import ConfirmDialog from "./ConfirmDialog";
 
 const SectionHeading = ({ icon: Icon, children }) => (
   <Typography
@@ -45,7 +44,6 @@ const SessionDetailDialog = () => {
     useSession();
   const actions = useSessionDashboardActions();
   const [summaryBillId, setSummaryBillId] = useState(null);
-  const [billToClose, setBillToClose] = useState(null);
 
   const requests = session ? requestsBySession[session.session_Id] || [] : [];
   const bills = sortBillsByStatus(session?.bills || []);
@@ -144,16 +142,6 @@ const SessionDetailDialog = () => {
                                 View Bill Summary
                               </Button>
                             </Tooltip>
-                            {isOpenBill(bill) && (
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                aria-label={`Close bill ${bill.bill_Name}`}
-                                onClick={() => setBillToClose(bill)}
-                              >
-                                Close Bill
-                              </Button>
-                            )}
                           </Box>
                         }
                       >
@@ -212,15 +200,6 @@ const SessionDetailDialog = () => {
         sessionId={session?.session_Id}
         billId={summaryBillId}
         onClose={() => setSummaryBillId(null)}
-      />
-
-      <ConfirmDialog
-        open={!!billToClose}
-        title="Close bill"
-        message={`Close ${billToClose?.bill_Name ?? "this bill"}? Guests won't be able to order on it.`}
-        confirmLabel="Close Bill"
-        onConfirm={() => actions.closeBill(session, billToClose)}
-        onClose={() => setBillToClose(null)}
       />
     </>
   );

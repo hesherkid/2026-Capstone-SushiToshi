@@ -4,8 +4,7 @@ import { useSession } from "../context/SessionContext";
 
 // Row and detail-dialog actions for the session dashboard
 export const useSessionDashboardActions = () => {
-  const { openDialog, openSession, endSession, closeBill, refreshData } =
-    useSession();
+  const { openDialog, openSession, endSession, refreshData } = useSession();
   const { notifySuccess, notifyError } = useNotification();
 
   return {
@@ -24,8 +23,6 @@ export const useSessionDashboardActions = () => {
         confirmLabel: "End Session",
         onConfirm: () => endSession(session.session_Id),
       }),
-
-    closeBill: (session, bill) => closeBill(session.session_Id, bill.bill_Id),
 
     completeRequest: async (request) => {
       try {
