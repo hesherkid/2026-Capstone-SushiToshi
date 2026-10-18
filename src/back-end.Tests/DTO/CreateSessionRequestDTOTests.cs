@@ -29,8 +29,7 @@ public class CreateSessionRequestDTOTests
             Menu_Id = 1,
             Location_Id = 1,
             Table_Id = 5,
-            Request_By_User_Id = 123,
-            Request_By_Name = "John Doe"
+            AssignmentType = "table"
         };
 
         // Act
@@ -159,8 +158,6 @@ public class CreateSessionRequestDTOTests
         dto.Table_Id.Should().BeNull();
         dto.TableGroup_Id.Should().BeNull();
         dto.AssignmentType.Should().BeNull();
-        dto.Request_By_User_Id.Should().BeNull();
-        dto.Request_By_Name.Should().BeNull();
     }
 
     [Fact]
@@ -173,9 +170,7 @@ public class CreateSessionRequestDTOTests
             Location_Id = 2,
             Table_Id = 3,
             TableGroup_Id = null,
-            AssignmentType = "table",
-            Request_By_User_Id = 456,
-            Request_By_Name = "Jane Smith"
+            AssignmentType = "table"
         };
 
         // Act
@@ -189,8 +184,6 @@ public class CreateSessionRequestDTOTests
         deserialized.Table_Id.Should().Be(3);
         deserialized.TableGroup_Id.Should().BeNull();
         deserialized.AssignmentType.Should().Be("table");
-        deserialized.Request_By_User_Id.Should().Be(456);
-        deserialized.Request_By_Name.Should().Be("Jane Smith");
     }
 
     [Fact]
@@ -205,40 +198,6 @@ public class CreateSessionRequestDTOTests
         // Assert — only Menu_Id has a [JsonPropertyName]; the rest keep their C# names
         json.Should().Contain("\"menu_id\"");
         json.Should().Contain("\"Location_Id\"");
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData(null)]
-    public void CreateSessionRequestDTO_WithBlankOrMissingName_IsValid(string? name)
-    {
-        // Arrange — guests may have no name; the controller falls back to "Guest"
-        var dto = new CreateSessionRequestDTO { Menu_Id = 1, Location_Id = 1, Request_By_Name = name };
-
-        // Act
-        var (isValid, _) = Validate(dto);
-
-        // Assert
-        isValid.Should().BeTrue();
-    }
-
-    [Fact]
-    public void CreateSessionRequestDTO_WithLongName_IsValid()
-    {
-        // Arrange
-        var dto = new CreateSessionRequestDTO
-        {
-            Menu_Id = 1,
-            Location_Id = 1,
-            Request_By_Name = new string('x', 500)
-        };
-
-        // Act
-        var (isValid, _) = Validate(dto);
-
-        // Assert
-        isValid.Should().BeTrue("Request_By_Name has no length limit");
     }
 
     [Theory]

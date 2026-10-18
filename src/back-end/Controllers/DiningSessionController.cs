@@ -5,7 +5,6 @@ using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.DiningSessionDTOs;
 using back_end.DTO.TableGroupDTOs;
-using back_end.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
 using back_end.Helpers;
@@ -80,6 +79,8 @@ namespace back_end.controllers
     /// Use assignmentType to control whether a table, table group, or neither is assigned during creation.
     /// </remarks>
     [HttpPost("Create_Dinning_Session")]
+    // Staff seat tables; guests join an existing session through POST /api/DiningSession/join
+    [Authorize(Roles = "Admin,Staff")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -112,33 +113,14 @@ namespace back_end.controllers
                 if (table.Location_Id != sessionData.Location_Id)
                     return BadRequest($"Table belongs to a different location");
 
-                var existingSession = await _context.DiningSessions
-                    .FirstOrDefaultAsync(d => d.Ended_At == null && d.Table_Id == table.Table_Id);
+                // Busy if the table, or a table group it belongs to, already has an open session
+                bool tableBusy = await _context.DiningSessions
+                    .AnyAsync(d => d.Ended_At == null &&
+                                   (d.Table_Id == table.Table_Id ||
+                                    (table.TableGroup_Id != null && d.TableGroup_Id == table.TableGroup_Id)));
 
-                if (existingSession != null)
-                {
-                    var existingParticipant = await _context.SessionParticipants
-                        .FirstOrDefaultAsync(p => p.Session_Id == existingSession.Session_Id &&
-                                              p.User_Id == sessionData.Request_By_User_Id);
-
-                    if (existingParticipant == null)
-                    {
-                        _context.SessionParticipants.Add(new SessionParticipant
-                        {
-                            Session_Id = existingSession.Session_Id,
-                            User_Id = sessionData.Request_By_User_Id,
-                            User_Name = sessionData.Request_By_Name ?? "Guest",
-                            Joined_At = DateTime.UtcNow
-                        });
-                        await _context.SaveChangesAsync();
-                    }
-
-                    return Ok(new
-                    {
-                        message = $"Joined existing session at table {table.Table_Id}",
-                        session_Id = existingSession.Session_Id
-                    });
-                }
+                if (tableBusy)
+                    return BadRequest($"Table {table.table_number} already has an active session");
 
                 tableId = table.Table_Id;
                 tableNumbers.Add(table.table_number);
@@ -186,30 +168,6 @@ namespace back_end.controllers
             ValidateTableAssignment(newSession);
             _context.Add<DiningSession>(newSession);
             await _context.SaveChangesAsync();
-
-            var newDiningSession = await _context.DiningSessions
-                .OrderByDescending(s => s.Session_Id)
-                .FirstOrDefaultAsync();
-
-            if (sessionData.Request_By_User_Id != null && sessionData.Request_By_Name == "Guest")
-            {
-                var alreadyExists = _context.SessionParticipants
-                    .Any(sp => sp.Session_Id == newDiningSession.Session_Id && sp.User_Id == sessionData.Request_By_User_Id);
-
-                if (!alreadyExists)
-                {
-                    var guestParticipant = new SessionParticipant
-                    {
-                        Session_Id = newDiningSession.Session_Id,
-                        User_Id = sessionData.Request_By_User_Id,
-                        User_Name = "Guest",
-                        Joined_At = DateTime.UtcNow
-                    };
-
-                    _context.SessionParticipants.Add(guestParticipant);
-                    await _context.SaveChangesAsync();
-                }
-            }
 
             return Ok(new DiningSessionResponseDTO
             {
@@ -932,136 +890,85 @@ namespace back_end.controllers
       }
     }
 
-    [HttpPost("AddGuestParticipant")]
-    [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    /// <summary>
+    /// Joins the signed-in user to the active dining session for a table, using the table number
+    /// and location from the table's QR code. Guests use the shared guest account's login.
+    /// </summary>
+    /// <remarks>
+    /// Only joins sessions staff have already started; it never creates one.
+    /// A table in a table group joins the group's session.
+    /// Calling it again returns the same participant, so rescanning the QR code is safe.
+    /// </remarks>
+    /// <response code="200">Joined (or already in) the table's session.</response>
+    /// <response code="401">The request has no valid user.</response>
+    /// <response code="404">The table doesn't exist, or it has no active session yet.</response>
+    [HttpPost("join")]
+    [Authorize]
+    [ProducesResponseType(typeof(JoinTableSessionResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> AddGuestParticipant([FromBody] GuestParticipantDTOs dto)
+    public async Task<IActionResult> JoinTableSession([FromBody] JoinTableSessionDTO request)
     {
-
-        //Find the next available empty session
-        var session = await _context.DiningSessions
-            .FirstOrDefaultAsync(s => s.Session_Id == dto.Session_Id && s.Ended_At == null);
-
-        if (session == null)
-            return NotFound(new { message = "Session not found or already closed" });
-
-        //Check if guest is already in this session
-        bool alreadyJoined = await _context.SessionParticipants
-            .AnyAsync(sp => sp.Session_Id == dto.Session_Id && sp.User_Id == dto.User_Id);
-        if (alreadyJoined)
-            return BadRequest(new { message = "Guest already joined this session" });
-
-        //Add guest with default name and a new session and Oid
-        var guest = new SessionParticipant
-        {
-            Session_Id = dto.Session_Id,
-            User_Name = "Guest",
-            User_Id = dto.User_Id,
-            Joined_At = DateTime.UtcNow
-        };
-
-        _context.SessionParticipants.Add(guest);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { message = "Guest added successfully" });
-    }
-
-    [HttpPost("addguestparticipant/v2")]
-    [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [AllowAnonymous]
-    public async Task<IActionResult> AddGuestParticipantV2(
-      [FromBody] AddGuestParticipantV2DTO request)
-    {
-
-      try
+      if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
       {
-        var location_id = request.LocationId;
-        // The QR code / join URL carries the table NUMBER shown on the table, not the database Table_Id
-        var table = await _context.Tables
-            .FirstOrDefaultAsync(t => t.table_number == request.TableId
-                                    && t.Location_Id == location_id
-                                    && t.is_active);
-        if (table == null)
+        return Unauthorized(new { message = "Please sign in to join a table." });
+      }
+
+      var table = await _context.Tables
+          .FirstOrDefaultAsync(t => t.table_number == request.Table_Number &&
+                                    t.Location_Id == request.Location_Id &&
+                                    t.is_active);
+      if (table == null)
+      {
+        return NotFound(new { message = $"Table {request.Table_Number} was not found at this location." });
+      }
+
+      // A grouped table seats guests in the group's session, otherwise the table's own
+      var session = await _context.DiningSessions
+          .Include(ds => ds.Table)
+          .Include(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+          .Where(ds => ds.Ended_At == null && ds.Location_Id == request.Location_Id)
+          .FirstOrDefaultAsync(ds =>
+              (table.TableGroup_Id != null && ds.TableGroup_Id == table.TableGroup_Id) ||
+              ds.Table_Id == table.Table_Id);
+      if (session == null)
+      {
+        return NotFound(new { message = $"Table {request.Table_Number} doesn't have an active session yet. Please ask staff to start your table." });
+      }
+
+      var participant = await _context.SessionParticipants
+          .FirstOrDefaultAsync(sp => sp.Session_Id == session.Session_Id &&
+                                     sp.User_Id == userId &&
+                                     sp.Left_At == null);
+      bool alreadyJoined = participant != null;
+
+      if (participant == null)
+      {
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.User_id == userId);
+        if (user == null)
         {
-            return NotFound(new { message = $"Table {request.TableId} was not found at this location." });
-        }
-        var table_id = table.Table_Id;
-        var userIdString = ClaimsHelpers.GetUserId(User);
-        if (request.GuestName.ToLower() != "guest" )
-        {
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
-            {
-              return Unauthorized(new { message = "User not authenticated or invalid user ID" });
-            }
-        }
-        else
-        {
-            //Assign a temporary negative user id for guest users
-            userIdString = _context.Users.Where(u => u.Email == "guestemail@email.com").Select(u => u.User_id.ToString()).FirstOrDefault();
-        }
-        var SessionParticipant = new SessionParticipant();
-        int sessionId = 0;
-        if (_context.TableGroups.Any(tg => tg.Tables.Any(t => t.Table_Id == table_id && tg.Location_Id == location_id && tg.Is_Active)))
-        {
-          int TableGroupNumber = _context.Tables.Where(t => t.Table_Id == table_id && t.Location_Id == location_id && t.is_active)
-              .Select(t => t.TableGroup_Id ?? 0)
-              .FirstOrDefault();
-          sessionId = await _context.DiningSessions.Where(ds => ds.Ended_At == null && ds.TableGroup_Id == TableGroupNumber && ds.Location_Id == location_id)
-              .Select(ds => ds.Session_Id)
-              .FirstOrDefaultAsync();
-        }
-        else
-        {
-          sessionId = await _context.DiningSessions.Where(ds => ds.Ended_At == null && ds.Table_Id == table_id && ds.Location_Id == location_id)
-              .Select(ds => ds.Session_Id)
-              .FirstOrDefaultAsync();
+          return Unauthorized(new { message = "Please sign in to join a table." });
         }
 
-        //Find the next available empty session for the table
-        // if (!_context.DiningSessions.Any(ds => (ds.Ended_At == null && ds.Table_Id == table_id && ds.Location_Id == location_id) ))
-        // {
-        //   return NotFound(new { message = "No active session found for the specified table" });
-        // }
-
-        // No open session for this table (or its group): stop before inserting a participant for session 0
-        if (sessionId == 0)
+        participant = new SessionParticipant
         {
-          return NotFound(new { message = "No active session found for this table. Please ask staff to start one." });
-        }
-        var returnedSession= new AddGuestParticipantResponseDTO
-        {
-          SessionId = 0,
-        };
-        if (_context.SessionParticipants.Any(sp => sp.Session_Id == sessionId && sp.User_Id.ToString() == userIdString))
-        {
-          returnedSession.SessionId = sessionId;
-          return Ok(new { returnedSession, message = "Guest participant already in session", sessionId = sessionId });
-        }
-
-        var newParticipant = new SessionParticipant
-        {
-          Session_Id = sessionId,
-          User_Name = await _context.Users
-              .Where(u => u.User_id == int.Parse(userIdString))
-              .Select(u => u.Email)
-              .FirstOrDefaultAsync(),
-          User_Id = int.Parse(userIdString),
+          Session_Id = session.Session_Id,
+          User_Id = userId,
+          User_Name = $"{user.First_name} {user.Last_name}".Trim() is { Length: > 0 } name ? name : user.Email,
           Joined_At = DateTime.UtcNow
         };
-        await _context.SessionParticipants.AddAsync(newParticipant);
+        _context.SessionParticipants.Add(participant);
         await _context.SaveChangesAsync();
-        returnedSession.SessionId = sessionId;
-        return Ok(new { returnedSession,message = "Guest participant added successfully" });
-      }
-      catch (Exception ex)
-      {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message }); 
       }
 
+      return Ok(new JoinTableSessionResponseDTO
+      {
+        Session_Id = session.Session_Id,
+        Participant_Id = participant.Participant_Id,
+        Menu_Id = session.Menu_Id,
+        Table_Numbers = GetTableNumbers(session),
+        Already_Joined = alreadyJoined
+      });
     }
   }
 
