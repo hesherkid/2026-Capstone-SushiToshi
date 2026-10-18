@@ -9,7 +9,7 @@ namespace back_end.domain.Entities
     {
         [Key]
         [Column("assignment_id")]
-        public int Assignment_Id { get; set; }          // new primary key (the old composite key can't include a nullable column)
+        public int Assignment_Id { get; set; }
 
         [Column("menu_id")]
         [ForeignKey(nameof(Menu))]
@@ -31,10 +31,6 @@ namespace back_end.domain.Entities
 
         public decimal Price { get; set; }
 
-        public int Total_Units_Ordered { get; set; }
-
-        public DateTime LastOrdered { get; set; }
-
         public bool Is_Add_On { get; set; }
 
         public MenuItemStatus Status { get; set; }
@@ -46,6 +42,12 @@ namespace back_end.domain.Entities
         public int Senior_limit { get; set; }
 
         public int Tot_Limit { get; set; }
+
+        public int Per_Order_Limit { get; set; } = 0; // 0 = no per-order cap; always Block
+
+        public OverLimitBehavior Over_Limit_Behavior { get; set; } = OverLimitBehavior.Block;
+
+        public decimal Full_Price { get; set; } = 0m;
 
         public Menu Menu { get; set; } = null!;
 
