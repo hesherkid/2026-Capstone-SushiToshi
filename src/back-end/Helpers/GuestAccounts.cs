@@ -13,6 +13,12 @@ namespace back_end.Helpers
         // Long enough for a whole visit; regular logins use Jwt:ExpiresInMinutes
         public const int DefaultTokenMinutes = 6 * 60;
 
+        // POST /api/auth/guest creates a database row per call, so it's rate limited per IP address.
+        // Diners on the restaurant Wi-Fi share one public IP, so the limit allows a full room
+        // arriving at once while stopping a script from creating thousands of accounts.
+        public const string RateLimitPolicy = "guest-login";
+        public const int RateLimitPerMinute = 30;
+
         // No 0/O or 1/I so staff can read the code off a screen
         private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 

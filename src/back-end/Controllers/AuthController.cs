@@ -9,6 +9,7 @@ using back_end.Services.Email;
 using back_end.Helpers;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -83,8 +84,11 @@ namespace back_end.controllers
         /// (Jwt:GuestExpiresInMinutes, default 6 hours).
         /// </remarks>
         /// <response code="200">Returns the guest's access token and display name.</response>
+        /// <response code="429">Too many guest sign-ins from this network in the last minute.</response>
         [HttpPost("guest")]
+        [EnableRateLimiting(GuestAccounts.RateLimitPolicy)]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<IActionResult> GuestLogin()
         {
             var now = DateTime.UtcNow;

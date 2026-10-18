@@ -113,6 +113,13 @@ const LoginFormContent = () => {
     const status = err.response?.status;
     const data = err.response?.data;
 
+    // Rate limited (e.g. lots of guest sign-ins from the restaurant Wi-Fi at once); the response has no body
+    if (status === 429) {
+      setNeedsVerification(false);
+      setError("Lots of people are signing in right now. Please wait a moment and try again.");
+      return;
+    }
+
     if (status === 404 || status >= 500 || !err.response) {
       setNeedsVerification(false);
       setError("Something went wrong. Please try again.");

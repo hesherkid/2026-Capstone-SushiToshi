@@ -259,6 +259,19 @@ describe("LoginForm", () => {
       expect(localStorage.getItem("session_id")).toBe("101");
     });
 
+    it("asks guests to wait when guest sign-in is rate limited", async () => {
+      const user = userEvent.setup();
+      loginAsGuest.mockRejectedValue({ response: { status: 429, data: "" } });
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+
+      expect(
+        await screen.findByText(/Please wait a moment and try again/)
+      ).toBeInTheDocument();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
     it("tells guests to ask staff when the table hasn't been started", async () => {
       const user = userEvent.setup();
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });

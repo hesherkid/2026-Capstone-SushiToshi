@@ -180,6 +180,18 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 
+    // Guest sign-in (POST api/auth/guest) creates an account per call, so cap it per IP address.
+    // No queue: over the limit is refused straight away rather than delayed.
+    options.AddPolicy(GuestAccounts.RateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            $"ip:{httpContext.Connection.RemoteIpAddress}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = GuestAccounts.RateLimitPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
