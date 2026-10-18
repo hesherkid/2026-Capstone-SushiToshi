@@ -84,7 +84,7 @@ namespace back_end.Controllers
         ///         "child_limit": 4,
         ///         "senior_limit": 5,
         ///         "toddler_limit": 2,
-        ///         "total_limit": 0,
+        ///         "per_order_limit": 0,
         ///         "over_limit_behavior": "Block"
         ///     }
         ///
@@ -93,8 +93,8 @@ namespace back_end.Controllers
         /// Last viewed timestamp is automatically set to current UTC time.
         /// adult_limit, child_limit, and senior_limit are required (0 = unlimited).
         /// toddler_limit is optional: 0 or omitted = same as child_limit.
-        /// total_limit is an optional hard ceiling for the whole table (0 = no ceiling).
-        /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total.
+        /// Rules: child and senior ≤ adult, toddler ≤ child.
+        /// per_order_limit: max combined units from this category per order for the whole table (0 = no limit cap, always blocks).
         /// over_limit_behavior ("Block" or "Charge", default "Block") controls what happens when a limit is exceeded;
         /// "Charge" bills each item's full_Price from its menu assignment.
         /// </remarks>
@@ -109,7 +109,7 @@ namespace back_end.Controllers
             try
             {
                 var error = LimitRules.Validate(category.Adult_Limit!.Value, category.Child_Limit!.Value,
-                                  category.Senior_Limit!.Value, category.Toddler_Limit, category.Total_Limit);
+                                  category.Senior_Limit!.Value, category.Toddler_Limit, category.Per_Order_Limit);
                 if (error != null) return BadRequest(error);
                 var newCategory = await _context.Categories.FirstOrDefaultAsync(c => c.Category_name == category.Name);
                 if (newCategory != null)
@@ -125,7 +125,7 @@ namespace back_end.Controllers
                     child_limit = category.Child_Limit!.Value,
                     senior_limit = category.Senior_Limit!.Value,
                     toddler_limit = category.Toddler_Limit,
-                    total_limit = category.Total_Limit,
+                    per_order_limit = category.Per_Order_Limit,
                     over_limit_behavior = category.Over_Limit_Behavior,
                     last_viewed_at = DateTime.UtcNow
                 };
@@ -214,16 +214,15 @@ namespace back_end.Controllers
         ///         "child_limit": 4,
         ///         "senior_limit": 5,
         ///         "toddler_limit": 2,
-        ///         "total_limit": 0,
+        ///         "per_order_limit": 0,
         ///         "over_limit_behavior": "Block"
         ///     }
         ///
         /// Updates the category information and limits.
         /// Name and description are optional - if not provided, existing values are retained.
-        /// Last viewed timestamp is automatically updated to current UTC time.
         /// A limit of 0 means unlimited, except toddler_limit: 0 means "same as child_limit".
-        /// Rules: child and senior ≤ adult, toddler ≤ child, adult ≤ total
-        /// (total is an optional hard ceiling for the table).
+        /// Rules: child and senior ≤ adult, toddler ≤ child.
+        /// per_order_limit: max combined units from this category per order for the whole table (0 = no limit cap, always blocks).
         /// Over limit behavior determines how the system handles situations where the specified limits are exceeded. Accepts Block or Charge.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
@@ -248,18 +247,16 @@ namespace back_end.Controllers
                 var child = updatedCategory.Child_Limit ?? existingCategory.child_limit;
                 var senior = updatedCategory.Senior_Limit ?? existingCategory.senior_limit;
                 var toddler = updatedCategory.Toddler_Limit ?? existingCategory.toddler_limit;
-                var total = updatedCategory.Total_Limit ?? existingCategory.total_limit;
+                var perOrder = updatedCategory.Per_Order_Limit ?? existingCategory.per_order_limit;
 
-
-                var error = LimitRules.Validate(adult, child, senior, toddler, total);
+                var error = LimitRules.Validate(adult, child, senior, toddler, perOrder);
                 if (error != null) return BadRequest(error);
 
                 existingCategory.adult_limit = adult;
                 existingCategory.child_limit = child;
                 existingCategory.senior_limit = senior;
                 existingCategory.toddler_limit = toddler;
-                existingCategory.total_limit = total;
-                existingCategory.last_viewed_at = DateTime.UtcNow;
+                existingCategory.per_order_limit = perOrder;
                 existingCategory.Category_name = updatedCategory.Name ?? existingCategory.Category_name;
                 existingCategory.Description = updatedCategory.Description ?? existingCategory.Description;
                 existingCategory.over_limit_behavior = updatedCategory.Over_Limit_Behavior ?? existingCategory.over_limit_behavior;

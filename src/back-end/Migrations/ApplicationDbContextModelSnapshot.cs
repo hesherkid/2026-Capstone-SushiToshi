@@ -139,13 +139,13 @@ namespace back_end.Migrations
                     b.Property<int>("over_limit_behavior")
                         .HasColumnType("int");
 
+                    b.Property<int>("per_order_limit")
+                        .HasColumnType("int");
+
                     b.Property<int>("senior_limit")
                         .HasColumnType("int");
 
                     b.Property<int>("toddler_limit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("total_limit")
                         .HasColumnType("int");
 
                     b.Property<int>("total_view_seconds")
@@ -326,6 +326,9 @@ namespace back_end.Migrations
                         .HasColumnName("menu_id");
 
                     b.Property<int>("Over_Limit_Behavior")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Per_Order_Limit")
                         .HasColumnType("int");
 
                     b.Property<decimal>("Price")

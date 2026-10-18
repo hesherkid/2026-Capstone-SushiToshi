@@ -31,7 +31,7 @@ namespace back_end.domain.Seeders
                     child_limit = 0,
                     senior_limit = 0,
                     toddler_limit = 0,
-                    total_limit = 0
+                    per_order_limit = 0
                 },
                 new Category
                 {
@@ -41,7 +41,7 @@ namespace back_end.domain.Seeders
                     child_limit = 0,
                     senior_limit = 0,
                     toddler_limit = 0,
-                    total_limit = 0
+                    per_order_limit = 0
                 },
                 new Category
                 {
@@ -51,7 +51,7 @@ namespace back_end.domain.Seeders
                     child_limit = 20,
                     senior_limit = 20,
                     toddler_limit = 20,
-                    total_limit = 0,
+                    per_order_limit = 0,
                     over_limit_behavior = OverLimitBehavior.Block
                 },
                 new Category
@@ -62,7 +62,7 @@ namespace back_end.domain.Seeders
                     child_limit = 0,
                     senior_limit = 0,
                     toddler_limit = 0,
-                    total_limit = 0
+                    per_order_limit = 0
                 },
                 new Category
                 {
@@ -72,7 +72,7 @@ namespace back_end.domain.Seeders
                     child_limit = 1,
                     senior_limit = 1,
                     toddler_limit = 1,
-                    total_limit = 0,
+                    per_order_limit = 0,
                     over_limit_behavior = OverLimitBehavior.Charge
                 },
                 new Category
@@ -83,7 +83,7 @@ namespace back_end.domain.Seeders
                     child_limit = 0,
                     senior_limit = 0,
                     toddler_limit = 0,
-                    total_limit = 0
+                    per_order_limit = 0
                 }
             };
 

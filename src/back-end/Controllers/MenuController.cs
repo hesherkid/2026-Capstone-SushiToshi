@@ -338,8 +338,9 @@ namespace back_end.Controllers
         /// Each item includes:
         /// - Item details (ID, name, description, image URL)
         /// - Price for this specific menu
-        /// - Category information
+        /// - Category and item limits per person / per order
         /// - Associated tags with names and color codes
+        /// - Full price for over limit charges
         /// </remarks>
         //GET: api/menu/{menu}/items
         //Get items from a Menu
@@ -382,6 +383,7 @@ namespace back_end.Controllers
                         description = m.MenuItem.Description,
                         category = m.MenuItem.Category.Category_name,
                         price = m.Price,
+                        fullPrice = m.Full_Price,
                         categoryID = m.MenuItem.Category_id,
                         categoryLimits = new
                         {
@@ -389,7 +391,17 @@ namespace back_end.Controllers
                             senior = m.MenuItem.Category.senior_limit,
                             child = m.MenuItem.Category.child_limit,
                             toddler = LimitRules.EffectToddler(m.MenuItem.Category.toddler_limit, m.MenuItem.Category.child_limit),
-                            total = m.MenuItem.Category.total_limit,
+                            perOrder = m.MenuItem.Category.per_order_limit,
+                            overLimitBehavior = m.MenuItem.Category.over_limit_behavior,
+                        },
+                        itemLimits = new
+                        {
+                            adult = m.Adult_Limit,
+                            senior = m.Senior_limit,
+                            child = m.Child_limit,
+                            toddler = LimitRules.EffectToddler(m.Tot_Limit, m.Child_limit),
+                            perOrder = m.Per_Order_Limit,
+                            overLimitBehavior = m.Over_Limit_Behavior,
                         },
                         isAddOn = m.Is_Add_On,
                         imageURL = m.MenuItem.image_url,

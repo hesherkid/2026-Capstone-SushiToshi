@@ -52,6 +52,7 @@ namespace back_end.Controllers
         ///         "senior_Limit": 50,
         ///         "child_Limit": 30,
         ///         "tot_Limit": 20,
+        ///         "per_Order_Limit": 2,
         ///         "is_Add_on": true,
         ///         "status": "Available"
         ///     }
@@ -63,6 +64,7 @@ namespace back_end.Controllers
         /// full_Price defaults to price if not provided; over_Limit_Behavior defaults to "Block".
         /// over_Limit_Behavior "Charge" requires full_Price greater than 0.
         /// Add-on items must have a price greater than 0.
+        /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Item views are recorded separately (POST api/menu-item-views).
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
@@ -77,8 +79,7 @@ namespace back_end.Controllers
         {
             try
             {
-                var limitError = LimitRules.Validate(assignmentData.Adult_Limit ?? 0, assignmentData.Child_Limit ?? 0,
-                                       assignmentData.Senior_Limit ?? 0, assignmentData.Tot_Limit ?? 0);
+                var limitError = LimitRules.Validate(assignmentData.Adult_Limit ?? 0, assignmentData.Child_Limit ?? 0, assignmentData.Senior_Limit ?? 0, assignmentData.Tot_Limit ?? 0, assignmentData.Per_Order_Limit ?? 0);
                 if (limitError != null) return BadRequest(limitError);
 
                 var behavior = assignmentData.Over_Limit_Behavior ?? OverLimitBehavior.Block;
@@ -109,6 +110,7 @@ namespace back_end.Controllers
                     Child_limit = assignmentData.Child_Limit!.Value,
                     Senior_limit = assignmentData.Senior_Limit!.Value,
                     Tot_Limit = assignmentData.Tot_Limit ?? 0,
+                    Per_Order_Limit = assignmentData.Per_Order_Limit ?? 0,
                     Status = assignmentData.Status,
                     Is_Add_On = assignmentData.Is_Add_on,
                     Location_Id = assignmentData.Location_Id,
@@ -161,6 +163,7 @@ namespace back_end.Controllers
         ///         "child_Limit": 1,
         ///         "senior_Limit": 1,
         ///         "tot_Limit": 0,
+        ///         "per_Order_Limit": 2,
         ///         "over_Limit_Behavior": "Charge",
         ///         "is_Add_on": false,
         ///         "status": "Available"
@@ -171,6 +174,7 @@ namespace back_end.Controllers
         /// A limit of 0 means unlimited, except tot_Limit: 0 means "same as child_Limit".
         /// Rules: child and senior ≤ adult, toddler ≤ child.
         /// over_Limit_Behavior "Charge" requires full_Price greater than 0.
+        /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Add-on items require price greater than 0.
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
@@ -201,12 +205,13 @@ namespace back_end.Controllers
                 var finalChildLimit = updateData.Child_Limit ?? assignment.Child_limit;
                 var finalSeniorLimit = updateData.Senior_Limit ?? assignment.Senior_limit;
                 var finalTotLimit = updateData.Tot_Limit ?? assignment.Tot_Limit;
+                var finalPerOrder = updateData.Per_Order_Limit ?? assignment.Per_Order_Limit;
                 var finalBehavior = updateData.Over_Limit_Behavior ?? assignment.Over_Limit_Behavior;
                 var finalFullPrice = updateData.Full_Price ?? assignment.Full_Price;
                 var finalPrice = updateData.Price ?? assignment.Price;
                 var finalIsAddOn = updateData.Is_Add_on ?? assignment.Is_Add_On;
 
-                var limitError = LimitRules.Validate(finalAdultLimit, finalChildLimit, finalSeniorLimit, finalTotLimit);
+                var limitError = LimitRules.Validate(finalAdultLimit, finalChildLimit, finalSeniorLimit, finalTotLimit, finalPerOrder);
                 if (limitError != null) return BadRequest(limitError);
 
                 if (finalBehavior == OverLimitBehavior.Charge && finalFullPrice <= 0)
@@ -219,6 +224,7 @@ namespace back_end.Controllers
                 assignment.Child_limit = finalChildLimit;
                 assignment.Senior_limit = finalSeniorLimit;
                 assignment.Tot_Limit = finalTotLimit;
+                assignment.Per_Order_Limit = finalPerOrder;
                 assignment.Over_Limit_Behavior = finalBehavior;
                 assignment.Full_Price = finalFullPrice;
                 assignment.Price = finalPrice;
@@ -296,12 +302,12 @@ namespace back_end.Controllers
         /// <param name="source_menu_id">The unique identifier of the menu to copy from</param>
         /// <param name="new_menu_name">The name for the new menu</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the collection of newly created <see cref="MenuItemAssignment"/> objects.
+        /// An <see cref="IActionResult"/> summary of the new menu.
         /// Returns HTTP 200 (OK) with the list of copied assignments on success.
         /// Returns HTTP 409 (Conflict) if a menu with the new name already exists.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
         /// </returns>
-        /// <response code="200">Returns the list of newly created menu item assignments</response>
+        /// <response code="200">Returns menu_id, name, assignments_copied</response>
         /// <response code="409">If a menu with the specified name already exists</response>
         /// <response code="500">If an internal error occurs while copying the menu</response>
         /// <remarks>
@@ -354,6 +360,7 @@ namespace back_end.Controllers
                         Child_limit = element.Child_limit,
                         Senior_limit = element.Senior_limit,
                         Tot_Limit = element.Tot_Limit,
+                        Per_Order_Limit = element.Per_Order_Limit,
                         Is_Add_On = element.Is_Add_On,
                         Status = element.Status,
                         Location_Id = element.Location_Id,

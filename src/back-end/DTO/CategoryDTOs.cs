@@ -34,8 +34,8 @@ namespace back_end.DTO.Category
         [JsonPropertyName("toddler_limit")]
         public int Toddler_Limit { get; set; }
 
-        [JsonPropertyName("total_limit")]
-        public int Total_Limit { get; set; }
+        [JsonPropertyName("per_order_limit")]
+        public int Per_Order_Limit { get; set; }
 
         [JsonPropertyName("over_limit_behavior")]
         public OverLimitBehavior Over_Limit_Behavior { get; set; } = OverLimitBehavior.Block;
@@ -61,8 +61,8 @@ namespace back_end.DTO.Category
         [JsonPropertyName("toddler_limit")]
         public int? Toddler_Limit { get; set; }
 
-        [JsonPropertyName("total_limit")]
-        public int? Total_Limit { get; set; }
+        [JsonPropertyName("per_order_limit")]
+        public int? Per_Order_Limit { get; set; }
 
         [JsonPropertyName("over_limit_behavior")]
         public OverLimitBehavior? Over_Limit_Behavior { get; set; }

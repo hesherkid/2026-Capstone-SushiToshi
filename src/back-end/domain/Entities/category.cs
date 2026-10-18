@@ -36,7 +36,7 @@ namespace back_end.domain.Entities
 
         public int toddler_limit { get; set; } = 0;
 
-        public int total_limit { get; set; } = 0;
+        public int per_order_limit { get; set; } = 0;
 
         public OverLimitBehavior over_limit_behavior { get; set; } = OverLimitBehavior.Block;
 

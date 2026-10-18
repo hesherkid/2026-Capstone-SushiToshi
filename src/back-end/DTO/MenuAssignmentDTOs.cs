@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using back_end.domain;
 using back_end.domain.enums;
-using Microsoft.AspNetCore.SignalR;
 
 namespace back_end.DTO.MenuItemAssignmentDTO
 {
@@ -17,6 +16,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public decimal? Full_Price { get; set; }
         public OverLimitBehavior? Over_Limit_Behavior { get; set; }
         public int? Tot_Limit { get; set; } = 0; // optional: 0 = same as child
+        public int? Per_Order_Limit { get; set; } = 0;
         public int? Location_Id { get; set; }   // null = default for all locations
     }
 
@@ -45,6 +45,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public int? Tot_Limit { get; set; }
         public MenuItemStatus? Status { get; set; } // no default, so "not sent" stays null
         public bool? Is_Add_on { get; set; }
+        public int? Per_Order_Limit { get; set; }
     }
 
     class MenuAssignmentResponse : MenuItemAssignmentBaseDTO
