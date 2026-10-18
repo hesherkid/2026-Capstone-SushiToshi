@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
 import LoginForm from "../LoginForm";
-import { loginUser } from "@/utils/auth";
+import { loginUser, loginAsGuest } from "@/utils/auth";
 import api from "@/config/api";
 
 jest.mock("@/config/api", () => ({
@@ -22,6 +22,7 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/utils/auth", () => ({
   loginUser: jest.fn(),
+  loginAsGuest: jest.fn(),
 }));
 
 const fillLoginForm = async (
@@ -217,21 +218,18 @@ describe("LoginForm", () => {
   });
 
   describe("Guest Login", () => {
-    it("signs in with the guest account and marks the session as guest", async () => {
+    it("signs in as a new guest and marks the session as guest", async () => {
       const user = userEvent.setup();
-      loginUser.mockResolvedValue({ access_token: "guest-token" });
+      loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
 
       render(<LoginForm />);
       await user.click(
         screen.getByRole("button", { name: /Continue as Guest/i }),
       );
 
-      await waitFor(() => {
-        expect(loginUser).toHaveBeenCalledWith(
-          "guestemail@email.com",
-          "GuestUser!",
-        );
-      });
+      // Each guest gets their own account; the shared guest login is no longer used
+      await waitFor(() => expect(loginAsGuest).toHaveBeenCalledTimes(1));
+      expect(loginUser).not.toHaveBeenCalled();
       await waitFor(() => {
         expect(mockReplace).toHaveBeenCalledWith("/");
       });
@@ -240,7 +238,7 @@ describe("LoginForm", () => {
 
     it("joins the session for the table in the scanned QR code", async () => {
       const user = userEvent.setup();
-      loginUser.mockResolvedValue({ access_token: "guest-token" });
+      loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=3&tableNumber=8")
       );
@@ -263,7 +261,7 @@ describe("LoginForm", () => {
 
     it("tells guests to ask staff when the table hasn't been started", async () => {
       const user = userEvent.setup();
-      loginUser.mockResolvedValue({ access_token: "guest-token" });
+      loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=3&tableNumber=8")
       );

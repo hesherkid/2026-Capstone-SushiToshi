@@ -30,35 +30,46 @@ export const getAuthToken = () => {
 // LOGIN
 // --------------------------------------------------
 
+// Saves a login response's token (and expiry/user if present) for the api client
+const storeSession = (data) => {
+  if (!data.access_token || typeof window === "undefined") return;
+
+  localStorage.setItem("authToken", data.access_token);
+  localStorage.setItem("access_token", data.access_token);
+
+  if (data.expires_in) {
+    const expiresAt = Date.now() + data.expires_in * 1000;
+
+    localStorage.setItem(
+      "tokenExpiresAt",
+      expiresAt.toString()
+    );
+  }
+
+  if (data.user) {
+    localStorage.setItem("user", JSON.stringify(data.user));
+  }
+
+  notifyAuthChange();
+};
+
 export const loginUser = async (email, password) => {
   const response = await api.post("/auth/login", {
     email,
     password,
   });
 
-  const data = response.data;
+  storeSession(response.data);
+  return response.data;
+};
 
-  if (data.access_token && typeof window !== "undefined") {
-    localStorage.setItem("authToken", data.access_token);
-    localStorage.setItem("access_token", data.access_token);
+// "Continue as Guest": the server creates a throwaway account for this guest
+// ("Guest K7P2"), so each guest at a table is their own participant
+export const loginAsGuest = async () => {
+  const response = await api.post("/auth/guest");
 
-    if (data.expires_in) {
-      const expiresAt = Date.now() + data.expires_in * 1000;
-
-      localStorage.setItem(
-        "tokenExpiresAt",
-        expiresAt.toString()
-      );
-    }
-
-    if (data.user) {
-      localStorage.setItem("user", JSON.stringify(data.user));
-    }
-
-    notifyAuthChange();
-  }
-
-  return data;
+  storeSession(response.data);
+  return response.data;
 };
 
 // --------------------------------------------------

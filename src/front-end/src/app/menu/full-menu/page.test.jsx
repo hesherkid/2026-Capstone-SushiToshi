@@ -28,25 +28,17 @@ jest.mock('@/config/api', () => ({
   },
 }));
 
-jest.mock('@/config/publicApi', () => ({
-  __esModule: true,
-  default: {
-    get: jest.fn(),
-  },
-}));
-
 const api = require('@/config/api').default;
-const publicApi = require('@/config/publicApi').default;
 
 describe('FullMenu guest flow', () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem('guest', 'true');
     localStorage.setItem('session_id', '42');
+    // Guests now call the API with their own guest token, through the regular api client
     api.get.mockReset();
-    publicApi.get.mockReset();
 
-    publicApi.get.mockImplementation((url) => {
+    api.get.mockImplementation((url) => {
       if (url.includes('/Bill/get_bills/42')) {
         return Promise.resolve({
           status: 200,
@@ -108,11 +100,9 @@ describe('FullMenu guest flow', () => {
     });
 
     // Items are requested for the session's location
-    expect(publicApi.get).toHaveBeenCalledWith('/Menu/7/item', {
+    expect(api.get).toHaveBeenCalledWith('/Menu/7/item', {
       params: { locationId: 3 },
     });
-    // ...and the API client for logged-in users isn't used for guests
-    expect(api.get).not.toHaveBeenCalled();
 
 
     expect(
@@ -162,8 +152,8 @@ describe('FullMenu guest flow', () => {
 
   it('shows the location price for add-on items', async () => {
     // Wrap the default mock: the item price depends on the locationId sent
-    const baseMock = publicApi.get.getMockImplementation();
-    publicApi.get.mockImplementation((url, config) => {
+    const baseMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) => {
       if (url.includes('/Menu/7/item')) {
         const atLocation3 = config?.params?.locationId === 3;
         return Promise.resolve({
@@ -194,8 +184,8 @@ describe('FullMenu guest flow', () => {
   });
 
   it('falls back to default prices when the session has no location', async () => {
-    const baseMock = publicApi.get.getMockImplementation();
-    publicApi.get.mockImplementation((url, config) => {
+    const baseMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) => {
       if (url.includes('/DiningSession/session-menu/42')) {
         return Promise.resolve({ status: 200, data: { menu_id: 7 } }); // no location
       }
@@ -207,6 +197,6 @@ describe('FullMenu guest flow', () => {
     await waitFor(() => {
       expect(screen.getByText('Miso Soup')).toBeInTheDocument();
     });
-    expect(publicApi.get).toHaveBeenCalledWith('/Menu/7/item', { params: {} });
+    expect(api.get).toHaveBeenCalledWith('/Menu/7/item', { params: {} });
   });
 });

@@ -19,7 +19,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
 import api from "@/config/api";
-import { loginUser } from "@/utils/auth";
+import { loginUser, loginAsGuest } from "@/utils/auth";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -29,9 +29,6 @@ class TableJoinError extends Error {}
 const LoginFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const guestEmail = "guestemail@email.com";
-  const guestPassword = "GuestUser!";
 
   // Email/password are uncontrolled and read on submit. Re-rendering the form on
   // every keystroke makes iOS Safari repeatedly offer to save the password.
@@ -188,7 +185,7 @@ const LoginFormContent = () => {
     setNeedsVerification(false);
 
     try {
-      const response = await loginUser(guestEmail, guestPassword);
+      const response = await loginAsGuest();
 
       if (!response.access_token) {
         throw new Error("Guest login succeeded but no token was returned.");

@@ -14,7 +14,6 @@ import {
 import { Plus, Receipt } from "lucide-react";
 import { styled } from "@mui/material/styles";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
 import NewBillDialog from "@/components/staff/SessionDashboard/components/dialogs/NewBillDialog";
 import BillSummaryDialog from "@/components/staff/SessionDashboard/components/dialogs/BillSummaryDialog";
 import { SessionProvider } from "@/components/staff/SessionDashboard/context/SessionContext";
@@ -158,7 +157,7 @@ const BillsDashboard = () => {
 
   const fetchBills = async (sid) => {
 
-    const apiClient = isGuest() ? publicApi : api;
+    const apiClient = api;
 
     try {
       setLoading(true);

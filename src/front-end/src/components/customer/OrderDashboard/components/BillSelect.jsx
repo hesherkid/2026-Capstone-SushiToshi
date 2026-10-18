@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import api from "@/config/api";
 import { formatGuestBreakdown } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
-import publicApi from "@/config/publicApi";
 
 
 const BillSelect = (props) => {
@@ -48,7 +47,7 @@ const effectiveSessionId = localStorage.getItem("session_id")
 
       setLoading(true);
       setError(null);
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
       const response = await apiClient.get(`/Bill/get_bills/${effectiveSessionId}`);
 
         const billsData = Array.isArray(response.data) ? response.data : [];

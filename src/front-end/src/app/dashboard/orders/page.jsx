@@ -17,7 +17,6 @@ import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import BillSelect from "@/components/customer/OrderDashboard/components/BillSelect";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
 
 const OrdersAccordion = () => {
   const router = useRouter();
@@ -42,7 +41,7 @@ const OrdersAccordion = () => {
   useEffect(() => {
     const getActiveSession = async (billId = "") => {
 
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
 
       if (isGuest()) {
         const sid = localStorage.getItem("session_id");
@@ -63,7 +62,7 @@ const OrdersAccordion = () => {
             setError("Guest session not found. Please scan your table QR again.");
             return;
           }
-          response = await publicApi.get(`/Order/by-session/${sid}`, { params }); 
+          response = await api.get(`/Order/by-session/${sid}`, { params }); 
         } else {
           response = await api.get("/Order/active-session/orders", { params });
         }
@@ -92,7 +91,7 @@ const OrdersAccordion = () => {
 
 const fetchOrders = async (billId = "") => {
 
-  const apiClient = isGuest() ? publicApi : api;
+  const apiClient = api;
 
   try {
     setLoading(true);
@@ -109,7 +108,7 @@ const fetchOrders = async (billId = "") => {
         setLoading(false);
         return;
       }
-      response = await publicApi.get(`/Order/session/${sid}`, { params });
+      response = await api.get(`/Order/session/${sid}`, { params });
     } else {
       response = await apiClient.get("/Order/active-session/orders", { params });
     }

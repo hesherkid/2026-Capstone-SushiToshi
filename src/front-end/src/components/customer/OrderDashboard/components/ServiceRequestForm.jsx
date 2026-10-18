@@ -12,7 +12,6 @@ import {
   CircularProgress,
 } from "@mui/material";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
 
 const ServiceRequestForm = () => {
   const [message, setMessage] = useState("");
@@ -65,7 +64,7 @@ const ServiceRequestForm = () => {
         }
 
         // Signed-in user: call API
-        const apiClient = guest ? publicApi : api;
+        const apiClient = api;
 
         const response = await apiClient.get(
           "/DiningSession/participants/active-session-id"
@@ -94,7 +93,7 @@ const ServiceRequestForm = () => {
 
   //Send the service request to the staff
   const handleSubmit = async (e) => {
-    const apiClient = isGuest() ? publicApi : api;
+    const apiClient = api;
     e.preventDefault();
     if (!message.trim() || !sessionId) return;
 

@@ -15,7 +15,6 @@ import CartDrawer from "@/components/menu/CartDrawer";
 import TrackedItem from "@/components/menu/TrackedItem";
 import useMenuSearch from "@/components/menu/searchUtils";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
 import { useOrderActions } from "@/hooks/useOrderActions";
 
 //Check if the logged in user is a guest.
@@ -186,7 +185,7 @@ const FullMenu = () => {
 
     const selectCurrentBill = async () => {
       try {
-        const apiClient = isGuest() ? publicApi : api;
+        const apiClient = api;
         const response = await apiClient.get(`/Bill/get_bills/${sessionId}`);
         const bills = Array.isArray(response.data) ? response.data : [];
 
@@ -236,7 +235,7 @@ const FullMenu = () => {
 
     const fetchMenu = async () => {
 
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
       try {
         setError(null);
 
@@ -288,7 +287,7 @@ const FullMenu = () => {
   useEffect(() => {
     const fetchCategories = async () => {
 
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
 
       try {
         setError(null);
@@ -317,7 +316,7 @@ const FullMenu = () => {
     //Make sure the menu ID is valid or if we already loaded the menu items
     if (!menu_id || menuItems[categoryId]) return;
 
-    const apiClient = isGuest() ? publicApi : api;
+    const apiClient = api;
 
     try {
       //Call GetItemsByMenu with the session's location so location prices apply
