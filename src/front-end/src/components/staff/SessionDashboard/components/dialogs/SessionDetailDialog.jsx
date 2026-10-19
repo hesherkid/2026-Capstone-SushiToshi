@@ -154,6 +154,15 @@ const SessionDetailDialog = () => {
                                 color={getBillStatusColor(bill.status)}
                                 size="small"
                               />
+                              {/* Guests pressed "Ready for Bill"; they can't order more on it */}
+                              {isOpenBill(bill) && bill.requested_At && (
+                                <Chip
+                                  icon={<Bell size={14} />}
+                                  label="Asked for bill"
+                                  color="warning"
+                                  size="small"
+                                />
+                              )}
                             </Box>
                           }
                           secondary={formatGuestBreakdown(bill)}

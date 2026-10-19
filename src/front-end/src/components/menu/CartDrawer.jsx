@@ -4,7 +4,11 @@ import {
   Button,
   CircularProgress,
   Drawer,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Typography,
 } from "@mui/material";
 import { X } from "lucide-react";
@@ -20,6 +24,12 @@ const CartDrawer = ({
   onConfirmOrder,
   isLoading,
   selectedBillId,
+  // The table's open bills ({ bill_id, bill_name, requested_at }); the orderer picks one
+  bills = [],
+  onBillChange,
+  // True after the guests ask for their bill: the cart stays visible but can't be ordered
+  orderingLocked = false,
+  lockedMessage,
   itemCount,
   totalQuantity,
 }) => {
@@ -81,6 +91,11 @@ const CartDrawer = ({
       </Box>
 
       <Box sx={{ flex: 1, overflowY: "auto" }}>
+        {orderingLocked && (
+          <Alert severity="info" sx={{ m: 2 }}>
+            {lockedMessage}
+          </Alert>
+        )}
         {!selectedBillId && (
           <Alert severity="warning" sx={{ m: 2 }}>
             There is no open bill for this session yet. Ask a staff member to open one before placing an order.
@@ -107,6 +122,30 @@ const CartDrawer = ({
       </Box>
 
       <Box sx={{ p: 2.5, borderTop: 1, borderColor: "divider" }}>
+        {bills.length > 1 && (
+          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+            <InputLabel id="order-bill-label">Put this order on</InputLabel>
+            <Select
+              labelId="order-bill-label"
+              label="Put this order on"
+              value={selectedBillId || ""}
+              onChange={(event) => onBillChange?.(Number(event.target.value))}
+            >
+              {bills.map((bill) => (
+                // Bills the guests have asked for can't take more orders
+                <MenuItem key={bill.bill_id} value={bill.bill_id} disabled={!!bill.requested_at}>
+                  {bill.bill_name || `Bill #${bill.bill_id}`}
+                  {bill.requested_at ? " (bill requested)" : ""}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+        {bills.length === 1 && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Ordering on {bills[0].bill_name || `Bill #${bills[0].bill_id}`}
+          </Typography>
+        )}
         <Box
           sx={{
             display: "flex",
@@ -134,7 +173,7 @@ const CartDrawer = ({
           variant="contained"
           fullWidth
           onClick={onConfirmOrder}
-          disabled={isLoading || !selectedBillId || itemCount === 0}
+          disabled={isLoading || !selectedBillId || orderingLocked || itemCount === 0}
         >
           {isLoading ? (
             <CircularProgress size={24} color="inherit" />

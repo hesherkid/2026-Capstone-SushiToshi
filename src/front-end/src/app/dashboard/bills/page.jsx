@@ -14,8 +14,9 @@ import {
 import { Plus, Receipt } from "lucide-react";
 import { styled } from "@mui/material/styles";
 import api from "@/config/api";
+import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import NewBillDialog from "@/components/staff/SessionDashboard/components/dialogs/NewBillDialog";
-import BillSummaryDialog from "@/components/staff/SessionDashboard/components/dialogs/BillSummaryDialog";
+import CustomerBillDialog from "@/components/customer/CustomerBillDialog";
 import { SessionProvider } from "@/components/staff/SessionDashboard/context/SessionContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import { getStatusColorValue, formatDateTime, formatBillStatus, getTableDescription, sortBillsByStatus } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
@@ -79,59 +80,19 @@ const BillsDashboard = () => {
 
   const isGuest = () => localStorage.getItem("guest") === "true";
 
-//May only need sessions for staff or admin
-//Leaving code here now in case
-/*const fetchActiveSession = async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    const res = await api.get("/Dashboard/sessions");
-    if (res.status !== 200) throw new Error();
-    const sessions = Array.isArray(res.data) ? res.data : [];
-    const s = sessions[0] || null;
-    const id = s?.Session_Id ?? null;
-    setSessionId(id);
-    return id;
-  } catch {
-    setError("Unable to fetch active session");
-    return null;
-  } finally {
-    setLoading(false);
-  }
-}; */
-
-// Fetch active session ID first
+  // Fetch active session ID first
   useEffect(() => {
     const fetchActiveSession = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Handle guest users separately
-        if (isGuest()) {
-          const sid = localStorage.getItem("session_id");
-          if (sid) {
-            setSessionId(parseInt(sid));
-          } else {
-            setError("Guest session not found. Please scan your table QR again.");
-          }
-          setLoading(false);
-          return;
-        }
-
-        // For authenticated users only
-        const response = await api.get("/DiningSession/participants/active-session-id/latest");
-
-        console.log("active-session response:", response.data);
-
-        if (response.status !== 200) {
-          throw new Error("Failed to fetch active session");
-        }
-
-        if (response.data && response.data.session_id) {
-          setSessionId(response.data.session_id);
+        // Ask the server (guests included) rather than trusting a saved session_id
+        const mySessionId = await fetchMySessionId();
+        if (mySessionId) {
+          setSessionId(mySessionId);
         } else {
-          setError("No active session found. Please join a table first.");
+          setError(NOT_SEATED_MESSAGE);
         }
       } catch (err) {
         console.error("Error fetching active session:", err);
@@ -148,7 +109,7 @@ const BillsDashboard = () => {
     fetchActiveSession();
   }, []);
 
-// Fetch bills when sessionId is available
+  // Fetch bills when sessionId is available
   useEffect(() => {
     if (sessionId) {
       fetchBills(sessionId);
@@ -174,15 +135,15 @@ const BillsDashboard = () => {
       setBills(billsData);
     } catch (err) {
       console.error("Error fetching bills:", err);
-      
+
       // 404 means no bills exist - not an error
       if (err?.response?.status === 404) {
         setBills([]);
         setError(null);
       } else {
         notifyError(
-          err?.response?.data?.detail || 
-          err?.response?.data?.message || 
+          err?.response?.data?.detail ||
+          err?.response?.data?.message ||
           "Error loading bills"
         );
       }
@@ -215,42 +176,38 @@ const BillsDashboard = () => {
 
   return (
     <SessionProvider sessionId={sessionId}>
-    <Container maxWidth="lg">
-      <Box sx={{ py: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 4,
-          }}
-        >
-          <Typography variant="h4">Your Table's Bills</Typography>
-            {sessionId && (
-              <AddButton onClick={() => setDialogOpen(true)}>
-                <Plus />
-              </AddButton>
-            )}
-        </Box>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            {typeof error === "string" ? error : "Error loading bills"}
-          </Alert>
-        )}
-
-        {!bills || bills.length === 0 ? (
-          <Alert severity="info">No bills yet. Create your first bill to get started.</Alert>
-        ) : (
+      <Container maxWidth="lg">
+        <Box sx={{ py: 3 }}>
           <Box
             sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: 2,
-              width: "100%",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 4,
             }}
           >
-            {sortedBills.map((bill) => {
+            <Typography variant="h4">Your Table's Bills</Typography>
+
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+              {typeof error === "string" ? error : "Error loading bills"}
+            </Alert>
+          )}
+
+          {!bills || bills.length === 0 ? (
+            <Alert severity="info">No bills yet. Create your first bill to get started.</Alert>
+          ) : (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                gap: 2,
+                width: "100%",
+              }}
+            >
+              {sortedBills.map((bill) => {
                 if (!bill?.bill_id) return null;
                 const statusColor = getStatusColorValue(bill.status);
 
@@ -290,24 +247,13 @@ const BillsDashboard = () => {
                       View Summary
                     </Button>
                   </BillCard>
-              );
-            })}
-          </Box>
-        )}
-
-        {/* New Bill Dialog */}
-          {sessionId && (
-            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-              <NewBillDialog 
-                open={dialogOpen} 
-                sessionId={sessionId} 
-                onClose={handleBillCreated} 
-              />
-            </Dialog>
+                );
+              })}
+            </Box>
           )}
 
           {/* Bill Summary Dialog */}
-          <BillSummaryDialog
+          <CustomerBillDialog
             open={summaryDialogOpen}
             sessionId={sessionId}
             billId={selectedBillId}
@@ -317,7 +263,7 @@ const BillsDashboard = () => {
             }}
           />
         </Box>
-    </Container>
+      </Container>
     </SessionProvider>
   );
 };

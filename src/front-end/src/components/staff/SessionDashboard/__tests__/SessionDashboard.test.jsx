@@ -7,11 +7,6 @@ jest.mock("@/config/api", () => {
   return { __esModule: true, default: mockApi, api: mockApi };
 });
 
-// Staff see "Close Bill" in the bill summary; customers see "Ready for Bill"
-jest.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ userRole: "staff", userEmail: "sue@example.com" }),
-}));
-
 jest.mock("@/utils/storage", () => ({
   __esModule: true,
   default: { get: jest.fn(() => "1") },

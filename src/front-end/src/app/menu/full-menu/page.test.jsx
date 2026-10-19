@@ -39,6 +39,11 @@ describe('FullMenu guest flow', () => {
     api.get.mockReset();
 
     api.get.mockImplementation((url) => {
+      // The page asks the server which session the guest is seated in
+      if (url === '/DiningSession/participants/active-session-id') {
+        return Promise.resolve({ status: 200, data: { session_id: 42 } });
+      }
+
       if (url.includes('/Bill/get_bills/42')) {
         return Promise.resolve({
           status: 200,
@@ -201,11 +206,66 @@ describe('FullMenu guest flow', () => {
   });
 
   it("tells guests who aren't seated to scan their table's QR code", async () => {
-    localStorage.removeItem("session_id");
+    const seatedMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) =>
+      url === '/DiningSession/participants/active-session-id'
+        ? Promise.reject({ response: { status: 404 } })
+        : seatedMock(url, config)
+    );
     render(<FullMenu />);
 
     expect(
       await screen.findByText(/You're not seated at a table yet/)
     ).toBeInTheDocument();
+  });
+
+  it("ignores a stale session_id left in the browser", async () => {
+    // Left over from another table; the server says this guest is at session 42
+    localStorage.setItem("session_id", "143");
+    render(<FullMenu />);
+
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith('/DiningSession/session-menu/42')
+    );
+    expect(api.get).not.toHaveBeenCalledWith('/DiningSession/session-menu/143');
+    expect(localStorage.getItem("session_id")).toBe("42");
+  });
+
+  it("stops ordering once the guests have asked for their bill", async () => {
+    const baseMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) =>
+      url.includes('/Bill/get_bills/42')
+        ? Promise.resolve({
+            status: 200,
+            data: [{ bill_id: 7, status: 'Open', created_at: '2026-10-18T04:00:00Z', requested_at: '2026-10-18T04:30:00Z' }],
+          })
+        : baseMock(url, config)
+    );
+    render(<FullMenu />);
+
+    expect(
+      await screen.findAllByText(/You've asked for your bill, so no more orders can be added/)
+    ).not.toHaveLength(0);
+  });
+
+  it("keeps ordering on the bill this phone used last when the table has several", async () => {
+    localStorage.setItem("currentBillId", "8");
+    const baseMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) =>
+      url.includes('/Bill/get_bills/42')
+        ? Promise.resolve({
+            status: 200,
+            data: [
+              { bill_id: 9, bill_name: 'Park', status: 'Open', created_at: '2026-10-18T04:10:00Z' },
+              { bill_id: 8, bill_name: 'Lee', status: 'Open', created_at: '2026-10-18T04:00:00Z' },
+              { bill_id: 7, bill_name: 'Old', status: 'Closed', created_at: '2026-10-18T03:00:00Z' },
+            ],
+          })
+        : baseMock(url, config)
+    );
+    render(<FullMenu />);
+
+    await waitFor(() => expect(localStorage.getItem("currentBillId")).toBe("8"));
+    expect(screen.queryByText(/there is no open bill/i)).not.toBeInTheDocument();
   });
 });

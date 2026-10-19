@@ -20,6 +20,13 @@ namespace back_end.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<OrderController> _logger;
 
+        private const string BillRequestedMessage =
+            "You've asked for this bill, so no more orders can be added to it. Please ask your server if you'd like anything else.";
+
+        // Once guests press "Ready for Bill" they can't add to that bill; staff still can
+        private bool BillOrderingClosed(Billing? bill) =>
+            bill?.Requested_At != null && !User.IsInRole("Admin") && !User.IsInRole("Staff");
+
         public OrderController(ApplicationDbContext context, ILogger<OrderController> logger)
         {
             _context = context;
@@ -71,6 +78,11 @@ namespace back_end.Controllers
                 if (bill is null)
                 {
                     return NotFound("Bill Was not found for the current session order Create Bill");
+                }
+
+                if (BillOrderingClosed(bill))
+                {
+                    return BadRequest(new { message = BillRequestedMessage });
                 }
 
                 int? userId = null;
@@ -560,12 +572,18 @@ namespace back_end.Controllers
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                     .Include(o => o.DiningSession)
+                    .Include(o => o.Bill)
                     .FirstOrDefaultAsync(o => o.Order_Id == orderId);
 
                 //Check if order exists
                 if (order == null)
                 {
                     return NotFound(new { message = $"Order {orderId} not found" });
+                }
+
+                if (BillOrderingClosed(order.Bill))
+                {
+                    return BadRequest(new { message = BillRequestedMessage });
                 }
 
                 //Determine guest or logged in
@@ -1043,7 +1061,7 @@ namespace back_end.Controllers
         //GET: api/order/session/{id}
         //Get all orders tied to a Dining Session
         [HttpGet("session/{sessionId}")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<object>>> GetOrderBySession(int sessionId, [FromQuery] int? bill_id = null)
         {
             try
@@ -1054,26 +1072,16 @@ namespace back_end.Controllers
                     return NotFound(new { message = $"Can't find session with the ID: {sessionId}" });
                 }
 
-                // Determine user identity
-                int? userId = null;
-                var userRole = ClaimsHelpers.GetUserRole(User) ?? "";
-                bool isStaff = userRole.Contains("Staff") || userRole.Contains("Admin");
-
-                // For authenticated users, get their User ID
-                if (User.Identity?.IsAuthenticated == true)
+                // Staff see any table; customers see every order at the table they're seated at,
+                // so when one person orders for everyone the rest of the table can see it too
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
                 {
-                    var userIdString = ClaimsHelpers.GetUserId(User);
-                    if (int.TryParse(userIdString, out var parsedUserId))
-                    {
-                        userId = parsedUserId;
-                    }
+                    return Forbid();
                 }
 
-                // Fetch orders (staff can see all, regular users can only see their own)
                 var sessionOrder = await _context.SessionOrders
                     .Where(o => o.session_id == sessionId &&
-                                (!bill_id.HasValue || o.Bill_Id == bill_id.Value) &&
-                                (isStaff || !userId.HasValue || o.User_Id == userId))
+                                (!bill_id.HasValue || o.Bill_Id == bill_id.Value))
                     .Include(o => o.Bill)
                     .Include(o => o.OrderItems)
                         .ThenInclude(or => or.MenuItem)
@@ -1085,6 +1093,7 @@ namespace back_end.Controllers
                 {
                     orderId = o.Order_Id,
                     billId = o.Bill_Id,
+                    billName = o.Bill?.Bill_Name,
                     billStatus = o.Bill?.Status.ToString(),
                     sessionId = o.session_id,
                     userId = o.User_Id,

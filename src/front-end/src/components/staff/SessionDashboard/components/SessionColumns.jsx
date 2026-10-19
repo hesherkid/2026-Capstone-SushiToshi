@@ -103,6 +103,7 @@ export const getSessionColumns = (actions) => [
   },
   {
     field: "active_Participants",
+    // Used to be Guests but this actually counts the number of devices scanning the QR code in a session
     headerName: "Guests",
     type: "number",
     align: "left",

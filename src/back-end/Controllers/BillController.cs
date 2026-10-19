@@ -214,10 +214,16 @@ namespace back_end.controllers
     /// Bills are ordered by creation date (newest first).
     /// </remarks>
     [HttpGet("get_bills/{_session_id}")]
+    [Authorize]
     public async Task<IActionResult> Get_Bills(int _session_id, int? _table_id = null)
     {
       try
       {
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        {
+          return Forbid();
+        }
+
         var session = await _context.DiningSessions
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
@@ -274,6 +280,7 @@ namespace back_end.controllers
           Status = bill.Status.ToString(),
           Created_At = bill.Created_At,
           Closed_At = bill.Closed_At,
+          Requested_At = bill.Requested_At,
           Table_Numbers = GetTableNumbers(session)
         }).ToList();
 
@@ -308,10 +315,16 @@ namespace back_end.controllers
     /// Returns complete bill information including guest counts, status, and timestamps.
     /// </remarks>
     [HttpGet("get_bill/{_bill_id}")]
+    [Authorize]
     public async Task<IActionResult> Get_Bill(int _session_id, int _bill_id)
     {
       try
       {
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        {
+          return Forbid();
+        }
+
         var bill = await _context.Bills
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.Table)
@@ -338,6 +351,7 @@ namespace back_end.controllers
           Status = bill.Status.ToString(),
           Created_At = bill.Created_At,
           Closed_At = bill.Closed_At,
+          Requested_At = bill.Requested_At,
           Table_Numbers = GetTableNumbers(bill.DiningSession)
         });
       }
@@ -424,6 +438,7 @@ namespace back_end.controllers
           Status = bill.Status.ToString(),
           Created_At = bill.Created_At,
           Closed_At = bill.Closed_At,
+          Requested_At = bill.Requested_At,
           Table_Numbers = GetTableNumbers(bill.DiningSession)
         });
       }
@@ -432,6 +447,70 @@ namespace back_end.controllers
         Console.WriteLine($"Error in Close Bill: {ex}");
         return StatusCode(500, "There was a Problem in the Close Bill Method");
       }
+    }
+
+    /// <summary>
+    /// Guests ask for their bill ("Ready for Bill").
+    /// </summary>
+    /// <remarks>
+    /// Marks the bill as requested, which stops any more orders being placed on it, and sends staff a
+    /// "Ready for bill" service request. Asking again is safe: it returns the original request time.
+    /// Only guests seated at the table (or staff) can ask.
+    /// </remarks>
+    /// <response code="200">The bill is requested; returns when it was first requested.</response>
+    /// <response code="400">The bill isn't open.</response>
+    /// <response code="403">The caller isn't seated at this table.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    [HttpPost("request_bill/{_bill_id}")]
+    [Authorize]
+    public async Task<IActionResult> Request_Bill(int _session_id, int _bill_id)
+    {
+      if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+      {
+        return Forbid();
+      }
+
+      var bill = await _context.Bills
+          .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+          .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+      if (bill == null)
+      {
+        return NotFound(new { message = "Bill or session was not found" });
+      }
+      if (bill.Status != BillStatus.Open)
+      {
+        return BadRequest(new { message = $"This bill is already {bill.Status.ToString().ToLower()}." });
+      }
+      if (bill.Requested_At != null)
+      {
+        return Ok(new { requested_at = bill.Requested_At, already_requested = true });
+      }
+
+      if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
+      {
+        return Unauthorized(new { message = "Please sign in to ask for your bill." });
+      }
+
+      // Requests are tied to a table; a table group's go to its first table
+      var session = bill.DiningSession;
+      int? tableId = session.Table_Id ?? session.TableGroup?.Tables.OrderBy(t => t.table_number).FirstOrDefault()?.Table_Id;
+      if (tableId == null)
+      {
+        return BadRequest(new { message = "This session has no table to send the request to." });
+      }
+
+      bill.Requested_At = DateTime.UtcNow;
+      _context.ServiceRequests.Add(new ServiceRequest
+      {
+        Session_Id = session.Session_Id,
+        Table_Id = tableId.Value,
+        Request_By = userId,
+        Notes = $"Ready for bill: {bill.Bill_Name}",
+        Status = ServiceRequestStatus.Pending,
+      });
+      await _context.SaveChangesAsync();
+
+      return Ok(new { requested_at = bill.Requested_At, already_requested = false });
     }
 
     /// <summary>
@@ -513,6 +592,7 @@ namespace back_end.controllers
           Status = bill.Status.ToString(),
           Created_At = bill.Created_At,
           Closed_At = bill.Closed_At,
+          Requested_At = bill.Requested_At,
           Table_Numbers = GetTableNumbers(bill.DiningSession)
         });
       }
@@ -601,6 +681,7 @@ namespace back_end.controllers
           Status = bill.Status.ToString(),
           Created_At = bill.Created_At,
           Closed_At = bill.Closed_At,
+          Requested_At = bill.Requested_At,
           Table_Numbers = GetTableNumbers(bill.DiningSession)
         }).ToList();
 
@@ -620,10 +701,17 @@ namespace back_end.controllers
     [ProducesResponseType(typeof(BillSummaryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize]
     public async Task<IActionResult> GetBillSummary(int _session_id, int _bill_id)
     {
       try
       {
+        // Staff, or customers seated at this table (see SessionAccess)
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        {
+          return Forbid();
+        }
+
         var bill = await _context.Bills
             .Include(b => b.DiningSession.Table)
             .Include(b => b.DiningSession.TableGroup)
@@ -711,6 +799,7 @@ namespace back_end.controllers
           Pricing_Type = pricing.PricingType,
           Created_At = bill.Created_At,
           Closed_At = bill.Closed_At,
+          Requested_At = bill.Requested_At,
           Table_Numbers = GetTableNumbers(bill.DiningSession)
         };
 

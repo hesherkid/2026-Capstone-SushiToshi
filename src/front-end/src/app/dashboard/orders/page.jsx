@@ -11,12 +11,19 @@ import {
   Chip,
   IconButton,
   Button,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import BillSelect from "@/components/customer/OrderDashboard/components/BillSelect";
 import api from "@/config/api";
+import { fetchMySessionId, getMyUserId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+
+// "table": every order at the table, so when one person orders for everyone the rest can see it.
+// "mine": only orders this person placed.
+const VIEWS = { TABLE: "table", MINE: "mine" };
 
 const OrdersAccordion = () => {
   const router = useRouter();
@@ -25,6 +32,8 @@ const OrdersAccordion = () => {
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [selectedBillId, setSelectedBillId] = useState("");
+  const [view, setView] = useState(VIEWS.TABLE);
+  const myUserId = getMyUserId();
 
   const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
 
@@ -43,38 +52,14 @@ const OrdersAccordion = () => {
 
       const apiClient = api;
 
-      if (isGuest()) {
-        const sid = localStorage.getItem("session_id");
-        if (sid) {
-          setSessionId({ session_id: parseInt(sid) });
-          return;
-        } else {
-          setError("Guest session not found. Please scan your table QR again.");
-          return;
-        }
-      }
       try {
-        const params = billId ? { bill_id: billId } : {};
-        let response;
-        if (isGuest()) {
-          const sid = localStorage.getItem("session_id");
-          if (!sid) {
-            setError("Guest session not found. Please scan your table QR again.");
-            return;
-          }
-          response = await api.get(`/Order/by-session/${sid}`, { params }); 
+        // Ask the server (guests included) rather than trusting a saved session_id
+        const mySessionId = await fetchMySessionId();
+        if (mySessionId) {
+          setSessionId({ session_id: mySessionId });
         } else {
-          response = await api.get("/Order/active-session/orders", { params });
-        }
-
-        if (response.status < 200 || response.status >= 300) {
-          throw new Error("Failed to fetch active session");
-        }
-
-        if (response.data) {
-          setSessionId(response.data);
-        } else {
-          setError("No active session found");
+          setError(NOT_SEATED_MESSAGE);
+          setLoading(false);
         }
       } catch (err) {
         console.error("Error fetching session:", err);
@@ -83,6 +68,7 @@ const OrdersAccordion = () => {
             ? err.response.data.detail
             : "Error fetching session"
         );
+        setLoading(false);
       }
     };
 
@@ -100,18 +86,11 @@ const fetchOrders = async (billId = "") => {
     //If a bill is selected - include it as a param to the endpoint
     const params = billId ? { bill_id: billId } : {};
     
-    let response;
-    if (isGuest()) {
-      const sid = localStorage.getItem("session_id");
-      if (!sid) {
-        setError("Guest session not found. Please scan your table QR again.");
-        setLoading(false);
-        return;
-      }
-      response = await api.get(`/Order/session/${sid}`, { params });
-    } else {
-      response = await apiClient.get("/Order/active-session/orders", { params });
-    }
+    // Whole table: every order in the session. Mine: the server finds this person's own orders.
+    const response =
+      view === VIEWS.TABLE
+        ? await apiClient.get(`/Order/session/${sessionId.session_id}`, { params })
+        : await apiClient.get("/Order/active-session/orders", { params });
 
 
     //Check if there are no orders
@@ -159,10 +138,15 @@ const fetchOrders = async (billId = "") => {
   };
   
   useEffect(() => {
+    // The table view needs the session; it's ready after fetchMySessionId
+    if (!sessionId) return;
     fetchOrders(selectedBillId);
     const interval = setInterval(() => fetchOrders(selectedBillId), 30000);
     return () => clearInterval(interval);
-  }, [selectedBillId]);
+  }, [selectedBillId, view, sessionId]);
+
+  const orderedBy = (order) =>
+    myUserId && order.userId === myUserId ? "You" : order.userName || "Guest";
 
   const renderOrderAccordion = (order, groupStatus) => (
     <Accordion
@@ -198,6 +182,12 @@ const fetchOrders = async (billId = "") => {
               </Typography>
             )}
           </Typography>
+          {view === VIEWS.TABLE && (
+            <Typography variant="body2" color="text.secondary">
+              {orderedBy(order)}
+              {order.billName ? ` · ${order.billName}` : ""}
+            </Typography>
+          )}
         </Box>
       </AccordionSummary>
       <AccordionDetails>
@@ -226,9 +216,12 @@ const fetchOrders = async (billId = "") => {
                     color="textSecondary"
                     align="left"
                   >
-                    {item.price === 0
-                      ? "Included item"
-                      : item?.price ? `Price: $${Number(item.price).toFixed(2)}` : "Price unavailable"}
+                    {(() => {
+                      // "Mine" sends price; the table view sends priceAtTime
+                      const price = item.price ?? item.priceAtTime;
+                      if (price === 0) return "Included item";
+                      return price ? `Price: $${Number(price).toFixed(2)}` : "Price unavailable";
+                    })()}
                   </Typography>
                 </Box>
 
@@ -320,6 +313,18 @@ const fetchOrders = async (billId = "") => {
           Order More
         </Button>
       </Box>
+
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        value={view}
+        onChange={(event, next) => next && setView(next)}
+        aria-label="Which orders to show"
+        sx={{ mb: 2 }}
+      >
+        <ToggleButton value={VIEWS.TABLE}>Whole table</ToggleButton>
+        <ToggleButton value={VIEWS.MINE}>My orders</ToggleButton>
+      </ToggleButtonGroup>
 
       <Box mb={3}>
         {sessionId ? (

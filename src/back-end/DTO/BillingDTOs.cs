@@ -57,6 +57,10 @@ namespace back_end.DTO.bill
     [JsonPropertyName("closed_at")]
     public DateTime? Closed_At { get; set; }
 
+    // Set once the guests ask for the bill; ordering on it stops
+    [JsonPropertyName("requested_at")]
+    public DateTime? Requested_At { get; set; }
+
     [JsonPropertyName("table_numbers")]
     public List<int> Table_Numbers { get; set; } = new List<int>();
   }
@@ -133,6 +137,10 @@ namespace back_end.DTO.bill
 
     [JsonPropertyName("closed_at")]
     public DateTime? Closed_At { get; set; }
+
+    // Set once the guests ask for the bill; ordering on it stops
+    [JsonPropertyName("requested_at")]
+    public DateTime? Requested_At { get; set; }
 
     [JsonPropertyName("table_numbers")]
     public List<int> Table_Numbers { get; set; } = new List<int>();
