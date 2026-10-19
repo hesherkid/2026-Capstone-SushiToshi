@@ -82,6 +82,12 @@ describe("Session dashboard", () => {
     api.get.mockImplementation((url) => {
       if (url.startsWith("/Dashboard/sessions")) return Promise.resolve({ status: 200, data: sessions });
       if (url === "/ServiceRequest/pending") return Promise.resolve({ status: 200, data: requests });
+      if (url === "/Bill/summary/80") {
+        return Promise.resolve({
+          status: 200,
+          data: { bill_id: 80, bill_name: "Lee", status: "Open", addon_items: [], total_amount: 180.6 },
+        });
+      }
       return Promise.resolve({ status: 200, data: [] });
     });
     api.post.mockResolvedValue({ status: 200 });
@@ -133,15 +139,21 @@ describe("Session dashboard", () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledWith("/ServiceRequest/11/complete"));
   });
 
-  it("asks before closing an open bill and blocks ending the session until then", async () => {
+  it("closes a bill from its summary and blocks ending the session until then", async () => {
     await renderDashboard();
 
     fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("button", { name: "End Session" })).toBeDisabled();
     expect(within(dialog).getByText("Close all bills to end the session.")).toBeInTheDocument();
+    // Bills are closed from the summary, not the bill list
+    expect(within(dialog).queryByRole("button", { name: /Close bill/i })).not.toBeInTheDocument();
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Close bill Lee" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "View Lee summary" }));
+    const closeButton = await screen.findByRole("button", { name: "Close Bill" });
+    expect(screen.queryByRole("button", { name: /Ready for Bill/i })).not.toBeInTheDocument();
+    fireEvent.click(closeButton);
+
     const confirm = await screen.findByText(/Close Lee\?/);
     fireEvent.click(
       within(confirm.closest('[role="dialog"]')).getByRole("button", { name: "Close Bill" })

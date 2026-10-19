@@ -94,6 +94,23 @@ public class ClaimsHelpersTests
     }
 
     [Fact]
+    public void GetUserDisplayName_WithClaimsAsReadFromARealToken_ReturnsNameNotEmail()
+    {
+        // The JWT handler maps given_name/family_name to these when it reads a request's token
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, "guest-3f9c2a@guest.sushitoshi.invalid"),
+            new Claim(ClaimTypes.GivenName, "Guest"),
+            new Claim(ClaimTypes.Surname, "K7P2")
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"));
+
+        var result = ClaimsHelpers.GetUserDisplayName(user);
+
+        result.Should().Be("Guest K7P2");
+    }
+
+    [Fact]
     public void GetUserDisplayName_WithOnlyGivenName_ReturnsGivenName()
     {
         // Arrange

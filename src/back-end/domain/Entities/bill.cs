@@ -32,6 +32,9 @@ namespace back_end.domain.Entities
 
         public DateTime? Closed_At { get; set; }
 
+        // When the guests pressed "Ready for Bill". After that no more orders can go on this bill.
+        public DateTime? Requested_At { get; set; }
+
         public DiningSession DiningSession { get; set; } = null!;
         public ICollection<SessionOrder> Orders { get; set; } = new List<SessionOrder>();
 

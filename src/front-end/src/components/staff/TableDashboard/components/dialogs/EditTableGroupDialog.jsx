@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -14,6 +13,7 @@ import {
   InputLabel,
   MenuItem,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { useTable } from "../../context/TableContext";
 import api from "@/config/api";
 
@@ -58,7 +58,7 @@ const EditTableGroupDialog = ({ open, group }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <AppDialog open={open} onClose={handleClose}>
       <form onSubmit={handleSubmit}>
         <DialogTitle>Edit Table Group</DialogTitle>
         <DialogContent>
@@ -101,7 +101,7 @@ const EditTableGroupDialog = ({ open, group }) => {
           </Button>
         </DialogActions>
       </form>
-    </Dialog>
+    </AppDialog>
   );
 };
 

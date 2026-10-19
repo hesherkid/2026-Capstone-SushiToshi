@@ -44,7 +44,7 @@ namespace back_end.domain.Entities
 
     public UserStatus Status { get; set; } = UserStatus.Active;
 
-    public DateTime Created_at { get; set; } = DateTime.Now;
+    public DateTime Created_at { get; set; } = DateTime.UtcNow;
 
     public DateTime? Last_Interaction_at { get; set; }
 

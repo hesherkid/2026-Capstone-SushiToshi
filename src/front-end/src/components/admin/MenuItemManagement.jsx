@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
-  Dialog,
   IconButton,
   Typography,
   CircularProgress,
@@ -17,6 +16,7 @@ import {
   Input,
   TextField,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import {
   Plus,
   Edit,
@@ -337,11 +337,9 @@ const MenuItemManagement = () => {
     };
 
     return (
-      <Dialog
+      <AppDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
       >
         <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
@@ -473,7 +471,7 @@ const MenuItemManagement = () => {
             </Box>
           </Stack>
         </Box>
-      </Dialog>
+      </AppDialog>
     );
   };
 
@@ -514,9 +512,10 @@ const MenuItemManagement = () => {
         onSuccess={fetchData}
       />
 
-      <Dialog
+      <AppDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="xs"
       >
         <Box sx={{ p: 3 }}>
           <Stack direction="row" spacing={1} alignItems="center" mb={2}>
@@ -538,7 +537,7 @@ const MenuItemManagement = () => {
             </Button>
           </Stack>
         </Box>
-      </Dialog>
+      </AppDialog>
 
       <CategoryManagementDialog
         open={categoryDialogOpen}

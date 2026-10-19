@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
-  Dialog,
   Typography,
   Stack,
   IconButton,
   DialogContent,
   Divider,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X } from "lucide-react";
 import TagChip from "@/components/tags/TagChip";
 
@@ -48,7 +48,7 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
   const availableTags = tags.filter((tag) => !selectedTagIds.has(tag.tag_id));
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <AppDialog open={open} onClose={onClose}>
       <Box
         sx={{
           display: "flex",
@@ -129,7 +129,7 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
           ))}
         </Box>
       </DialogContent>
-    </Dialog>
+    </AppDialog>
   );
 };
 

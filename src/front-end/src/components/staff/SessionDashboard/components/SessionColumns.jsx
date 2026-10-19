@@ -1,7 +1,35 @@
-import { Chip } from "@mui/material";
-import { Eye, ReceiptText, LogOut, Bell } from "lucide-react";
+import { Box, Chip, Tooltip } from "@mui/material";
+import { Eye, ReceiptText, LogOut, Bell, AlertTriangle } from "lucide-react";
 import { actionsColumn } from "@/components/common/RowActions";
-import { formatTime, getSessionDuration } from "../utils/sessionHelpers";
+import {
+  formatTime,
+  getSessionDuration,
+  getSessionMinutes,
+  isLongSeating,
+  parseUtcDate,
+  LONG_SEATING_MINUTES,
+} from "../utils/sessionHelpers";
+
+// "Seated For" text, with a warning once a table passes the long-seating limit
+export const SeatedFor = ({ startedAt }) => {
+  if (!startedAt) return "—";
+  const duration = getSessionDuration(startedAt);
+  if (!isLongSeating(startedAt)) return duration;
+
+  const hours = LONG_SEATING_MINUTES / 60;
+  return (
+    <Tooltip title={`Seated for more than ${hours} hours`}>
+      <Box
+        component="span"
+        sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, color: "warning.dark", fontWeight: 600 }}
+      >
+        {duration}
+        {/* The Tooltip labels the wrapper for screen readers */}
+        <AlertTriangle size={16} aria-hidden />
+      </Box>
+    </Tooltip>
+  );
+};
 
 export const tableLabel = (tableNumbers = []) => {
   if (tableNumbers.length === 0) return "—";
@@ -58,20 +86,24 @@ export const getSessionColumns = (actions) => [
     type: "dateTime",
     flex: 1,
     minWidth: 100,
-    valueGetter: (value) => (value ? new Date(value) : null),
+    valueGetter: (value) => parseUtcDate(value),
     valueFormatter: (value) => (value ? formatTime(value) : ""),
   },
   {
     field: "duration",
     headerName: "Seated For",
+    type: "number",
+    align: "left",
+    headerAlign: "left",
     flex: 0.8,
-    minWidth: 100,
-    sortable: false,
-    valueGetter: (value, row) =>
-      row.started_At ? getSessionDuration(row.started_At) : "—",
+    minWidth: 110,
+    // Minutes, so the column sorts by how long tables have been seated
+    valueGetter: (value, row) => getSessionMinutes(row.started_At),
+    renderCell: ({ row }) => <SeatedFor startedAt={row.started_At} />,
   },
   {
     field: "active_Participants",
+    // Used to be Guests but this actually counts the number of devices scanning the QR code in a session
     headerName: "Guests",
     type: "number",
     align: "left",

@@ -12,14 +12,13 @@ import {
 } from "@mui/material";
 import api from "@/config/api";
 import { formatGuestBreakdown } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
-import publicApi from "@/config/publicApi";
 
 
 const BillSelect = (props) => {
   // Accept both prop names; prefer `session_id` if provided
   const { session_id, _session_id, value, onChange, disabled, message } = props;
-//  const effectiveSessionId = session_id ?? _session_id ?? null;
-const effectiveSessionId = localStorage.getItem("session_id")
+  // The page passes the server's answer; localStorage is kept in step by fetchMySessionId
+  const effectiveSessionId = session_id ?? _session_id ?? localStorage.getItem("session_id");
 
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +47,7 @@ const effectiveSessionId = localStorage.getItem("session_id")
 
       setLoading(true);
       setError(null);
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
       const response = await apiClient.get(`/Bill/get_bills/${effectiveSessionId}`);
 
         const billsData = Array.isArray(response.data) ? response.data : [];

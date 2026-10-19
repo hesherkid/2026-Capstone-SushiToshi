@@ -27,7 +27,7 @@ namespace back_end.domain.Entities
 
         public ServiceRequestStatus Status { get; set; }
 
-        public DateTime Created_At { get; set; } = DateTime.Now;
+        public DateTime Created_At { get; set; } = DateTime.UtcNow;
 
         public DateTime? Claimed_At { get; set; }
 

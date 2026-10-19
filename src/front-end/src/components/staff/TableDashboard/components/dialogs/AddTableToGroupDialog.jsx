@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -14,6 +13,7 @@ import {
   Typography,
   Chip,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { useTable } from "../../context/TableContext";
 import { TABLE_STATUS } from "../../hooks/useTableData";
 import api from "@/config/api";
@@ -61,7 +61,7 @@ const AddTableToGroupDialog = ({ open, group }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <AppDialog open={open} onClose={handleClose}>
       <form onSubmit={handleSubmit}>
         <DialogTitle>Add Table to {group?.group_Name}</DialogTitle>
         <DialogContent>
@@ -133,7 +133,7 @@ const AddTableToGroupDialog = ({ open, group }) => {
           </Button>
         </DialogActions>
       </form>
-    </Dialog>
+    </AppDialog>
   );
 };
 

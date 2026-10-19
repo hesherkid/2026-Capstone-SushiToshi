@@ -30,8 +30,9 @@ const getRequestId = (request) => request.request_id;
 const getOrderId = (order) => order.orderId;
 
 /**
- * Live data for the staff/admin home pages: active dining sessions at the
- * user's location, how many tables they cover, and pending service requests.
+ * Live data for the staff/admin home pages: active dining sessions at the location
+ * picked in the app bar, how many tables they cover, and pending service requests.
+ * Uses the same source as the Sessions and Tables pages so the numbers always match.
  * With `includeOrders`, also open (pending/processing) kitchen orders.
  */
 export default function useRestaurantOverview({ includeOrders = false } = {}) {
@@ -45,23 +46,24 @@ export default function useRestaurantOverview({ includeOrders = false } = {}) {
 
   const refresh = useCallback(async () => {
     try {
-      // Same location the staff Orders page uses (app bar location picker)
+      // The app bar's location picker, like the Sessions, Tables and Orders pages. Not the
+      // location on the user's account: admins usually have none, which showed 0 everywhere.
       const locationId = storage.get("branch-location");
+      const locationParams = locationId ? { locationId } : {};
 
       const [sessionsResponse, requestsResponse, ordersResponse] = await Promise.all([
-        api.get("/DiningSession/get_list_dining_sessions", {
-          params: { ActiveOnly: true },
-        }),
+        api.get("/Dashboard/sessions", { params: locationParams }),
         api.get("/ServiceRequest/pending"),
         includeOrders
-          ? api.get("/Order/all_orders", { params: locationId ? { locationId } : {} })
+          ? api.get("/Order/all_orders", { params: locationParams })
           : Promise.resolve({ data: [] }),
       ]);
 
       const activeSessions = Array.isArray(sessionsResponse.data)
         ? sessionsResponse.data
         : [];
-      // Sessions are already limited to the user's location; keep only requests from them
+      // 204 (no active sessions) has no body. Sessions are limited to the location;
+      // keep only requests from them
       const sessionIds = new Set(activeSessions.map((s) => s.session_Id));
       const pending = (Array.isArray(requestsResponse.data) ? requestsResponse.data : [])
         .filter((request) => sessionIds.has(request.session_id));

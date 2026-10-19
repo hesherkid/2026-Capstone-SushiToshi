@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   Box,
   Button,
@@ -19,17 +19,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
 import api from "@/config/api";
-import { decodeToken } from "@/config/auth";
-import { loginUser } from "@/utils/auth";
+import { loginUser, loginAsGuest, getReusableGuestToken } from "@/utils/auth";
+import { startTableVisit } from "@/utils/tableVisit";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+// Sign-in worked but the table couldn't be joined; its message is shown on the form as-is
+class TableJoinError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
 
 const LoginFormContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const guestEmail = "guestemail@email.com";
-  const guestPassword = "GuestUser!";
 
   // Email/password are uncontrolled and read on submit. Re-rendering the form on
   // every keystroke makes iOS Safari repeatedly offer to save the password.
@@ -43,6 +48,12 @@ const LoginFormContent = () => {
   // Keep the context from the restaurant QR code.
   const locationId = searchParams.get("locationId");
   const tableNumber = searchParams.get("tableNumber");
+
+  // A scanned QR code is a new visit: show its table right away (not the last visit's)
+  // and drop the old session so nothing can order onto it
+  useEffect(() => {
+    startTableVisit({ locationId, tableNumber });
+  }, [locationId, tableNumber]);
 
   // --------------------------------------------------
   // HELPERS
@@ -58,69 +69,27 @@ const LoginFormContent = () => {
     }
   };
 
+  // Joins the session staff started for the QR code's table. Returns the session ID,
+  // or null when the user didn't come from a table QR code.
   const startQrDiningSession = async (accessToken) => {
     if (!locationId || !tableNumber) return null;
 
-    const numericLocationId = Number(locationId);
-    const numericTableNumber = Number(tableNumber);
-    const claims = decodeToken(accessToken);
-    const userId = Number(
-      claims?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ??
-        claims?.nameid ??
-        claims?.user_id
-    );
-
-    if (!numericLocationId || !numericTableNumber || !userId) {
-      throw new Error("The QR code is missing valid table or login information.");
+    try {
+      const { data } = await api.post(
+        "/DiningSession/join",
+        { Table_Number: Number(tableNumber), Location_Id: Number(locationId) },
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      localStorage.setItem("session_id", String(data.session_Id));
+      return data.session_Id;
+    } catch (err) {
+      // e.g. "Table 4 doesn't have an active session yet. Please ask staff to start your table."
+      throw new TableJoinError(
+        err.response?.data?.message ||
+          "We couldn't join your table. Please ask staff for help.",
+        err.response?.status,
+      );
     }
-
-    const [tablesResponse, menusResponse] = await Promise.all([
-      api.get("/TableEntity"),
-      api.get("/Menu"),
-    ]);
-    const tables = Array.isArray(tablesResponse.data) ? tablesResponse.data : [];
-    const menus = Array.isArray(menusResponse.data) ? menusResponse.data : [];
-    const table = tables.find(
-      (candidate) =>
-        Number(candidate.location_Id ?? candidate.Location_Id) === numericLocationId &&
-        Number(candidate.table_number ?? candidate.Table_Number) === numericTableNumber &&
-        (candidate.is_active ?? candidate.Is_Active) !== false
-    );
-
-    if (!table) {
-      throw new Error(`Table ${tableNumber} was not found at this location.`);
-    }
-
-    const menu =
-      menus.find(
-        (candidate) =>
-          Number(candidate.location_Id ?? candidate.Location_Id) === numericLocationId
-      ) ?? menus[0];
-    const menuId = Number(menu?.menu_id ?? menu?.Menu_Id ?? menu?.menuId);
-    const tableId = Number(table.table_Id ?? table.Table_Id ?? table.table_id);
-
-    if (!menuId || !tableId) {
-      throw new Error("A menu or table could not be found for this QR code.");
-    }
-
-    const response = await api.post("/DiningSession/Create_Dinning_Session", {
-      Menu_Id: menuId,
-      Location_Id: numericLocationId,
-      Table_Id: tableId,
-      AssignmentType: "table",
-      Request_By_User_Id: userId,
-      Request_By_Name: "Guest",
-    });
-    const sessionId = Number(
-      response.data?.session_Id ?? response.data?.Session_Id ?? response.data?.sessionId
-    );
-
-    if (!sessionId) {
-      throw new Error("The dining session could not be started for this table.");
-    }
-
-    localStorage.setItem("session_id", String(sessionId));
-    return sessionId;
   };
 
   const clearExistingAuthentication = () => {
@@ -148,8 +117,21 @@ const LoginFormContent = () => {
   };
 
   const handleAuthError = (err) => {
+    if (err instanceof TableJoinError) {
+      setNeedsVerification(false);
+      setError(err.message);
+      return;
+    }
+
     const status = err.response?.status;
     const data = err.response?.data;
+
+    // Rate limited (e.g. lots of guest sign-ins from the restaurant Wi-Fi at once); the response has no body
+    if (status === 429) {
+      setNeedsVerification(false);
+      setError("Lots of people are signing in right now. Please wait a moment and try again.");
+      return;
+    }
 
     if (status === 404 || status >= 500 || !err.response) {
       setNeedsVerification(false);
@@ -222,16 +204,34 @@ const LoginFormContent = () => {
     setError("");
     setNeedsVerification(false);
 
-    try {
-      const response = await loginUser(guestEmail, guestPassword);
+    // A new guest account, for a phone that isn't already a guest
+    const newGuestToken = async () => {
+      const response = await loginAsGuest();
 
       if (!response.access_token) {
         throw new Error("Guest login succeeded but no token was returned.");
       }
 
-      saveRestaurantContext();
       localStorage.setItem("guest", "true");
-      const sessionId = await startQrDiningSession(response.access_token);
+      return response.access_token;
+    };
+
+    try {
+      saveRestaurantContext();
+
+      // Rescanning the QR code, or another table's, keeps this phone the same guest
+      // instead of adding a new "Guest XXXX" participant each time
+      const savedToken = getReusableGuestToken();
+      let sessionId;
+
+      try {
+        sessionId = await startQrDiningSession(savedToken ?? (await newGuestToken()));
+      } catch (err) {
+        // The saved guest no longer works (e.g. the account was removed): start over as a new guest
+        if (!savedToken || err.status !== 401) throw err;
+        sessionId = await startQrDiningSession(await newGuestToken());
+      }
+
       router.replace(sessionId ? "/menu/full-menu" : "/");
       router.refresh();
     } catch (err) {

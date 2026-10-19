@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -15,20 +14,19 @@ import {
   Divider,
   Tooltip,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X, Check, Receipt, ReceiptText, LogOut, Bell } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
 import {
   formatTime,
-  getSessionDuration,
   formatBillStatus,
   getBillStatusColor,
   formatGuestBreakdown,
   sortBillsByStatus,
 } from "../../utils/sessionHelpers";
-import { tableLabel, isOpenBill } from "../SessionColumns";
+import { tableLabel, isOpenBill, SeatedFor } from "../SessionColumns";
 import BillSummaryDialog from "./BillSummaryDialog";
-import ConfirmDialog from "./ConfirmDialog";
 
 const SectionHeading = ({ icon: Icon, children }) => (
   <Typography
@@ -46,15 +44,15 @@ const SessionDetailDialog = () => {
     useSession();
   const actions = useSessionDashboardActions();
   const [summaryBillId, setSummaryBillId] = useState(null);
-  const [billToClose, setBillToClose] = useState(null);
 
   const requests = session ? requestsBySession[session.session_Id] || [] : [];
   const bills = sortBillsByStatus(session?.bills || []);
   const hasOpenBills = bills.some(isOpenBill);
 
+
   return (
     <>
-      <Dialog open={!!session} onClose={closeSession} maxWidth="sm" fullWidth>
+      <AppDialog open={!!session} onClose={closeSession}>
         {session && (
           <>
             <DialogTitle>
@@ -67,12 +65,12 @@ const SessionDetailDialog = () => {
               >
                 <Box>
                   <Typography variant="h6" component="span">
-                    Session #{session.session_Id} ·{" "}
+                    Dining Session #{session.session_Id} ·{" "}
                     {tableLabel(session.table_Numbers)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Started {formatTime(session.started_At)} ·{" "}
-                    {getSessionDuration(session.started_At)} ·{" "}
+                    <SeatedFor startedAt={session.started_At} /> ·{" "}
                     {session.active_Participants ?? 0} guest
                     {session.active_Participants === 1 ? "" : "s"}
                   </Typography>
@@ -136,24 +134,14 @@ const SessionDetailDialog = () => {
                         secondaryAction={
                           <Box sx={{ display: "flex", gap: 1 }}>
                             <Tooltip title="View bill summary">
-                              <IconButton
+                              <Button
                                 aria-label={`View ${bill.bill_Name} summary`}
                                 onClick={() => setSummaryBillId(bill.bill_Id)}
+                                startIcon={<Receipt />}
                               >
-                                <Receipt size={18} />
-                              </IconButton>
-                            </Tooltip>
-                            {isOpenBill(bill) && (
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                color="error"
-                                aria-label={`Close bill ${bill.bill_Name}`}
-                                onClick={() => setBillToClose(bill)}
-                              >
-                                Close
+                                View Bill Summary
                               </Button>
-                            )}
+                            </Tooltip>
                           </Box>
                         }
                       >
@@ -166,6 +154,15 @@ const SessionDetailDialog = () => {
                                 color={getBillStatusColor(bill.status)}
                                 size="small"
                               />
+                              {/* Guests pressed "Ready for Bill"; they can't order more on it */}
+                              {isOpenBill(bill) && bill.requested_At && (
+                                <Chip
+                                  icon={<Bell size={14} />}
+                                  label="Asked for bill"
+                                  color="warning"
+                                  size="small"
+                                />
+                              )}
                             </Box>
                           }
                           secondary={formatGuestBreakdown(bill)}
@@ -179,7 +176,7 @@ const SessionDetailDialog = () => {
               )}
             </DialogContent>
 
-            <DialogActions sx={{ p: 2, gap: 1, flexWrap: "wrap" }}>
+            <DialogActions sx={{ flexWrap: "wrap" }}>
               {hasOpenBills && (
                 <Typography variant="body2" color="text.secondary" sx={{ mr: "auto" }}>
                   Close all bills to end the session.
@@ -205,22 +202,13 @@ const SessionDetailDialog = () => {
             </DialogActions>
           </>
         )}
-      </Dialog>
+      </AppDialog>
 
       <BillSummaryDialog
         open={summaryBillId !== null}
         sessionId={session?.session_Id}
         billId={summaryBillId}
         onClose={() => setSummaryBillId(null)}
-      />
-
-      <ConfirmDialog
-        open={!!billToClose}
-        title="Close bill"
-        message={`Close ${billToClose?.bill_Name ?? "this bill"}? Guests won't be able to order on it.`}
-        confirmLabel="Close Bill"
-        onConfirm={() => actions.closeBill(session, billToClose)}
-        onClose={() => setBillToClose(null)}
       />
     </>
   );

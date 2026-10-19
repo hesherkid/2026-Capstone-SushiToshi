@@ -6,18 +6,23 @@ import {
   AccordionDetails,
   Typography,
   Box,
-  CircularProgress,
   Alert,
   Chip,
   IconButton,
   Button,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import BillSelect from "@/components/customer/OrderDashboard/components/BillSelect";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
+import { fetchMySessionId, getMyUserId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import { setPageLoading } from "@/utils/pageLoading";
+
+// "table": every order at the table, so when one person orders for everyone the rest can see it.
+// "mine": only orders this person placed.
+const VIEWS = { TABLE: "table", MINE: "mine" };
 
 const OrdersAccordion = () => {
   const router = useRouter();
@@ -25,7 +30,8 @@ const OrdersAccordion = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-  const [selectedBillId, setSelectedBillId] = useState("");
+  const [view, setView] = useState(VIEWS.MINE);
+  const myUserId = getMyUserId();
 
   const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
 
@@ -42,40 +48,16 @@ const OrdersAccordion = () => {
   useEffect(() => {
     const getActiveSession = async (billId = "") => {
 
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
 
-      if (isGuest()) {
-        const sid = localStorage.getItem("session_id");
-        if (sid) {
-          setSessionId({ session_id: parseInt(sid) });
-          return;
-        } else {
-          setError("Guest session not found. Please scan your table QR again.");
-          return;
-        }
-      }
       try {
-        const params = billId ? { bill_id: billId } : {};
-        let response;
-        if (isGuest()) {
-          const sid = localStorage.getItem("session_id");
-          if (!sid) {
-            setError("Guest session not found. Please scan your table QR again.");
-            return;
-          }
-          response = await publicApi.get(`/Order/by-session/${sid}`, { params }); 
+        // Ask the server (guests included) rather than trusting a saved session_id
+        const mySessionId = await fetchMySessionId();
+        if (mySessionId) {
+          setSessionId({ session_id: mySessionId });
         } else {
-          response = await api.get("/Order/active-session/orders", { params });
-        }
-
-        if (response.status < 200 || response.status >= 300) {
-          throw new Error("Failed to fetch active session");
-        }
-
-        if (response.data) {
-          setSessionId(response.data);
-        } else {
-          setError("No active session found");
+          setError(NOT_SEATED_MESSAGE);
+          setLoading(false);
         }
       } catch (err) {
         console.error("Error fetching session:", err);
@@ -84,35 +66,26 @@ const OrdersAccordion = () => {
             ? err.response.data.detail
             : "Error fetching session"
         );
+        setLoading(false);
       }
     };
 
     getActiveSession();
   }, []);
 
-const fetchOrders = async (billId = "") => {
+const fetchOrders = async () => {
 
-  const apiClient = isGuest() ? publicApi : api;
+  const apiClient = api;
 
   try {
     setLoading(true);
     setError(null);
 
-    //If a bill is selected - include it as a param to the endpoint
-    const params = billId ? { bill_id: billId } : {};
-    
-    let response;
-    if (isGuest()) {
-      const sid = localStorage.getItem("session_id");
-      if (!sid) {
-        setError("Guest session not found. Please scan your table QR again.");
-        setLoading(false);
-        return;
-      }
-      response = await publicApi.get(`/Order/session/${sid}`, { params });
-    } else {
-      response = await apiClient.get("/Order/active-session/orders", { params });
-    }
+    // Whole table: every order in the session. Mine: the server finds this person's own orders.
+    const response =
+      view === VIEWS.TABLE
+        ? await apiClient.get(`/Order/session/${sessionId.session_id}`)
+        : await apiClient.get("/Order/active-session/orders");
 
 
     //Check if there are no orders
@@ -147,23 +120,33 @@ const fetchOrders = async (billId = "") => {
   }
 };
 
-  const handleBillChange = (event) => {
-    const billId = event.target.value;
-    setSelectedBillId(billId);
-    fetchOrders(billId);
-  };
-
   // TODO: Check if this is needed
   const handleNewOrder = (event) => {
     event.preventDefault();
     router.push("/menu/full-menu");
   };
   
+  // The app bar's spinner is the page's only loading indicator
   useEffect(() => {
-    fetchOrders(selectedBillId);
-    const interval = setInterval(() => fetchOrders(selectedBillId), 30000);
+    setPageLoading(loading);
+  }, [loading]);
+  useEffect(() => () => setPageLoading(false), []);
+
+  useEffect(() => {
+    // The table view needs the session; it's ready after fetchMySessionId
+    if (!sessionId) return;
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 30000);
     return () => clearInterval(interval);
-  }, [selectedBillId]);
+  }, [view, sessionId]);
+
+  // Other guests' orders show only the bill they're on, never who placed them
+  const orderLabel = (order) => {
+    const parts = [];
+    if (myUserId && order.userId === myUserId) parts.push("You");
+    if (order.billName) parts.push(order.billName);
+    return parts.join(" · ");
+  };
 
   const renderOrderAccordion = (order, groupStatus) => (
     <Accordion
@@ -191,14 +174,20 @@ const fetchOrders = async (billId = "") => {
             pr: 2,
           }}
         >
-          <Typography>
-            Order #{order.orderId}
+          {/* Item count sits under the order number, leaving room for the name beside it */}
+          <Box>
+            <Typography>Order #{order.orderId}</Typography>
             {order.items && (
-              <Typography component="span" color="textSecondary" sx={{ ml: 2 }}>
+              <Typography variant="body2" color="textSecondary">
                 ({order.items.length} items)
               </Typography>
             )}
-          </Typography>
+          </Box>
+          {view === VIEWS.TABLE && (
+            <Typography variant="body2" color="text.secondary">
+              {orderLabel(order)}
+            </Typography>
+          )}
         </Box>
       </AccordionSummary>
       <AccordionDetails>
@@ -227,9 +216,12 @@ const fetchOrders = async (billId = "") => {
                     color="textSecondary"
                     align="left"
                   >
-                    {item.price === 0
-                      ? "Included item"
-                      : item?.price ? `Price: $${Number(item.price).toFixed(2)}` : "Price unavailable"}
+                    {(() => {
+                      // "Mine" sends price; the table view sends priceAtTime
+                      const price = item.price ?? item.priceAtTime;
+                      if (price === 0) return "Included item";
+                      return price ? `Price: $${Number(price).toFixed(2)}` : "Price unavailable";
+                    })()}
                   </Typography>
                 </Box>
 
@@ -253,14 +245,6 @@ const fetchOrders = async (billId = "") => {
     </Accordion>
   );
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   if (error) {
     return (
       <Box p={2}>
@@ -276,29 +260,31 @@ const fetchOrders = async (billId = "") => {
       <Typography
         variant="h4"
         component="h1"
-        sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200,}}
+        sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200 }}
       >
         Table Orders
       </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-            gap: 2,
-          }}
+
+      {/* Tabs on the left, Order More on the right of the same row */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={view}
+          onChange={(event, next) => next && setView(next)}
+          aria-label="Which orders to show"
         >
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mt: 0.5,
-            fontSize: { xs: "0.8rem", sm: "0.875rem" },
-          }}
-        >
-          Add more items to your order
-        </Typography>
+          <ToggleButton value={VIEWS.MINE}>My orders</ToggleButton>
+          <ToggleButton value={VIEWS.TABLE}>Whole table</ToggleButton>
+        </ToggleButtonGroup>
 
         <Button
           variant="contained"
@@ -322,25 +308,15 @@ const fetchOrders = async (billId = "") => {
         </Button>
       </Box>
 
-      <Box mb={3}>
-        {sessionId ? (
-          <BillSelect
-            session_id={sessionId.session_id}
-            value={selectedBillId}
-            onChange={handleBillChange}
-            message="Select Bill To Filter Orders"
-          />
-        ) : (
-          <Alert severity="info">No active session found</Alert>
-        )}
-      </Box>
-
+      {/* While loading, keep the current list; the app bar shows the spinner */}
       {Object.keys(groupedOrders).length === 0 ? (
+        !loading && (
         <Alert severity="info">
-          {selectedBillId
-            ? "No orders found for selected bill."
-            : "No orders found. Select a bill to view its orders."}
+          {view === VIEWS.MINE
+            ? "You haven't ordered anything yet."
+            : "No one at your table has ordered yet."}
         </Alert>
+        )
       ) : (
         statusOrder.map((status) => {
           if (!groupedOrders[status]?.length) return null;

@@ -85,6 +85,9 @@ namespace back_end.Migrations
                     b.Property<DateTime>("Created_At")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("Requested_At")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("Senior_Count")
                         .HasColumnType("int");
 

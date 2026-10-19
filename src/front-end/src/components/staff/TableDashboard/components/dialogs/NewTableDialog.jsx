@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -14,6 +13,7 @@ import {
   MenuItem,
   IconButton,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X } from "lucide-react";
 import { useTable } from "../../context/TableContext";
 import api from "@/config/api";
@@ -83,7 +83,7 @@ const NewTableDialog = ({ open }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <AppDialog open={open} onClose={handleClose}>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
           Create New Table
@@ -147,7 +147,7 @@ const NewTableDialog = ({ open }) => {
           </Button>
         </DialogActions>
       </form>
-    </Dialog>
+    </AppDialog>
   );
 };
 

@@ -3,7 +3,7 @@ import NewSessionDialog from "./NewSessionDialog";
 import AddTableDialog from "./AddTableDialog";
 import NewBillDialog from "./NewBillDialog";
 import SessionDetailDialog from "./SessionDetailDialog";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const DialogContainer = () => {
   const { dialogState, closeDialog } = useSession();

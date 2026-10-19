@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Dialog } from "@mui/material";
+import {  } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import StaffManagementForm from "@/components/admin/StaffManagementForm";
 import { getStaffColumns, isActiveAccount } from "@/components/admin/StaffList";
 import PasswordChangeDialog from "@/components/admin/PasswordChangeDialog";
@@ -181,11 +182,9 @@ const StaffManagementPage = () => {
         getRowId: (row) => row.user_id,
       }}
     >
-      <Dialog
+      <AppDialog
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        maxWidth="sm"
-        fullWidth
       >
         <StaffManagementForm
           initialData={editMode ? selectedStaff : null}
@@ -195,7 +194,7 @@ const StaffManagementPage = () => {
           mode={editMode ? "edit" : "create"}
           lockRole={editMode && isSelf(selectedStaff)}
         />
-      </Dialog>
+      </AppDialog>
 
       <ConfirmDialog
         open={!!staffToDeactivate}

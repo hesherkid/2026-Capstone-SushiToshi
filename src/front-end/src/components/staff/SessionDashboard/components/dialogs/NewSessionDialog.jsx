@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -18,6 +17,7 @@ import {
   Typography,
   Chip,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import api from "@/config/api";
@@ -151,7 +151,7 @@ const NewSessionDialog = ({ open, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
+    <AppDialog open={open} onClose={handleClose} maxWidth="md">
       <DialogTitle>
         Create New Session
         <IconButton
@@ -361,7 +361,7 @@ const NewSessionDialog = ({ open, onClose }) => {
           {loading ? "Creating..." : "Create Session"}
         </Button>
       </DialogActions>
-    </Dialog>
+    </AppDialog>
   );
 };
 

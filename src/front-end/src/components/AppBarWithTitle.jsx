@@ -30,6 +30,8 @@ import storage from "@/utils/storage";
 import { LocationOn } from "@mui/icons-material";
 import { useNotification } from "@/contexts/NotificationContext";
 import AppNavigationDrawer from "@/components/AppNavigationDrawer";
+import { TABLE_VISIT_EVENT } from "@/utils/tableVisit";
+import { PAGE_LOADING_EVENT } from "@/utils/pageLoading";
 
 const AppBarWithTitle = ({ title }) => {
   const router = useRouter();
@@ -46,6 +48,8 @@ const AppBarWithTitle = ({ title }) => {
   const { isAuthenticated, userRole, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
   const [isGuest, setIsGuest] = useState(false);
+  // A page loading its data (see utils/pageLoading); shown with the same spinner as sign-in
+  const [pageLoading, setPageLoadingState] = useState(false);
   const canShowDrawer =
     !isLoginPage && (isAuthenticated || isGuest);
 
@@ -62,11 +66,30 @@ const AppBarWithTitle = ({ title }) => {
     };
   }, []);
 
-  // The app bar stays mounted across client-side navigation, so re-read the
-  // table number and guest flag on each route change (e.g. after the QR login saves them)
   useEffect(() => {
-    setTableNumber(localStorage.getItem("tableNumber") || "");
-    setIsGuest(localStorage.getItem("guest") === "true");
+    const handlePageLoading = (event) => setPageLoadingState(Boolean(event.detail?.loading));
+
+    window.addEventListener(PAGE_LOADING_EVENT, handlePageLoading);
+    return () => window.removeEventListener(PAGE_LOADING_EVENT, handlePageLoading);
+  }, []);
+
+  // A page that was loading when the user navigated away no longer is
+  useEffect(() => {
+    setPageLoadingState(false);
+  }, [pathname]);
+
+  // The app bar stays mounted across client-side navigation, so re-read the
+  // table number and guest flag on each route change (e.g. after the QR login saves them),
+  // and when a table QR code is opened on the current page
+  useEffect(() => {
+    const readTableVisit = () => {
+      setTableNumber(localStorage.getItem("tableNumber") || "");
+      setIsGuest(localStorage.getItem("guest") === "true");
+    };
+
+    readTableVisit();
+    window.addEventListener(TABLE_VISIT_EVENT, readTableVisit);
+    return () => window.removeEventListener(TABLE_VISIT_EVENT, readTableVisit);
   }, [pathname]);
 
   useEffect(() => {
@@ -370,7 +393,7 @@ const handleLogout = () => {
           />
         )}
       </Toolbar>
-    {loading && (
+    {(loading || pageLoading) && (
       <Box
         role="status"
         aria-label="Loading"

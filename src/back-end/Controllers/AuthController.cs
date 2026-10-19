@@ -6,8 +6,10 @@ using back_end.domain.enums;
 using back_end.DTO.Auth;
 using back_end.Services.Auth;
 using back_end.Services.Email;
+using back_end.Helpers;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -72,6 +74,55 @@ namespace back_end.controllers
         /// 
         /// Updates the user's last interaction timestamp upon successful login.
         /// </remarks>
+        /// <summary>
+        /// Signs in a new anonymous guest for "Continue as Guest".
+        /// </summary>
+        /// <remarks>
+        /// Creates a throwaway customer account for this guest, so every guest at a table is a separate
+        /// session participant. It has no password and a reserved email domain, so nobody can sign in to it
+        /// later, and it's left out of the admin customer list. The token lasts a whole visit
+        /// (Jwt:GuestExpiresInMinutes, default 6 hours).
+        /// </remarks>
+        /// <response code="200">Returns the guest's access token and display name.</response>
+        /// <response code="429">Too many guest sign-ins from this network in the last minute.</response>
+        [HttpPost("guest")]
+        [EnableRateLimiting(GuestAccounts.RateLimitPolicy)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+        public async Task<IActionResult> GuestLogin()
+        {
+            var now = DateTime.UtcNow;
+            var guest = new User
+            {
+                Email = GuestAccounts.NewEmail(),
+                Password_hash = null,
+                First_name = "Guest",
+                Last_name = GuestAccounts.NewCode(),
+                Role = UserRoles.Customer,
+                Status = UserStatus.Active,
+                Is_email_confirmed = true,
+                Created_at = now,
+                Last_Interaction_at = now,
+            };
+
+            _context.Users.Add(guest);
+            await _context.SaveChangesAsync();
+
+            int minutes = int.Parse(_config["Jwt:GuestExpiresInMinutes"] ?? GuestAccounts.DefaultTokenMinutes.ToString());
+
+            return Ok(new
+            {
+                access_token = GenerateJwtToken(guest, minutes),
+                token_type = "Bearer",
+                expires_in = minutes * 60,
+                user = new
+                {
+                    first_name = guest.First_name,
+                    last_name = guest.Last_name,
+                },
+            });
+        }
+
         [HttpPost("login")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -505,7 +556,7 @@ namespace back_end.controllers
         /// Token expiration is configurable via Jwt:ExpiresInMinutes setting (default: 60 minutes).
         /// The token is signed using HMAC-SHA256 algorithm.
         /// </remarks>
-        private string GenerateJwtToken(domain.Entities.User user)
+        private string GenerateJwtToken(domain.Entities.User user, int? expiresInMinutes = null)
         {
 
             var keyStr = _config["Jwt:Key"]
@@ -515,7 +566,7 @@ namespace back_end.controllers
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             //Add all the claims based on the user's information and their role
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.User_id.ToString()),
                 new Claim(ClaimTypes.Name, user.Email),
@@ -525,12 +576,21 @@ namespace back_end.controllers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 
+            // Guests' emails are random, so give orders and requests a readable name ("Guest K7P2").
+            // ClaimsHelpers.GetUserDisplayName prefers these over the email.
+            if (GuestAccounts.IsGuest(user.Email))
+            {
+                claims.Add(new Claim("given_name", user.First_name));
+                claims.Add(new Claim("family_name", user.Last_name));
+                claims.Add(new Claim(GuestAccounts.TokenClaim, "true"));
+            }
+
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(
-                    int.Parse(_config["Jwt:ExpiresInMinutes"] ?? "60")),
+                    expiresInMinutes ?? int.Parse(_config["Jwt:ExpiresInMinutes"] ?? "60")),
                 signingCredentials: credentials
             );
 
