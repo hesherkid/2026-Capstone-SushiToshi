@@ -410,7 +410,7 @@ const OrderTiming = () => {
   ];
 
   return (
-    <Box sx={{ p: 1 }}>
+    <Box>
       <Stack
         direction="row"
         justifyContent="space-between"

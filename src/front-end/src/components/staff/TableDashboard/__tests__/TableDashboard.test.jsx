@@ -1,11 +1,14 @@
 import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import TableDashboard from "@/components/staff/TableDashboard";
 import api from "@/config/api";
+import { useAuth } from "@/hooks/useAuth";
 
 jest.mock("@/config/api", () => {
   const mockApi = { get: jest.fn(), post: jest.fn(), delete: jest.fn() };
   return { __esModule: true, default: mockApi, api: mockApi };
 });
+
+jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
 
 jest.mock("@/utils/storage", () => ({
   __esModule: true,
@@ -69,6 +72,7 @@ describe("Table dashboard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockApiData();
+    useAuth.mockReturnValue({ userRole: "admin" });
   });
 
   it("lists every table, including inactive and grouped ones, with its status", async () => {
@@ -122,6 +126,15 @@ describe("Table dashboard", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/TableEntity/1"));
+  });
+
+  it("does not let staff delete a table", async () => {
+    useAuth.mockReturnValue({ userRole: "staff" });
+    render(<TableDashboard />);
+    await screen.findByText("Table 1");
+
+    expect(within(rowFor("Table 1")).queryByRole("button", { name: "Delete table" })).not.toBeInTheDocument();
+    expect(within(rowFor("Table 1")).getByRole("button", { name: "Edit table" })).toBeInTheDocument();
   });
 
   it("lists table groups with their tables and seats", async () => {

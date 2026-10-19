@@ -178,6 +178,13 @@ const handleLogout = () => {
   };
   const effectiveRole = userRole || (isGuest ? "customer" : null);
 
+  // Leave the dropdown empty until the stored location is one of the loaded options
+  const locationValue =
+    Array.isArray(allLocations) &&
+    allLocations.some((loc) => loc.location_Id === Number(selectedLocation))
+      ? Number(selectedLocation)
+      : "";
+
   return (
     <AppBar
       position="fixed"
@@ -311,7 +318,7 @@ const handleLogout = () => {
             (userRole === "staff" || userRole === "admin") && (
               <FormControl size="small">
                 <Select
-                  value={Number(selectedLocation)}
+                  value={locationValue}
                   onChange={handleLocationChange}
                   renderValue={(value) => {
                     const location = allLocations?.find(
