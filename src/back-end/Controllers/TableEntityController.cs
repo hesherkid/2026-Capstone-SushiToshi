@@ -271,9 +271,10 @@ namespace back_end.Controllers
     /// </remarks>
     /// <response code="204">The table was deleted successfully.</response>
     /// <response code="404">No table exists with the specified <paramref name="table_id"/>.</response>
+    /// <response code="403">Only admins can delete tables.</response>
     /// <response code="409">The table cannot be deleted because it is currently in use.</response>
     /// <response code="500">An unexpected error occurred while deleting the table.</response>
-    [Authorize]
+    [Authorize(Policy = "adminOnly")]
     [HttpDelete("{table_id}")]
     public async Task<IActionResult> DeleteTable(int table_id)
     {

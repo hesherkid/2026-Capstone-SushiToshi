@@ -37,7 +37,7 @@ const statusColumn = {
   ),
 };
 
-export const getTableColumns = (actions) => [
+export const getTableColumns = (actions, { canDelete = false } = {}) => [
   {
     field: "table_number",
     headerName: "Table Number",
@@ -89,7 +89,8 @@ export const getTableColumns = (actions) => [
           icon: Trash2,
           onClick: () => actions.deleteTable(row),
           color: "error",
-          hidden: inSession,
+          // Only admins may delete tables; staff can deactivate instead
+          hidden: !canDelete || inSession,
         },
       ];
     },

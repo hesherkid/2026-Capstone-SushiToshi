@@ -13,6 +13,7 @@ import ManagementHeader from "@/components/common/ManagementHeader";
 import ManagementGrid from "@/components/common/ManagementGrid";
 import StatCard from "@/components/home/StatCard";
 import { statsGrid } from "@/components/home/homeLayout";
+import { useAuth } from "@/hooks/useAuth";
 import { useTable } from "../context/TableContext";
 import { useTableActions } from "../hooks/useTableActions";
 import { TABLE_STATUS } from "../hooks/useTableData";
@@ -41,6 +42,7 @@ const TableDashboardInner = () => {
     openDialog,
   } = useTable();
   const actions = useTableActions();
+  const { userRole } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [statusFilter, setStatusFilter] = useState(ALL);
 
@@ -133,7 +135,7 @@ const TableDashboardInner = () => {
         <ManagementGrid
           key="tables"
           rows={filteredRows}
-          columns={getTableColumns(actions)}
+          columns={getTableColumns(actions, { canDelete: userRole === "admin" })}
           loading={isLoading}
           getRowId={(row) => row.table_Id}
           getRowClassName={rowClassName}
