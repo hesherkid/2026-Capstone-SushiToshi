@@ -732,34 +732,39 @@ namespace back_end.controllers
             (bill.Child_Count * pricing.ChildBasePrice) +
             (bill.Tot_Count * pricing.ToddlerBasePrice);
 
-        // Get all add-on items for this bill
-        var menuId = bill.DiningSession.Menu_Id;
-        var locationId = bill.DiningSession.Location_Id;
-        var addOnItems = await _context.OrderItems
-          .Include(oi => oi.SessionOrder)
+        // Charged lines for this bill (cancelled orders and cancelled items are excluded).
+        // Prices are snapshots on each order line, so later price changes don't alter old bills.
+        var chargedLines = await _context.OrderItems
           .Include(oi => oi.MenuItem)
           .Where(oi =>
               oi.SessionOrder.Bill_Id == _bill_id &&
               oi.SessionOrder.Status != OrderStatus.Cancelled &&
-              _context.MenuItemAssignments.Any(mia =>
-                mia.Menu_Id == menuId && mia.Item_Id == oi.Item_Id &&
-                (mia.Location_Id == null || mia.Location_Id == locationId) &&
-                mia.Is_Add_On)
-          )
-          .Select(oi => new BillAddOnItem
-          {
-            Order_Item_Id = oi.Order_Item_Id,
-            Item_Id = oi.Item_Id,
-            Item_Name = oi.MenuItem.Name,
-            Quantity = oi.Quantity,
-            Price_Per_Unit = oi.Price_At_Time,
-            Line_Total = oi.Quantity * oi.Price_At_Time,
-            Status = oi.Order_Item_Status.ToString()
-          })
+              oi.Order_Item_Status != OrderStatus.Cancelled &&
+              (oi.Price_At_Time > 0 || (oi.Leftover_Quantity > 0 && oi.Leftover_Price_At_Time > 0)))
           .ToListAsync();
 
+        // Add-ons and drinks (charged every time); also any line staff priced manually
+        var addOnItems = chargedLines
+          .Where(oi => oi.Charge_Reason == ChargeReason.None && oi.Price_At_Time > 0)
+          .Select(oi => ToBillItem(oi, oi.Quantity, oi.Price_At_Time))
+          .ToList();
+
+        // Units over a Charge limit (e.g. Hot Stone extras)
+        var overLimitItems = chargedLines
+          .Where(oi => oi.Charge_Reason == ChargeReason.OverLimit)
+          .Select(oi => ToBillItem(oi, oi.Quantity, oi.Price_At_Time))
+          .ToList();
+
+        // Leftovers marked by staff
+        var leftoverItems = chargedLines
+          .Where(oi => oi.Leftover_Quantity > 0 && oi.Leftover_Price_At_Time > 0)
+          .Select(oi => ToBillItem(oi, oi.Leftover_Quantity, oi.Leftover_Price_At_Time))
+          .ToList();
+
         decimal addOnSubtotal = addOnItems.Sum(item => item.Line_Total);
-        decimal subtotal = baseChargesSubtotal + addOnSubtotal;
+        decimal overLimitSubtotal = overLimitItems.Sum(item => item.Line_Total);
+        decimal leftoverSubtotal = leftoverItems.Sum(item => item.Line_Total);
+        decimal subtotal = baseChargesSubtotal + addOnSubtotal + overLimitSubtotal + leftoverSubtotal;
         decimal taxAmount = Math.Round(subtotal * pricing.TaxRate, 2);
         decimal totalAmount = subtotal + taxAmount;
 
@@ -787,6 +792,12 @@ namespace back_end.controllers
           AddOn_Items = addOnItems,
           AddOn_Subtotal = addOnSubtotal,
 
+          // Over-limit and leftover charges
+          OverLimit_Items = overLimitItems,
+          OverLimit_Subtotal = overLimitSubtotal,
+          Leftover_Items = leftoverItems,
+          Leftover_Subtotal = leftoverSubtotal,
+
           // Totals
           Subtotal = subtotal,
           Tax_Rate = pricing.TaxRate,
@@ -804,7 +815,8 @@ namespace back_end.controllers
 
         _logger.LogInformation(
             $"Generated {pricing.PricingType} bill summary for Bill {_bill_id}: " +
-            $"Total ${totalAmount:F2} (Base: ${baseChargesSubtotal:F2}, Add-ons: ${addOnSubtotal:F2}, Tax: ${taxAmount:F2})");
+            $"Total ${totalAmount:F2} (Base: ${baseChargesSubtotal:F2}, Add-ons: ${addOnSubtotal:F2}, " +
+            $"Over-limit: ${overLimitSubtotal:F2}, Leftovers: ${leftoverSubtotal:F2}, Tax: ${taxAmount:F2})");
 
         return Ok(summary);
       }
@@ -814,5 +826,16 @@ namespace back_end.controllers
         return StatusCode(500, new { message = "Error calculating bill summary", error = ex.Message });
       }
     }
+
+    private static BillAddOnItem ToBillItem(OrderItems oi, int quantity, decimal pricePerUnit) => new BillAddOnItem
+    {
+      Order_Item_Id = oi.Order_Item_Id,
+      Item_Id = oi.Item_Id,
+      Item_Name = oi.MenuItem?.Name ?? string.Empty,
+      Quantity = quantity,
+      Price_Per_Unit = pricePerUnit,
+      Line_Total = quantity * pricePerUnit,
+      Status = oi.Order_Item_Status.ToString()
+    };
   }
 }
