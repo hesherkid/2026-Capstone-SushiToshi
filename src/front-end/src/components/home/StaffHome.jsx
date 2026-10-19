@@ -2,7 +2,8 @@
 
 import React from "react";
 import { Box, Typography, Alert } from "@mui/material";
-import { Clock, Table, ClipboardList, Bell, Users } from "lucide-react";
+import { Clock, ClipboardList, Bell, Users } from "lucide-react";
+import TableIcon from "@/components/common/TableIcon";
 import StatCard from "@/components/home/StatCard";
 import ShortcutCard from "@/components/home/ShortcutCard";
 import ServiceRequestAlerts from "@/components/home/ServiceRequestAlerts";
@@ -18,8 +19,8 @@ export const StaffHome = ({ userEmail }) => {
     useRestaurantOverview({ includeOrders: true });
 
   const shortcuts = [
-    { title: "Sessions", description: "Seat guests, manage sessions and bills", href: "/dashboard/sessions", icon: Clock, badge: requests.length },
-    { title: "Tables", description: "Table status and availability", href: "/dashboard/tables", icon: Table },
+    { title: "Dining Sessions", description: "Seat guests, manage sessions and bills", href: "/dashboard/sessions", icon: Clock, badge: requests.length },
+    { title: "Tables", description: "Table status and availability", href: "/dashboard/tables", icon: TableIcon },
     { title: "Orders", description: "Incoming orders for the kitchen", href: "/staff/dashboard/orders", icon: ClipboardList, badge: orders.length },
   ];
 
@@ -35,7 +36,7 @@ export const StaffHome = ({ userEmail }) => {
       {error && <Alert severity="error">{error}</Alert>}
 
       <Box sx={statsGrid}>
-        <StatCard label="Tables active" value={activeTables} icon={Table} loading={loading} href="/dashboard/tables" />
+        <StatCard label="Tables active" value={activeTables} icon={TableIcon} loading={loading} href="/dashboard/tables" />
         <StatCard label="Active sessions" value={sessions.length} icon={Users} loading={loading} href="/dashboard/sessions" />
         <StatCard
           label="Pending requests"

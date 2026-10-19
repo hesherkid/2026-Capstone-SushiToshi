@@ -94,7 +94,7 @@ describe("Home page dashboards", () => {
     expect(within(alert).getByText("Need more soy sauce")).toBeInTheDocument();
     expect(within(alert).queryByText("Table 9")).not.toBeInTheDocument();
 
-    for (const name of ["Sessions", "Tables", "Orders"]) {
+    for (const name of ["Dining Sessions", "Tables", "Orders"]) {
       expect(screen.getByRole("link", { name: new RegExp(`^${name}`) })).toBeInTheDocument();
     }
     // Bills are managed from the session dialog, not a separate page

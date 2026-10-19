@@ -21,11 +21,11 @@ import {
   QrCode,
   Phone,
   MapPin,
-  Table,
   Group,
   Contact,
   LogOut,
 } from "lucide-react";
+import TableIcon from "@/components/common/TableIcon";
 
 const menuItemsByRole = {
   customer: [
@@ -36,15 +36,15 @@ const menuItemsByRole = {
   ],
   staff: [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Clock, label: "Sessions", path: "/dashboard/sessions" },
-    { icon: Table, label: "Tables", path: "/dashboard/tables" },
+    { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
+    { icon: TableIcon, label: "Tables", path: "/dashboard/tables" },
     { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
     { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes" },
   ],
   admin: [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Clock, label: "Sessions", path: "/dashboard/sessions" },
-    { icon: Table, label: "Tables", path: "/dashboard/tables" },
+    { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
+    { icon: TableIcon, label: "Tables", path: "/dashboard/tables" },
     { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
     // `section` starts a labelled group; `divider` starts an unlabelled one
     { icon: Tag, label: "Manage Tags", path: "/tags/tag-management", section: "Management" },

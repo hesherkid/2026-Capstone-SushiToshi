@@ -1,6 +1,7 @@
 import { Box, Alert, Button } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { RefreshCw, Users, Table, Bell } from "lucide-react";
+import { RefreshCw, Users, Bell } from "lucide-react";
+import TableIcon from "@/components/common/TableIcon";
 import ManagementHeader from "@/components/common/ManagementHeader";
 import ManagementGrid from "@/components/common/ManagementGrid";
 import StatCard from "@/components/home/StatCard";
@@ -73,7 +74,7 @@ const SessionDashboardInner = () => {
         <StatCard
           label="Tables In Use"
           value={sessionSummary.tablesInUse}
-          icon={Table}
+          icon={TableIcon}
           loading={isLoading}
         />
         <StatCard

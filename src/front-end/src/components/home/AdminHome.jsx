@@ -4,7 +4,6 @@ import React from "react";
 import { Box, Typography, Alert } from "@mui/material";
 import {
   Clock,
-  Table,
   ClipboardList,
   Bell,
   Users,
@@ -21,6 +20,7 @@ import {
   RefreshCw,
   Eye,
 } from "lucide-react";
+import TableIcon from "@/components/common/TableIcon";
 import StatCard from "@/components/home/StatCard";
 import ShortcutCard from "@/components/home/ShortcutCard";
 import ServiceRequestAlerts from "@/components/home/ServiceRequestAlerts";
@@ -37,7 +37,7 @@ const shortcutSections = (pendingRequests) => [
     title: "Service",
     items: [
       {
-        title: "Sessions",
+        title: "Dining Sessions",
         description: "Live dining sessions, table requests and bills",
         href: "/dashboard/sessions",
         icon: Clock,
@@ -47,7 +47,7 @@ const shortcutSections = (pendingRequests) => [
         title: "Tables",
         description: "Table status and availability",
         href: "/dashboard/tables",
-        icon: Table,
+        icon: TableIcon,
       },
       {
         title: "Orders",
@@ -182,7 +182,7 @@ export const AdminHome = ({ userEmail }) => {
         <StatCard
           label="Tables in use"
           value={activeTables}
-          icon={Table}
+          icon={TableIcon}
           loading={loading}
           href="/dashboard/tables"
         />
