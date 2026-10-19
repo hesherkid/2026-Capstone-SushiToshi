@@ -45,7 +45,7 @@ const orders = [
 
 const mockApiData = ({ requests = pendingRequests, allOrders = orders } = {}) => {
   api.get.mockImplementation((url) => {
-    if (url.includes("get_list_dining_sessions")) return Promise.resolve({ data: sessions });
+    if (url === "/Dashboard/sessions") return Promise.resolve({ data: sessions });
     if (url.includes("ServiceRequest/pending")) return Promise.resolve({ data: requests });
     if (url === "/staff/7") return Promise.resolve({ data: { first_name: "Arlyssa" } });
     if (url === "/Order/all_orders") return Promise.resolve({ data: allOrders });
@@ -62,7 +62,19 @@ const signInAs = (userRole) => {
 describe("Home page dashboards", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
     mockApiData();
+  });
+
+  it("counts sessions at the location picked in the app bar, like the Sessions page", async () => {
+    // Admins have no location on their account; the app bar picker decides
+    localStorage.setItem("branch-location", "2");
+    signInAs("admin");
+    render(<HomePage />);
+
+    expect(await screen.findByRole("link", { name: "2 Active sessions" })).toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith("/Dashboard/sessions", { params: { locationId: "2" } });
+    expect(api.get).not.toHaveBeenCalledWith("/DiningSession/get_list_dining_sessions", expect.anything());
   });
 
   it("shows staff a welcome, live counts and only this location's table requests", async () => {
