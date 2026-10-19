@@ -1,5 +1,4 @@
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
 
 const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
 
@@ -24,7 +23,7 @@ export const orderService = {
     orderData.Request_By_Name = "Guest";
   }
 
-    //const apiClient = isGuest() ? publicApi : api;
+    //const apiClient = api;
     const apiClient =  api;
 
     try {
@@ -85,7 +84,7 @@ export const orderService = {
    * @returns {Promise<Array>} Array of added order items
    */
   addOrderItems: async (orderId, items) => {
-    const apiClient = isGuest() ? publicApi : api;
+    const apiClient = api;
     const response = await apiClient.post(`/Order/${orderId}/items`, items);
 
     return response.data;

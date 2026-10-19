@@ -1,3 +1,4 @@
+using back_end.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
@@ -247,10 +248,12 @@ namespace back_end.Controllers
     ///
     ///     POST /api/servicerequest/by-session/123
     ///
-    /// This endpoint requires Admin or Staff role authorization.
+    /// Staff and admins can read any session. Customers can read only a session they're seated in,
+    /// so the bill summary can tell them a "Ready for bill" request is already waiting.
     /// Only returns service requests with 'Pending' status.
     /// </remarks>
-    [Authorize(Roles = "Admin,Staff")]
+    /// <response code="403">A customer asked about a session they aren't seated in</response>
+    [Authorize]
     [HttpGet("by-session/{session_id}")]
     public async Task<IActionResult> GetSessionServiceRequest(int session_id)
     {
@@ -262,6 +265,11 @@ namespace back_end.Controllers
         if (session is null)
         {
           return NotFound(new { message = "The session was not found" });
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+          return Forbid();
         }
 
         var sessionRequestList = await _context.ServiceRequests

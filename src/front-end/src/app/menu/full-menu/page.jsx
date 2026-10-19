@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Typography,
   Box,
@@ -12,22 +12,41 @@ import {
 import { Search } from "lucide-react";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import CartDrawer from "@/components/menu/CartDrawer";
+import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import TrackedItem from "@/components/menu/TrackedItem";
 import useMenuSearch from "@/components/menu/searchUtils";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
+import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+
+// localStorage key for the items picked but not yet ordered
+const CART_STORAGE_KEY = "menuCart";
+
+const BILL_REQUESTED_MESSAGE =
+  "You've asked for your bill, so no more orders can be added.";
 import { useOrderActions } from "@/hooks/useOrderActions";
 
 //Check if the logged in user is a guest.
 const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
 
+
+
 const FullMenu = () => {
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState({});
+  // False until the menu's items have been fetched (or the fetch failed)
+  const [itemsLoaded, setItemsLoaded] = useState(false);
   const [quantities, setQuantities] = useState({});
   const [sessionId, setSessionId] = useState(null);
+  // False until the server says which table (if any) this person is at
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [error, setError] = useState(null);
   const [selectedBillId, setSelectedBillId] = useState("");
+  // The table's open bills, newest first; the orderer picks which one this order goes on
+  const [openBills, setOpenBills] = useState([]);
+  // The guests pressed "Ready for Bill" on this bill, so the server won't take more orders on it
+  const billRequested = Boolean(
+    openBills.find((bill) => bill.bill_id === selectedBillId)?.requested_at
+  );
   const [menuId, setMenuId] = useState("");
   const [locationId, setLocationId] = useState(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -37,7 +56,7 @@ const FullMenu = () => {
   const handleOrderSuccess = () => {
     setOrderSuccess(true);
     setQuantities({});
-    
+
     // Redirect to orders page
     setTimeout(() => {
       window.location.href = "/dashboard/orders";
@@ -142,6 +161,27 @@ const FullMenu = () => {
     );
   }, [quantities]);
 
+  // The cart survives a page refresh. It's saved with its session so a cart from an
+  // earlier visit is never restored onto a different table.
+  const cartRestored = useRef(false);
+
+  useEffect(() => {
+    if (!sessionId || cartRestored.current) return;
+    cartRestored.current = true;
+    try {
+      const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null");
+      if (saved?.sessionId === sessionId && saved.quantities) setQuantities(saved.quantities);
+    } catch {
+      localStorage.removeItem(CART_STORAGE_KEY);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    // Wait until the saved cart has been read, or the empty starting cart would replace it
+    if (!sessionId || !cartRestored.current) return;
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ sessionId, quantities }));
+  }, [sessionId, quantities]);
+
   useEffect(() => {
     const openCart = () => setCartDrawerOpen(true);
     window.addEventListener("menu-cart-open", openCart);
@@ -150,74 +190,64 @@ const FullMenu = () => {
 
   useEffect(() => {
     const getActiveSession = async () => {
-      // Handle guest users separately
-      if (isGuest()) {
-        const sid = localStorage.getItem("session_id");
-        if (sid) {
-          setSessionId(parseInt(sid));
-        } else {
-          setError("Guest session not found. Please scan your table QR again.");
-        }
-        return;
-      }
-
-      // For authenticated users only
+      // Ask the server (guests included) rather than trusting a saved session_id
       try {
         setError(null);
-        const response = await api.get(
-          "/DiningSession/participants/active-session-id"
-        );
-        if (response?.status >= 200 && response.status < 300 && response.data) {
-          setSessionId(response.data.session_id ?? response.data);
+        const mySessionId = await fetchMySessionId();
+        if (mySessionId) {
+          setSessionId(mySessionId);
         } else {
-          setError("No active session found");
+          setError(NOT_SEATED_MESSAGE);
         }
       } catch (err) {
         console.error("Error fetching session:", err);
         setError(err.response?.data?.detail || "Error fetching session");
+      } finally {
+        setSessionChecked(true);
       }
     };
 
     getActiveSession();
   }, []);
 
+  const chooseBill = (billId) => {
+    setSelectedBillId(billId);
+    localStorage.setItem("currentBillId", String(billId));
+  };
+
   useEffect(() => {
     if (!sessionId || sessionId < 1) return;
 
     const selectCurrentBill = async () => {
       try {
-        const apiClient = isGuest() ? publicApi : api;
+        const apiClient = api;
         const response = await apiClient.get(`/Bill/get_bills/${sessionId}`);
         const bills = Array.isArray(response.data) ? response.data : [];
 
-        if (!bills.length) {
+        // Only open bills can take orders; newest first
+        const open = bills
+          .filter((bill) => String(bill.status ?? "").toUpperCase() === "OPEN")
+          .map((bill) => ({
+            bill_id: Number(bill.bill_id),
+            bill_name: bill.bill_name,
+            requested_at: bill.requested_at,
+            created_at: bill.created_at,
+          }))
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setOpenBills(open);
+
+        // Keep the bill this phone ordered on last, so a guest doesn't drift onto another
+        // party's bill; otherwise the newest bill that can still take orders
+        const lastUsed = Number(localStorage.getItem("currentBillId"));
+        const current =
+          open.find((bill) => bill.bill_id === lastUsed) ??
+          open.find((bill) => !bill.requested_at) ??
+          open[0];
+
+        if (current) {
+          chooseBill(current.bill_id);
+        } else {
           setSelectedBillId("");
-          return;
-        }
-
-        const sortedBills = [...bills].sort(
-          (a, b) =>
-            new Date(
-              b.created_At ?? b.created_at ?? b.Created_At ?? 0
-            ).getTime() -
-            new Date(
-              a.created_At ?? a.created_at ?? a.Created_At ?? 0
-            ).getTime()
-        );
-
-        const currentBill =
-          sortedBills.find(
-            (bill) =>
-              (bill.status ?? bill.Status ?? "")
-                .toString()
-                .toUpperCase() !== "CLOSED"
-          ) ?? sortedBills[0];
-
-        const billId = Number(currentBill?.bill_id ?? currentBill?.Bill_Id);
-
-        if (!Number.isNaN(billId) && billId > 0) {
-          setSelectedBillId(billId);
-          localStorage.setItem("currentBillId", String(billId));
         }
       } catch (err) {
         console.error("Error fetching current bill:", err);
@@ -236,7 +266,7 @@ const FullMenu = () => {
 
     const fetchMenu = async () => {
 
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
       try {
         setError(null);
 
@@ -288,7 +318,7 @@ const FullMenu = () => {
   useEffect(() => {
     const fetchCategories = async () => {
 
-      const apiClient = isGuest() ? publicApi : api;
+      const apiClient = api;
 
       try {
         setError(null);
@@ -317,7 +347,7 @@ const FullMenu = () => {
     //Make sure the menu ID is valid or if we already loaded the menu items
     if (!menu_id || menuItems[categoryId]) return;
 
-    const apiClient = isGuest() ? publicApi : api;
+    const apiClient = api;
 
     try {
       //Call GetItemsByMenu with the session's location so location prices apply
@@ -348,6 +378,8 @@ const FullMenu = () => {
       setMenuItems((prev) => ({ ...prev, ...grouped }));
     } catch (err) {
       console.error(`Error fetching menu items for menu ${menu_id}:`, err);
+    } finally {
+      setItemsLoaded(true);
     }
   };
 
@@ -380,6 +412,8 @@ const FullMenu = () => {
               item_id: Number(itemId),
               quantity: Number(quantity),
               price_at_time,
+              // Not stored; names the items in the "added to order" notification
+              name: menuItem.name,
             };
           })
     );
@@ -390,6 +424,10 @@ const FullMenu = () => {
   const handleConfirmOrder = async () => {
     if (!selectedBillId || !sessionId || !menuId) {
       setError("Please select a bill first");
+      return;
+    }
+    if (billRequested) {
+      setError(BILL_REQUESTED_MESSAGE);
       return;
     }
 
@@ -421,7 +459,9 @@ const FullMenu = () => {
   };
 
   // Combine local and hook errors
-  const displayError = error || actionError;
+  // Without a session the info box below already shows `error` (e.g. not seated), so the
+  // red alert only shows it once the guest is seated
+  const displayError = (sessionId ? error : null) || actionError;
 
   const filteredMenuGroups = categories
     .filter(
@@ -445,13 +485,16 @@ const FullMenu = () => {
 
     <Container disableGutters maxWidth={false}>
       <Box sx={{ p: 0 }}>
-        <Typography
-          variant="h5"
-          component="h1"
-          sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200,}}
-        >
-          All You Can Eat Menu
-        </Typography>
+        {/* Not seated: only the info message below shows, without a menu title */}
+        {sessionId && (
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200, }}
+          >
+            All You Can Eat Menu
+          </Typography>
+        )}
 
         {/* Error Alert */}
         {displayError && (
@@ -547,21 +590,36 @@ const FullMenu = () => {
                     >
                       {category.name || `Category ${category.category_id}`}
                     </Button>
-                    
+
                   ))}
                 </Box>
-                
+
               )}
             </>
           ) : (
-            <Alert severity="info">No active session found</Alert>
+            // Only once the check is done; before that sessionId is just not known yet
+            sessionChecked && <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
           )}
-          
+
         </Box>
 
-        {sessionId && menuId && (
+        {/* Seated, but the menu is still on its way */}
+        {sessionId && !itemsLoaded && !error && (
           <Box sx={{ width: "100%", mb: 4 }}>
             <Divider sx={{ mb: 2 }} />
+            <MenuListSkeleton />
+          </Box>
+        )}
+
+        {sessionId && menuId && itemsLoaded && (
+          <Box sx={{ width: "100%", mb: 4 }}>
+            <Divider sx={{ mb: 2 }} />
+
+            {selectedBillId && billRequested && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {BILL_REQUESTED_MESSAGE}
+              </Alert>
+            )}
 
             {!selectedBillId && (
               <Alert severity="warning" sx={{ mb: 2 }}>
@@ -594,7 +652,7 @@ const FullMenu = () => {
                   {allMenuItemCount} items
                 </Typography>
               </Typography>
-  
+
             )}
 
             {filteredMenuGroups.length === 0 ? (
@@ -674,6 +732,10 @@ const FullMenu = () => {
           onConfirmOrder={handleConfirmOrder}
           isLoading={isLoading}
           selectedBillId={selectedBillId}
+          bills={openBills}
+          onBillChange={chooseBill}
+          orderingLocked={billRequested}
+          lockedMessage={BILL_REQUESTED_MESSAGE}
           itemCount={getTotalStats().itemCount}
           totalQuantity={getTotalStats().totalQuantity}
         />

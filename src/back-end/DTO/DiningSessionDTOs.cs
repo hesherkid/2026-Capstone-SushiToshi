@@ -23,9 +23,6 @@ namespace back_end.DTO.DiningSessionDTOs
     public int? TableGroup_Id { get; set; }
 
     public string? AssignmentType { get; set; }
-
-    public int? Request_By_User_Id { get; set; }
-    public string? Request_By_Name { get; set; }
   }
 
   public class DiningSessionResponseDTO
@@ -70,18 +67,25 @@ namespace back_end.DTO.DiningSessionDTOs
     public bool ActiveOnly { get; set; } = false;
   }
 
-  public class AddGuestParticipantV2DTO
+  // Body for POST /api/DiningSession/join. Values come from the table's QR code.
+  public class JoinTableSessionDTO
   {
-    public int TableId { get; set; }
-    public int LocationId { get; set; }
+    // The number printed on the table, not the database Table_Id
+    [Range(1, int.MaxValue, ErrorMessage = "Table number must be positive")]
+    public int Table_Number { get; set; }
 
-    public string? GuestName { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "Location Id must be positive")]
+    public int Location_Id { get; set; }
   }
 
-  public class AddGuestParticipantResponseDTO
+  public class JoinTableSessionResponseDTO
   {
-    public int SessionId { get; set; }
+    public int Session_Id { get; set; }
+    public int Participant_Id { get; set; }
+    public int Menu_Id { get; set; }
+    public List<int> Table_Numbers { get; set; } = new();
 
-
+    // True when the user was already a participant (rescanning the QR code is safe)
+    public bool Already_Joined { get; set; }
   }
 }

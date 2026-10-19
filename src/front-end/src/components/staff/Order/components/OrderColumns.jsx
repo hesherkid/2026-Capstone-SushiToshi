@@ -1,7 +1,7 @@
 import { Chip } from "@mui/material";
 import { Eye, Check, Package } from "lucide-react";
 import { actionsColumn } from "@/components/common/RowActions";
-import { formatTime } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { formatTime, parseUtcDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import { ORDER_STATUS, normalizeStatus } from "../hooks/useOrderData";
 
 export const STATUS_OPTIONS = {
@@ -56,7 +56,7 @@ export const getOrderColumns = (actions) => [
     type: "dateTime",
     flex: 1,
     minWidth: 100,
-    valueGetter: (value) => (value ? new Date(value) : null),
+    valueGetter: (value) => parseUtcDate(value),
     valueFormatter: (value) => (value ? formatTime(value) : ""),
   },
   {

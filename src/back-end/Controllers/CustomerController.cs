@@ -9,6 +9,7 @@ using back_end.DTO.UserDTOs;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
+using back_end.Helpers;
 
 namespace back_end.Controllers
 {
@@ -39,6 +40,8 @@ namespace back_end.Controllers
 
             var users = await _context.Users.AsNoTracking()
                 .Where(u => u.Role == UserRoles.Customer && u.Status != UserStatus.Deleted)
+                // Throwaway "Continue as Guest" accounts aren't real customers
+                .Where(u => !u.Email.EndsWith("@" + GuestAccounts.EmailDomain))
                 .OrderByDescending(u => u.Created_at)
                 .Skip(skip)
                 .Take(limit)

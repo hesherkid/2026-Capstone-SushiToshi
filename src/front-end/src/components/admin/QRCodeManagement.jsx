@@ -18,13 +18,13 @@ import {
   Alert,
   Snackbar,
   CircularProgress,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Chip,
   Divider,
 } from '@mui/material';
+import AppDialog from '@/components/common/AppDialog';
 import { Download, QrCode, Wifi, Menu } from 'lucide-react';
 import { api } from '@/config/api';
 import storage from '@/utils/storage';
@@ -564,7 +564,7 @@ export default function QRCodeManagement() {
       </Paper>
 
       {/* Preview Dialog */}
-      <Dialog open={previewDialog.open} onClose={handleClosePreview} maxWidth="sm" fullWidth>
+      <AppDialog open={previewDialog.open} onClose={handleClosePreview}>
         <DialogTitle>
           {previewDialog.title}
           <Chip
@@ -598,7 +598,7 @@ export default function QRCodeManagement() {
             Download
           </Button>
         </DialogActions>
-      </Dialog>
+      </AppDialog>
 
       {/* Snackbar for notifications */}
       <Snackbar

@@ -1,7 +1,6 @@
 import api from "@/config/api";
 import React, { useState, useEffect } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -13,6 +12,7 @@ import {
   CircularProgress,
   Typography,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { AlertTriangle } from "lucide-react";
 
 const CategoryManagementDialog = ({
@@ -137,7 +137,7 @@ const CategoryManagementDialog = ({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <AppDialog open={open} onClose={onClose}>
         <DialogTitle>
           {selectedCategory ? "Edit Category" : "New Category"}
         </DialogTitle>
@@ -236,7 +236,7 @@ const CategoryManagementDialog = ({
             </Stack>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
+        <DialogActions>
           {selectedCategory && (
             <Button
               color="error"
@@ -261,11 +261,12 @@ const CategoryManagementDialog = ({
             )}
           </Button>
         </DialogActions>
-      </Dialog>
+      </AppDialog>
 
-      <Dialog
+      <AppDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="xs"
       >
         <Box sx={{ p: 3 }}>
           <Stack direction="row" spacing={1} alignItems="center" mb={2}>
@@ -288,7 +289,7 @@ const CategoryManagementDialog = ({
             </Button>
           </Stack>
         </Box>
-      </Dialog>
+      </AppDialog>
     </>
   );
 };

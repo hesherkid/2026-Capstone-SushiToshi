@@ -10,6 +10,7 @@ namespace back_end.DTO.DashBoardDTOs
         public BillStatus Status { get; set; }
         public DateTime Created_At { get; set; }
         public int Total_Guests { get; set; }
+        public DateTime? Requested_At { get; set; }
     }
 
     public class DashBoardSessionsDTO

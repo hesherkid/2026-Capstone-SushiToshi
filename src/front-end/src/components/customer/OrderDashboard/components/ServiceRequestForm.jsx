@@ -12,7 +12,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import api from "@/config/api";
-import publicApi from "@/config/publicApi";
+import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 
 const ServiceRequestForm = () => {
   const [message, setMessage] = useState("");
@@ -43,38 +43,12 @@ const ServiceRequestForm = () => {
   useEffect(() => {
     const getActiveSession = async () => {
       try {
-        const guest = isGuest();
-
-        // Handle guest users separately
-        if (guest) {
-          const sid = localStorage.getItem("session_id");
-
-          if (!sid) {
-            setError("Guest session not found. Please scan your table QR again.");
-            return;
-          }
-
-          const parsed = parseInt(sid, 10);
-          if (isNaN(parsed)) {
-            setError("Invalid guest session. Please scan your table QR again.");
-            return;
-          }
-
-          setSessionId(parsed);
-          return;
-        }
-
-        // Signed-in user: call API
-        const apiClient = guest ? publicApi : api;
-
-        const response = await apiClient.get(
-          "/DiningSession/participants/active-session-id"
-        );
-
-        if (response?.data?.session_id) {
-          setSessionId(response.data.session_id);
+        // Ask the server (guests included) rather than trusting a saved session_id
+        const mySessionId = await fetchMySessionId();
+        if (mySessionId) {
+          setSessionId(mySessionId);
         } else {
-          setError("No active session found");
+          setError(NOT_SEATED_MESSAGE);
         }
       } catch (err) {
         console.error("Error fetching session:", err);
@@ -94,7 +68,7 @@ const ServiceRequestForm = () => {
 
   //Send the service request to the staff
   const handleSubmit = async (e) => {
-    const apiClient = isGuest() ? publicApi : api;
+    const apiClient = api;
     e.preventDefault();
     if (!message.trim() || !sessionId) return;
 

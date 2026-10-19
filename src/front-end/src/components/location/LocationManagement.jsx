@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   Button,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Typography,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { Edit, Menu, AlertTriangle, Trash2 } from "lucide-react";
 import LocationForm from "@/components/location/LocationForm";
 import MenuAssignmentForm from "@/components/location/MenuAssignmentForm";
@@ -218,11 +218,9 @@ const LocationManagement = () => {
       }}
     >
 
-      <Dialog
+      <AppDialog
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        maxWidth="sm"
-        fullWidth
       >
         <LocationForm
           initialData={selectedLocation}
@@ -230,26 +228,23 @@ const LocationManagement = () => {
           onClose={() => setIsFormOpen(false)}
           mode={formMode}
         />
-      </Dialog>
+      </AppDialog>
 
-      <Dialog
+      <AppDialog
         open={isMenuFormOpen}
         onClose={() => setIsMenuFormOpen(false)}
-        maxWidth="sm"
-        fullWidth
       >
         <MenuAssignmentForm
           location={selectedLocation}
           onClose={() => setIsMenuFormOpen(false)}
           api={api}
         />
-      </Dialog>
+      </AppDialog>
 
-      <Dialog
+      <AppDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         maxWidth="xs"
-        fullWidth
       >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <AlertTriangle color="error" size={24} />
@@ -262,7 +257,7 @@ const LocationManagement = () => {
             this location. This action cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">
             Cancel
           </Button>
@@ -275,7 +270,7 @@ const LocationManagement = () => {
             Delete Location
           </Button>
         </DialogActions>
-      </Dialog>
+      </AppDialog>
     </ManagementPage>
   );
 };

@@ -139,7 +139,8 @@ namespace back_end.controllers
               Bill_Name = b.Bill_Name,
               Status = b.Status,
               Created_At = b.Created_At,
-              Total_Guests = b.Total_Count
+              Total_Guests = b.Total_Count,
+              Requested_At = b.Requested_At
             }).ToList(),
             Bill_Count = session.Bills.Count(),
             Is_Closable = Is_Closable

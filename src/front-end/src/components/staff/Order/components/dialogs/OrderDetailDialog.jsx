@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -16,6 +15,7 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import {
   X,
   Check,
@@ -32,7 +32,7 @@ import { useOrderDashboard } from "../../context/OrderDashboardContext";
 import { useOrderDashboardActions } from "../../hooks/useOrderDashboardActions";
 import { ORDER_STATUS, normalizeStatus } from "../../hooks/useOrderData";
 import { StatusChip, tableLabel } from "../OrderColumns";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const QuantityChip = ({ quantity }) => (
   <Chip
@@ -163,12 +163,9 @@ const OrderDetailDialog = () => {
 
   return (
     <>
-      <Dialog
+      <AppDialog
         open={!!order}
         onClose={closeOrder}
-        maxWidth="sm"
-        fullWidth
-        slotProps={{ paper: { sx: { maxHeight: "90vh" } } }}
       >
         {order && (
           <>
@@ -227,7 +224,7 @@ const OrderDetailDialog = () => {
               </List>
             </DialogContent>
 
-            <DialogActions sx={{ p: 2, gap: 1 }}>
+            <DialogActions>
               {isPending && isEditing && (
                 <>
                   <Button onClick={stopEditing} disabled={busy} color="inherit">
@@ -296,7 +293,7 @@ const OrderDetailDialog = () => {
             </DialogActions>
           </>
         )}
-      </Dialog>
+      </AppDialog>
 
       <ConfirmDialog
         open={!!pendingCancel}

@@ -30,35 +30,70 @@ export const getAuthToken = () => {
 // LOGIN
 // --------------------------------------------------
 
+// Saves a login response's token (and expiry/user if present) for the api client
+const storeSession = (data) => {
+  if (!data.access_token || typeof window === "undefined") return;
+
+  localStorage.setItem("authToken", data.access_token);
+  localStorage.setItem("access_token", data.access_token);
+
+  if (data.expires_in) {
+    const expiresAt = Date.now() + data.expires_in * 1000;
+
+    localStorage.setItem(
+      "tokenExpiresAt",
+      expiresAt.toString()
+    );
+  }
+
+  if (data.user) {
+    localStorage.setItem("user", JSON.stringify(data.user));
+  }
+
+  notifyAuthChange();
+};
+
 export const loginUser = async (email, password) => {
   const response = await api.post("/auth/login", {
     email,
     password,
   });
 
-  const data = response.data;
+  storeSession(response.data);
+  return response.data;
+};
 
-  if (data.access_token && typeof window !== "undefined") {
-    localStorage.setItem("authToken", data.access_token);
-    localStorage.setItem("access_token", data.access_token);
+// A guest token must have this long left to be reused; with less, the visit could outlast it
+export const GUEST_REUSE_MARGIN_MS = 15 * 60 * 1000;
 
-    if (data.expires_in) {
-      const expiresAt = Date.now() + data.expires_in * 1000;
+const GUEST_EMAIL_DOMAIN = "@guest.sushitoshi.invalid";
+const EMAIL_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
 
-      localStorage.setItem(
-        "tokenExpiresAt",
-        expiresAt.toString()
-      );
-    }
+// The saved token, if it belongs to a guest and has time left. "Continue as Guest" reuses it so
+// a phone that rescans the QR code (or refreshes the login page) stays the same guest instead
+// of adding another participant to the table. Tokens from before the "guest" claim was added
+// are recognised by their email domain.
+export const getReusableGuestToken = () => {
+  if (typeof window === "undefined") return null;
 
-    if (data.user) {
-      localStorage.setItem("user", JSON.stringify(data.user));
-    }
+  const token = localStorage.getItem("authToken");
+  const claims = token ? decodeToken(token) : null;
+  if (!claims) return null;
 
-    notifyAuthChange();
-  }
+  const email = claims[EMAIL_CLAIM] ?? claims.email ?? "";
+  const isGuest = claims.guest === "true" || email.toLowerCase().endsWith(GUEST_EMAIL_DOMAIN);
+  const hasTimeLeft = claims.exp * 1000 > Date.now() + GUEST_REUSE_MARGIN_MS;
 
-  return data;
+  return isGuest && hasTimeLeft ? token : null;
+};
+
+// "Continue as Guest": the server creates a throwaway account for this guest
+// ("Guest K7P2"), so each guest at a table is their own participant
+export const loginAsGuest = async () => {
+  const response = await api.post("/auth/guest");
+
+  storeSession(response.data);
+  return response.data;
 };
 
 // --------------------------------------------------

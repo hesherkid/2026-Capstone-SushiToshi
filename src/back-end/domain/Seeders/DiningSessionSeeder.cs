@@ -53,7 +53,12 @@ namespace back_end.domain.Seeders
 
         var sessions = new List<DiningSession>();
 
-        // Create 10 active sessions (mix of individual tables and groups) per location
+        // Each table or group gets at most one active session, like the real app enforces.
+        // Picking at random with repeats used to seat two sessions at the same table.
+        var freeTables = tables.OrderBy(_ => _rng.Next()).ToList();
+        var freeGroups = tableGroups.OrderBy(_ => _rng.Next()).ToList();
+
+        // Create up to 10 active sessions (mix of individual tables and groups) per location
         for (int i = 1; i <= 10; i++)
         {
           var startTime = now.AddHours(-_rng.Next(1, 4));
@@ -61,10 +66,12 @@ namespace back_end.domain.Seeders
 
           DiningSession session;
 
-          // 70% individual tables, 30% table groups
-          if (_rng.NextDouble() < 0.7 && tables.Any())
+          // 70% individual tables, 30% table groups, while free ones remain
+          bool useTable = freeTables.Any() && (_rng.NextDouble() < 0.7 || !freeGroups.Any());
+          if (useTable)
           {
-            var table = tables[_rng.Next(tables.Count)];
+            var table = freeTables[0];
+            freeTables.RemoveAt(0);
             session = new DiningSession
             {
               Menu_Id = menu.Menu_id,
@@ -75,9 +82,10 @@ namespace back_end.domain.Seeders
               Table_Id = table.Table_Id
             };
           }
-          else if (tableGroups.Any())
+          else if (freeGroups.Any())
           {
-            var group = tableGroups[_rng.Next(tableGroups.Count)];
+            var group = freeGroups[0];
+            freeGroups.RemoveAt(0);
             session = new DiningSession
             {
               Menu_Id = menu.Menu_id,
@@ -90,7 +98,7 @@ namespace back_end.domain.Seeders
           }
           else
           {
-            continue;
+            break; // every table and group already has an active session
           }
 
           sessions.Add(session);
