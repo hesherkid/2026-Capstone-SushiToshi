@@ -30,9 +30,10 @@ describe("session time helpers (Edmonton)", () => {
     expect(formatDateTime(STARTED_UTC)).toMatch(/Oct\.? 17, 2026.*10:25/);
   });
 
-  it("follows daylight saving: winter is UTC-7", () => {
-    // 1 Jan 2027 03:00 UTC = 31 Dec 8:00 pm MST
-    expect(formatTime("2027-01-01T03:00:00")).toMatch(/^8:00\s?p\.?m\.?$/i);
+  it("follows daylight saving: winter 2025-26 was UTC-7", () => {
+    // 1 Jan 2026 03:00 UTC = 31 Dec 8:00 pm MST. Alberta stays on UTC-6 year-round from
+    // 1 Nov 2026, so later winters depend on how new the time zone data is; don't test those.
+    expect(formatTime("2026-01-01T03:00:00")).toMatch(/^8:00\s?p\.?m\.?$/i);
   });
 
   it("counts how long a session has been seated", () => {

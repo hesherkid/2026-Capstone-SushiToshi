@@ -11,7 +11,8 @@ using back_end.Services;
 
 namespace back_end.Tests.Services;
 
-// Times are stored in UTC; the restaurant is in Edmonton (UTC-6 in summer, UTC-7 in winter)
+// Times are stored in UTC; the restaurant is in Edmonton (UTC-6 in summer, UTC-7 in winter
+// until Alberta moved to UTC-6 year-round on 1 Nov 2026)
 public class RestaurantTimeTests
 {
     private static PricingService Pricing()
@@ -48,7 +49,8 @@ public class RestaurantTimeTests
     [Fact]
     public void ChristmasEveningInEdmonton_IsHolidayPricing()
     {
-        // Fri 25 Dec 2026, 6pm MST (winter, UTC-7) = Sat 26 Dec 01:00 UTC
+        // Sat 26 Dec 01:00 UTC is still 25 Dec in Edmonton: 7pm under the year-round UTC-6 rule,
+        // or 6pm on servers whose time zone data predates it
         Pricing().GetPricingForDate(Utc(2026, 12, 26, 1)).PricingType.Should().Be("Holiday");
     }
 
