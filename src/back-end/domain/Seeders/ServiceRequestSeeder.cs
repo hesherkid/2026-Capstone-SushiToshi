@@ -14,7 +14,7 @@ namespace back_end.domain.Seeders
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ServiceRequestSeeder> _logger;
-        private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData;
+        private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData = new();
 
         public ServiceRequestSeeder(ApplicationDbContext context, ILogger<ServiceRequestSeeder> logger)
         {

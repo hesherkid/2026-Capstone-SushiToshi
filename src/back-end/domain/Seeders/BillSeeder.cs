@@ -19,7 +19,7 @@ namespace back_end.domain.Seeders
     private readonly ILogger<BillSeeder> _logger;
     private readonly Random _rng = new();
 
-    private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData;
+    private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData = new();
 
     public BillSeeder(ApplicationDbContext context, ILogger<BillSeeder> logger)
     {
@@ -37,7 +37,7 @@ namespace back_end.domain.Seeders
       var sessions = _context.DiningSessions
           .Include(s => s.Table)
           .Include(s => s.TableGroup)
-              .ThenInclude(tg => tg.Tables)
+              .ThenInclude(tg => tg!.Tables)
           .OrderBy(s => s.Session_Id)
           .ToList();
 

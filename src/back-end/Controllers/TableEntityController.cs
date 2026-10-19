@@ -64,7 +64,7 @@ namespace back_end.Controllers
         var newTable = new TableEntity
         {
           table_number = table_data.Table_Number,
-          QR_Code = table_data.Qr_Code_Url,
+          QR_Code = table_data.Qr_Code_Url ?? string.Empty,
           seat_count = table_data.Seat_Count,
           is_active = table_data.Is_Active,
           Location_Id = table_data.Location_Id

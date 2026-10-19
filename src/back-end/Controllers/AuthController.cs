@@ -559,12 +559,10 @@ namespace back_end.controllers
         private string GenerateJwtToken(domain.Entities.User user, int? expiresInMinutes = null)
         {
 
-            var keyStr = _config["Jwt:Key"];
-            Console.WriteLine($"[JWT SIGN] Key len: {keyStr?.Length}, First8: {keyStr?[..Math.Min(8, keyStr!.Length)]}");
-            // TODO: Not good practice to log the JWT key, even partially. Remove this in production. Should also rotate the JWT key in appsettings.json as it was previously commited, move it to a secure location.
+            var keyStr = _config["Jwt:Key"]
+                ?? throw new InvalidOperationException("Jwt:Key is not configured.");
 
-            var securityKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             //Add all the claims based on the user's information and their role

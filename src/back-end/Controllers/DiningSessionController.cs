@@ -143,7 +143,7 @@ namespace back_end.controllers
                 var checkIfTablesInActiveSession = await _context.DiningSessions
                     .AnyAsync(d => d.Ended_At == null &&
                                   (d.Table_Id.HasValue && tableIds.Contains(d.Table_Id.Value) ||
-                                  d.TableGroup_Id.HasValue && d.TableGroup.Tables.Any(t => tableIds.Contains(t.Table_Id))));
+                            d.TableGroup_Id.HasValue && d.TableGroup!.Tables.Any(t => tableIds.Contains(t.Table_Id))));
 
                 if (checkIfTablesInActiveSession)
                     return BadRequest($"One or more tables in table group {tableGroup.TableGroup_Id} are currently in another active dining session");
@@ -225,7 +225,7 @@ namespace back_end.controllers
         var query = _context.DiningSessions.Where(ds => ds.Location_Id == location)
             .Include(s => s.Table)
             .Include(s => s.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(s => s.Participants)
             .AsQueryable();
 
@@ -306,7 +306,7 @@ namespace back_end.controllers
             .Include(s => s.Bills)
             .Include(s => s.Table)
             .Include(s => s.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(s => s.Orders)
             .FirstOrDefaultAsync(s => s.Session_Id == session_id);
 
@@ -504,7 +504,7 @@ namespace back_end.controllers
             .AnyAsync(d => d.Ended_At == null &&
                           d.Session_Id != session_id &&
                           (d.Table_Id.HasValue && tableIds.Contains(d.Table_Id.Value) ||
-                           d.TableGroup_Id.HasValue && d.TableGroup.Tables.Any(t => tableIds.Contains(t.Table_Id))));
+                           d.TableGroup_Id.HasValue && d.TableGroup!.Tables.Any(t => tableIds.Contains(t.Table_Id))));
 
         if (checkIfTablesInActiveSession)
         {
@@ -849,7 +849,7 @@ namespace back_end.controllers
             .Include(ds => ds.Bills)
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
-                .ThenInclude(tg => tg.Tables)
+                .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Participants)
             .FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
 

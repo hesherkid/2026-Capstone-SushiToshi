@@ -53,8 +53,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-Console.WriteLine(Path.GetPathRoot(Directory.GetCurrentDirectory()));
-
 // Add Swagger/OpenAPI services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -106,6 +104,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Seeders registration
 builder.Services.AddDatabaseSeeders();
 
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+
 // Simple JWT Authentication
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -120,7 +121,7 @@ builder.Services
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+                System.Text.Encoding.UTF8.GetBytes(jwtKey)),
             NameClaimType = ClaimTypes.NameIdentifier,
             RoleClaimType = ClaimTypes.Role
         };
@@ -225,10 +226,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<QrGeneratorService>();
 builder.Services.AddAnalyticsServices();
-
-// Temporary //**
-Console.WriteLine(">>> USING CONNECTION STRING:");
-Console.WriteLine(builder.Configuration.GetConnectionString("MySqlConnection"));
 
 var app = builder.Build();
 

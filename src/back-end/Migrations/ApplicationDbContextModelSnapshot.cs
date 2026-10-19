@@ -139,10 +139,16 @@ namespace back_end.Migrations
                     b.Property<DateTime>("last_viewed_at")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("over_limit_behavior")
+                        .HasColumnType("int");
+
+                    b.Property<int>("per_order_limit")
+                        .HasColumnType("int");
+
                     b.Property<int>("senior_limit")
                         .HasColumnType("int");
 
-                    b.Property<int>("total_limit")
+                    b.Property<int>("toddler_limit")
                         .HasColumnType("int");
 
                     b.Property<int>("total_view_seconds")
@@ -298,15 +304,15 @@ namespace back_end.Migrations
                     b.Property<int>("Child_limit")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("Full_Price")
+                        .HasColumnType("decimal(65,30)");
+
                     b.Property<bool>("Is_Add_On")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<int>("Item_Id")
                         .HasColumnType("int")
                         .HasColumnName("item_id");
-
-                    b.Property<DateTime>("LastOrdered")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<int?>("Location_Id")
                         .HasColumnType("int")
@@ -322,6 +328,12 @@ namespace back_end.Migrations
                         .HasColumnType("int")
                         .HasColumnName("menu_id");
 
+                    b.Property<int>("Over_Limit_Behavior")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Per_Order_Limit")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(65,30)");
 
@@ -332,9 +344,6 @@ namespace back_end.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Tot_Limit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Total_Units_Ordered")
                         .HasColumnType("int");
 
                     b.HasKey("Assignment_Id");
@@ -468,10 +477,19 @@ namespace back_end.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Order_Item_Id"));
 
+                    b.Property<int>("Charge_Reason")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("Completed_At")
                         .HasColumnType("datetime(6)");
 
                     b.Property<int>("Item_Id")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Leftover_Price_At_Time")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int>("Leftover_Quantity")
                         .HasColumnType("int");
 
                     b.Property<int>("Menu_Id")
