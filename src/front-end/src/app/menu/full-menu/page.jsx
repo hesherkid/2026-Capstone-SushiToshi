@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Typography,
   Box,
@@ -12,10 +12,14 @@ import {
 import { Search } from "lucide-react";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import CartDrawer from "@/components/menu/CartDrawer";
+import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import TrackedItem from "@/components/menu/TrackedItem";
 import useMenuSearch from "@/components/menu/searchUtils";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+
+// localStorage key for the items picked but not yet ordered
+const CART_STORAGE_KEY = "menuCart";
 
 const BILL_REQUESTED_MESSAGE =
   "You've asked for your bill, so no more orders can be added.";
@@ -29,8 +33,12 @@ const isGuest = () => typeof window !== "undefined" && localStorage.getItem("gue
 const FullMenu = () => {
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState({});
+  // False until the menu's items have been fetched (or the fetch failed)
+  const [itemsLoaded, setItemsLoaded] = useState(false);
   const [quantities, setQuantities] = useState({});
   const [sessionId, setSessionId] = useState(null);
+  // False until the server says which table (if any) this person is at
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [error, setError] = useState(null);
   const [selectedBillId, setSelectedBillId] = useState("");
   // The table's open bills, newest first; the orderer picks which one this order goes on
@@ -153,6 +161,27 @@ const FullMenu = () => {
     );
   }, [quantities]);
 
+  // The cart survives a page refresh. It's saved with its session so a cart from an
+  // earlier visit is never restored onto a different table.
+  const cartRestored = useRef(false);
+
+  useEffect(() => {
+    if (!sessionId || cartRestored.current) return;
+    cartRestored.current = true;
+    try {
+      const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null");
+      if (saved?.sessionId === sessionId && saved.quantities) setQuantities(saved.quantities);
+    } catch {
+      localStorage.removeItem(CART_STORAGE_KEY);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    // Wait until the saved cart has been read, or the empty starting cart would replace it
+    if (!sessionId || !cartRestored.current) return;
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ sessionId, quantities }));
+  }, [sessionId, quantities]);
+
   useEffect(() => {
     const openCart = () => setCartDrawerOpen(true);
     window.addEventListener("menu-cart-open", openCart);
@@ -173,6 +202,8 @@ const FullMenu = () => {
       } catch (err) {
         console.error("Error fetching session:", err);
         setError(err.response?.data?.detail || "Error fetching session");
+      } finally {
+        setSessionChecked(true);
       }
     };
 
@@ -347,6 +378,8 @@ const FullMenu = () => {
       setMenuItems((prev) => ({ ...prev, ...grouped }));
     } catch (err) {
       console.error(`Error fetching menu items for menu ${menu_id}:`, err);
+    } finally {
+      setItemsLoaded(true);
     }
   };
 
@@ -379,6 +412,8 @@ const FullMenu = () => {
               item_id: Number(itemId),
               quantity: Number(quantity),
               price_at_time,
+              // Not stored; names the items in the "added to order" notification
+              name: menuItem.name,
             };
           })
     );
@@ -424,7 +459,9 @@ const FullMenu = () => {
   };
 
   // Combine local and hook errors
-  const displayError = error || actionError;
+  // Without a session the info box below already shows `error` (e.g. not seated), so the
+  // red alert only shows it once the guest is seated
+  const displayError = (sessionId ? error : null) || actionError;
 
   const filteredMenuGroups = categories
     .filter(
@@ -448,13 +485,16 @@ const FullMenu = () => {
 
     <Container disableGutters maxWidth={false}>
       <Box sx={{ p: 0 }}>
-        <Typography
-          variant="h5"
-          component="h1"
-          sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200, }}
-        >
-          All You Can Eat Menu
-        </Typography>
+        {/* Not seated: only the info message below shows, without a menu title */}
+        {sessionId && (
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200, }}
+          >
+            All You Can Eat Menu
+          </Typography>
+        )}
 
         {/* Error Alert */}
         {displayError && (
@@ -557,12 +597,21 @@ const FullMenu = () => {
               )}
             </>
           ) : (
-            <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
+            // Only once the check is done; before that sessionId is just not known yet
+            sessionChecked && <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
           )}
 
         </Box>
 
-        {sessionId && menuId && (
+        {/* Seated, but the menu is still on its way */}
+        {sessionId && !itemsLoaded && !error && (
+          <Box sx={{ width: "100%", mb: 4 }}>
+            <Divider sx={{ mb: 2 }} />
+            <MenuListSkeleton />
+          </Box>
+        )}
+
+        {sessionId && menuId && itemsLoaded && (
           <Box sx={{ width: "100%", mb: 4 }}>
             <Divider sx={{ mb: 2 }} />
 

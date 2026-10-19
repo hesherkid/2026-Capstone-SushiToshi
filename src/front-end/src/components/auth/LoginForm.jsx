@@ -19,13 +19,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
 import api from "@/config/api";
-import { loginUser, loginAsGuest } from "@/utils/auth";
+import { loginUser, loginAsGuest, getReusableGuestToken } from "@/utils/auth";
 import { startTableVisit } from "@/utils/tableVisit";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 // Sign-in worked but the table couldn't be joined; its message is shown on the form as-is
-class TableJoinError extends Error {}
+class TableJoinError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
 
 const LoginFormContent = () => {
   const router = useRouter();
@@ -82,6 +87,7 @@ const LoginFormContent = () => {
       throw new TableJoinError(
         err.response?.data?.message ||
           "We couldn't join your table. Please ask staff for help.",
+        err.response?.status,
       );
     }
   };
@@ -198,16 +204,34 @@ const LoginFormContent = () => {
     setError("");
     setNeedsVerification(false);
 
-    try {
+    // A new guest account, for a phone that isn't already a guest
+    const newGuestToken = async () => {
       const response = await loginAsGuest();
 
       if (!response.access_token) {
         throw new Error("Guest login succeeded but no token was returned.");
       }
 
-      saveRestaurantContext();
       localStorage.setItem("guest", "true");
-      const sessionId = await startQrDiningSession(response.access_token);
+      return response.access_token;
+    };
+
+    try {
+      saveRestaurantContext();
+
+      // Rescanning the QR code, or another table's, keeps this phone the same guest
+      // instead of adding a new "Guest XXXX" participant each time
+      const savedToken = getReusableGuestToken();
+      let sessionId;
+
+      try {
+        sessionId = await startQrDiningSession(savedToken ?? (await newGuestToken()));
+      } catch (err) {
+        // The saved guest no longer works (e.g. the account was removed): start over as a new guest
+        if (!savedToken || err.status !== 401) throw err;
+        sessionId = await startQrDiningSession(await newGuestToken());
+      }
+
       router.replace(sessionId ? "/menu/full-menu" : "/");
       router.refresh();
     } catch (err) {

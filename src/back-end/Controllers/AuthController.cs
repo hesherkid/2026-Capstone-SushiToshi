@@ -584,6 +584,7 @@ namespace back_end.controllers
             {
                 claims.Add(new Claim("given_name", user.First_name));
                 claims.Add(new Claim("family_name", user.Last_name));
+                claims.Add(new Claim(GuestAccounts.TokenClaim, "true"));
             }
 
             var token = new JwtSecurityToken(

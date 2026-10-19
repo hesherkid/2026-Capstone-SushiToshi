@@ -6,7 +6,6 @@ import {
   AccordionDetails,
   Typography,
   Box,
-  CircularProgress,
   Alert,
   Chip,
   IconButton,
@@ -17,9 +16,9 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import BillSelect from "@/components/customer/OrderDashboard/components/BillSelect";
 import api from "@/config/api";
 import { fetchMySessionId, getMyUserId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import { setPageLoading } from "@/utils/pageLoading";
 
 // "table": every order at the table, so when one person orders for everyone the rest can see it.
 // "mine": only orders this person placed.
@@ -31,8 +30,7 @@ const OrdersAccordion = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-  const [selectedBillId, setSelectedBillId] = useState("");
-  const [view, setView] = useState(VIEWS.TABLE);
+  const [view, setView] = useState(VIEWS.MINE);
   const myUserId = getMyUserId();
 
   const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
@@ -75,7 +73,7 @@ const OrdersAccordion = () => {
     getActiveSession();
   }, []);
 
-const fetchOrders = async (billId = "") => {
+const fetchOrders = async () => {
 
   const apiClient = api;
 
@@ -83,14 +81,11 @@ const fetchOrders = async (billId = "") => {
     setLoading(true);
     setError(null);
 
-    //If a bill is selected - include it as a param to the endpoint
-    const params = billId ? { bill_id: billId } : {};
-    
     // Whole table: every order in the session. Mine: the server finds this person's own orders.
     const response =
       view === VIEWS.TABLE
-        ? await apiClient.get(`/Order/session/${sessionId.session_id}`, { params })
-        : await apiClient.get("/Order/active-session/orders", { params });
+        ? await apiClient.get(`/Order/session/${sessionId.session_id}`)
+        : await apiClient.get("/Order/active-session/orders");
 
 
     //Check if there are no orders
@@ -125,28 +120,33 @@ const fetchOrders = async (billId = "") => {
   }
 };
 
-  const handleBillChange = (event) => {
-    const billId = event.target.value;
-    setSelectedBillId(billId);
-    fetchOrders(billId);
-  };
-
   // TODO: Check if this is needed
   const handleNewOrder = (event) => {
     event.preventDefault();
     router.push("/menu/full-menu");
   };
   
+  // The app bar's spinner is the page's only loading indicator
+  useEffect(() => {
+    setPageLoading(loading);
+  }, [loading]);
+  useEffect(() => () => setPageLoading(false), []);
+
   useEffect(() => {
     // The table view needs the session; it's ready after fetchMySessionId
     if (!sessionId) return;
-    fetchOrders(selectedBillId);
-    const interval = setInterval(() => fetchOrders(selectedBillId), 30000);
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 30000);
     return () => clearInterval(interval);
-  }, [selectedBillId, view, sessionId]);
+  }, [view, sessionId]);
 
-  const orderedBy = (order) =>
-    myUserId && order.userId === myUserId ? "You" : order.userName || "Guest";
+  // Other guests' orders show only the bill they're on, never who placed them
+  const orderLabel = (order) => {
+    const parts = [];
+    if (myUserId && order.userId === myUserId) parts.push("You");
+    if (order.billName) parts.push(order.billName);
+    return parts.join(" · ");
+  };
 
   const renderOrderAccordion = (order, groupStatus) => (
     <Accordion
@@ -174,18 +174,18 @@ const fetchOrders = async (billId = "") => {
             pr: 2,
           }}
         >
-          <Typography>
-            Order #{order.orderId}
+          {/* Item count sits under the order number, leaving room for the name beside it */}
+          <Box>
+            <Typography>Order #{order.orderId}</Typography>
             {order.items && (
-              <Typography component="span" color="textSecondary" sx={{ ml: 2 }}>
+              <Typography variant="body2" color="textSecondary">
                 ({order.items.length} items)
               </Typography>
             )}
-          </Typography>
+          </Box>
           {view === VIEWS.TABLE && (
             <Typography variant="body2" color="text.secondary">
-              {orderedBy(order)}
-              {order.billName ? ` · ${order.billName}` : ""}
+              {orderLabel(order)}
             </Typography>
           )}
         </Box>
@@ -245,14 +245,6 @@ const fetchOrders = async (billId = "") => {
     </Accordion>
   );
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   if (error) {
     return (
       <Box p={2}>
@@ -268,29 +260,31 @@ const fetchOrders = async (billId = "") => {
       <Typography
         variant="h4"
         component="h1"
-        sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200,}}
+        sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200 }}
       >
         Table Orders
       </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-            gap: 2,
-          }}
+
+      {/* Tabs on the left, Order More on the right of the same row */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={view}
+          onChange={(event, next) => next && setView(next)}
+          aria-label="Which orders to show"
         >
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mt: 0.5,
-            fontSize: { xs: "0.8rem", sm: "0.875rem" },
-          }}
-        >
-          Add more items to your order
-        </Typography>
+          <ToggleButton value={VIEWS.MINE}>My orders</ToggleButton>
+          <ToggleButton value={VIEWS.TABLE}>Whole table</ToggleButton>
+        </ToggleButtonGroup>
 
         <Button
           variant="contained"
@@ -314,37 +308,15 @@ const fetchOrders = async (billId = "") => {
         </Button>
       </Box>
 
-      <ToggleButtonGroup
-        exclusive
-        size="small"
-        value={view}
-        onChange={(event, next) => next && setView(next)}
-        aria-label="Which orders to show"
-        sx={{ mb: 2 }}
-      >
-        <ToggleButton value={VIEWS.TABLE}>Whole table</ToggleButton>
-        <ToggleButton value={VIEWS.MINE}>My orders</ToggleButton>
-      </ToggleButtonGroup>
-
-      <Box mb={3}>
-        {sessionId ? (
-          <BillSelect
-            session_id={sessionId.session_id}
-            value={selectedBillId}
-            onChange={handleBillChange}
-            message="Select Bill To Filter Orders"
-          />
-        ) : (
-          <Alert severity="info">No active session found</Alert>
-        )}
-      </Box>
-
+      {/* While loading, keep the current list; the app bar shows the spinner */}
       {Object.keys(groupedOrders).length === 0 ? (
+        !loading && (
         <Alert severity="info">
-          {selectedBillId
-            ? "No orders found for selected bill."
-            : "No orders found. Select a bill to view its orders."}
+          {view === VIEWS.MINE
+            ? "You haven't ordered anything yet."
+            : "No one at your table has ordered yet."}
         </Alert>
+        )
       ) : (
         statusOrder.map((status) => {
           if (!groupedOrders[status]?.length) return null;

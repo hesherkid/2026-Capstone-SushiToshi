@@ -101,6 +101,7 @@ public class GuestLoginTests : IDisposable
         token.ValidTo.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(GuestAccounts.DefaultTokenMinutes), TimeSpan.FromMinutes(1));
         token.Claims.Should().Contain(c => c.Type == "given_name" && c.Value == "Guest");
         token.Claims.Should().Contain(c => c.Type == "family_name" && c.Value == guest.Last_name);
+        token.Claims.Should().Contain(c => c.Type == GuestAccounts.TokenClaim && c.Value == "true");
     }
 
     [Fact]

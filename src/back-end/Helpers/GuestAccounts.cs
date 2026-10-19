@@ -27,6 +27,9 @@ namespace back_end.Helpers
         // Short code shown after "Guest" so staff can tell guests at a table apart, e.g. "Guest K7P2"
         public static string NewCode() => RandomNumberGenerator.GetString(CodeAlphabet, 4);
 
+        // JWT claim marking guest tokens, so the front end can reuse one instead of making a new guest
+        public const string TokenClaim = "guest";
+
         public static bool IsGuest(string? email) =>
             email != null && email.EndsWith("@" + EmailDomain, StringComparison.OrdinalIgnoreCase);
     }

@@ -4,7 +4,7 @@
 export const TABLE_VISIT_EVENT = "table-visit-changed";
 
 // Belong to one visit; a new scan must not reuse them
-const VISIT_KEYS = ["session_id", "currentBillId"];
+const VISIT_KEYS = ["session_id", "currentBillId", "menuCart"];
 
 /**
  * Called as soon as a table QR code is opened, before sign-in. Saves the scanned table and

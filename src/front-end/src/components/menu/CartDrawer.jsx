@@ -60,12 +60,14 @@ const CartDrawer = ({
       "& .MuiDrawer-paper": {
         top: { xs: 70, sm: 64 },
         height: { xs: "calc(100% - 70px)", sm: "calc(100% - 64px)" },
+        // Full screen width on phones, a side panel from sm up
+        width: { xs: "100%", sm: 420 },
       },
     }}
     >
     <Box
       sx={{
-        width: { xs: "100mv", sm: 420 },
+        width: "100%",
         height: "100%",
         display: "flex",
         flexDirection: "column",

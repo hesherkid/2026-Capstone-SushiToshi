@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
 import LoginForm from "../LoginForm";
-import { loginUser, loginAsGuest } from "@/utils/auth";
+import { loginUser, loginAsGuest, getReusableGuestToken } from "@/utils/auth";
 import api from "@/config/api";
 
 jest.mock("@/config/api", () => ({
@@ -23,6 +23,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/utils/auth", () => ({
   loginUser: jest.fn(),
   loginAsGuest: jest.fn(),
+  getReusableGuestToken: jest.fn(),
 }));
 
 const fillLoginForm = async (
@@ -52,6 +53,7 @@ describe("LoginForm", () => {
       refresh: mockRefresh,
     });
     useSearchParams.mockReturnValue(new URLSearchParams());
+    getReusableGuestToken.mockReturnValue(null);
   });
 
   describe("Rendering", () => {
@@ -293,6 +295,62 @@ describe("LoginForm", () => {
       ).toBeInTheDocument();
       expect(mockReplace).not.toHaveBeenCalled();
       expect(localStorage.getItem("session_id")).toBeNull();
+    });
+  });
+
+  describe("Returning guest", () => {
+    beforeEach(() => {
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
+      getReusableGuestToken.mockReturnValue("saved-guest-token");
+    });
+
+    it("stays the same guest instead of creating another one", async () => {
+      const user = userEvent.setup();
+      api.post.mockResolvedValue({ data: { session_Id: 101, participant_Id: 9, already_Joined: true } });
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+
+      await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu"));
+      expect(loginAsGuest).not.toHaveBeenCalled();
+      expect(api.post).toHaveBeenCalledWith(
+        "/DiningSession/join",
+        { Table_Number: 8, Location_Id: 3 },
+        { headers: { Authorization: "Bearer saved-guest-token" } }
+      );
+    });
+
+    it("becomes a new guest when the saved one is rejected", async () => {
+      const user = userEvent.setup();
+      loginAsGuest.mockResolvedValue({ access_token: "new-guest-token" });
+      api.post
+        .mockRejectedValueOnce({ response: { status: 401, data: { message: "Please sign in to join a table." } } })
+        .mockResolvedValueOnce({ data: { session_Id: 101, participant_Id: 10 } });
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+
+      await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu"));
+      expect(loginAsGuest).toHaveBeenCalledTimes(1);
+      expect(api.post).toHaveBeenLastCalledWith(
+        "/DiningSession/join",
+        { Table_Number: 8, Location_Id: 3 },
+        { headers: { Authorization: "Bearer new-guest-token" } }
+      );
+      expect(localStorage.getItem("guest")).toBe("true");
+    });
+
+    it("keeps the saved guest when the table just hasn't been started", async () => {
+      const user = userEvent.setup();
+      api.post.mockRejectedValue({
+        response: { status: 404, data: { message: "Table 8 doesn't have an active session yet. Please ask staff to start your table." } },
+      });
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+
+      expect(await screen.findByText(/Please ask staff to start your table/)).toBeInTheDocument();
+      expect(loginAsGuest).not.toHaveBeenCalled();
     });
   });
 

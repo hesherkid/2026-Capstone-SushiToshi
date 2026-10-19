@@ -118,17 +118,24 @@ export const useOrderActions = (onSuccess) => {
         async () => {
           const result = await orderService.addOrderItems(orderId, items);
 
-          // Generate list of items ordered from 1 to 4+ before counting
+          // Generate list of items ordered from 1 to 4+ before counting.
+          // Callers that don't send names get a count instead of "undefined, undefined..."
+          // "2 × Salmon Roll"
+          const label = (item) => (item.quantity ? `${item.quantity} × ${item.name}` : item.name);
+
           let message;
-          if (items.length === 1) {
-            message = `${items[0].name} added to order`;
+          if (items.some((item) => !item.name)) {
+            const units = items.reduce((total, item) => total + (Number(item.quantity) || 1), 0);
+            message = `${units} item${units === 1 ? "" : "s"} added to order`;
+          } else if (items.length === 1) {
+            message = `${label(items[0])} added to order`;
           } else if (items.length === 2) {
-            message = `${items[0].name} and ${items[1].name} added to order`;
+            message = `${label(items[0])} and ${label(items[1])} added to order`;
           } else if (items.length === 3) {
-            message = `${items[0].name}, ${items[1].name}, and ${items[2].name} added to order`;
+            message = `${label(items[0])}, ${label(items[1])}, and ${label(items[2])} added to order`;
           } else {
             // For 4+ items, show first 2 and count
-            message = `${items[0].name}, ${items[1].name}, and ${items.length - 2} other item${items.length - 2 > 1 ? "s" : ""} added to order`;
+            message = `${label(items[0])}, ${label(items[1])}, and ${items.length - 2} other item${items.length - 2 > 1 ? "s" : ""} added to order`;
           }
 
           notifySuccess(message);

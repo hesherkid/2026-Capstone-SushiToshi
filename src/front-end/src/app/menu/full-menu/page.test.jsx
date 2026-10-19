@@ -2,10 +2,13 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import FullMenu from './page';
 
+const mockCreateOrder = jest.fn();
+const mockAddOrderItems = jest.fn();
+
 jest.mock('@/hooks/useOrderActions', () => ({
   useOrderActions: () => ({
-    createOrder: jest.fn(),
-    addOrderItems: jest.fn(),
+    createOrder: mockCreateOrder,
+    addOrderItems: mockAddOrderItems,
     actionError: null,
     isLoading: false,
     clearActionError: jest.fn(),
@@ -217,6 +220,10 @@ describe('FullMenu guest flow', () => {
     expect(
       await screen.findByText(/You're not seated at a table yet/)
     ).toBeInTheDocument();
+    // Shown once, as info: no red error copy and no menu title
+    expect(screen.getAllByText(/You're not seated at a table yet/)).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveClass('MuiAlert-standardInfo');
+    expect(screen.queryByText('All You Can Eat Menu')).not.toBeInTheDocument();
   });
 
   it("ignores a stale session_id left in the browser", async () => {
@@ -267,5 +274,94 @@ describe('FullMenu guest flow', () => {
 
     await waitFor(() => expect(localStorage.getItem("currentBillId")).toBe("8"));
     expect(screen.queryByText(/there is no open bill/i)).not.toBeInTheDocument();
+  });
+
+  it("sends each item's name with the order so the confirmation can name it", async () => {
+    mockCreateOrder.mockResolvedValue({ order_Id: 500 });
+    const baseMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) =>
+      url.includes('/Bill/get_bills/42')
+        ? Promise.resolve({ status: 200, data: [{ bill_id: 8, bill_name: 'Lee', status: 'Open' }] })
+        : baseMock(url, config)
+    );
+    render(<FullMenu />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add one Miso Soup' }));
+    fireEvent(window, new Event('menu-cart-open'));
+    const cartDrawer = await screen.findByRole('dialog');
+    const placeOrder = within(cartDrawer).getByRole('button', { name: /Place Order/ });
+    await waitFor(() => expect(placeOrder).toBeEnabled());
+    fireEvent.click(placeOrder);
+
+    await waitFor(() =>
+      expect(mockAddOrderItems).toHaveBeenCalledWith(500, [
+        expect.objectContaining({ item_id: 11, quantity: 1, name: 'Miso Soup' }),
+      ])
+    );
+  });
+
+  it("keeps the items picked for this table after a refresh", async () => {
+    const first = render(<FullMenu />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add one Miso Soup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add one Miso Soup' }));
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('menuCart'))).toEqual({ sessionId: 42, quantities: { 1: { 11: 2 } } })
+    );
+    first.unmount();
+
+    render(<FullMenu />);
+
+    fireEvent(window, new Event('menu-cart-open'));
+    const cartDrawer = await screen.findByRole('dialog');
+    expect(await within(cartDrawer).findByText('Qty 2')).toBeInTheDocument();
+  });
+
+  it("doesn't restore a cart saved at another table", async () => {
+    localStorage.setItem('menuCart', JSON.stringify({ sessionId: 99, quantities: { 1: { 11: 3 } } }));
+    render(<FullMenu />);
+    await screen.findByRole('button', { name: 'Add one Miso Soup' });
+
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('menuCart'))).toEqual({ sessionId: 42, quantities: {} })
+    );
+  });
+
+  it("doesn't say 'not seated' while it's still checking the table", async () => {
+    let answer;
+    const baseMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) =>
+      url === '/DiningSession/participants/active-session-id'
+        ? new Promise((resolve) => { answer = resolve; })
+        : baseMock(url, config)
+    );
+    render(<FullMenu />);
+
+    await waitFor(() => expect(answer).toBeDefined());
+    expect(screen.queryByText(/You're not seated at a table yet/)).not.toBeInTheDocument();
+
+    answer({ status: 200, data: { session_id: 42 } });
+
+    expect(await screen.findByText('Miso Soup')).toBeInTheDocument();
+    expect(screen.queryByText(/You're not seated at a table yet/)).not.toBeInTheDocument();
+  });
+
+  it("shows placeholder cards, not 'no items', while the menu loads", async () => {
+    let sendItems;
+    const baseMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) =>
+      url.includes('/Menu/7/item')
+        ? new Promise((resolve) => { sendItems = () => baseMock(url, config).then(resolve); })
+        : baseMock(url, config)
+    );
+    render(<FullMenu />);
+
+    expect(await screen.findByRole('status', { name: 'Loading menu' })).toBeInTheDocument();
+    await waitFor(() => expect(sendItems).toBeDefined());
+    expect(screen.queryByText('No items match your search.')).not.toBeInTheDocument();
+
+    sendItems();
+
+    expect(await screen.findByText('Miso Soup')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading menu' })).not.toBeInTheDocument();
   });
 });

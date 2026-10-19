@@ -892,12 +892,13 @@ namespace back_end.controllers
 
     /// <summary>
     /// Joins the signed-in user to the active dining session for a table, using the table number
-    /// and location from the table's QR code. Guests use the shared guest account's login.
+    /// and location from the table's QR code. Each guest signs in with their own guest account.
     /// </summary>
     /// <remarks>
     /// Only joins sessions staff have already started; it never creates one.
     /// A table in a table group joins the group's session.
     /// Calling it again returns the same participant, so rescanning the QR code is safe.
+    /// Joining a table leaves any other table the user is still seated at.
     /// </remarks>
     /// <response code="200">Joined (or already in) the table's session.</response>
     /// <response code="401">The request has no valid user.</response>
@@ -936,6 +937,13 @@ namespace back_end.controllers
         return NotFound(new { message = $"Table {request.Table_Number} doesn't have an active session yet. Please ask staff to start your table." });
       }
 
+      // Someone is seated at one table at a time: scanning a new table (e.g. after moving)
+      // leaves any other table they're still in, so their active session is never ambiguous
+      var otherSeats = await _context.SessionParticipants
+          .Where(sp => sp.User_Id == userId && sp.Left_At == null && sp.Session_Id != session.Session_Id)
+          .ToListAsync();
+      otherSeats.ForEach(sp => sp.Left_At = DateTime.UtcNow);
+
       var participant = await _context.SessionParticipants
           .FirstOrDefaultAsync(sp => sp.Session_Id == session.Session_Id &&
                                      sp.User_Id == userId &&
@@ -958,8 +966,9 @@ namespace back_end.controllers
           Joined_At = DateTime.UtcNow
         };
         _context.SessionParticipants.Add(participant);
-        await _context.SaveChangesAsync();
       }
+
+      await _context.SaveChangesAsync();
 
       return Ok(new JoinTableSessionResponseDTO
       {

@@ -26,8 +26,10 @@ const mockApi = ({ summary = openBill, requests = [] } = {}) => {
   });
 };
 
+const mockOnClose = jest.fn();
+
 const renderSummary = () =>
-  render(<BillSummaryDialog open sessionId={8} billId={80} onClose={jest.fn()} />);
+  render(<BillSummaryDialog open sessionId={8} billId={80} onClose={mockOnClose} />);
 
 describe("Staff bill summary", () => {
   beforeEach(() => {
@@ -35,7 +37,7 @@ describe("Staff bill summary", () => {
     mockApi();
   });
 
-  it("shows the bill's total and lets staff close it after confirming", async () => {
+  it("shows the bill's total, closes it after confirming, then closes the summary", async () => {
     mockCloseBill.mockResolvedValue(true);
     renderSummary();
 
@@ -47,10 +49,19 @@ describe("Staff bill summary", () => {
     fireEvent.click(within(confirm.closest('[role="dialog"]')).getByRole("button", { name: "Close Bill" }));
 
     await waitFor(() => expect(mockCloseBill).toHaveBeenCalledWith(8, 80));
-    // Reloads so the summary shows the bill as closed
-    await waitFor(() =>
-      expect(api.get.mock.calls.filter(([url]) => url === "/Bill/summary/80")).toHaveLength(2)
-    );
+    await waitFor(() => expect(mockOnClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("stays open with an error when closing the bill fails", async () => {
+    mockCloseBill.mockResolvedValue(false);
+    renderSummary();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Close Bill" }));
+    const confirm = await screen.findByText(/Close Lee\?/);
+    fireEvent.click(within(confirm.closest('[role="dialog"]')).getByRole("button", { name: "Close Bill" }));
+
+    expect(await screen.findByText(/Failed to close the bill/)).toBeInTheDocument();
+    expect(mockOnClose).not.toHaveBeenCalled();
   });
 
   it("tells staff when the guests asked for the bill", async () => {

@@ -108,6 +108,29 @@ public class DiningSessionJoinTests : IDisposable
         (await _context.SessionParticipants.CountAsync()).Should().Be(1);
     }
 
+    [Fact]
+    public async Task Join_LeavesTheTableTheyMovedFrom()
+    {
+        var atTable1 = Body(await ControllerAs(MiaUserId).JoinTableSession(Table(1)));
+
+        var atTable3 = Body(await ControllerAs(MiaUserId).JoinTableSession(Table(3)));
+
+        atTable3.Session_Id.Should().Be(8);
+        var oldSeat = await _context.SessionParticipants.SingleAsync(p => p.Participant_Id == atTable1.Participant_Id);
+        oldSeat.Left_At.Should().NotBeNull();
+        (await _context.SessionParticipants.CountAsync(p => p.User_Id == MiaUserId && p.Left_At == null)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Join_DoesNotAffectOtherPeoplesSeats()
+    {
+        await ControllerAs(GuestUserId).JoinTableSession(Table(1));
+
+        await ControllerAs(MiaUserId).JoinTableSession(Table(3));
+
+        (await _context.SessionParticipants.SingleAsync(p => p.User_Id == GuestUserId)).Left_At.Should().BeNull();
+    }
+
     [Theory]
     [InlineData(3)]
     [InlineData(4)]

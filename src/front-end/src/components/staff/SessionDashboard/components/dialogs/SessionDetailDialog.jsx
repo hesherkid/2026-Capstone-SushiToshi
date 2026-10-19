@@ -137,8 +137,8 @@ const SessionDetailDialog = () => {
                               <Button
                                 aria-label={`View ${bill.bill_Name} summary`}
                                 onClick={() => setSummaryBillId(bill.bill_Id)}
+                                startIcon={<Receipt />}
                               >
-                                <Receipt />
                                 View Bill Summary
                               </Button>
                             </Tooltip>

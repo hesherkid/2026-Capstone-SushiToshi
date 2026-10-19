@@ -10,14 +10,14 @@ import { formatTime } from "../../utils/sessionHelpers";
 // Staff view of a bill: review the total, then close it. Customers use CustomerBillDialog.
 const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
   const { closeBill } = useSession();
-  const { summary, loading, error, setError, reload, isOpen } = useBillSummary({ open, sessionId, billId });
+  const { summary, loading, error, setError, isOpen } = useBillSummary({ open, sessionId, billId });
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
 
   const handleCloseBill = async () => {
     setError(null);
     if (await closeBill(sessionId, billId)) {
-      // Reload so the status shows Closed and the button goes away
-      await reload();
+      // Done with this bill; the confirm dialog closes itself
+      onClose();
     } else {
       setError("Failed to close the bill. Please try again.");
     }
