@@ -11,7 +11,6 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -22,6 +21,7 @@ import {
   CircularProgress,
   Tooltip,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { Edit, Image as ImageIcon, Trash2, Eye, X } from "lucide-react";
 import api from "@/config/api";
 import TagChip from "./TagChip";
@@ -270,11 +270,10 @@ const columns = [
   };
 
   const DeleteConfirmationDialog = () => (
-    <Dialog
+    <AppDialog
       open={deleteDialogOpen}
       onClose={() => setDeleteDialogOpen(false)}
       maxWidth="xs"
-      fullWidth
     >
       <DialogTitle>Confirm Delete</DialogTitle>
       <DialogContent>
@@ -299,7 +298,7 @@ const columns = [
           Delete
         </Button>
       </DialogActions>
-    </Dialog>
+    </AppDialog>
   );
 
   const MenuItemsDialog = () => {
@@ -325,13 +324,12 @@ const columns = [
     };
 
     return (
-      <Dialog
+      <AppDialog
         open={itemsDialogOpen}
         onClose={() => setItemsDialogOpen(false)}
         maxWidth="md"
-        fullWidth
       >
-        <DialogTitle sx={{ pb: 1 }}>
+        <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Typography>Menu Items with Tag:</Typography>
             {selectedTagForItems && (
@@ -452,7 +450,7 @@ const columns = [
         <DialogActions>
           <Button onClick={() => setItemsDialogOpen(false)}>Close</Button>
         </DialogActions>
-      </Dialog>
+      </AppDialog>
     );
   };
 
@@ -566,19 +564,11 @@ const columns = [
         getRowId: (row) => row.tag_id,
       }}
     >
-      <Dialog
+      <AppDialog
         open={dialogOpen}
         onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            maxHeight: "90vh",
-            width: { xs: "95%", sm: "80%", md: "600px" },
-          },
-        }}
       >
-        <DialogTitle sx={{ pb: 1 }}>
+        <DialogTitle>
           {dialogMode === "add" ? "Add New Tag" : "Update Tag"}
         </DialogTitle>
         <DialogContent dividers>
@@ -711,13 +701,13 @@ const columns = [
             )}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained">
             {dialogMode === "add" ? "Save" : "Update"}
           </Button>
         </DialogActions>
-      </Dialog>
+      </AppDialog>
 
       <DeleteConfirmationDialog />
       <MenuItemsDialog />

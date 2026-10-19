@@ -4,10 +4,10 @@ import EditTableDialog from "./EditTableDialog";
 import NewTableGroupDialog from "./NewTableGroupDialog";
 import EditTableGroupDialog from "./EditTableGroupDialog";
 import AddTableToGroupDialog from "./AddTableToGroupDialog";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const DialogContainer = () => {
-  const { dialogState } = useTable();
+  const { dialogState, closeDialog } = useTable();
 
   return (
     <>
@@ -25,9 +25,11 @@ const DialogContainer = () => {
         open={dialogState.type === "addTableToGroup"}
         group={dialogState.data}
       />
+      {/* data: { title, message, confirmLabel, onConfirm } */}
       <ConfirmDialog
         open={dialogState.type === "confirm"}
-        data={dialogState.data}
+        {...(dialogState.type === "confirm" ? dialogState.data : {})}
+        onClose={closeDialog}
       />
     </>
   );

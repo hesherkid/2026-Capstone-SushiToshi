@@ -54,7 +54,9 @@ describe("Customer bill dialog", () => {
     });
     renderDialog();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Ready for Bill" }));
+    const callForBill = await screen.findByRole("button", { name: "Ready for Bill" });
+    expect(callForBill).toHaveClass("MuiButton-fullWidth");
+    fireEvent.click(callForBill);
     expect(await screen.findByText(/no more orders can be added to it/)).toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalled();
 

@@ -4,7 +4,6 @@ import {
   Box,
   Card,
   Typography,
-  CircularProgress,
   Alert,
   Container,
   IconButton,
@@ -15,6 +14,7 @@ import { Plus, Receipt } from "lucide-react";
 import { styled } from "@mui/material/styles";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import { setPageLoading } from "@/utils/pageLoading";
 import NewBillDialog from "@/components/staff/SessionDashboard/components/dialogs/NewBillDialog";
 import CustomerBillDialog from "@/components/customer/CustomerBillDialog";
 import { SessionProvider } from "@/components/staff/SessionDashboard/context/SessionContext";
@@ -80,6 +80,12 @@ const BillsDashboard = () => {
 
   const isGuest = () => localStorage.getItem("guest") === "true";
 
+  // The app bar's spinner is the page's only loading indicator
+  useEffect(() => {
+    setPageLoading(loading);
+  }, [loading]);
+  useEffect(() => () => setPageLoading(false), []);
+
   // Fetch active session ID first
   useEffect(() => {
     const fetchActiveSession = async () => {
@@ -90,9 +96,11 @@ const BillsDashboard = () => {
         // Ask the server (guests included) rather than trusting a saved session_id
         const mySessionId = await fetchMySessionId();
         if (mySessionId) {
+          // Still loading: the bills are fetched next
           setSessionId(mySessionId);
         } else {
           setError(NOT_SEATED_MESSAGE);
+          setLoading(false);
         }
       } catch (err) {
         console.error("Error fetching active session:", err);
@@ -101,7 +109,6 @@ const BillsDashboard = () => {
           err?.response?.data?.message ||
           "Unable to fetch your active session"
         );
-      } finally {
         setLoading(false);
       }
     };
@@ -164,14 +171,6 @@ const BillsDashboard = () => {
     setSummaryDialogOpen(true);
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   const sortedBills = sortBillsByStatus(bills || []);
 
   return (
@@ -196,7 +195,8 @@ const BillsDashboard = () => {
             </Alert>
           )}
 
-          {!bills || bills.length === 0 ? (
+          {/* While loading, the app bar shows the spinner and nothing is listed yet */}
+          {loading ? null : !bills || bills.length === 0 ? (
             <Alert severity="info">No bills yet. Create your first bill to get started.</Alert>
           ) : (
             <Box

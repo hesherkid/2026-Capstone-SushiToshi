@@ -4,12 +4,12 @@ import {
   Alert,
   CircularProgress,
   Stack,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { Edit, Trash2, AlertTriangle } from "lucide-react";
 import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
@@ -143,11 +143,10 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
       }}
     >
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <AppDialog
         open={deleteDialogOpen}
         onClose={handleDeleteCancel}
         maxWidth="xs"
-        fullWidth
       >
         <DialogTitle>
           <Stack direction="row" alignItems="center" spacing={1}>
@@ -177,7 +176,7 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
             {deleting ? <CircularProgress size={24} /> : "Delete"}
           </Button>
         </DialogActions>
-      </Dialog>
+      </AppDialog>
     </ManagementPage>
   );
 };

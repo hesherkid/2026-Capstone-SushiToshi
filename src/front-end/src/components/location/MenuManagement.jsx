@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   Button,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Typography,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { Edit, AlertTriangle, Trash2, LocateFixed } from "lucide-react";
 import MenuForm from "@/components/location/MenuForm";
 import AddLocationsToMenu from "@/components/location/AddLocationToMenu";
@@ -246,11 +246,9 @@ const MenuManagement = () => {
         getRowId: (row) => row.menu_id,
       }}
     >
-      <Dialog
+      <AppDialog
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        maxWidth="sm"
-        fullWidth
       >
         <MenuForm
           initialData={selectedMenu}
@@ -258,13 +256,12 @@ const MenuManagement = () => {
           onClose={() => setIsFormOpen(false)}
           mode={formMode}
         />
-      </Dialog>
+      </AppDialog>
 
-      <Dialog
+      <AppDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         maxWidth="xs"
-        fullWidth
       >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <AlertTriangle color="error" size={24} />
@@ -276,7 +273,7 @@ const MenuManagement = () => {
             This action cannot be undone.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">
             Cancel
           </Button>
@@ -289,15 +286,15 @@ const MenuManagement = () => {
             Delete Menu
           </Button>
         </DialogActions>
-      </Dialog>
-      <Dialog open={locationDialogOpen} onClose={() => setLocationDialogOpen(false)}>
+      </AppDialog>
+      <AppDialog open={locationDialogOpen} onClose={() => setLocationDialogOpen(false)}>
         <AddLocationsToMenu
           menu={selectedMenu}
           // onSubmit={handleLocationSubmit}
           onClose={() => setLocationDialogOpen(false)}
           availableLocations={locationsList}
         />
-      </Dialog>
+      </AppDialog>
     </ManagementPage>
   );
 };

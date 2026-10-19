@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -15,6 +14,7 @@ import {
   Divider,
   Tooltip,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X, Check, Receipt, ReceiptText, LogOut, Bell } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
@@ -52,7 +52,7 @@ const SessionDetailDialog = () => {
 
   return (
     <>
-      <Dialog open={!!session} onClose={closeSession} maxWidth="sm" fullWidth>
+      <AppDialog open={!!session} onClose={closeSession}>
         {session && (
           <>
             <DialogTitle>
@@ -176,7 +176,7 @@ const SessionDetailDialog = () => {
               )}
             </DialogContent>
 
-            <DialogActions sx={{ p: 2, gap: 1, flexWrap: "wrap" }}>
+            <DialogActions sx={{ flexWrap: "wrap" }}>
               {hasOpenBills && (
                 <Typography variant="body2" color="text.secondary" sx={{ mr: "auto" }}>
                   Close all bills to end the session.
@@ -202,7 +202,7 @@ const SessionDetailDialog = () => {
             </DialogActions>
           </>
         )}
-      </Dialog>
+      </AppDialog>
 
       <BillSummaryDialog
         open={summaryBillId !== null}

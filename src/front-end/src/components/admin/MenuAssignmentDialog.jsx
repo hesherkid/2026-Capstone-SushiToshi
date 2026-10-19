@@ -1,7 +1,6 @@
 import api from "@/config/api";
 import React, { useState, useEffect } from "react";
 import {
-  Dialog,
   Box,
   Stack,
   Typography,
@@ -25,6 +24,7 @@ import {
   Button,
   CircularProgress,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X, Edit, Trash2 } from "lucide-react";
 
 const ALL_LOCATIONS = ""; // "" in the form = default row (location_id null)
@@ -232,7 +232,7 @@ const MenuAssignmentDialog = ({
   }, [formData.menu_id, formData.location_id]);
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <AppDialog open={open} onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <Box sx={{ p: 3 }}>
           <Stack
@@ -525,7 +525,7 @@ const MenuAssignmentDialog = ({
           </Stack>
         </Box>
       </form>
-    </Dialog>
+    </AppDialog>
   );
 };
 

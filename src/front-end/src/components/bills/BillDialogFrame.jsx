@@ -1,5 +1,4 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -8,7 +7,8 @@ import {
   CircularProgress,
   IconButton,
 } from "@mui/material";
-import { X, Receipt } from "lucide-react";
+import AppDialog from "@/components/common/AppDialog";
+import { X } from "lucide-react";
 import BillBreakdown from "./BillBreakdown";
 
 /**
@@ -16,12 +16,9 @@ import BillBreakdown from "./BillBreakdown";
  * errors and the breakdown. Each dialog adds its own notices and action buttons.
  */
 const BillDialogFrame = ({ open, onClose, summary, loading, error, onErrorClose, notices, actions }) => (
-  <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+  <AppDialog open={open} onClose={onClose} maxWidth="md">
     <DialogTitle>
-      <Box display="flex" alignItems="center" gap={1}>
-        <Receipt size={24} />
-        Bill Summary
-      </Box>
+      Bill Summary
       <IconButton aria-label="Close" onClick={onClose} sx={{ position: "absolute", right: 8, top: 8 }}>
         <X />
       </IconButton>
@@ -45,8 +42,8 @@ const BillDialogFrame = ({ open, onClose, summary, loading, error, onErrorClose,
       )}
     </DialogContent>
 
-    {actions && !loading && <DialogActions sx={{ px: 3, py: 2 }}>{actions}</DialogActions>}
-  </Dialog>
+    {actions && !loading && <DialogActions>{actions}</DialogActions>}
+  </AppDialog>
 );
 
 export default BillDialogFrame;

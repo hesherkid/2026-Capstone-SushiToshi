@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Alert, Button } from "@mui/material";
-import { Bell } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import api from "@/config/api";
 import BillDialogFrame from "@/components/bills/BillDialogFrame";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -69,11 +69,15 @@ const CustomerBillDialog = ({ open, sessionId, billId, onClose }) => {
         }
         actions={
           isOpen && (
+            // Full width: label on the left, arrow on the right
             <Button
               variant="contained"
+              fullWidth
+              size="large"
               onClick={() => setConfirmOpen(true)}
               disabled={!!requestedAt}
-              startIcon={<Bell size={16} />}
+              endIcon={requestedAt ? null : <ChevronRight size={20} />}
+              sx={{ justifyContent: "space-between", textAlign: "left", minHeight: 56, px: 2.5, fontSize: "1.05rem" }}
             >
               {requestedAt ? "Bill Requested" : "Ready for Bill"}
             </Button>

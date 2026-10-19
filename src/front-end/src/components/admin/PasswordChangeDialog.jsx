@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -10,6 +9,7 @@ import {
   Box,
   CircularProgress,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { Key } from "lucide-react";
 
 const PasswordChangeDialog = ({
@@ -96,7 +96,7 @@ const PasswordChangeDialog = ({
   const displayError = getErrorMessage(error) || validationError;
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <AppDialog open={open} onClose={handleClose}>
       <form onSubmit={handleSubmit}>
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Key />
@@ -152,7 +152,7 @@ const PasswordChangeDialog = ({
           </Button>
         </DialogActions>
       </form>
-    </Dialog>
+    </AppDialog>
   );
 };
 

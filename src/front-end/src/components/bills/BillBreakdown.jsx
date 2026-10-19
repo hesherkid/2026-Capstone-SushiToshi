@@ -1,16 +1,4 @@
-import {
-  Box,
-  Typography,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-} from "@mui/material";
+import { Box, Typography, Divider, Chip } from "@mui/material";
 import {
   formatCurrency,
   formatDateTime,
@@ -18,11 +6,6 @@ import {
   formatBillStatus,
   getBillStatusColor,
 } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
-
-const headSx = {
-  backgroundColor: "primary.main",
-  "& .MuiTableCell-head": { color: "white", fontWeight: 600 },
-};
 
 // Field names from GET /Bill/summary
 const GUEST_TYPES = [
@@ -32,21 +15,41 @@ const GUEST_TYPES = [
   { label: "Toddlers", count: "tot_count", price: "toddler_base_price" },
 ];
 
-const SubtotalRow = ({ label, amount }) => (
-  <TableRow>
-    <TableCell colSpan={3} align="right" sx={{ fontWeight: 600 }}>
-      {label}
-    </TableCell>
-    <TableCell align="right" sx={{ fontWeight: 600 }}>
-      {formatCurrency(amount)}
-    </TableCell>
-  </TableRow>
+// Dashed rule between receipt sections
+const ReceiptRule = () => <Divider sx={{ my: 1.5, borderStyle: "dashed" }} />;
+
+const SectionHeading = ({ children }) => (
+  <Typography
+    variant="overline"
+    component="h3"
+    color="text.secondary"
+    sx={{ display: "block", lineHeight: 2, letterSpacing: 1 }}
+  >
+    {children}
+  </Typography>
 );
 
-const TotalLine = ({ label, amount }) => (
-  <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
-    <Typography variant="body1">{label}</Typography>
-    <Typography variant="body1">{formatCurrency(amount)}</Typography>
+// One receipt line: name and amount, with "2 × $42.95" underneath when there's a quantity
+const ReceiptLine = ({ label, amount, quantity, unitPrice, bold, large }) => (
+  <Box sx={{ py: 0.5 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+      <Typography variant={large ? "h6" : "body1"} fontWeight={bold ? 700 : 400}>
+        {label}
+      </Typography>
+      <Typography
+        variant={large ? "h6" : "body1"}
+        fontWeight={bold ? 700 : 400}
+        color={large ? "primary" : undefined}
+        sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}
+      >
+        {formatCurrency(amount)}
+      </Typography>
+    </Box>
+    {quantity != null && (
+      <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+        {quantity} × {formatCurrency(unitPrice)}
+      </Typography>
+    )}
   </Box>
 );
 
@@ -56,7 +59,7 @@ const TotalLine = ({ label, amount }) => (
  */
 const BillBreakdown = ({ summary }) => (
   <Box>
-    <Box sx={{ mb: 3 }}>
+    <Box sx={{ mb: 2 }}>
       <Typography variant="h6" gutterBottom>
         {summary.bill_name}
       </Typography>
@@ -78,85 +81,46 @@ const BillBreakdown = ({ summary }) => (
       </Box>
     </Box>
 
-    <Divider sx={{ my: 2 }} />
+    {/* Laid out like a receipt: guests, add-ons, then the totals */}
+    <ReceiptRule />
 
-    <Box sx={{ mb: 3 }}>
-      <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-        Guest Breakdown
-      </Typography>
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
-          <TableHead sx={headSx}>
-            <TableRow>
-              <TableCell>Type</TableCell>
-              <TableCell align="right">Count</TableCell>
-              <TableCell align="right">Price Each</TableCell>
-              <TableCell align="right">Subtotal</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {GUEST_TYPES.filter((type) => summary[type.count] > 0).map((type) => (
-              <TableRow key={type.label}>
-                <TableCell>{type.label}</TableCell>
-                <TableCell align="right">{summary[type.count]}</TableCell>
-                <TableCell align="right">{formatCurrency(summary[type.price])}</TableCell>
-                <TableCell align="right">
-                  {formatCurrency(summary[type.count] * summary[type.price])}
-                </TableCell>
-              </TableRow>
-            ))}
-            <SubtotalRow label="Base Charges Subtotal:" amount={summary.base_charges_subtotal} />
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+    <SectionHeading>Guests</SectionHeading>
+    {GUEST_TYPES.filter((type) => summary[type.count] > 0).map((type) => (
+      <ReceiptLine
+        key={type.label}
+        label={type.label}
+        quantity={summary[type.count]}
+        unitPrice={summary[type.price]}
+        amount={summary[type.count] * summary[type.price]}
+      />
+    ))}
+    <ReceiptLine label="Base charges" amount={summary.base_charges_subtotal} bold />
 
     {summary.addon_items?.length > 0 && (
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle1" fontWeight="600" gutterBottom>
-          Premium Add-ons
-        </Typography>
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead sx={headSx}>
-              <TableRow>
-                <TableCell>Item</TableCell>
-                <TableCell align="right">Qty</TableCell>
-                <TableCell align="right">Price</TableCell>
-                <TableCell align="right">Total</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {summary.addon_items.map((item) => (
-                <TableRow key={item.order_item_id}>
-                  <TableCell>{item.item_name}</TableCell>
-                  <TableCell align="right">{item.quantity}</TableCell>
-                  <TableCell align="right">{formatCurrency(item.price_per_unit)}</TableCell>
-                  <TableCell align="right">{formatCurrency(item.line_total)}</TableCell>
-                </TableRow>
-              ))}
-              <SubtotalRow label="Add-ons Subtotal:" amount={summary.addon_subtotal} />
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+      <>
+        <ReceiptRule />
+        <SectionHeading>Premium Add-ons</SectionHeading>
+        {summary.addon_items.map((item) => (
+          <ReceiptLine
+            key={item.order_item_id}
+            label={item.item_name}
+            quantity={item.quantity}
+            unitPrice={item.price_per_unit}
+            amount={item.line_total}
+          />
+        ))}
+        <ReceiptLine label="Add-ons" amount={summary.addon_subtotal} bold />
+      </>
     )}
 
-    <Divider sx={{ my: 2 }} />
+    <ReceiptRule />
 
-    <Box>
-      <TotalLine label="Subtotal:" amount={summary.subtotal} />
-      <TotalLine label={`Tax (${(summary.tax_rate * 100).toFixed(0)}%):`} amount={summary.tax_amount} />
-      <Divider sx={{ my: 1 }} />
-      <Box display="flex" justifyContent="space-between">
-        <Typography variant="h6" fontWeight="700">
-          Total Amount:
-        </Typography>
-        <Typography variant="h6" fontWeight="700" color="primary">
-          {formatCurrency(summary.total_amount)}
-        </Typography>
-      </Box>
-    </Box>
+    <ReceiptLine label="Subtotal" amount={summary.subtotal} />
+    <ReceiptLine label={`Tax (${(summary.tax_rate * 100).toFixed(0)}%)`} amount={summary.tax_amount} />
+
+    <ReceiptRule />
+
+    <ReceiptLine label="Total" amount={summary.total_amount} bold large />
   </Box>
 );
 

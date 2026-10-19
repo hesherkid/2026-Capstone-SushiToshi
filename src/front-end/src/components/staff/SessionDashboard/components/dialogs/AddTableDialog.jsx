@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import api from "@/config/api";
 import storage from "@/utils/storage";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -14,6 +13,7 @@ import {
   IconButton,
   Typography,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 
@@ -78,7 +78,7 @@ const AddTableDialog = ({ open, sessionId, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth>
+    <AppDialog open={open} onClose={onClose}>
       <DialogTitle>
         Add Table to Session
         <IconButton
@@ -129,7 +129,7 @@ const AddTableDialog = ({ open, sessionId, onClose }) => {
           Add Table
         </Button>
       </DialogActions>
-    </Dialog>
+    </AppDialog>
   );
 };
 

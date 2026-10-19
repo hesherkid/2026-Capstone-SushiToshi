@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -12,6 +11,7 @@ import {
   Typography,
   IconButton,
 } from "@mui/material";
+import AppDialog from "@/components/common/AppDialog";
 import { X } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { validateBillData } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
@@ -126,7 +126,7 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+    <AppDialog open={open} onClose={handleClose}>
       <DialogTitle>
         {billTable ? `Create New Bill for ${billTable}` : "Create New Bill"}
         <IconButton
@@ -259,7 +259,7 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions>
           <Button onClick={handleClose} disabled={submitting}>
             Cancel
           </Button>
@@ -273,7 +273,7 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
           </Button>
         </DialogActions>
       </form>
-    </Dialog>
+    </AppDialog>
   );
 };
 
