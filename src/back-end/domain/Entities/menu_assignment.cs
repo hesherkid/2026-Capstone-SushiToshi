@@ -28,7 +28,6 @@ namespace back_end.domain.Entities
         [Column("location_key")]
         public int Location_Key { get; private set; }
 
-
         public decimal Price { get; set; }
 
         public bool Is_Add_On { get; set; }
