@@ -282,4 +282,62 @@ public class OrderLimitEnforcementTests : IDisposable
 
         summary!.AddOn_Subtotal.Should().Be(0m);
     }
+
+    // GET session/{id}/limits: what the menu uses to stop guests before the server would
+
+    private async Task<SessionOrderLimitsDTO> Limits() =>
+        ((await Orders().GetSessionOrderLimits(SessionId)) as OkObjectResult)!.Value as SessionOrderLimitsDTO
+            ?? throw new InvalidOperationException("No limits returned");
+
+    [Fact]
+    public async Task Limits_ReportPerOrderCapsForItemsAndCategories()
+    {
+        var limits = await Limits();
+
+        limits.Items.Single(i => i.Item_Id == SalmonNigiri).Per_Order.Should().Be(1);
+        limits.Items.Single(i => i.Item_Id == SalmonSashimi).Per_Order.Should().BeNull();
+        limits.Categories.Single(c => c.Category_Id == 2).Per_Order.Should().Be(30);
+    }
+
+    [Fact]
+    public async Task Limits_CountDownPerPersonBlockLimitsAsTheTableOrders()
+    {
+        // Chop Chop: 2 per person, 2 adults = 4 for the table
+        (await Limits()).Items.Single(i => i.Item_Id == ChopChop).Session_Left.Should().Be(4);
+
+        await Add(NewOrder(), (ChopChop, 1));
+        await Add(NewOrder(), (ChopChop, 1));
+
+        (await Limits()).Items.Single(i => i.Item_Id == ChopChop).Session_Left.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Limits_LeaveOutChargeLimits_SinceGoingOverIsAllowed()
+    {
+        var limits = await Limits();
+
+        limits.Categories.Single(c => c.Category_Id == 3).Session_Left.Should().BeNull();
+        limits.Items.Single(i => i.Item_Id == HotStoneSteak).Session_Left.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Limits_AreOnlyForTheTableYoureAt()
+    {
+        var controller = new OrderController(_context, new Mock<ILogger<OrderController>>().Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, "77"),
+                        new Claim(ClaimTypes.Role, "Customer"),
+                    }, "TestAuth")),
+                },
+            },
+        };
+
+        (await controller.GetSessionOrderLimits(SessionId)).Should().BeOfType<ForbidResult>();
+    }
 }

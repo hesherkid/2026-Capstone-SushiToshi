@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Box, Button, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
 import Tags from "@/components/Tags";
+import QuantityStepper from "@/components/menu/QuantityStepper";
+import MaterialSymbol from "@/components/common/MaterialSymbol";
 
 const money = (value) => `$${Number(value).toFixed(2)}`;
 
@@ -40,187 +41,91 @@ const MenuItemCard = ({
   quantity,
   onQuantityChange,
   showQuantityControls = true,
+  // The cart holds as many as the item's limit allows: no more adding, and the note turns red
+  atLimit = false,
 }) => {
-  const [translateX, setTranslateX] = useState(0);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-  const elementRef = useRef(null);
   const limits = limitText(item);
 
-  useEffect(() => {
-    if (!showQuantityControls) return;
-
-    const element = elementRef.current;
-    if (!element) return;
-
-    const handleTouchStart = (event) => {
-      touchStartX.current = event.touches[0].clientX;
-      touchStartY.current = event.touches[0].clientY;
-    };
-
-    const handleTouchMove = (event) => {
-      if (!touchStartX.current || !touchStartY.current) return;
-
-      const deltaX = event.touches[0].clientX - touchStartX.current;
-      const deltaY = event.touches[0].clientY - touchStartY.current;
-
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        event.preventDefault();
-        setTranslateX(Math.min(Math.max(deltaX, -75), 75));
-      }
-    };
-
-    const handleTouchEnd = (event) => {
-      if (!touchStartX.current) return;
-
-      const deltaX = event.changedTouches[0].clientX - touchStartX.current;
-      if (Math.abs(deltaX) >= 50) {
-        onQuantityChange(categoryId, item.item_id, deltaX > 0 ? 1 : -1);
-      }
-
-      setTranslateX(0);
-      touchStartX.current = null;
-      touchStartY.current = null;
-    };
-
-    element.addEventListener("touchstart", handleTouchStart, { passive: true });
-    element.addEventListener("touchmove", handleTouchMove, { passive: false });
-    element.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-    return () => {
-      element.removeEventListener("touchstart", handleTouchStart);
-      element.removeEventListener("touchmove", handleTouchMove);
-      element.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [categoryId, item.item_id, onQuantityChange, showQuantityControls]);
+  const inCart = quantity > 0;
 
   return (
     <Paper
-      elevation={1}
+      variant="outlined"
       sx={{
-        display: "flex",
         overflow: "hidden",
-        minHeight: { xs: 180, sm: 188 },
+        borderRadius: 3,
+        // Picked items stand out while scrolling the menu
+        borderColor: inCart ? "primary.main" : "divider",
+        boxShadow: inCart ? "0 0 0 1px #C01E2E" : "none",
         transition: "border-color 160ms ease, box-shadow 160ms ease",
+        textAlign: "left",
       }}
     >
-      <div
-        ref={elementRef}
-        style={{
-          transform: `translateX(${translateX}px)`,
-          transition: translateX === 0 ? "transform 0.2s ease-out" : "none",
-          touchAction: "pan-y pinch-zoom",
-          width: "100%",
-          display: "flex",
-        }}
+      <Box
+        sx={{ display: "flex", gap: { xs: 1.5, sm: 2 }, width: "100%", p: 1.5 }}
       >
-        <Box sx={{ display: "flex", width: "100%", minHeight: "inherit" }}>
-          <Box
-            sx={{
-              width: { xs: 152, sm: 220 },
-              minWidth: { xs: 152, sm: 220 },
-              minHeight: { xs: 156, sm: 188 },
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              p: 1,
-              position: "relative",
-            }}
-          >
+        {/* Square photo, or a plain tile when the item has none */}
+        <Box
+          sx={{
+            width: { xs: 104, sm: 136 },
+            height: { xs: 104, sm: 136 },
+            flexShrink: 0,
+            borderRadius: 2.5,
+            overflow: "hidden",
+            bgcolor: "grey.100",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {item.item_image_url ? (
             <Box
               component="img"
-              src={
-                item.item_image_url ||
-                "https://via.placeholder.com/220x188?text=No+Image"
-              }
+              src={item.item_image_url}
               alt={item.name}
-              sx={{
-                width: "100%",
-                height: { xs: 108, sm: 148 },
-                objectFit: "cover",
-                borderRadius: 1,
-              }}
+              loading="lazy"
+              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
-            {!item.is_add_on && (
-              <Typography
-                variant="caption"
-                sx={{
-                  position: "absolute",
-                  top: 12,
-                  left: 12,
-                  px: 1,
-                  py: 0.5,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                  backgroundColor: "rgba(255, 255, 255, 0.94)",
-                  color: "text.primary",
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                }}
-              >
-                Included
-              </Typography>
-            )}
-          </Box>
+          ) : (
+            <MaterialSymbol
+              name="restaurant"
+              size={36}
+              sx={{ color: "text.disabled" }}
+            />
+          )}
+        </Box>
 
-          <Box
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Typography
+            component="h3"
             sx={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              p: { xs: 1.5, sm: 2 },
-              minWidth: 0,
-              gap: 1.25,
-              justifyContent: "space-between",
+              fontWeight: 700,
+              fontSize: { xs: "1rem", sm: "1.05rem" },
+              lineHeight: 1.3,
+              overflowWrap: "anywhere",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                width: "100%",
-              }}
-            >
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: "1rem", sm: "1.1rem" },
-                  lineHeight: 1.3,
-                  flex: 1,
-                  mr: 1,
-                  textAlign: "left",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {item.name}
-              </Typography>
-              {item.is_add_on && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "#C01E2E",
-                    whiteSpace: "nowrap",
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: 1,
-                  }}
-                >
-                  {money(item.price)}
-                </Typography>
-              )}
-            </Box>
+            {item.name}
+          </Typography>
 
+          {item.description && (
             <Typography
               variant="body2"
               color="text.secondary"
-              align="left"
               sx={{
-                fontSize: "0.75rem",
+                mt: 0.5,
+                fontSize: "0.8rem",
                 lineHeight: 1.45,
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -230,100 +135,83 @@ const MenuItemCard = ({
             >
               {item.description}
             </Typography>
+          )}
 
-            {/* Ordering limits, e.g. "1 per order" or "1 per person, then $5.00 each" */}
-            {limits && (
+          <Tags tags={item.tags} />
+          {limits && (
+            <Typography
+              variant="caption"
+              sx={{
+                mt: 1.5,
+                lineHeight: 1.35,
+                color: atLimit ? "error.main" : "text.secondary",
+                fontWeight: atLimit ? 600 : 400,
+              }}
+            >
+              {limits}
+            </Typography>
+          )}
+          <Box
+            sx={{
+              mt: "auto",
+              pt: 1.25,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1,
+            }}
+          >
+            {item.is_add_on ? (
               <Typography
-                variant="caption"
-                align="left"
-                sx={{ color: "#C01E2E", fontWeight: 600, lineHeight: 1.3 }}
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontWeight: 600 }}
               >
-                {limits}
+                Add-on{" "}
+                <Box
+                  component="span"
+                  sx={{ ml: 0.5, fontWeight: 700, color: "primary.main" }}
+                >
+                  {money(item.price)}
+                </Box>
+              </Typography>
+            ) : (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontWeight: 600 }}
+              >
+                Included
               </Typography>
             )}
 
-            <Tags tags={item.tags} size="m" />
-
             {showQuantityControls ? (
-              <Box
+              <QuantityStepper
+                itemName={item.name}
+                quantity={quantity}
+                onDecrease={() =>
+                  onQuantityChange(categoryId, item.item_id, -1)
+                }
+                onIncrease={() => onQuantityChange(categoryId, item.item_id, 1)}
+                canIncrease={!atLimit}
+              />
+            ) : (
+              <Typography
+                variant="body2"
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  gap: 1,
-                  width: "100%",
-                  mt: 0.5,
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 1,
+                  bgcolor: "grey.100",
+                  fontWeight: 700,
                 }}
               >
-                <Button
-                  size="small"
-                  variant="outlined"
-                  aria-label={`Remove one ${item.name}`}
-                  onClick={() => onQuantityChange(categoryId, item.item_id, -1)}
-                  sx={{
-                    minWidth: 40,
-                    width: 40,
-                    height: 40,
-                    minHeight: 40,
-                    p: 0,
-                    borderColor: "#C01E2E",
-                    color: "#C01E2E",
-                    fontSize: "1.1rem",
-                  }}
-                >
-                  -
-                </Button>
-                <Typography
-                  sx={{
-                    minWidth: 28,
-                    textAlign: "center",
-                    userSelect: "none",
-                    fontWeight: 700,
-                    fontSize: "0.95rem",
-                  }}
-                >
-                  {quantity}
-                </Typography>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  aria-label={`Add one ${item.name}`}
-                  onClick={() => onQuantityChange(categoryId, item.item_id, 1)}
-                  sx={{
-                    minWidth: 40,
-                    width: 40,
-                    height: 40,
-                    minHeight: 40,
-                    p: 0,
-                    borderColor: "#C01E2E",
-                    color: "#C01E2E",
-                    fontSize: "1.1rem",
-                  }}
-                >
-                  +
-                </Button>
-              </Box>
-            ) : (
-              <Box
-                sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    px: 1.5,
-                    py: 0.75,
-                    borderRadius: 1,
-                    bgcolor: "#f4f4f4",
-                    fontWeight: 700,
-                  }}
-                >
-                  Qty {quantity}
-                </Typography>
-              </Box>
+                Qty {quantity}
+              </Typography>
             )}
           </Box>
         </Box>
-      </div>
+      </Box>
     </Paper>
   );
 };

@@ -2,17 +2,18 @@ import { Box, Paper, Skeleton } from "@mui/material";
 
 // Placeholder the same size as a MenuItemCard, shown while the menu loads
 const MenuItemCardSkeleton = () => (
-  <Paper elevation={1} sx={{ display: "flex", overflow: "hidden", minHeight: { xs: 180, sm: 188 } }}>
-    <Box sx={{ width: { xs: 152, sm: 220 }, minWidth: { xs: 152, sm: 220 }, p: 1 }}>
-      <Skeleton variant="rounded" sx={{ width: "100%", height: { xs: 108, sm: 148 } }} />
-    </Box>
-    <Box sx={{ flex: 1, p: 2, display: "flex", flexDirection: "column", gap: 1 }}>
-      <Skeleton variant="text" width="60%" sx={{ fontSize: "1.25rem" }} />
+  <Paper variant="outlined" sx={{ display: "flex", gap: { xs: 1.5, sm: 2 }, p: 1.5, borderRadius: 3 }}>
+    <Skeleton
+      variant="rounded"
+      sx={{ width: { xs: 104, sm: 136 }, height: { xs: 104, sm: 136 }, flexShrink: 0, borderRadius: 2.5 }}
+    />
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <Skeleton variant="text" width="60%" sx={{ fontSize: "1.1rem" }} />
       <Skeleton variant="text" width="90%" />
       <Skeleton variant="text" width="75%" />
-      <Box sx={{ mt: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Skeleton variant="text" width={48} />
-        <Skeleton variant="rounded" width={96} height={36} />
+      <Box sx={{ mt: "auto", pt: 1.25, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Skeleton variant="text" width={56} />
+        <Skeleton variant="rounded" width={104} height={36} sx={{ borderRadius: 999 }} />
       </Box>
     </Box>
   </Paper>

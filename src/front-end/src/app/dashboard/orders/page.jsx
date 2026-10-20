@@ -13,12 +13,13 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import MaterialSymbol from "@/components/common/MaterialSymbol";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/config/api";
 import { fetchMySessionId, getMyUserId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import { setPageLoading } from "@/utils/pageLoading";
+import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 
 // "table": every order at the table, so when one person orders for everyone the rest can see it.
 // "mine": only orders this person placed.
@@ -157,7 +158,7 @@ const fetchOrders = async () => {
       }}
     >
       <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
+        expandIcon={<MaterialSymbol name="expand_more" />}
         sx={{
           backgroundColor:
             groupStatus === "PENDING"
@@ -256,7 +257,7 @@ const fetchOrders = async () => {
   }
 
   return (
-    <Box>
+    <CustomerPageContainer>
       <Typography
         variant="h4"
         component="h1"
@@ -351,7 +352,7 @@ const fetchOrders = async () => {
           );
         })
       )}
-    </Box>
+    </CustomerPageContainer>
   );
 };
 

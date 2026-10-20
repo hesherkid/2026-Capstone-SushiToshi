@@ -71,6 +71,19 @@ public class BillAccessTests : IDisposable
     }
 
     [Fact]
+    public async Task ASessionWithNoBillsYet_ReturnsAnEmptyList()
+    {
+        _context.Bills.RemoveRange(_context.Bills.Where(b => b.Session_Id == 269));
+        _context.SaveChanges();
+
+        var result = await ControllerFor(SeatedAtTable6).Get_Bills(269);
+
+        result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeAssignableTo<IEnumerable<object>>()
+            .Which.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Customers_CantSeeAnotherTablesBills()
     {
         var controller = ControllerFor(SeatedAtTable6);

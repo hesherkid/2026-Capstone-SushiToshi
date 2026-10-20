@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Toolbar, Typography } from "@mui/material";
 import AppBarWithTitle from "./AppBarWithTitle";
+import CustomerBottomNav from "./customer/CustomerBottomNav";
 
 const Layout = ({ children }) => {
   return (
@@ -20,7 +21,9 @@ const Layout = ({ children }) => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          padding: "2rem 1rem",
+          // Phones get thin gutters so customer pages use most of the screen
+          px: { xs: 1.5, sm: 2 },
+          py: { xs: 2, sm: 4 },
         }}
       >
         {children}
@@ -29,6 +32,8 @@ const Layout = ({ children }) => {
       <Box
         component="footer"
         sx={{
+          // Phones show the copyright in the side menu instead
+          display: { xs: "none", md: "block" },
           py: 2,
           px: 3,
           mt: "auto",
@@ -41,6 +46,8 @@ const Layout = ({ children }) => {
           &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
         </Typography>
       </Box>
+
+      <CustomerBottomNav />
     </Box>
   );
 };

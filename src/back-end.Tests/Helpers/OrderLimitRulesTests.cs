@@ -182,4 +182,40 @@ public class OrderLimitRulesTests
 
         result.IsValid.Should().BeFalse();
     }
+
+    // What the menu is told is left
+
+    [Fact]
+    public void PerOrderCap_ZeroIsNoCap()
+    {
+        OrderLimitRules.PerOrderCap(Unlimited).Should().BeNull();
+        OrderLimitRules.PerOrderCap(PerOrder(3)).Should().Be(3);
+    }
+
+    [Fact]
+    public void SessionLeftBeforeBlock_IsTheCapMinusWhatsOrdered()
+    {
+        OrderLimitRules.SessionLeftBeforeBlock(PerPerson(2, OverLimitBehavior.Block), TwoAdults, sessionUsed: 1)
+            .Should().Be(3);
+    }
+
+    [Fact]
+    public void SessionLeftBeforeBlock_NeverGoesBelowZero()
+    {
+        OrderLimitRules.SessionLeftBeforeBlock(PerPerson(1, OverLimitBehavior.Block), TwoAdults, sessionUsed: 5)
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public void SessionLeftBeforeBlock_ChargeLimitsDontBlock()
+    {
+        OrderLimitRules.SessionLeftBeforeBlock(PerPerson(1, OverLimitBehavior.Charge), TwoAdults, sessionUsed: 5)
+            .Should().BeNull();
+    }
+
+    [Fact]
+    public void SessionLeftBeforeBlock_UnlimitedIsNull()
+    {
+        OrderLimitRules.SessionLeftBeforeBlock(Unlimited, TwoAdults, sessionUsed: 0).Should().BeNull();
+    }
 }

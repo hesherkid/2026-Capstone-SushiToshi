@@ -77,6 +77,43 @@ namespace back_end.DTO.OrdersDTOs
         public OrderStatus Status { get; set; }
 
     }
+    /// <summary>
+    /// How much the table can still order before a limit that blocks stops them.
+    /// null = no blocking limit. Charge limits are left out: going over them is allowed at full price.
+    /// </summary>
+    public class OrderLimitLeftDTO
+    {
+        [JsonPropertyName("per_order")]
+        public int? Per_Order { get; set; }
+
+        [JsonPropertyName("session_left")]
+        public int? Session_Left { get; set; }
+    }
+
+    public class ItemOrderLimitDTO : OrderLimitLeftDTO
+    {
+        [JsonPropertyName("item_id")]
+        public int Item_Id { get; set; }
+
+        [JsonPropertyName("category_id")]
+        public int Category_Id { get; set; }
+    }
+
+    public class CategoryOrderLimitDTO : OrderLimitLeftDTO
+    {
+        [JsonPropertyName("category_id")]
+        public int Category_Id { get; set; }
+    }
+
+    public class SessionOrderLimitsDTO
+    {
+        [JsonPropertyName("items")]
+        public List<ItemOrderLimitDTO> Items { get; set; } = new();
+
+        [JsonPropertyName("categories")]
+        public List<CategoryOrderLimitDTO> Categories { get; set; } = new();
+    }
+
     public class OrderItemUpdateDTO
     {
         [JsonPropertyName("quantity")]

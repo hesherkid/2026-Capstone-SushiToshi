@@ -1,24 +1,12 @@
 import React from "react";
-import {
-  render,
-  screen,
-  waitFor,
-  fireEvent,
-  within,
-} from "@testing-library/react";
+import { render as rtlRender, screen, waitFor, fireEvent } from "@testing-library/react";
 import FullMenu from "./page";
+import { TableOrderProvider } from "@/contexts/TableOrderContext";
+import { tableApi, MISO_SOUP, SALMON_ROLL } from "../_testing/tableApiMock";
 
-const mockCreateOrder = jest.fn();
-const mockAddOrderItems = jest.fn();
-
-jest.mock("@/hooks/useOrderActions", () => ({
-  useOrderActions: () => ({
-    createOrder: mockCreateOrder,
-    addOrderItems: mockAddOrderItems,
-    actionError: null,
-    isLoading: false,
-    clearActionError: jest.fn(),
-  }),
+const mockPush = jest.fn();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush, back: jest.fn() }),
 }));
 
 jest.mock("@/components/menu/searchUtils", () => ({
@@ -39,74 +27,20 @@ jest.mock("@/config/api", () => ({
 
 const api = require("@/config/api").default;
 
+// The page reads its table, menu and cart from TableOrderContext
+const render = (ui) => rtlRender(<TableOrderProvider>{ui}</TableOrderProvider>);
+
 describe("FullMenu guest flow", () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem("guest", "true");
     localStorage.setItem("session_id", "42");
-    // Guests now call the API with their own guest token, through the regular api client
+    mockPush.mockReset();
+    // jsdom doesn't scroll; the category bar scrolls to sections
+    window.scrollTo = jest.fn();
+    // Guests call the API with their own guest token, through the regular api client
     api.get.mockReset();
-
-    api.get.mockImplementation((url) => {
-      // The page asks the server which session the guest is seated in
-      if (url === "/DiningSession/participants/active-session-id") {
-        return Promise.resolve({ status: 200, data: { session_id: 42 } });
-      }
-
-      if (url.includes("/Bill/get_bills/42")) {
-        return Promise.resolve({
-          status: 200,
-          data: [],
-        });
-      }
-
-      if (url.includes("/DiningSession/session-menu/42")) {
-        return Promise.resolve({
-          status: 200,
-          data: { menu_id: 7, location_Id: 3 },
-        });
-      }
-
-      if (url.includes("/Category")) {
-        return Promise.resolve({
-          status: 200,
-          data: [
-            { category_id: 1, category_name: "Appetizers" },
-            { category_id: 2, category_name: "Sushi Rolls" },
-          ],
-        });
-      }
-
-      if (url.includes("/Menu/7/item")) {
-        return Promise.resolve({
-          status: 200,
-          data: [
-            {
-              item_id: 11,
-              name: "Miso Soup",
-              description: "Classic miso broth",
-              price: 6,
-              category_id: 1,
-              category: "Appetizers",
-              tags: [{ tag_id: 3, name: "Popular", color_code: "#C01E2E" }],
-              item_image_url: "",
-            },
-            {
-              item_id: 12,
-              name: "Salmon Roll",
-              description: "Salmon and rice",
-              price: 8,
-              category_id: 2,
-              category: "Sushi Rolls",
-              tags: [],
-              item_image_url: "",
-            },
-          ],
-        });
-      }
-
-      return Promise.resolve({ data: [] });
-    });
+    api.get.mockImplementation(tableApi());
   });
 
   it("shows the menu items and supports category filtering", async () => {
@@ -125,65 +59,102 @@ describe("FullMenu guest flow", () => {
       screen.getByText(/there is no open bill for this session yet/i),
     ).toBeInTheDocument();
 
-    const cartCountHandler = jest.fn();
-    window.addEventListener("menu-cart-count-changed", cartCountHandler);
-
+    // Picking an item shows the Review order button with the count
     fireEvent.click(screen.getByRole("button", { name: "Add one Miso Soup" }));
-    await waitFor(() => {
-      expect(cartCountHandler).toHaveBeenLastCalledWith(
-        expect.objectContaining({ detail: { count: 1 } }),
+    expect(
+      await screen.findByRole("button", { name: "Review order, 1 item" }),
+    ).toBeInTheDocument();
+
+    // Every section stays on the page; a chip scrolls to its section and lights up
+    expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Appetizers" }));
+    expect(window.scrollTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({ behavior: "smooth" }),
+    );
+    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("heading", { name: "Appetizers 1 items" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sushi Rolls 1 items" })).toBeInTheDocument();
+    expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
+
+    // The cart is its own page now
+    fireEvent.click(screen.getByRole("button", { name: "Review order, 1 item" }));
+    expect(mockPush).toHaveBeenCalledWith("/menu/review");
+  });
+
+  it("lights up the category whose section is on screen as the guest scrolls", async () => {
+    render(<FullMenu />);
+    await screen.findByText("Salmon Roll");
+
+    const placeSections = (appetizersTop, rollsTop) => {
+      document.getElementById("category-1").getBoundingClientRect = () => ({ top: appetizersTop });
+      document.getElementById("category-2").getBoundingClientRect = () => ({ top: rollsTop });
+      fireEvent.scroll(window);
+    };
+
+    placeSections(-300, 600);
+    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "true");
+
+    placeSections(-900, 40);
+    expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  describe("order limits", () => {
+    it("stops adding at the limit: the plus goes and the note turns red", async () => {
+      api.get.mockImplementation(
+        tableApi({
+          items: [{ ...MISO_SOUP, itemLimits: { perOrder: 2 } }, SALMON_ROLL],
+          limits: { items: [{ item_id: 11, category_id: 1, per_order: 2, session_left: null }], categories: [] },
+        }),
+      );
+      render(<FullMenu />);
+
+      const add = await screen.findByRole("button", { name: "Add one Miso Soup" });
+      fireEvent.click(add);
+      expect(screen.getByText("2 per order")).toHaveStyle({ fontWeight: 400 });
+
+      fireEvent.click(screen.getByRole("button", { name: "Add one Miso Soup" }));
+
+      expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+      expect(screen.getByText("2 per order")).toHaveStyle({ fontWeight: 600 });
+      // Taking one out brings the plus back
+      fireEvent.click(screen.getByRole("button", { name: "Remove one Miso Soup" }));
+      expect(screen.getByRole("button", { name: "Add one Miso Soup" })).toBeInTheDocument();
+    });
+
+    it("shares a category's limit between its items", async () => {
+      const greenTea = { ...MISO_SOUP, item_id: 14, name: "Green Tea" };
+      api.get.mockImplementation(
+        tableApi({
+          items: [MISO_SOUP, greenTea, SALMON_ROLL],
+          limits: { items: [], categories: [{ category_id: 1, per_order: 2, session_left: null }] },
+        }),
+      );
+      render(<FullMenu />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Add one Miso Soup" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add one Green Tea" }));
+
+      // Two in Appetizers: neither can take more, other categories can
+      expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Add one Green Tea" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add one Salmon Roll" })).toBeInTheDocument();
+    });
+
+    it("can't add an item the table has already used up", async () => {
+      api.get.mockImplementation(
+        tableApi({
+          limits: { items: [{ item_id: 12, category_id: 2, per_order: null, session_left: 0 }], categories: [] },
+        }),
+      );
+      render(<FullMenu />);
+
+      await screen.findByRole("button", { name: "Add one Miso Soup" });
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: "Add one Salmon Roll" })).not.toBeInTheDocument(),
       );
     });
-    window.removeEventListener("menu-cart-count-changed", cartCountHandler);
-
-    expect(
-      screen.getByRole("button", { name: "Full Menu" }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("heading", { name: "Viewing Full Menu 2 items" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Appetizers" }));
-    expect(
-      screen.getByRole("heading", { name: "Appetizers 1 items" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "Viewing Full Menu 2 items" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Salmon Roll")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Full Menu" }));
-    expect(
-      screen.getByRole("heading", { name: "Miso Soup" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Viewing Full Menu 2 items" }),
-    ).toBeInTheDocument();
-
-    fireEvent(window, new Event("menu-cart-open"));
-    const cartDrawer = await screen.findByRole("dialog");
-    expect(
-      within(cartDrawer).getByRole("heading", { name: "Your Order" }),
-    ).toBeInTheDocument();
-    expect(
-      within(cartDrawer).getByRole("heading", { name: "Miso Soup" }),
-    ).toBeInTheDocument();
-    // The cart has quantity controls so a rejected order can be fixed without leaving it
-    expect(within(cartDrawer).getByText("1")).toBeInTheDocument();
-    expect(
-      within(cartDrawer).getByRole("button", { name: "Add one Miso Soup" }),
-    ).toBeInTheDocument();
-    expect(
-      within(cartDrawer).getByRole("button", { name: "Remove one Miso Soup" }),
-    ).toBeInTheDocument();
-    expect(within(cartDrawer).getByText("Subtotal")).toBeInTheDocument();
-    expect(within(cartDrawer).getByText("$0.00")).toBeInTheDocument();
-    expect(
-      within(cartDrawer).getByRole("button", {
-        name: "Place Order (1 item, 1 unit)",
-      }),
-    ).toBeDisabled();
   });
 
   it("shows the location price for add-on items", async () => {
@@ -217,6 +188,9 @@ describe("FullMenu guest flow", () => {
     expect(await screen.findByText("Wagyu Nigiri")).toBeInTheDocument();
     expect(screen.getByText("$9.00")).toBeInTheDocument();
     expect(screen.queryByText("$6.00")).not.toBeInTheDocument();
+    // Add-ons are labelled as such instead of "Included"
+    expect(screen.getByText(/Add-on/)).toHaveTextContent("Add-on $9.00");
+    expect(screen.queryByText("Included")).not.toBeInTheDocument();
   });
 
   it("falls back to default prices when the session has no location", async () => {
@@ -334,41 +308,6 @@ describe("FullMenu guest flow", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("sends each item's name with the order so the confirmation can name it", async () => {
-    mockCreateOrder.mockResolvedValue({ order_Id: 500 });
-    const baseMock = api.get.getMockImplementation();
-    api.get.mockImplementation((url, config) =>
-      url.includes("/Bill/get_bills/42")
-        ? Promise.resolve({
-            status: 200,
-            data: [{ bill_id: 8, bill_name: "Lee", status: "Open" }],
-          })
-        : baseMock(url, config),
-    );
-    render(<FullMenu />);
-
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Add one Miso Soup" }),
-    );
-    fireEvent(window, new Event("menu-cart-open"));
-    const cartDrawer = await screen.findByRole("dialog");
-    const placeOrder = within(cartDrawer).getByRole("button", {
-      name: /Place Order/,
-    });
-    await waitFor(() => expect(placeOrder).toBeEnabled());
-    fireEvent.click(placeOrder);
-
-    await waitFor(() =>
-      expect(mockAddOrderItems).toHaveBeenCalledWith(500, [
-        expect.objectContaining({
-          item_id: 11,
-          quantity: 1,
-          name: "Miso Soup",
-        }),
-      ]),
-    );
-  });
-
   it("keeps the items picked for this table after a refresh", async () => {
     const first = render(<FullMenu />);
     fireEvent.click(
@@ -385,9 +324,9 @@ describe("FullMenu guest flow", () => {
 
     render(<FullMenu />);
 
-    fireEvent(window, new Event("menu-cart-open"));
-    const cartDrawer = await screen.findByRole("dialog");
-    expect(await within(cartDrawer).findByText("2")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Review order, 2 items" }),
+    ).toBeInTheDocument();
   });
 
   it("doesn't restore a cart saved at another table", async () => {
