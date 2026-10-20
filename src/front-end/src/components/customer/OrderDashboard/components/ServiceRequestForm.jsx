@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import SendIcon from "@mui/icons-material/Send";
 import {
   Box,
@@ -13,6 +14,16 @@ import {
 } from "@mui/material";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import CustomerBillDialog from "@/components/customer/CustomerBillDialog";
+
+const SUCCESS_MESSAGE_MS = 8000;
+const READY_FOR_BILL = "Ready for bill";
+
+const getErrorMessage = (err, fallback) => {
+  const data = err?.response?.data;
+  if (typeof data === "string" && data.trim()) return data;
+  return data?.message || data?.detail || data?.title || fallback;
+};
 
 const ServiceRequestForm = () => {
   const [message, setMessage] = useState("");
@@ -20,14 +31,8 @@ const ServiceRequestForm = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [sessionId, setSessionId] = useState(null);
-
-  const isGuest = () =>
-    typeof window !== "undefined" && localStorage.getItem("guest") === "true";
-
-  const getUserName = () => {
-    if (typeof window === "undefined") return "User";
-    return localStorage.getItem("user_name") || localStorage.getItem("username") || "User";
-  };
+  const [billId, setBillId] = useState(null);
+  const router = useRouter();
 
   const commonRequests = [
     "Need water refill",
@@ -36,8 +41,42 @@ const ServiceRequestForm = () => {
     "Need soy sauce",
     "Need wasabi",
     "Need ginger",
-    "Ready for bill",
+    READY_FOR_BILL,
   ];
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(false), SUCCESS_MESSAGE_MS);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  // Same as the Bill Summary page's button: show the total, then lock the bill and tell staff.
+  // Uses the bill this phone last ordered on, or the table's only open bill
+  const openMyBill = async () => {
+    setError("");
+    if (!sessionId) return;
+    try {
+      const response = await api.get(`/Bill/get_bills/${sessionId}`);
+      const openBills = (Array.isArray(response.data) ? response.data : [])
+        .filter((bill) => String(bill.status ?? "").toUpperCase() === "OPEN");
+      const lastUsed = Number(localStorage.getItem("currentBillId"));
+      const mine =
+        openBills.find((bill) => Number(bill.bill_id) === lastUsed) ??
+        (openBills.length === 1 ? openBills[0] : null);
+
+      if (mine) {
+        setBillId(Number(mine.bill_id));
+      } else if (openBills.length > 1) {
+        // Several parties at the table: let them pick theirs
+        router.push("/dashboard/bills");
+      } else {
+        setError("Your table doesn't have an open bill yet. Your server will open one for you.");
+      }
+    } catch (err) {
+      console.error("Error finding your bill:", err);
+      setError(getErrorMessage(err, "Couldn't find your bill. Please try again."));
+    }
+  };
 
   //Find the current user's dining session right when the page loads
   useEffect(() => {
@@ -52,14 +91,7 @@ const ServiceRequestForm = () => {
         }
       } catch (err) {
         console.error("Error fetching session:", err);
-
-        // Compatible error extraction (Axios or fetch)
-        const message =
-          err?.response?.data ||
-          err?.message ||
-          "Unexpected error occurred";
-
-        setError(message);
+        setError(getErrorMessage(err, "Couldn't find your table. Please try again."));
       }
     };
 
@@ -76,20 +108,8 @@ const ServiceRequestForm = () => {
     setError("");
     setSuccess(false);
 
-    const tableId = localStorage.getItem("table_id");
-    if (!tableId) {
-      setError("Table ID not found. Please scan your table QR code again.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const payload = {
-      Session_Id: sessionId,
-      Table_Id: tableId,
-      Request_By_Name: localStorage.getItem("guest") === "true" ? "Guest" : getUserName(),
-      Request_By_Oid: localStorage.getItem("guest_oid") || "",
-      Notes: message,
-    };
+    // The server works out the table and who is asking from the session and login
+    const payload = { notes: message.trim() };
 
     try {
       const response = await apiClient.post(
@@ -108,14 +128,9 @@ const ServiceRequestForm = () => {
 
       setSuccess(true);
       setMessage("");
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error("Service request error:", err);
-      const errorMessage =
-        err?.response?.data ||
-        err?.message ||
-        "Failed to submit request";
-      setError(errorMessage);
+      setError(getErrorMessage(err, "Failed to submit request"));
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +145,10 @@ const ServiceRequestForm = () => {
       <Grid container spacing={2} justifyContent="center" mb={3}>
         {commonRequests.map((request) => (
           <Grid key={request}>
-            <Button variant="outlined" onClick={() => setMessage(request)}>
+            <Button
+              variant="outlined"
+              onClick={() => (request === READY_FOR_BILL ? openMyBill() : setMessage(request))}
+            >
               {request}
             </Button>
           </Grid>
@@ -157,7 +175,7 @@ const ServiceRequestForm = () => {
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(false)}>
           Request submitted successfully!
         </Alert>
       )}
@@ -175,6 +193,13 @@ const ServiceRequestForm = () => {
           {isSubmitting ? "Submitting..." : "Send Request"}
         </Button>
       </Box>
+
+      <CustomerBillDialog
+        open={!!billId}
+        sessionId={sessionId}
+        billId={billId}
+        onClose={() => setBillId(null)}
+      />
     </Box>
   );
 };
