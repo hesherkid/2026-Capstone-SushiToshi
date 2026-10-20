@@ -2,13 +2,13 @@ import React from "react";
 import { Snackbar, Alert, Slide } from "@mui/material";
 import { useNotification } from "@/contexts/NotificationContext";
 
+function SlideTransition(props) {
+  return <Slide {...props} direction="up" />;
+}
+
 const NotificationSystem = () => {
   const { open, message, severity, autoHideDuration, hideNotification } =
     useNotification();
-
-  function SlideTransition(props) {
-    return <Slide {...props} direction="up" />;
-  }
 
   const handleClose = (event, reason) => {
     if (reason === "clickaway") {
@@ -26,9 +26,19 @@ const NotificationSystem = () => {
       slots={{ transition: SlideTransition }}
       sx={{
         bottom: { xs: 70, sm: 24 },
+        pointerEvents: "none",
+        "& .MuiAlert-root": { pointerEvents: "auto" },
       }}
     >
-      <Alert onClose={handleClose} severity={severity} variant="filled" sx={{ width: "100%", maxWidth: { xs: "calc(100vw - 32px)", sm: "400px" }}} >
+      <Alert
+        onClose={handleClose}
+        severity={severity}
+        variant="filled"
+        sx={{
+          width: "100%",
+          maxWidth: { xs: "calc(100vw - 32px)", sm: "400px" },
+        }}
+      >
         {message}
       </Alert>
     </Snackbar>

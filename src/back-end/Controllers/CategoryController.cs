@@ -440,55 +440,5 @@ namespace back_end.Controllers
                 return StatusCode(500, "Internal Server Error");
             }
         }
-
-        //This endpoint is in the python project with notes that it needs parameters to be added to menu item model, comment out as 
-        // it is not being used and would cause errors if called but included for future implementation.
-
-        // [HttpPut("reorder-items{_categoryId}")]
-
-
-        // public async Task<IActionResult> ReorderMenuItems(int categoryId, [FromBody] List<int> itemIds)
-        // {
-        //     if (itemIds == null || itemIds.Count == 0)
-        //         return BadRequest("itemIds cannot be empty.");
-
-        //     if (itemIds.Count != itemIds.Distinct().Count())
-        //         return BadRequest("itemIds contains duplicates.");
-
-        //     var categoryExists = await _context.Categories
-        //         .AsNoTracking()
-        //         .AnyAsync(c => c.Category_id == categoryId);
-
-        //     if (!categoryExists)
-        //         return NotFound("Category not found.");
-
-        //     var fetchedItems = await _context.MenuItems
-        //         .Where(mi => mi.Category_id == categoryId && itemIds.Contains(mi.item_id))
-        //         .ToListAsync();
-
-        //     if (fetchedItems.Count != itemIds.Count)
-        //         return BadRequest("One or more itemIds are invalid or not in this category.");
-
-        //     // Map ItemId -> index (0-based; use idx + 1 if you want 1-based)
-        //     var orderMap = itemIds
-        //         .Select((id, idx) => new { id, idx })
-        //         .ToDictionary(x => x.id, x => x.idx);
-
-        //     foreach (var item in fetchedItems)
-        //         item.DisplayOrder = orderMap[item.item_id];
-
-        //     try
-        //     {
-        //         await _context.SaveChangesAsync();
-        //         return Ok(new { message = "Menu items reordered successfully", updated = fetchedItems.Count });
-        //     }
-        //     catch (DbUpdateException)
-        //     {
-        //         // If you added a unique index on (CategoryId, DisplayOrder), concurrency could trigger this
-        //         return Conflict("Could not reorder due to a constraint/concurrency issue. Please retry.");
-        //     }
-        // }
-
-
     }
 }

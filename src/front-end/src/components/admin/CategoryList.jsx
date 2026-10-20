@@ -15,6 +15,11 @@ import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
 
+// 0 means "no limit" for every limit except toddler, where it means "same as child"
+const limitCell = ({ value }) => (value ? value : "—");
+const toddlerCell = ({ value, row }) =>
+  value ? value : row.child_limit ? `${row.child_limit} (child)` : "—";
+
 const CategoryList = ({ onEditCategory, onCreateCategory }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +58,7 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
     setError(null);
     try {
       await api.delete(
-        `/Category/delete_category/${categoryToDelete.category_id}`
+        `/Category/delete_category/${categoryToDelete.category_id}`,
       );
       await fetchCategories();
       setDeleteDialogOpen(false);
@@ -71,53 +76,56 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
   };
 
   const columns = [
-    {
-      field: "category_name",
-      headerName: "Name",
-      flex: 1,
-      minWidth: 180,
-    },
-    {
-      field: "description",
-      headerName: "Description",
-      flex: 2,
-      minWidth: 250,
-    },
+    { field: "category_name", headerName: "Name", flex: 1, minWidth: 150 },
+    { field: "description", headerName: "Description", flex: 2, minWidth: 250 },
     {
       field: "adult_limit",
-      headerName: "Adult Limit",
-      width: 110,
+      headerName: "Adult",
+      width: 90,
       type: "number",
+      renderCell: limitCell,
     },
     {
       field: "child_limit",
-      headerName: "Child Limit",
-      width: 110,
+      headerName: "Child",
+      width: 90,
       type: "number",
+      renderCell: limitCell,
     },
     {
       field: "senior_limit",
-      headerName: "Senior Limit",
-      width: 110,
+      headerName: "Senior",
+      width: 90,
       type: "number",
+      renderCell: limitCell,
     },
     {
-      field: "total_limit",
-      headerName: "Total Limit",
+      field: "toddler_limit",
+      headerName: "Toddler",
       width: 110,
       type: "number",
+      renderCell: toddlerCell,
+    },
+    {
+      field: "per_order_limit",
+      headerName: "Per Order",
+      width: 100,
+      type: "number",
+      renderCell: limitCell,
+    },
+    {
+      field: "over_limit_behavior",
+      headerName: "Over Limit",
+      width: 120,
+      type: "singleSelect",
+      valueOptions: ["Block", "Charge"],
     },
     actionsColumn((row) => [
       {
         label: "Edit",
         icon: Edit,
         // Map row fields to dialog expected props
-        onClick: () =>
-          onEditCategory?.({
-            ...row,
-            name: row.category_name,
-            tot_limit: row.total_limit,
-          }),
+        onClick: () => onEditCategory?.({ ...row, name: row.category_name }),
       },
       {
         label: "Delete",
@@ -156,8 +164,8 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
         </DialogTitle>
         <DialogContent>
           <Typography mb={2}>
-            Are you sure you want to delete "
-            {categoryToDelete?.category_name}"? This action cannot be undone.
+            Are you sure you want to delete "{categoryToDelete?.category_name}"?
+            This action cannot be undone.
           </Typography>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>

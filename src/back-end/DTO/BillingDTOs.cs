@@ -115,6 +115,18 @@ namespace back_end.DTO.bill
     [JsonPropertyName("addon_subtotal")]
     public decimal AddOn_Subtotal { get; set; }
 
+    [JsonPropertyName("overlimit_items")]
+    public List<BillAddOnItem> OverLimit_Items { get; set; } = new List<BillAddOnItem>();
+
+    [JsonPropertyName("overlimit_subtotal")]
+    public decimal OverLimit_Subtotal { get; set; }
+
+    [JsonPropertyName("leftover_items")]
+    public List<BillAddOnItem> Leftover_Items { get; set; } = new List<BillAddOnItem>();
+
+    [JsonPropertyName("leftover_subtotal")]
+    public decimal Leftover_Subtotal { get; set; }
+
     // Totals
     [JsonPropertyName("subtotal")]
     public decimal Subtotal { get; set; }
@@ -173,5 +185,3 @@ namespace back_end.DTO.bill
     public string Status { get; set; } = string.Empty;
   }
 }
-
-

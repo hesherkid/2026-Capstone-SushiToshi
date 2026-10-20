@@ -20,6 +20,9 @@ public class AdminQrCodeControllerTests : IDisposable
     private readonly Mock<ILogger<AdminQrCodeController>> _mockControllerLogger;
     private readonly QrGeneratorService _qrService;
     private readonly AdminQrCodeController _controller;
+    // Unique per test instance so parallel test classes never share QR files
+    private readonly string _storageDir =
+        Path.Combine(Path.GetTempPath(), "sushitoshi-qr-tests", Guid.NewGuid().ToString());
 
     public AdminQrCodeControllerTests()
     {
@@ -32,6 +35,7 @@ public class AdminQrCodeControllerTests : IDisposable
         _mockConfig = new Mock<IConfiguration>();
         _mockServiceLogger = new Mock<ILogger<QrGeneratorService>>();
         _mockControllerLogger = new Mock<ILogger<AdminQrCodeController>>();
+        _mockConfig.Setup(c => c["QRCodeSettings:StoragePath"]).Returns(_storageDir);
 
         _qrService = new QrGeneratorService(_context, _mockConfig.Object, _mockServiceLogger.Object);
         _controller = new AdminQrCodeController(_qrService, _context, _mockControllerLogger.Object);
@@ -318,5 +322,7 @@ public class AdminQrCodeControllerTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+        if (Directory.Exists(_storageDir))
+            Directory.Delete(_storageDir, recursive: true);
     }
 }

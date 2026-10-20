@@ -26,7 +26,7 @@ export const useOrderActions = (onSuccess) => {
       setActionError(errorMessage);
       notifyError(errorMessage);
     },
-    [notifyError]
+    [notifyError],
   );
 
   // Wrapper that handles all the repetitive loading/error logic
@@ -38,7 +38,7 @@ export const useOrderActions = (onSuccess) => {
         handleError,
         onSuccess,
       }),
-    [handleError, onSuccess]
+    [handleError, onSuccess],
   );
 
   // ORDER CREATION
@@ -56,10 +56,10 @@ export const useOrderActions = (onSuccess) => {
           });
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: false },
       );
     },
-    [apiWrapper] // Removed notifySuccess to avoid duplicate notifications. Create order in full-menu triggers its own success message with Alert.
+    [apiWrapper], // Removed notifySuccess to avoid duplicate notifications. Create order in full-menu triggers its own success message with Alert.
   );
 
   // ORDER MANAGEMENT
@@ -73,10 +73,10 @@ export const useOrderActions = (onSuccess) => {
           notifySuccess("Order approved successfully");
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess]
+    [apiWrapper, notifySuccess],
   );
 
   const cancelOrder = useCallback(
@@ -88,10 +88,10 @@ export const useOrderActions = (onSuccess) => {
           notifySuccess("Order cancelled successfully");
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess]
+    [apiWrapper, notifySuccess],
   );
 
   const completeOrder = useCallback(
@@ -103,10 +103,10 @@ export const useOrderActions = (onSuccess) => {
           notifySuccess("Order completed successfully");
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess]
+    [apiWrapper, notifySuccess],
   );
 
   // ORDER ITEMS MANAGEMENT
@@ -121,11 +121,15 @@ export const useOrderActions = (onSuccess) => {
           // Generate list of items ordered from 1 to 4+ before counting.
           // Callers that don't send names get a count instead of "undefined, undefined..."
           // "2 × Salmon Roll"
-          const label = (item) => (item.quantity ? `${item.quantity} × ${item.name}` : item.name);
+          const label = (item) =>
+            item.quantity ? `${item.quantity} × ${item.name}` : item.name;
 
           let message;
           if (items.some((item) => !item.name)) {
-            const units = items.reduce((total, item) => total + (Number(item.quantity) || 1), 0);
+            const units = items.reduce(
+              (total, item) => total + (Number(item.quantity) || 1),
+              0,
+            );
             message = `${units} item${units === 1 ? "" : "s"} added to order`;
           } else if (items.length === 1) {
             message = `${label(items[0])} added to order`;
@@ -141,10 +145,10 @@ export const useOrderActions = (onSuccess) => {
           notifySuccess(message);
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess]
+    [apiWrapper, notifySuccess],
   );
 
   const updateOrderItem = useCallback(
@@ -155,16 +159,16 @@ export const useOrderActions = (onSuccess) => {
           const result = await orderService.updateOrderItem(
             orderId,
             itemId,
-            updateData
+            updateData,
           );
           const itemName = updateData.name || result?.name || "Order item";
           notifySuccess(`${itemName} updated successfully`);
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess]
+    [apiWrapper, notifySuccess],
   );
 
   const completeOrderItem = useCallback(
@@ -177,10 +181,10 @@ export const useOrderActions = (onSuccess) => {
           notifySuccess(`${name} marked as complete`);
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess]
+    [apiWrapper, notifySuccess],
   );
 
   const removeOrderItem = useCallback(
@@ -190,62 +194,57 @@ export const useOrderActions = (onSuccess) => {
         async () => {
           const result = await orderService.removeOrderItem(
             orderId,
-            orderItemId
+            orderItemId,
           );
           const name = itemName || result?.name || "Order item";
           notifySuccess(`${name} removed successfully`);
           return result;
         },
-        { triggerSuccess: true }
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess]
+    [apiWrapper, notifySuccess],
   );
 
   // ORDER RETRIEVAL
 
   // TODO: Might need to comment this out later in front and backend as there is no filterization which will cause performance issues as it calls ALL orders without filter.
-   const getAllOrders = useCallback(
-    async () => {
-      return apiWrapper(
-        "getAllOrders",
-        async () => orderService.getAllOrders(),
-        { defaultReturn: [] }
-      );
-    },
-    [apiWrapper]
-  );
+  const getAllOrders = useCallback(async () => {
+    return apiWrapper("getAllOrders", async () => orderService.getAllOrders(), {
+      defaultReturn: [],
+    });
+  }, [apiWrapper]);
 
   const getAllOrdersByLocation = useCallback(
     async (locationId = null) => {
       return apiWrapper(
         "getAllOrdersByLocation",
         async () => orderService.getAllOrdersByLocation(locationId),
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
-  )
+    [apiWrapper],
+  );
 
   const getOrderById = useCallback(
     async (orderId) => {
-      return apiWrapper(
-        "getOrderById",
-        async () => orderService.getOrderById(orderId)
+      return apiWrapper("getOrderById", async () =>
+        orderService.getOrderById(orderId),
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   const getOrdersBySession = useCallback(
-    async (sessionId, billId = null) => { // supports filtering by bill when splitting
+    async (sessionId, billId = null) => {
+      // supports filtering by bill when splitting
       return apiWrapper(
         "getOrdersBySession",
         async () => orderService.getOrdersBySession(sessionId, billId),
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   const getOrdersByUser = useCallback(
@@ -253,10 +252,10 @@ export const useOrderActions = (onSuccess) => {
       return apiWrapper(
         "getOrdersByUser",
         async () => orderService.getOrdersByUser(userOid),
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   const getActiveSessionOrders = useCallback(
@@ -264,10 +263,10 @@ export const useOrderActions = (onSuccess) => {
       return apiWrapper(
         "getActiveSessionOrders",
         async () => orderService.getActiveSessionOrders(billId),
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   return {

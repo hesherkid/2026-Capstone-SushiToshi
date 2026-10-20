@@ -65,7 +65,6 @@ namespace back_end.Controllers
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<SessionOrder>>> CreateOrder(OrderCreateDTO order_data)
         {
-
             try
             {
                 var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == order_data.Session_Id);
@@ -553,11 +552,46 @@ namespace back_end.Controllers
         }
 
         /// <summary>
-        /// Adds items to the created order from POST: api/Order
-        /// POST: api/Order/{order_id}/items
+        /// Adds items to an order, applying category and item limits.
         /// </summary>
+        /// <param name="orderId">The order to add items to (from POST api/Order)</param>
+        /// <param name="items">The list of items to add to the order. Duplicate item IDs are combined</param>
+        /// <returns>
+        /// Returns HTTP 200 (OK) with the lines added, including any over-limit charges.
+        /// Returns HTTP 400 (Bad Request) if the payload is invalid, the order is not pending,
+        /// an item is unavailable, or a Block limit would be exceeded (nothing is added).
+        /// Returns HTTP 404 (Not Found) if the order doesn't exist.
+        /// Returns HTTP 500 (Internal Server Error) if an exception occurs.
+        /// </returns>
+        /// <response code="200">Items added; response lists each line and any over-limit charges</response>
+        /// <response code="400">Invalid request or a limit was exceeded; errors lists every problem</response>
+        /// <response code="404">If the order is not found</response>
+        /// <response code="500">If an internal error occurs while adding items</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/order/123/items
+        ///     [
+        ///         { "item_id": 10, "quantity": 1 },
+        ///         { "item_id": 66, "quantity": 2 }
+        ///     ]
+        ///
+        /// Limits (category and item both apply; 0 = unlimited, toddler 0 = same as child):
+        /// - Per order (whole table, resets each order): always blocks.
+        /// - Per person (per dining session, limit x headcount from the session's bills):
+        ///   Block rejects the request; Charge adds the excess as a separate line at full price.
+        /// Cancelled orders and cancelled items don't count toward limits.
+        /// The request is all-or-nothing: if any item fails, nothing is added.
+        /// Prices are set by the server.
+        /// Staff edits to pending orders (PATCH) are not limit-checked, so staff can override.
+        /// Guests can't add items once the bill has been requested ("Ready for Bill"); staff can.
+        /// </remarks>
         [HttpPost("{orderId}/items")]
         [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddOrderItems(int orderId, [FromBody] List<OrderItemCreateDTO> items)
         {
             try
@@ -567,26 +601,39 @@ namespace back_end.Controllers
                 {
                     return BadRequest(new { message = "No items provided." });
                 }
+                if (items.Any(i => i.Quantity <= 0 || i.Quantity > 99))
+                {
+                    return BadRequest(new { message = "Each quantity must be between 1 and 99." });
+                }
 
-                //Retrieve the order
+                // Combine duplicate item IDs so per-order limits can't be bypassed by splitting a request
+                var requested = items
+                    .GroupBy(i => i.Item_Id)
+                    .Select(g => (ItemId: g.Key, Quantity: g.Sum(i => i.Quantity)))
+                    .ToList();
+
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                     .Include(o => o.DiningSession)
                     .Include(o => o.Bill)
                     .FirstOrDefaultAsync(o => o.Order_Id == orderId);
 
-                //Check if order exists
                 if (order == null)
                 {
                     return NotFound(new { message = $"Order {orderId} not found" });
                 }
 
+                // Guests can't add to a bill after pressing "Ready for Bill", but staff can
                 if (BillOrderingClosed(order.Bill))
                 {
                     return BadRequest(new { message = BillRequestedMessage });
                 }
+                if (order.Status != OrderStatus.Pending)
+                {
+                    return BadRequest(new { message = "Items can only be added to pending orders." });
+                }
 
-                //Determine guest or logged in
+                // Determine guest or logged in user
                 int? userId = null;
                 string? userName = null;
 
@@ -598,7 +645,6 @@ namespace back_end.Controllers
                     if (int.TryParse(userIdString, out var parsedUserId))
                     {
                         userId = parsedUserId;
-                        _logger.LogInformation("🔐 Authenticated user {UserId} ({Name})", userId, userName);
                     }
                     else
                     {
@@ -607,66 +653,148 @@ namespace back_end.Controllers
                 }
                 else
                 {
-                    // For guests, use null userId (they don't have database user records)
-                    userId = null;
                     userName = "Guest";
                 }
 
-                // For guests, we still allow the operation but with null user ID
-                // The User_Id field in the order can be null for guest users
-
-                //Add items to order
                 var session = order.DiningSession;
-                var itemIds = items.Select(i => i.Item_Id).ToList();
+                var itemIds = requested.Select(r => r.ItemId).ToList();
+
+                // Effective assignments location override first, with category limits
                 var menuRows = await _context.MenuItemAssignments
                     .ForLocation(session.Menu_Id, session.Location_Id)
                     .Where(a => itemIds.Contains(a.Item_Id))
+                    .Include(a => a.MenuItem)
+                        .ThenInclude(mi => mi.Category)
                     .ToListAsync();
 
-                foreach (var item in items)
+                // Headcount for per-person limits; all non-cancelled bills in the session
+                var bills = await _context.Bills
+                    .Where(b => b.Session_Id == session.Session_Id && b.Status != BillStatus.Cancelled)
+                    .ToListAsync();
+
+                var heads = new OrderLimitRules.Headcount(
+                    bills.Sum(b => b.Adult_Count),
+                    bills.Sum(b => b.Child_Count),
+                    bills.Sum(b => b.Senior_Count),
+                    bills.Sum(b => b.Tot_Count));
+                if (heads.IsEmpty) heads = OrderLimitRules.Headcount.Fallback;
+
+                // Units already ordered this session (cancelled orders/items don't count)
+                var used = await _context.OrderItems
+                    .Where(oi => oi.SessionOrder.session_id == session.Session_Id
+                            && oi.SessionOrder.Status != OrderStatus.Cancelled
+                            && oi.Order_Item_Status != OrderStatus.Cancelled)
+                    .Select(oi => new { oi.Order_Key, oi.Item_Id, oi.MenuItem.Category_id, oi.Quantity })
+                    .ToListAsync();
+
+                var sessionItemUsed = used.GroupBy(u => u.Item_Id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+                var sessionCategoryUsed = used.GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+                var orderItemUsed = used.Where(u => u.Order_Key == orderId)
+                    .GroupBy(u => u.Item_Id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+                var orderCategoryUsed = used.Where(u => u.Order_Key == orderId)
+                    .GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+
+
+                // Plan limit lines first, add nothing if any item fails (all or nothing)
+                var errors = new List<string>();
+                var newLines = new List<OrderItems>();
+
+                foreach (var (itemId, quantity) in requested)
                 {
-                    var assignment = menuRows.EffectiveFor(session.Menu_Id, item.Item_Id, session.Location_Id);
+                    var assignment = menuRows.EffectiveFor(session.Menu_Id, itemId, session.Location_Id);
                     if (assignment == null || assignment.Status != MenuItemStatus.Available)
                     {
-                        return BadRequest(new { message = $"Item {item.Item_Id} is not available at this location" });
+                        errors.Add($"Item {itemId} is not available at this location.");
+                        continue;
                     }
 
-                    order.OrderItems.Add(new OrderItems
+                    var category = assignment.MenuItem.Category;
+                    var categoryId = category.Category_id;
+
+                    var plan = OrderLimitRules.ApplyLimits(
+                        itemName: assignment.MenuItem.Name,
+                        categoryName: category.Category_name,
+                        requested: quantity,
+                        category: new OrderLimitRules.Limits(category.adult_limit, category.child_limit,
+                            category.senior_limit, category.toddler_limit, category.per_order_limit, category.over_limit_behavior),
+                        item: new OrderLimitRules.Limits(assignment.Adult_Limit, assignment.Child_limit,
+                            assignment.Senior_limit, assignment.Tot_Limit, assignment.Per_Order_Limit, assignment.Over_Limit_Behavior),
+                        heads: heads,
+                        used: new OrderLimitRules.Usage(
+                            orderCategoryUsed.GetValueOrDefault(categoryId),
+                            orderItemUsed.GetValueOrDefault(itemId),
+                            sessionCategoryUsed.GetValueOrDefault(categoryId),
+                            sessionItemUsed.GetValueOrDefault(itemId)),
+                        isAddOn: assignment.Is_Add_On,
+                        price: assignment.Price,
+                        fullPrice: assignment.Full_Price);
+
+                    if (!plan.IsValid)
                     {
-                        Menu_Id = session.Menu_Id,
-                        Item_Id = item.Item_Id,
-                        Quantity = item.Quantity,
-                        Price_At_Time = assignment.Is_Add_On ? assignment.Price : 0m,   // server decides, client price is ignored
-                        Order_Item_Status = OrderStatus.Pending
-                    });
+                        errors.Add(plan.Error!);
+                        continue;
+                    }
+
+                    foreach (var line in plan.Lines)
+                    {
+                        newLines.Add(new OrderItems
+                        {
+                            Menu_Id = session.Menu_Id,
+                            Item_Id = itemId,
+                            Quantity = line.Quantity,
+                            Price_At_Time = line.Price,          // server decides, client price is ignored
+                            Charge_Reason = line.Reason,
+                            Order_Item_Status = OrderStatus.Pending
+                        });
+                    }
+
+                    // Count this requests units so later items in the same request see them
+                    orderItemUsed[itemId] = orderItemUsed.GetValueOrDefault(itemId) + quantity;
+                    orderCategoryUsed[categoryId] = orderCategoryUsed.GetValueOrDefault(categoryId) + quantity;
+                    sessionItemUsed[itemId] = sessionItemUsed.GetValueOrDefault(itemId) + quantity;
+                    sessionCategoryUsed[categoryId] = sessionCategoryUsed.GetValueOrDefault(categoryId) + quantity;
+                }
+                if (errors.Any())
+                {
+                    return BadRequest(new { message = $"Nothing was added. {string.Join(" ", errors)}", errors });
                 }
 
-
-
-                _logger.LogInformation("💾 Saving changes...");
+                foreach (var line in newLines)
+                {
+                    order.OrderItems.Add(line);
+                }
                 await _context.SaveChangesAsync();
+
+                var namesById = menuRows.GroupBy(a => a.Item_Id).ToDictionary(g => g.Key, g => g.First().MenuItem.Name);
+                var overLimit = newLines.Where(l => l.Charge_Reason == ChargeReason.OverLimit).ToList();
 
                 return Ok(new
                 {
-                    message = "Items added successfully",
-                    count = items.Count,
+                    message = overLimit.Any()
+                        ? "Items added. Some items are over the limit and will be charged."
+                        : "Items added successfully",
+                    count = newLines.Count,
                     orderId,
                     userId,
-                    userName
+                    userName,
+                    lines = newLines.Select(l => new
+                    {
+                        orderItemId = l.Order_Item_Id,
+                        itemId = l.Item_Id,
+                        name = namesById.GetValueOrDefault(l.Item_Id),
+                        quantity = l.Quantity,
+                        priceAtTime = l.Price_At_Time,
+                        chargeReason = l.Charge_Reason.ToString()
+                    }),
+                    overLimitTotal = overLimit.Sum(l => l.Quantity * l.Price_At_Time)
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Error adding order items",
-                    error = ex.ToString()
-                });
+                _logger.LogError(ex, "Error adding items to order {OrderId}", orderId);
+                return StatusCode(500, new { message = "Error adding order items" });
             }
         }
-
-
-
 
         /// <summary>
         /// Updates order items before approval (pending orders only).
@@ -782,21 +910,25 @@ namespace back_end.Controllers
                     {
                         return Forbid("Only staff can modify order item status");
                     }
-                    if (Enum.TryParse<OrderStatus>(updateData.Status, true, out var newStatus))
+                    if (!Enum.TryParse<OrderStatus>(updateData.Status, true, out var newStatus))
                     {
-                        orderItem.Order_Item_Status = newStatus;
-                        if (newStatus == OrderStatus.Cancelled || newStatus == OrderStatus.Delivered) // FIXME: this logic assumes cancelled orders are complete.
+                        return BadRequest("Invalid status value");
+                    }
+                    // only set Completed_At when the status actually changes, so re-sending the same status doesn't reset the timestamp
+                    var statusChanged = orderItem.Order_Item_Status != newStatus;
+                    orderItem.Order_Item_Status = newStatus;
+                    if (statusChanged)
+                    {
+                        // Completed_At = when the item was finished, either delivered or cancelled.
+                        // Analytics filter on Order_Item_Status, so cancelled items never count as sales or timings.
+                        if (newStatus == OrderStatus.Cancelled || newStatus == OrderStatus.Delivered)
                         {
                             orderItem.Completed_At = DateTime.UtcNow;
                         }
                         else
                         {
-                            orderItem.Completed_At = null;
+                            orderItem.Completed_At = null;   // reopened (Pending/Processing): not finished yet
                         }
-                    }
-                    else
-                    {
-                        return BadRequest("Invalid status value");
                     }
                 }
 
@@ -920,8 +1052,9 @@ namespace back_end.Controllers
                             itemId = oi.Item_Id,
                             name = oi.MenuItem.Name,
                             quantity = oi.Quantity,
-                            priceAtTime = isAddOn ? oi.Price_At_Time : 0,
+                            priceAtTime = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0,
                             isAddOn = isAddOn,
+                            chargeReason = oi.Charge_Reason.ToString(),
                             status = oi.Order_Item_Status.ToString()
                         };
                     }).ToList()
@@ -1110,7 +1243,7 @@ namespace back_end.Controllers
 
                         // Only count price if it's an add-on item
                         bool isAddOn = assignment?.Is_Add_On ?? false;
-                        return isAddOn ? (or.Quantity * or.Price_At_Time) : 0;
+                        return isAddOn || or.Charge_Reason == ChargeReason.OverLimit ? (or.Quantity * or.Price_At_Time) : 0;
                     }),
                     createdAt = o.Created_At,
                     completedAt = o.Completed_At,
@@ -1125,14 +1258,16 @@ namespace back_end.Controllers
 
                         bool isAddOn = assignment?.Is_Add_On ?? false;
 
+
                         return new
                         {
                             orderItemId = oi.Order_Item_Id,
                             itemId = oi.Item_Id,
                             name = oi.MenuItem?.Name,
                             quantity = oi.Quantity,
-                            priceAtTime = isAddOn ? oi.Price_At_Time : 0, // Only show price for add-ons
+                            priceAtTime = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0, // Only show price for add-ons
                             isAddOn = isAddOn,
+                            chargeReason = oi.Charge_Reason.ToString(),
                             status = oi.Order_Item_Status
                         };
                     }).ToList()
@@ -1301,8 +1436,9 @@ namespace back_end.Controllers
                             itemId = i.Item_Id,
                             name = i.MenuItem?.Name,
                             quantity = i.Quantity,
-                            price = isAddOn ? i.Price_At_Time : 0, // Only show price for add-ons
+                            price = isAddOn || i.Charge_Reason == ChargeReason.OverLimit ? i.Price_At_Time : 0, // Only show price for add-ons
                             isAddOn = isAddOn,
+                            chargeReason = i.Charge_Reason.ToString(),
                             status = i.Order_Item_Status.ToString()
                         };
                     }).ToList()

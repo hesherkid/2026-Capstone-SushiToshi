@@ -2,6 +2,38 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Button, Paper, Typography } from "@mui/material";
 import Tags from "@/components/Tags";
 
+const money = (value) => `$${Number(value).toFixed(2)}`;
+
+export const limitText = (item) => {
+  const parts = [];
+  const cat = item.categoryLimits ?? {};
+  const own = item.itemLimits ?? {};
+
+  // Per order (whole table, each order): always blocks
+  if (own.perOrder) parts.push(`${own.perOrder} per order`);
+  if (cat.perOrder)
+    parts.push(
+      `${cat.perOrder} per order across all ${item.category ?? "items in this section"}`,
+    );
+
+  // Per person (whole dining session): the tighter one is what the guest hits first
+  const perPerson = [own.adult, cat.adult].filter((n) => n > 0);
+  if (perPerson.length) {
+    const limit = Math.min(...perPerson);
+    // Charge applies when the limit that binds is set to Charge (e.g. Hot Stone)
+    const binding = own.adult === limit ? own : cat;
+    const charges =
+      binding.overLimitBehavior === "Charge" && item.fullPrice > 0;
+    parts.push(
+      charges
+        ? `${limit} per person, then ${money(item.fullPrice)} each`
+        : `Limit ${limit} per person`,
+    );
+  }
+
+  return parts.join(" · ");
+};
+
 const MenuItemCard = ({
   item,
   categoryId,
@@ -13,6 +45,7 @@ const MenuItemCard = ({
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const elementRef = useRef(null);
+  const limits = limitText(item);
 
   useEffect(() => {
     if (!showQuantityControls) return;
@@ -68,7 +101,7 @@ const MenuItemCard = ({
         display: "flex",
         overflow: "hidden",
         minHeight: { xs: 180, sm: 188 },
-        transition: "border-color 160ms ease, box-shadow 160ms ease",        
+        transition: "border-color 160ms ease, box-shadow 160ms ease",
       }}
     >
       <div
@@ -96,7 +129,10 @@ const MenuItemCard = ({
           >
             <Box
               component="img"
-              src={item.item_image_url || "https://via.placeholder.com/220x188?text=No+Image"}
+              src={
+                item.item_image_url ||
+                "https://via.placeholder.com/220x188?text=No+Image"
+              }
               alt={item.name}
               sx={{
                 width: "100%",
@@ -174,7 +210,7 @@ const MenuItemCard = ({
                     borderRadius: 1,
                   }}
                 >
-                  ${item.price}
+                  {money(item.price)}
                 </Typography>
               )}
             </Box>
@@ -194,6 +230,17 @@ const MenuItemCard = ({
             >
               {item.description}
             </Typography>
+
+            {/* Ordering limits, e.g. "1 per order" or "1 per person, then $5.00 each" */}
+            {limits && (
+              <Typography
+                variant="caption"
+                align="left"
+                sx={{ color: "#C01E2E", fontWeight: 600, lineHeight: 1.3 }}
+              >
+                {limits}
+              </Typography>
+            )}
 
             <Tags tags={item.tags} size="m" />
 
@@ -257,7 +304,9 @@ const MenuItemCard = ({
                 </Button>
               </Box>
             ) : (
-              <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
+              <Box
+                sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}
+              >
                 <Typography
                   variant="body2"
                   sx={{

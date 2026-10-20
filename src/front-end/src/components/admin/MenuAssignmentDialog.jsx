@@ -20,6 +20,7 @@ import {
   TextField,
   Switch,
   FormControlLabel,
+  FormHelperText,
   Grid,
   Button,
   CircularProgress,
@@ -39,6 +40,68 @@ const emptyForm = {
   child_limit: 0,
   senior_limit: 0,
   tot_limit: 0,
+  per_order_limit: 0,
+  over_limit_behavior: "Block",
+  full_price: "",
+};
+
+const toForm = (a) => ({
+  price: a.price.toString(),
+  is_add_on: a.is_Add_On === true,
+  status: (a.status || "Available").toLowerCase(),
+  adult_limit: a.adult_Limit || 0,
+  child_limit: a.child_limit || 0,
+  senior_limit: a.senior_limit || 0,
+  tot_limit: a.tot_Limit || 0,
+  per_order_limit: a.per_Order_Limit || 0,
+  over_limit_behavior: a.over_Limit_Behavior || "Block",
+  full_price: a.full_Price != null ? a.full_Price.toString() : "",
+});
+
+// Mirrors Limit Rules so problems show before saving
+const cap = (n) => (n === 0 ? Infinity : n);
+const formProblem = (f) => {
+  const [adult, child, senior, tot, perOrder] = [
+    f.adult_limit,
+    f.child_limit,
+    f.senior_limit,
+    f.tot_limit,
+    f.per_order_limit,
+  ].map((v) => parseInt(v, 10) || 0);
+
+  if ([adult, child, senior, tot, perOrder].some((v) => v < 0))
+    return "Limits cannot be negative.";
+  if (cap(child) > cap(adult)) return "Child limit cannot exceed Adult limit.";
+  if (cap(senior) > cap(adult))
+    return "Senior limit cannot exceed Adult limit.";
+  if (cap(tot === 0 ? child : tot) > cap(child))
+    return "Toddler limit cannot exceed Child limit.";
+  if (f.is_add_on && !(parseFloat(f.price) > 0))
+    return "Add-on items must have a price greater than 0.";
+  if (
+    f.over_limit_behavior === "Charge" &&
+    !(parseFloat(f.full_price || f.price) > 0)
+  )
+    return "Items that charge over the limit need a full price greater than 0.";
+  return null;
+};
+
+const errorText = (data, fallback) => {
+  if (!data) return fallback;
+  if (typeof data === "string") return data;
+  if (data.errors && typeof data.errors === "object")
+    return Object.values(data.errors).flat().join(" ");
+  return data.message ?? data.title ?? fallback;
+};
+
+// Short summary for the table, e.g. "2/person, 1/order"
+const limitSummary = (a) => {
+  const parts = [];
+  if (a.adult_Limit) parts.push(`${a.adult_Limit}/adult`);
+  if (a.per_Order_Limit) parts.push(`${a.per_Order_Limit}/order`);
+  if (parts.length && a.over_Limit_Behavior === "Charge")
+    parts.push(`then $${Number(a.full_Price).toFixed(2)}`);
+  return parts.length ? parts.join(", ") : "None";
 };
 
 const MenuAssignmentDialog = ({
@@ -55,6 +118,9 @@ const MenuAssignmentDialog = ({
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [error, setError] = useState(null);
   const [locations, setLocations] = useState([]);
+
+  const setField = (field) => (e) =>
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
   const loadAssignments = async () => {
     const response = await api.get(`/menuItem/${selectedItem.item_id}`);
@@ -90,15 +156,10 @@ const MenuAssignmentDialog = ({
   useEffect(() => {
     if (editingAssignment) {
       setFormData({
+        ...emptyForm,
         menu_id: editingAssignment.menu_Id,
         location_id: editingAssignment.location_Id ?? ALL_LOCATIONS,
-        price: editingAssignment.price.toString(),
-        is_add_on: editingAssignment.is_Add_On === true,
-        status: (editingAssignment.status || "Available").toLowerCase(),
-        adult_limit: editingAssignment.adult_Limit || 0,
-        child_limit: editingAssignment.child_limit || 0,
-        senior_limit: editingAssignment.senior_limit || 0,
-        tot_limit: editingAssignment.tot_Limit || 0,
+        ...toForm(editingAssignment),
       });
     }
   }, [editingAssignment]);
@@ -106,10 +167,11 @@ const MenuAssignmentDialog = ({
   const locationName = (id) =>
     id == null
       ? "All locations"
-      : locations.find((l) => l.location_id === id)?.name ?? `Location ${id}`;
+      : (locations.find((l) => l.location_id === id)?.name ?? `Location ${id}`);
 
   // ?locationId=X for an override row, nothing for the default row
-  const locationQuery = (locId) => (locId != null ? `?locationId=${locId}` : "");
+  const locationQuery = (locId) =>
+    locId != null ? `?locationId=${locId}` : "";
 
   const handleDeleteAssignment = async (assignment) => {
     const isDefault = assignment.location_Id == null;
@@ -143,11 +205,21 @@ const MenuAssignmentDialog = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+
+    const problem = formProblem(formData);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const url = editingAssignment
         ? `/menuassignment/${editingAssignment.menu_Id}/${selectedItem.item_id}${locationQuery(editingAssignment.location_Id)}`
         : "/menuassignment";
+
+      const fullPrice = parseFloat(formData.full_price);
 
       await api({
         method: editingAssignment ? "PUT" : "POST",
@@ -164,6 +236,10 @@ const MenuAssignmentDialog = ({
           child_limit: parseInt(formData.child_limit) || 0,
           senior_limit: parseInt(formData.senior_limit) || 0,
           tot_limit: parseInt(formData.tot_limit) || 0,
+          per_order_limit: parseInt(formData.per_order_limit) || 0,
+          over_limit_behavior: formData.over_limit_behavior,
+          // Blank = server default (price on create, unchanged on update)
+          full_price: Number.isNaN(fullPrice) ? null : fullPrice,
           status: formData.status,
           is_add_on: formData.is_add_on,
         },
@@ -176,15 +252,13 @@ const MenuAssignmentDialog = ({
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error("Submit error:", err);
-      const data = err.response?.data;
       setError(
-        typeof data === "string"
-          ? data
-          : data?.message ??
-              data?.title ??
-              (editingAssignment
-                ? "Failed to update assignment"
-                : "Failed to create assignment"),
+        errorText(
+          err.response?.data,
+          editingAssignment
+            ? "Failed to update assignment"
+            : "Failed to create assignment",
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -198,17 +272,16 @@ const MenuAssignmentDialog = ({
     );
 
   const selectedLocId =
-    formData.location_id === ALL_LOCATIONS ? null : Number(formData.location_id);
+    formData.location_id === ALL_LOCATIONS
+      ? null
+      : Number(formData.location_id);
 
   // Default row: menus without one yet.
   // Location row: menus that HAVE a default but no row for that location yet.
   const availableMenus = menus.filter((menu) => {
-    if (editingAssignment && editingAssignment.menu_Id === menu.menu_id) {
+    if (editingAssignment && editingAssignment.menu_Id === menu.menu_id)
       return true;
-    }
-    if (selectedLocId == null) {
-      return !hasRow(menu.menu_id, null);
-    }
+    if (selectedLocId == null) return !hasRow(menu.menu_id, null);
     return hasRow(menu.menu_id, null) && !hasRow(menu.menu_id, selectedLocId);
   });
 
@@ -219,17 +292,22 @@ const MenuAssignmentDialog = ({
       (a) => a.menu_Id === Number(formData.menu_id) && a.location_Id == null,
     );
     if (!def) return;
-    setFormData((prev) => ({
-      ...prev,
-      price: def.price.toString(),
-      is_add_on: def.is_Add_On === true,
-      status: (def.status || "Available").toLowerCase(),
-      adult_limit: def.adult_Limit || 0,
-      child_limit: def.child_limit || 0,
-      senior_limit: def.senior_limit || 0,
-      tot_limit: def.tot_Limit || 0,
-    }));
+    setFormData((prev) => ({ ...prev, ...toForm(def) }));
   }, [formData.menu_id, formData.location_id]);
+
+  const limitField = (field, label, helperText) => (
+    <Grid item xs={6}>
+      <TextField
+        fullWidth
+        label={label}
+        type="number"
+        value={formData[field]}
+        onChange={setField(field)}
+        slotProps={{ htmlInput: { min: 0, max: 99 } }}
+        helperText={helperText}
+      />
+    </Grid>
+  );
 
   return (
     <AppDialog open={open} onClose={onClose}>
@@ -274,6 +352,7 @@ const MenuAssignmentDialog = ({
                     <TableCell sx={{ color: "white" }}>Menu</TableCell>
                     <TableCell sx={{ color: "white" }}>Location</TableCell>
                     <TableCell sx={{ color: "white" }}>Price</TableCell>
+                    <TableCell sx={{ color: "white" }}>Limits</TableCell>
                     <TableCell sx={{ color: "white" }}>Status</TableCell>
                     <TableCell sx={{ color: "white" }}>Add-on</TableCell>
                     <TableCell sx={{ color: "white" }} align="right">
@@ -282,55 +361,61 @@ const MenuAssignmentDialog = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                    {[...assignments]
+                  {[...assignments]
                     .sort(
                       (a, b) =>
                         a.menu_Id - b.menu_Id ||
                         (a.location_Id ?? 0) - (b.location_Id ?? 0),
                     )
                     .map((assignment) => (
-                    <TableRow
-                      key={assignment.assignment_Id}
-                      selected={editingAssignment?.assignment_Id === assignment.assignment_Id}
-                    >
-                      <TableCell>
-                        {assignment.menu?.name || "Unknown Menu"}
-                      </TableCell>
-                      <TableCell>
-                        {assignment.location_Id == null ? (
-                          <strong>All locations</strong>
-                        ) : (
-                          locationName(assignment.location_Id)
-                        )}
-                      </TableCell>
-                      <TableCell>${Number(assignment.price).toFixed(2)}</TableCell>
-                      <TableCell>{assignment.status}</TableCell>
-                      <TableCell>
-                        {assignment.is_Add_On ? "Yes" : "No"}
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => setEditingAssignment(assignment)}
-                          sx={{ mr: 1 }}
-                        >
-                          <Edit size={16} />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          title={
-                            assignment.location_Id == null
-                              ? "Remove from menu"
-                              : "Reset to default price"
-                          }
-                          onClick={() => handleDeleteAssignment(assignment)}
-                        >
-                          <Trash2 size={16} />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      <TableRow
+                        key={assignment.assignment_Id}
+                        selected={
+                          editingAssignment?.assignment_Id ===
+                          assignment.assignment_Id
+                        }
+                      >
+                        <TableCell>
+                          {assignment.menu?.name || "Unknown Menu"}
+                        </TableCell>
+                        <TableCell>
+                          {assignment.location_Id == null ? (
+                            <strong>All locations</strong>
+                          ) : (
+                            locationName(assignment.location_Id)
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          ${Number(assignment.price).toFixed(2)}
+                        </TableCell>
+                        <TableCell>{limitSummary(assignment)}</TableCell>
+                        <TableCell>{assignment.status}</TableCell>
+                        <TableCell>
+                          {assignment.is_Add_On ? "Yes" : "No"}
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            size="small"
+                            onClick={() => setEditingAssignment(assignment)}
+                            sx={{ mr: 1 }}
+                          >
+                            <Edit size={16} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            title={
+                              assignment.location_Id == null
+                                ? "Remove from menu"
+                                : "Reset to default price"
+                            }
+                            onClick={() => handleDeleteAssignment(assignment)}
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -345,7 +430,7 @@ const MenuAssignmentDialog = ({
           </Typography>
 
           <Stack spacing={2}>
-                        <FormControl fullWidth>
+            <FormControl fullWidth>
               <InputLabel>Location</InputLabel>
               <Select
                 value={formData.location_id}
@@ -359,7 +444,9 @@ const MenuAssignmentDialog = ({
                 label="Location"
                 disabled={Boolean(editingAssignment)}
               >
-                <MenuItem value={ALL_LOCATIONS}>All locations (default)</MenuItem>
+                <MenuItem value={ALL_LOCATIONS}>
+                  All locations (default)
+                </MenuItem>
                 {locations.map((loc) => (
                   <MenuItem key={loc.location_id} value={loc.location_id}>
                     {loc.name}
@@ -371,9 +458,7 @@ const MenuAssignmentDialog = ({
               <InputLabel>Menu</InputLabel>
               <Select
                 value={formData.menu_id}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, menu_id: e.target.value }))
-                }
+                onChange={setField("menu_id")}
                 label="Menu"
                 disabled={Boolean(editingAssignment)}
               >
@@ -381,7 +466,7 @@ const MenuAssignmentDialog = ({
                   <MenuItem key={menu.menu_id} value={menu.menu_id}>
                     {menu.name}
                   </MenuItem>
-                ))}                
+                ))}
               </Select>
             </FormControl>
 
@@ -390,12 +475,11 @@ const MenuAssignmentDialog = ({
                 label="Price"
                 type="number"
                 value={formData.price}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, price: e.target.value }))
-                }
+                onChange={setField("price")}
                 required
                 disabled={!formData.is_add_on}
                 inputProps={{ step: "0.01", min: "0" }}
+                helperText="Charged every time (add-ons only)"
                 sx={{ flex: 1 }}
               />
 
@@ -403,9 +487,7 @@ const MenuAssignmentDialog = ({
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={formData.status}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, status: e.target.value }))
-                  }
+                  onChange={setField("status")}
                   label="Status"
                 >
                   <MenuItem value="available">Available</MenuItem>
@@ -431,68 +513,53 @@ const MenuAssignmentDialog = ({
               label="Is Add-on Item"
             />
 
+            {/* Per person, per dining session. 0 = unlimited */}
+            <Typography variant="subtitle2" color="text.secondary">
+              Item limits per person (whole dining session). 0 = unlimited.
+              Category limits also apply.
+            </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Adult Limit"
-                  type="number"
-                  value={formData.adult_limit}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      adult_limit: e.target.value,
-                    }))
-                  }
-                  inputProps={{ min: 0, max: 99 }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Child Limit"
-                  type="number"
-                  value={formData.child_limit}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      child_limit: e.target.value,
-                    }))
-                  }
-                  inputProps={{ min: 0, max: 99 }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Senior Limit"
-                  type="number"
-                  value={formData.senior_limit}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      senior_limit: e.target.value,
-                    }))
-                  }
-                  inputProps={{ min: 0, max: 99 }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Tot Limit"
-                  type="number"
-                  value={formData.tot_limit}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      tot_limit: e.target.value,
-                    }))
-                  }
-                  inputProps={{ min: 0, max: 99 }}
-                />
-              </Grid>
+              {limitField("adult_limit", "Adult Limit")}
+              {limitField("senior_limit", "Senior Limit", "Can't exceed adult")}
+              {limitField("child_limit", "Child Limit", "Can't exceed adult")}
+              {limitField("tot_limit", "Toddler Limit", "0 = same as child")}
+              {limitField(
+                "per_order_limit",
+                "Per Order Limit",
+                "Whole table, each order. 0 = no cap",
+              )}
             </Grid>
+
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <FormControl sx={{ flex: 1 }}>
+                <InputLabel id="assignment-over-limit-label">
+                  Over Limit
+                </InputLabel>
+                <Select
+                  labelId="assignment-over-limit-label"
+                  label="Over Limit"
+                  value={formData.over_limit_behavior}
+                  onChange={setField("over_limit_behavior")}
+                >
+                  <MenuItem value="Block">Block</MenuItem>
+                  <MenuItem value="Charge">Charge full price</MenuItem>
+                </Select>
+                <FormHelperText>
+                  Per-person limits only; per-order limits always block
+                </FormHelperText>
+              </FormControl>
+
+              <TextField
+                label="Full Price"
+                type="number"
+                value={formData.full_price}
+                onChange={setField("full_price")}
+                slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
+                helperText="Charged per item over a Charge limit (category or item)"
+                required={formData.over_limit_behavior === "Charge"}
+                sx={{ flex: 1 }}
+              />
+            </Stack>
 
             <Stack direction="row" spacing={2}>
               {editingAssignment && (
@@ -519,7 +586,6 @@ const MenuAssignmentDialog = ({
                 ) : (
                   "Add Assignment"
                 )}
-
               </Button>
             </Stack>
           </Stack>
