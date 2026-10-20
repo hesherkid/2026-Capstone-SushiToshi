@@ -35,8 +35,6 @@ const BillSelect = (props) => {
 
   useEffect(() => {
     const fetchBills = async () => {
-    //console.log('Effective Session props:', JSON.stringify(props, null, 2))
-    console.log(`Effective Session ${effectiveSessionId}`)
       if (!effectiveSessionId) {
         setBills([]);
         setLoading(false);

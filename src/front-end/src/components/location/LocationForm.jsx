@@ -29,7 +29,6 @@ const LocationForm = ({ initialData, onSubmit, onClose, mode }) => {
   };
 
   const handleSubmit = (e) => {
-    console.log(formData)
     e.preventDefault();
     onSubmit(formData);
   };

@@ -54,7 +54,6 @@ useEffect(() => {
       // Use response.data instead of selectedLocation
       const locationId = Number(localStorage.getItem("locationId"));
       const filteredLocation = response.data.find(loc => loc.location_Id === locationId);
-      console.log('Filtered location:', filteredLocation);
       
       // If you want to set it in state
       if (filteredLocation) {
