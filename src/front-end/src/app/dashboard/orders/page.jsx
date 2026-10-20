@@ -13,7 +13,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import MaterialSymbol from "@/components/common/MaterialSymbol";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/config/api";
@@ -158,7 +158,7 @@ const fetchOrders = async () => {
       }}
     >
       <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
+        expandIcon={<MaterialSymbol name="expand_more" />}
         sx={{
           backgroundColor:
             groupStatus === "PENDING"

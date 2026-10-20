@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import SendIcon from "@mui/icons-material/Send";
 import {
   Box,
   Button,
@@ -15,6 +14,7 @@ import {
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import CustomerBillDialog from "@/components/customer/CustomerBillDialog";
+import MaterialSymbol from "@/components/common/MaterialSymbol";
 
 const SUCCESS_MESSAGE_MS = 8000;
 const READY_FOR_BILL = "Ready for bill";
@@ -187,7 +187,7 @@ const ServiceRequestForm = () => {
           variant="contained"
           color="primary"
           startIcon={
-            isSubmitting ? <CircularProgress size={20} /> : <SendIcon />
+            isSubmitting ? <CircularProgress size={20} /> : <MaterialSymbol name="send" size={20} />
           }
         >
           {isSubmitting ? "Submitting..." : "Send Request"}

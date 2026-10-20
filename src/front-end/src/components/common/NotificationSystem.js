@@ -25,7 +25,7 @@ const NotificationSystem = () => {
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       slots={{ transition: SlideTransition }}
       sx={{
-        bottom: { xs: 70, sm: 24 },
+        bottom: { xs: 80, md: 24 },
         pointerEvents: "none",
         "& .MuiAlert-root": { pointerEvents: "auto" },
       }}

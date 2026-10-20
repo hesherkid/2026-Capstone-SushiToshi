@@ -8,8 +8,10 @@ import { createTheme } from "@mui/material/styles";
 import { MenuProvider } from "@/contexts/MenuContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { OrderProvider } from "@/contexts/OrderContext";
+import { TableOrderProvider } from "@/contexts/TableOrderContext";
 import NotificationSystem from "@/components/common/NotificationSystem";
 import Layout from "@/components/Layout.jsx";
+import { MATERIAL_SYMBOLS_URL } from "@/components/common/MaterialSymbol";
 import "@/styles/global.css";
 
 import { useEffect, useState, createContext } from "react";
@@ -131,13 +133,20 @@ export const AuthContext = createContext();
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        {/* Google Material Symbols for the customer pages' icons */}
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={MATERIAL_SYMBOLS_URL} />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <NotificationProvider>
             <MenuProvider>
               <OrderProvider>
-                <Layout>{children}</Layout>
+                <TableOrderProvider>
+                  <Layout>{children}</Layout>
+                </TableOrderProvider>
               </OrderProvider>
             </MenuProvider>
             <NotificationSystem />

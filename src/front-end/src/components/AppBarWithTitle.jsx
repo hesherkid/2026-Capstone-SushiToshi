@@ -9,7 +9,6 @@ import {
   Box,
   useTheme,
   CircularProgress,
-  Badge,
   Select,
   MenuItem,
   FormControl,
@@ -17,7 +16,6 @@ import {
 import {
   Menu as MenuIcon,
   LogIn,
-  ShoppingBag,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -44,7 +42,6 @@ const AppBarWithTitle = ({ title }) => {
   );
   const [allLocations, setAllLocations] = useState([]);
   const [tableNumber, setTableNumber] = useState("");
-  const [bagItemCount, setBagItemCount] = useState(0);
   const { isAuthenticated, userRole, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
   const [isGuest, setIsGuest] = useState(false);
@@ -52,19 +49,6 @@ const AppBarWithTitle = ({ title }) => {
   const [pageLoading, setPageLoadingState] = useState(false);
   const canShowDrawer =
     !isLoginPage && (isAuthenticated || isGuest);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleCartCountChange = (event) => {
-      setBagItemCount(Number(event.detail?.count) || 0);
-    };
-
-    window.addEventListener("menu-cart-count-changed", handleCartCountChange);
-    return () => {
-      window.removeEventListener("menu-cart-count-changed", handleCartCountChange);
-    };
-  }, []);
 
   useEffect(() => {
     const handlePageLoading = (event) => setPageLoadingState(Boolean(event.detail?.loading));
@@ -280,36 +264,6 @@ const handleLogout = () => {
                 Table {tableNumber}
               </Typography>
             </Box>
-          )}
-
-          {(isGuest || userRole === "customer") && pathname === "/menu/full-menu" && (
-            <IconButton
-              color="inherit"
-              aria-label={`Shopping bag, ${bagItemCount} ${bagItemCount === 1 ? "item" : "items"}`}
-              disabled={bagItemCount === 0}
-              onClick={() =>
-                window.dispatchEvent(new Event("menu-cart-open"))
-              }
-              sx={{
-                color: "white",
-                "&.Mui-disabled": { color: "white" },
-              }}
-            >
-              <Badge
-                badgeContent={bagItemCount}
-                showZero
-                sx={{
-                  "& .MuiBadge-badge": {
-                    backgroundColor: "white",
-                    color: theme.palette.primary.main,
-                    border: `1.5px solid ${theme.palette.primary.main}`,
-                    fontWeight: 700,
-                  },
-                }}
-              >
-                <ShoppingBag size={25} />
-              </Badge>
-            </IconButton>
           )}
 
           {/* Location Dropdown - Only visible for staff and admin */}

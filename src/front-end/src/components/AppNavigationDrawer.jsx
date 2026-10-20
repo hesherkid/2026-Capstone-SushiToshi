@@ -9,31 +9,32 @@ import {
   Box, 
   Button,
   Divider,
+  Typography,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  MenuSquare,
   Home,
   Clock,
   Users,
   BarChart,
   Tag,
   QrCode,
-  Phone,
   MapPin,
   Group,
   Contact,
   LogOut,
 } from "lucide-react";
 import TableIcon from "@/components/common/TableIcon";
+import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
+import MaterialSymbol from "@/components/common/MaterialSymbol";
 
 const menuItemsByRole = {
-  customer: [
-    { icon: MenuSquare, label: "Menu", path: "/menu/full-menu" },
-     { icon: Users, label: "Table Orders", path: "/dashboard/orders" },
-    { icon: Clock, label: "Bill Summary", path: "/dashboard/bills" },
-    { icon: Phone, label: "Call Server", path: "/dashboard/call-server" },
-  ],
+  // Same pages and icons as the phone tab bar
+  customer: CUSTOMER_NAV_ITEMS.map(({ label, path, symbol }) => ({
+    icon: () => <MaterialSymbol name={symbol} size={22} />,
+    label,
+    path,
+  })),
   staff: [
     { icon: Home, label: "Home", path: "/" },
     { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
@@ -159,6 +160,20 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
         >
             Logout
         </Button>
+
+        {/* Phones hide the page footer, so the copyright lives here instead */}
+        <Typography
+            component="p"
+            variant="caption"
+            sx={{
+            display: { xs: "block", md: "none" },
+            mt: 1.5,
+            textAlign: "center",
+            color: "text.secondary",
+            }}
+        >
+            &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
+        </Typography>
     </Box>
 
     </Drawer>
