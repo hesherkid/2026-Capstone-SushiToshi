@@ -66,7 +66,6 @@ const AddLocationsToMenu = ({ menu, onSubmit, onClose, availableLocations = [] }
     // optimistic add (revert on error)
     const revertNeeded = !assignedLocations.includes(locId);
     if (revertNeeded) setAssignedLocations((prev) => [...prev, locId]);
-    console.log(menu)
     try {
       const url = `MenuLocation/menu/${menu.menu_id}/location/${locId}`;
       const res = await api.put(url);

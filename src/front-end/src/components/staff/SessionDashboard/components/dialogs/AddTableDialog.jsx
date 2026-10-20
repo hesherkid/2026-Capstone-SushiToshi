@@ -43,7 +43,6 @@ const AddTableDialog = ({ open, sessionId, onClose }) => {
         `/Location/${storage.get("branch-location")}/tables`
       );
       const locationTables = tablesResponse.data;
-      console.log(locationTables);
 
       // Filter out tables that are active and not in use in any session
       const availableTables = locationTables.filter((table) => table.is_active);
@@ -99,7 +98,6 @@ const AddTableDialog = ({ open, sessionId, onClose }) => {
           <Select
             value={selectedTable}
             onChange={(e) => {
-              console.log(e.target.value);
               setSelectedTable(e.target.value);
             }}
             label="Select Table"

@@ -57,7 +57,6 @@ const MenuItemManagement = () => {
   // TODO: Update APIs for menu items, categories, menu, and tags
   const fetchData = async () => {
     try {
-      // console.log("Fetching data...");
       const [
         { data: itemsData },
         { data: categoriesData },
@@ -69,12 +68,10 @@ const MenuItemManagement = () => {
         api.get("/Menu"),
         api.get("/tag/colors"), // TODO: Need Tag Controllers
       ]);
-      console.log(items)
       setItems(Array.isArray(itemsData) ? itemsData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setMenus(Array.isArray(menusData) ? menusData : []);
       setTags(Array.isArray(tagsData) ? tagsData : []);
-      console.log(itemsData)
     } catch (err) {
       console.error("Failed to fetch data:", err);
       setError("Failed to fetch data");
