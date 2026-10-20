@@ -33,7 +33,10 @@ const SectionHeading = ({ children }) => (
 const ReceiptLine = ({ label, amount, quantity, unitPrice, bold, large }) => (
   <Box sx={{ py: 0.5 }}>
     <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-      <Typography variant={large ? "h6" : "body1"} fontWeight={bold ? 700 : 400}>
+      <Typography
+        variant={large ? "h6" : "body1"}
+        fontWeight={bold ? 700 : 400}
+      >
         {label}
       </Typography>
       <Typography
@@ -46,12 +49,35 @@ const ReceiptLine = ({ label, amount, quantity, unitPrice, bold, large }) => (
       </Typography>
     </Box>
     {quantity != null && (
-      <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ fontVariantNumeric: "tabular-nums" }}
+      >
         {quantity} × {formatCurrency(unitPrice)}
       </Typography>
     )}
   </Box>
 );
+
+// One priced section (add-ons, over-limit, leftovers); hidden when empty
+const ChargeSection = ({ title, items, subtotalLabel, subtotal }) =>
+  items?.length > 0 && (
+    <>
+      <ReceiptRule />
+      <SectionHeading>{title}</SectionHeading>
+      {items.map((item) => (
+        <ReceiptLine
+          key={item.order_item_id}
+          label={item.item_name}
+          quantity={item.quantity}
+          unitPrice={item.price_per_unit}
+          amount={item.line_total}
+        />
+      ))}
+      <ReceiptLine label={subtotalLabel} amount={subtotal} bold />
+    </>
+  );
 
 /**
  * A bill's priced breakdown: guests by age, add-ons, tax and total.
@@ -69,7 +95,11 @@ const BillBreakdown = ({ summary }) => (
           color={getBillStatusColor(summary.status)}
           size="small"
         />
-        <Chip label={formatPricingType(summary.pricing_type)} variant="outlined" size="small" />
+        <Chip
+          label={formatPricingType(summary.pricing_type)}
+          variant="outlined"
+          size="small"
+        />
         <Typography variant="body2" color="text.secondary">
           Created: {formatDateTime(summary.created_at)}
         </Typography>
@@ -94,13 +124,18 @@ const BillBreakdown = ({ summary }) => (
         amount={summary[type.count] * summary[type.price]}
       />
     ))}
-    <ReceiptLine label="Base charges" amount={summary.base_charges_subtotal} bold />
+    <ReceiptLine
+      label="Base charges"
+      amount={summary.base_charges_subtotal}
+      bold
+    />
 
-    {summary.addon_items?.length > 0 && (
+    {(summary.addon_items?.length > 0 ||
+      summary.overlimit_items?.length > 0) && (
       <>
         <ReceiptRule />
         <SectionHeading>Premium Add-ons</SectionHeading>
-        {summary.addon_items.map((item) => (
+        {summary.addon_items?.map((item) => (
           <ReceiptLine
             key={item.order_item_id}
             label={item.item_name}
@@ -109,14 +144,33 @@ const BillBreakdown = ({ summary }) => (
             amount={item.line_total}
           />
         ))}
-        <ReceiptLine label="Add-ons" amount={summary.addon_subtotal} bold />
+        <SectionHeading>Over Limit Charges</SectionHeading>
+        {summary.overlimit_items?.map((item) => (
+          <ReceiptLine
+            key={`over-${item.order_item_id}`}
+            label={`${item.item_name}`}
+            quantity={item.quantity}
+            unitPrice={item.price_per_unit}
+            amount={item.line_total}
+          />
+        ))}
+        <ReceiptLine
+          label="Add-ons"
+          amount={
+            (summary.addon_subtotal ?? 0) + (summary.overlimit_subtotal ?? 0)
+          }
+          bold
+        />
       </>
     )}
 
     <ReceiptRule />
 
     <ReceiptLine label="Subtotal" amount={summary.subtotal} />
-    <ReceiptLine label={`Tax (${(summary.tax_rate * 100).toFixed(0)}%)`} amount={summary.tax_amount} />
+    <ReceiptLine
+      label={`Tax (${(summary.tax_rate * 100).toFixed(0)}%)`}
+      amount={summary.tax_amount}
+    />
 
     <ReceiptRule />
 

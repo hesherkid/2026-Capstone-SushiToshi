@@ -695,7 +695,7 @@ namespace back_end.Controllers
                     .GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
 
 
-                // Plan limit lines first, add nothing if any item dails (all or nothing)
+                // Plan limit lines first, add nothing if any item fails (all or nothing)
                 var errors = new List<string>();
                 var newLines = new List<OrderItems>();
 
@@ -756,7 +756,7 @@ namespace back_end.Controllers
                 }
                 if (errors.Any())
                 {
-                    return BadRequest(new { message = "Some items could not be added. Nothing was added.", errors });
+                    return BadRequest(new { message = $"Nothing was added. {string.Join(" ", errors)}", errors });
                 }
 
                 foreach (var line in newLines)

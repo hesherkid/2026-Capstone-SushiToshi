@@ -4,109 +4,73 @@ import CategoryManagementDialog from "@/components/admin/CategoryManagementDialo
 import { http, HttpResponse, delay } from "msw";
 import api from "@/config/api";
 
-const mockMsalInstance = {
-  getActiveAccount: () => ({}),
-  acquireTokenSilent: async () => {
-    return { accessToken: "mock-access-token" };
-  }
-};
+// 0 = unlimited; toddler 0 = same as child; enums are strings
+const category = (category_id, category_name, description, limits = {}) => ({
+  category_id,
+  category_name,
+  description,
+  image_url: null,
+  total_views: 0,
+  total_view_seconds: 0,
+  last_viewed_at: "0001-01-01T00:00:00",
+  adult_limit: 0,
+  child_limit: 0,
+  senior_limit: 0,
+  toddler_limit: 0,
+  per_order_limit: 0,
+  over_limit_behavior: "Block",
+  menuItems: [],
+  ...limits,
+});
 
 const mockCategories = [
-  {
-    category_id: 1,
-    category_name: "Sushi Rolls",
-    description: "Traditional and specialty sushi rolls",
-    image_url: null,
-    total_views: 0,
-    total_view_seconds: 0,
-    last_viewed_at: "0001-01-01T00:00:00",
-    adult_limit: 12,
-    child_limit: 8,
-    senior_limit: 10,
-    total_limit: 4,
-    menuItems: []
-  },
-  {
-    category_id: 2,
-    category_name: "Nigiri",
-    description: "Hand-pressed sushi with fresh fish",
-    image_url: null,
-    total_views: 0,
-    total_view_seconds: 0,
-    last_viewed_at: "0001-01-01T00:00:00",
-    adult_limit: 10,
-    child_limit: 6,
-    senior_limit: 8,
-    total_limit: 3,
-    menuItems: []
-  },
-  {
-    category_id: 3,
-    category_name: "Sashimi",
-    description: "Fresh sliced raw fish",
-    image_url: null,
-    total_views: 0,
-    total_view_seconds: 0,
-    last_viewed_at: "0001-01-01T00:00:00",
-    adult_limit: 8,
-    child_limit: 4,
-    senior_limit: 6,
-    total_limit: 2,
-    menuItems: []
-  },
-  {
-    category_id: 4,
-    category_name: "Appetizers",
-    description: "Starters and small dishes",
-    image_url: null,
-    total_views: 0,
-    total_view_seconds: 0,
-    last_viewed_at: "0001-01-01T00:00:00",
-    adult_limit: 6,
-    child_limit: 4,
-    senior_limit: 5,
-    total_limit: 2,
-    menuItems: []
-  },
-  {
-    category_id: 5,
-    category_name: "Hot Dishes",
-    description: "Cooked meals and hot specialties",
-    image_url: null,
-    total_views: 0,
-    total_view_seconds: 0,
-    last_viewed_at: "0001-01-01T00:00:00",
-    adult_limit: 5,
-    child_limit: 3,
-    senior_limit: 4,
-    total_limit: 2,
-    menuItems: []
-  },
-  {
-    category_id: 6,
-    category_name: "Desserts",
-    description: "Sweet treats to end your meal",
-    image_url: null,
-    total_views: 0,
-    total_view_seconds: 0,
-    last_viewed_at: "0001-01-01T00:00:00",
-    adult_limit: 2,
-    child_limit: 2,
-    senior_limit: 2,
-    total_limit: 1,
-    menuItems: []
-  }
+  category(
+    1,
+    "Sashimi",
+    "Fresh sliced raw fish, ordered by the piece. Maximum 30 pieces per order.",
+    { per_order_limit: 30 },
+  ),
+  category(
+    2,
+    "Nigiri",
+    "Hand-pressed sushi and gunkan. 1 piece of each type per order.",
+  ),
+  category(3, "Maki", "Small rolls. 2 of each type per order."),
+  category(
+    4,
+    "Rolls",
+    "Inside-out and specialty rolls. 2 of each type per order.",
+  ),
+  category(
+    5,
+    "Hot Stone",
+    "Cooked at your table on a hot stone. Maximum 1 per person; $5 for each extra item.",
+    {
+      adult_limit: 1,
+      child_limit: 1,
+      senior_limit: 1,
+      over_limit_behavior: "Charge",
+    },
+  ),
+  category(6, "Cooked/Hot", "Appetizers, soups, and salads."),
+  category(
+    7,
+    "Add On",
+    "Premium sashimi, nigiri, rolls, and ice cream charged per piece.",
+  ),
 ];
 
-// Mock api methods for Storybook to bypass MSAL and handle category CRUD
 api.get = async (url) => {
-  if (url === "/category" || url === "/category") {
+  if (url.toLowerCase() === "/category") {
     return { data: mockCategories };
   }
-  if (url.startsWith("/Category/get_category/")) {
-    const id = parseInt(url.split("/").pop());
-    const found = mockCategories.find(c => c.category_id === id);
-    return { data: found || null };
+  if (url.startsWith("/Category/get_menu_by_category/")) {
+    const error = new Error("Not found");
+    error.response = {
+      status: 404,
+      data: "No menu items found for the specified category.",
+    };
+    throw error;
   }
   return { data: [] };
 };
@@ -125,7 +89,7 @@ api.post = async (url, data) => {
 };
 api.delete = async (url) => {
   if (url.startsWith("/Category/delete_category/")) {
-    return { data: { success: true } };
+    return { data: "Category deleted successfully." };
   }
   return { data: {} };
 };
@@ -139,24 +103,30 @@ export default {
         await delay(200);
         return HttpResponse.json(mockCategories, { status: 200 });
       }),
-      http.get("/Category/get_category/:categoryId", async ({ params }) => {
-        await delay(200);
-        const found = mockCategories.find(c => c.category_id === parseInt(params.categoryId));
-        return HttpResponse.json(found || {}, { status: 200 });
-      }),
-      http.put("/Category/update_category/:categoryId", async ({ request, params }) => {
-        await delay(200);
-        const body = await request.json();
-        return HttpResponse.json({ ...body, category_id: parseInt(params.categoryId) }, { status: 200 });
-      }),
+      http.put(
+        "/Category/update_category/:categoryId",
+        async ({ request, params }) => {
+          await delay(200);
+          const body = await request.json();
+          return HttpResponse.json(
+            { ...body, category_id: parseInt(params.categoryId) },
+            { status: 200 },
+          );
+        },
+      ),
       http.post("/Category", async ({ request }) => {
         await delay(200);
         const body = await request.json();
-        return HttpResponse.json({ ...body, category_id: 999 }, { status: 201 });
+        return HttpResponse.json(
+          { ...body, category_id: 999 },
+          { status: 200 },
+        );
       }),
       http.delete("/Category/delete_category/:categoryId", async () => {
         await delay(200);
-        return HttpResponse.json({ success: true }, { status: 200 });
+        return HttpResponse.json("Category deleted successfully.", {
+          status: 200,
+        });
       }),
     ],
   },
@@ -167,12 +137,7 @@ export const Default = (args) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const handleEditCategory = (category) => {
-    // Map fields for CategoryManagementDialog
-    setSelectedCategory({
-      ...category,
-      name: category.category_name,
-      tot_limit: category.total_limit,
-    });
+    setSelectedCategory(category);
     setDialogOpen(true);
   };
 
@@ -202,4 +167,3 @@ export const Default = (args) => {
     </>
   );
 };
-

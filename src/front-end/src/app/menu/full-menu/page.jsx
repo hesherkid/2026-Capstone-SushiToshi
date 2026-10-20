@@ -26,9 +26,8 @@ const BILL_REQUESTED_MESSAGE =
 import { useOrderActions } from "@/hooks/useOrderActions";
 
 //Check if the logged in user is a guest.
-const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
-
-
+const isGuest = () =>
+  typeof window !== "undefined" && localStorage.getItem("guest") === "true";
 
 const FullMenu = () => {
   const [categories, setCategories] = useState([]);
@@ -45,17 +44,56 @@ const FullMenu = () => {
   const [openBills, setOpenBills] = useState([]);
   // The guests pressed "Ready for Bill" on this bill, so the server won't take more orders on it
   const billRequested = Boolean(
-    openBills.find((bill) => bill.bill_id === selectedBillId)?.requested_at
+    openBills.find((bill) => bill.bill_id === selectedBillId)?.requested_at,
   );
   const [menuId, setMenuId] = useState("");
   const [locationId, setLocationId] = useState(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  // Order created but its items not added yet (e.g. a limit was hit); reused on the next try
+  const PENDING_ORDER_KEY = "pendingOrder";
+  const [pendingOrderId, setPendingOrderIdState] = useState(null);
+
+  const setPendingOrderId = (orderId) => {
+    setPendingOrderIdState(orderId);
+    if (orderId) {
+      localStorage.setItem(
+        PENDING_ORDER_KEY,
+        JSON.stringify({ orderId, sessionId, billId: selectedBillId }),
+      );
+    } else {
+      localStorage.removeItem(PENDING_ORDER_KEY);
+    }
+  };
+
+  // Restore it once the session and bill are known
+  useEffect(() => {
+    if (!sessionId || !selectedBillId) return;
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(PENDING_ORDER_KEY) || "null",
+      );
+      if (
+        saved?.orderId &&
+        String(saved.sessionId) === String(sessionId) &&
+        String(saved.billId) === String(selectedBillId)
+      ) {
+        setPendingOrderIdState(Number(saved.orderId));
+      } else {
+        localStorage.removeItem(PENDING_ORDER_KEY);
+        setPendingOrderIdState(null);
+      }
+    } catch {
+      localStorage.removeItem(PENDING_ORDER_KEY);
+      setPendingOrderIdState(null);
+    }
+  }, [sessionId, selectedBillId]);
 
   const handleOrderSuccess = () => {
     setOrderSuccess(true);
     setQuantities({});
+    setPendingOrderId(null);
 
     // Redirect to orders page
     setTimeout(() => {
@@ -77,6 +115,7 @@ const FullMenu = () => {
   } = useOrderActions(handleOrderSuccess);
 
   const handleQuantityChange = (categoryId, itemId, delta) => {
+    clearActionError();
     setQuantities((prev) => ({
       ...prev,
       [categoryId]: {
@@ -132,7 +171,7 @@ const FullMenu = () => {
         itemCount: quantity > 0 ? stats.itemCount + 1 : stats.itemCount,
         totalQuantity: stats.totalQuantity + quantity,
       }),
-      { itemCount: 0, totalQuantity: 0 }
+      { itemCount: 0, totalQuantity: 0 },
     );
   };
 
@@ -145,19 +184,23 @@ const FullMenu = () => {
           totalQuantity: totals.totalQuantity + categoryStats.totalQuantity,
         };
       },
-      { itemCount: 0, totalQuantity: 0 }
+      { itemCount: 0, totalQuantity: 0 },
     );
   };
 
   useEffect(() => {
     const count = Object.values(quantities).reduce(
       (total, categoryQuantities) =>
-        total + Object.values(categoryQuantities).reduce((categoryTotal, quantity) => categoryTotal + quantity, 0),
-      0
+        total +
+        Object.values(categoryQuantities).reduce(
+          (categoryTotal, quantity) => categoryTotal + quantity,
+          0,
+        ),
+      0,
     );
 
     window.dispatchEvent(
-      new CustomEvent("menu-cart-count-changed", { detail: { count } })
+      new CustomEvent("menu-cart-count-changed", { detail: { count } }),
     );
   }, [quantities]);
 
@@ -169,8 +212,11 @@ const FullMenu = () => {
     if (!sessionId || cartRestored.current) return;
     cartRestored.current = true;
     try {
-      const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null");
-      if (saved?.sessionId === sessionId && saved.quantities) setQuantities(saved.quantities);
+      const saved = JSON.parse(
+        localStorage.getItem(CART_STORAGE_KEY) || "null",
+      );
+      if (saved?.sessionId === sessionId && saved.quantities)
+        setQuantities(saved.quantities);
     } catch {
       localStorage.removeItem(CART_STORAGE_KEY);
     }
@@ -179,7 +225,10 @@ const FullMenu = () => {
   useEffect(() => {
     // Wait until the saved cart has been read, or the empty starting cart would replace it
     if (!sessionId || !cartRestored.current) return;
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ sessionId, quantities }));
+    localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify({ sessionId, quantities }),
+    );
   }, [sessionId, quantities]);
 
   useEffect(() => {
@@ -260,22 +309,28 @@ const FullMenu = () => {
   useEffect(() => {
     //Session ID can only be 1 or above
     if (!sessionId || sessionId < 1) {
-
       return;
     }
 
     const fetchMenu = async () => {
-
       const apiClient = api;
       try {
         setError(null);
 
-        const response = await apiClient.get(`/DiningSession/session-menu/${sessionId}`);
+        const response = await apiClient.get(
+          `/DiningSession/session-menu/${sessionId}`,
+        );
 
         if (response?.status >= 200 && response.status < 300 && response.data) {
           const raw = response.data;
 
-          const id = raw.menu_id ?? raw.menuId ?? raw.Menu_Id ?? raw.menu_Id ?? raw.MenuID ?? raw;
+          const id =
+            raw.menu_id ??
+            raw.menuId ??
+            raw.Menu_Id ??
+            raw.menu_Id ??
+            raw.MenuID ??
+            raw;
           const getMenuID =
             typeof id === "number" ? id : parseInt(String(id), 10);
 
@@ -286,10 +341,14 @@ const FullMenu = () => {
           }
 
           // Location decides which prices this table sees
-          const loc = Number(raw.location_Id ?? raw.location_id ?? raw.locationId ?? raw.Location_Id);
+          const loc = Number(
+            raw.location_Id ??
+              raw.location_id ??
+              raw.locationId ??
+              raw.Location_Id,
+          );
           setLocationId(Number.isNaN(loc) || loc < 1 ? null : loc);
           setMenuId(getMenuID);
-
         } else {
           console.warn("No menu found", response?.data);
           setError("No menu found for this session");
@@ -314,10 +373,8 @@ const FullMenu = () => {
     fetchMenuItems(null, menuId, locationId);
   }, [menuId, locationId]);
 
-
   useEffect(() => {
     const fetchCategories = async () => {
-
       const apiClient = api;
 
       try {
@@ -328,7 +385,7 @@ const FullMenu = () => {
           data.map((c) => ({
             category_id: c.category_id ?? c.Category_id,
             name: c.name ?? c.category_name ?? c.Category_name,
-          }))
+          })),
         );
       } catch (err) {
         console.error("Error fetching categories:", err);
@@ -367,6 +424,9 @@ const FullMenu = () => {
         category_id: it.categoryID ?? it.categoryId ?? it.category_id,
         category: it.category,
         tags: it.tags ?? [],
+        categoryLimits: it.categoryLimits,
+        itemLimits: it.itemLimits,
+        fullPrice: it.fullPrice,
       }));
 
       //Group the items so all each category has its own list
@@ -396,7 +456,7 @@ const FullMenu = () => {
           .filter(([_, quantity]) => quantity > 0)
           .map(([itemId, quantity]) => {
             const menuItem = menuItems[categoryId]?.find(
-              (item) => item.item_id === parseInt(itemId)
+              (item) => item.item_id === parseInt(itemId),
             );
 
             if (!menuItem) {
@@ -415,7 +475,7 @@ const FullMenu = () => {
               // Not stored; names the items in the "added to order" notification
               name: menuItem.name,
             };
-          })
+          }),
     );
 
     return orderItems;
@@ -432,7 +492,7 @@ const FullMenu = () => {
     }
 
     const hasItems = Object.values(quantities).some((category) =>
-      Object.values(category).some((quantity) => quantity > 0)
+      Object.values(category).some((quantity) => quantity > 0),
     );
     if (!hasItems) {
       setError("Please select at least one item");
@@ -443,15 +503,33 @@ const FullMenu = () => {
     clearActionError();
 
     try {
-      const orderResponse = await createOrder(sessionId, selectedBillId);
+      let orderId = pendingOrderId;
 
-      if (!orderResponse) throw new Error("Failed to create order");
+      // The saved order may have been cancelled, approved, or filled since; only reuse it
+      // while it still exists, is pending, and has no items
+      if (orderId) {
+        const existing = await api
+          .get(`/Order/${orderId}`)
+          .then((res) => res.data)
+          .catch(() => null);
+        const reusable =
+          existing &&
+          String(existing.status).toLowerCase() === "pending" &&
+          (existing.items?.length ?? 0) === 0;
+        if (!reusable) {
+          setPendingOrderId(null);
+          orderId = null;
+        }
+      }
 
-      const newOrderId = Number(orderResponse.order_Id);
+      if (!orderId) {
+        const orderResponse = await createOrder(sessionId, selectedBillId);
+        if (!orderResponse) throw new Error("Failed to create order");
+        orderId = Number(orderResponse.order_Id);
+        setPendingOrderId(orderId);
+      }
 
-      const orderItems = createOrderItems();
-
-      await addOrderItems(newOrderId, orderItems);
+      await addOrderItems(orderId, createOrderItems());
     } catch (error) {
       console.error("Error processing order:", error);
       setError(error.message || "Error processing order");
@@ -466,23 +544,26 @@ const FullMenu = () => {
   const filteredMenuGroups = categories
     .filter(
       (category) =>
-        selectedCategory === "all" || category.category_id === selectedCategory
+        selectedCategory === "all" || category.category_id === selectedCategory,
     )
     .map((category) => ({
       category,
-      items: filterMenuItems(menuItems[category.category_id], category.category_id),
+      items: filterMenuItems(
+        menuItems[category.category_id],
+        category.category_id,
+      ),
     }))
     .filter(({ items }) => items.length > 0);
 
   const allMenuItemCount = categories.reduce(
     (total, category) =>
       total +
-      filterMenuItems(menuItems[category.category_id], category.category_id).length,
-    0
+      filterMenuItems(menuItems[category.category_id], category.category_id)
+        .length,
+    0,
   );
 
   return (
-
     <Container disableGutters maxWidth={false}>
       <Box sx={{ p: 0 }}>
         {/* Not seated: only the info message below shows, without a menu title */}
@@ -490,7 +571,13 @@ const FullMenu = () => {
           <Typography
             variant="h5"
             component="h1"
-            sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200, }}
+            sx={{
+              mt: 4,
+              mb: 4,
+              textAlign: "left",
+              width: "100%",
+              fontWeight: 200,
+            }}
           >
             All You Can Eat Menu
           </Typography>
@@ -518,26 +605,28 @@ const FullMenu = () => {
                 placeholder="Search the menu..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                InputProps={{
-                  startAdornment: (
-                    <Search size={20} style={{ marginRight: 8 }} />
-                  ),
-                  endAdornment: searchTerm ? (
-                    <Button
-                      onClick={() => setSearchTerm("")}
-                      sx={{
-                        minWidth: "auto",
-                        p: 0.5,
-                        color: "text.secondary",
-                        "&:hover": {
-                          backgroundColor: "transparent",
-                          color: "text.primary",
-                        },
-                      }}
-                    >
-                      ✕
-                    </Button>
-                  ) : null,
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <Search size={20} style={{ marginRight: 8 }} />
+                    ),
+                    endAdornment: searchTerm ? (
+                      <Button
+                        onClick={() => setSearchTerm("")}
+                        sx={{
+                          minWidth: "auto",
+                          p: 0.5,
+                          color: "text.secondary",
+                          "&:hover": {
+                            backgroundColor: "transparent",
+                            color: "text.primary",
+                          },
+                        }}
+                      >
+                        ✕
+                      </Button>
+                    ) : null,
+                  },
                 }}
                 sx={{ mb: 2 }}
               />
@@ -554,11 +643,14 @@ const FullMenu = () => {
                   }}
                 >
                   <Button
-                    variant={selectedCategory === "all" ? "contained" : "outlined"}
+                    variant={
+                      selectedCategory === "all" ? "contained" : "outlined"
+                    }
                     onClick={() => setSelectedCategory("all")}
                     sx={{
                       minWidth: "max-content",
-                      bgcolor: selectedCategory === "all" ? "#C01E2E" : "transparent",
+                      bgcolor:
+                        selectedCategory === "all" ? "#C01E2E" : "transparent",
                       color: selectedCategory === "all" ? "#fff" : "#C01E2E",
                       borderColor: "#C01E2E",
                     }}
@@ -590,17 +682,16 @@ const FullMenu = () => {
                     >
                       {category.name || `Category ${category.category_id}`}
                     </Button>
-
                   ))}
                 </Box>
-
               )}
             </>
           ) : (
             // Only once the check is done; before that sessionId is just not known yet
-            sessionChecked && <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
+            sessionChecked && (
+              <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
+            )
           )}
-
         </Box>
 
         {/* Seated, but the menu is still on its way */}
@@ -623,8 +714,9 @@ const FullMenu = () => {
 
             {!selectedBillId && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                Your menu is available, but there is no open bill for this session yet.
-                Ask a staff member to open a bill before placing an order.
+                Your menu is available, but there is no open bill for this
+                session yet. Ask a staff member to open a bill before placing an
+                order.
               </Alert>
             )}
 
@@ -652,7 +744,6 @@ const FullMenu = () => {
                   {allMenuItemCount} items
                 </Typography>
               </Typography>
-
             )}
 
             {filteredMenuGroups.length === 0 ? (
@@ -702,7 +793,8 @@ const FullMenu = () => {
                           item={item}
                           categoryId={category.category_id}
                           quantity={
-                            quantities[category.category_id]?.[item.item_id] || 0
+                            quantities[category.category_id]?.[item.item_id] ||
+                            0
                           }
                           onQuantityChange={handleQuantityChange}
                         />
@@ -718,7 +810,6 @@ const FullMenu = () => {
                 Order placed successfully!
               </Alert>
             )}
-
           </Box>
         )}
 
