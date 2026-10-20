@@ -1,5 +1,4 @@
 // config/auth.js
-import api from "@/config/api";
 /**
  * Custom claims namespace for roles (keep for backend compatibility)
  */
@@ -24,16 +23,6 @@ export function extractRoles(tokenClaims) {
     return Array.isArray(roles) ? roles : [roles];
 }
 
-
-export function registerUser(formData){
-    console.log(formData);
-    return api.post("/auth/register", {
-        email: formData.email,   
-        password: formData.password,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-    });
-}
 
 /**
  * Check if user has any of the specified roles
@@ -147,25 +136,3 @@ export function isTokenExpired(token) {
     // exp is in seconds, Date.now() is in milliseconds
     return claims.exp * 1000 < Date.now();
 }
-
-/**
- * Logger utility (optional - for debugging)
- */
-export const logger = {
-    error: (message, ...args) => {
-        console.error(`[Auth Error]: ${message}`, ...args);
-    },
-    info: (message, ...args) => {
-        if (process.env.NODE_ENV === 'development') {
-            console.info(`[Auth Info]: ${message}`, ...args);
-        }
-    },
-    warn: (message, ...args) => {
-        console.warn(`[Auth Warning]: ${message}`, ...args);
-    },
-    debug: (message, ...args) => {
-        if (process.env.NODE_ENV === 'development') {
-            console.debug(`[Auth Debug]: ${message}`, ...args);
-        }
-    }
-};

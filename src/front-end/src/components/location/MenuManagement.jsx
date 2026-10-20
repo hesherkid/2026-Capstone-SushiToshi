@@ -31,13 +31,10 @@ const MenuManagement = () => {
     try {
       const response = await api.get("/Menu");
       setMenus(response.data);
-      console.log(response.data)
     } catch (err) {
       console.error("Error fetching data:", err);
       if (err.response) {
         const { status, data } = err.response;
-        console.log("Status", status)
-        console.log("Data", err.response.data)
         
         switch (status) {
           case 401:
@@ -46,7 +43,6 @@ const MenuManagement = () => {
             break;
           case 409:
             setError(err.response.data || "Conflict error occurred");
-            console.error("Conflict message:", err.response.data);
             break;
           case 404:
             setError(err.response.data || "Resource not found");
@@ -83,7 +79,6 @@ const MenuManagement = () => {
             break;
           case 409:
             setError(err.response.data || "Conflict error occurred");
-            console.log("Conflict message:", err.response.data);
             break;
           case 404:
             setError(err.response.data || "Resource not found");
@@ -136,8 +131,6 @@ const MenuManagement = () => {
       console.error("Error fetching data:", err);
       if (err.response) {
         const { status, data } = err.response;
-        console.log("Status", status)
-        console.log("Data", err.response.data)
         
         switch (status) {
           case 401:
@@ -146,7 +139,6 @@ const MenuManagement = () => {
             break;
           case 409:
             setError(err.response.data || "Conflict error occurred");
-            console.log("Conflict message:", err.response.data);
             break;
           case 404:
             setError(err.response.data || "Resource not found");
@@ -186,7 +178,6 @@ const MenuManagement = () => {
             break;
           case 409:
             setError(err.response.data || "Conflict error occurred");
-            console.log("Conflict message:", err.response.data);
             break;
           case 404:
             setError(err.response.data || "Resource not found");

@@ -122,7 +122,6 @@ const NewSessionDialog = ({ open, onClose }) => {
           tableAssignmentType
         );
       }
-      console.log(createSession)
     } catch (error) {
       console.error("Error creating session:", error);
       const errorMessage =
@@ -143,11 +142,9 @@ const NewSessionDialog = ({ open, onClose }) => {
   };
 
   const handleTableAssignmentTypeChange = (event) => {
-    console.log("Table Group Change")
     setTableAssignmentType(event.target.value);
     setSelectedTable("");
     setSelectedTableGroup("");
-    console.log(tableAssignmentType)
   };
 
   return (
