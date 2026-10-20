@@ -200,7 +200,7 @@ namespace back_end.controllers
     /// </returns>
     /// <response code="200">Returns the list of bills for the session</response>
     /// <response code="400">If the specified table is not associated with the session</response>
-    /// <response code="404">If the session is not found or no bills exist</response>
+    /// <response code="404">If the session is not found</response>
     /// <response code="500">If an internal error occurs while retrieving bills</response>
     /// <remarks>
     /// Sample requests:
@@ -259,12 +259,8 @@ namespace back_end.controllers
           }
         }
 
+        // A session with no bills yet is normal (e.g. just seated), so return an empty list
         var bills = billQuery.OrderByDescending(b => b.Created_At).ToList();
-
-        if (bills.Count == 0)
-        {
-          return NotFound(new { message = "No bills found for the specified session" });
-        }
 
         var billResponses = bills.Select(bill => new BillResponse
         {
