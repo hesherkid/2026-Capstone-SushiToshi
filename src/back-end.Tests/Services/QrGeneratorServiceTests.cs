@@ -17,6 +17,9 @@ public class QrGeneratorServiceTests : IDisposable
     private readonly Mock<IConfiguration> _mockConfig;
     private readonly Mock<ILogger<QrGeneratorService>> _mockLogger;
     private readonly QrGeneratorService _service;
+    // Unique per test instance so parallel test classes never share QR files
+    private readonly string _storageDir =
+        Path.Combine(Path.GetTempPath(), "sushitoshi-qr-tests", Guid.NewGuid().ToString());
 
     public QrGeneratorServiceTests()
     {
@@ -28,6 +31,7 @@ public class QrGeneratorServiceTests : IDisposable
         _context = new ApplicationDbContext(options);
         _mockConfig = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<QrGeneratorService>>();
+        _mockConfig.Setup(c => c["QRCodeSettings:StoragePath"]).Returns(_storageDir);
 
         _service = new QrGeneratorService(_context, _mockConfig.Object, _mockLogger.Object);
 
@@ -223,7 +227,7 @@ public class QrGeneratorServiceTests : IDisposable
     }
 
     [Fact]
-    public void QrCodeExists_CachedFile_ReturnsTrue()
+    public void QrCodeExists_NotCached_ReturnsFalse()
     {
         // Note: This test would require actual file system interaction
         // For demonstration, testing the method signature
@@ -257,5 +261,7 @@ public class QrGeneratorServiceTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+        if (Directory.Exists(_storageDir))
+            Directory.Delete(_storageDir, recursive: true);
     }
 }

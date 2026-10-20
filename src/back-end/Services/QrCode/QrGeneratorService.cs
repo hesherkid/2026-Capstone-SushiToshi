@@ -26,7 +26,11 @@ namespace back_end.Services
             _config = config;
             _logger = logger;
 
-            _storagePath = Path.Combine(Directory.GetCurrentDirectory(), "storage", "qrcodes");
+            // Optional override (used by tests for isolated folders); defaults to ./storage/qrcodes
+            var configuredPath = _config["QRCodeSettings:StoragePath"];
+            _storagePath = string.IsNullOrWhiteSpace(configuredPath)
+                ? Path.Combine(Directory.GetCurrentDirectory(), "storage", "qrcodes")
+                : configuredPath;
             Directory.CreateDirectory(_storagePath);
         }
 
