@@ -20,7 +20,9 @@ const Layout = ({ children }) => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          padding: "2rem 1rem",
+          // Phones get thin gutters so customer pages use most of the screen
+          px: { xs: 1.5, sm: 2 },
+          py: { xs: 2, sm: 4 },
         }}
       >
         {children}

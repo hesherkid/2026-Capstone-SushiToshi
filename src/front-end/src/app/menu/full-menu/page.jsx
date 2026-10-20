@@ -4,7 +4,6 @@ import {
   Typography,
   Box,
   Button,
-  Container,
   Alert,
   TextField,
   Divider,
@@ -14,6 +13,7 @@ import MenuItemCard from "@/components/menu/MenuItemCard";
 import CartDrawer from "@/components/menu/CartDrawer";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import TrackedItem from "@/components/menu/TrackedItem";
+import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import useMenuSearch from "@/components/menu/searchUtils";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
@@ -564,274 +564,272 @@ const FullMenu = () => {
   );
 
   return (
-    <Container disableGutters maxWidth={false}>
-      <Box sx={{ p: 0 }}>
-        {/* Not seated: only the info message below shows, without a menu title */}
-        {sessionId && (
-          <Typography
-            variant="h5"
-            component="h1"
-            sx={{
-              mt: 4,
-              mb: 4,
-              textAlign: "left",
-              width: "100%",
-              fontWeight: 200,
-            }}
-          >
-            All You Can Eat Menu
-          </Typography>
-        )}
+    <CustomerPageContainer>
+      {/* Not seated: only the info message below shows, without a menu title */}
+      {sessionId && (
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{
+            mt: 4,
+            mb: 4,
+            textAlign: "left",
+            width: "100%",
+            fontWeight: 200,
+          }}
+        >
+          All You Can Eat Menu
+        </Typography>
+      )}
 
-        {/* Error Alert */}
-        {displayError && (
-          <Alert
-            severity="error"
-            sx={{ mb: 2 }}
-            onClose={() => {
-              setError(null);
-              clearActionError();
-            }}
-          >
-            {displayError}
-          </Alert>
-        )}
+      {/* Error Alert */}
+      {displayError && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          onClose={() => {
+            setError(null);
+            clearActionError();
+          }}
+        >
+          {displayError}
+        </Alert>
+      )}
 
-        <Box sx={{ width: "100%", mb: 3 }}>
-          {sessionId ? (
-            <>
-              <TextField
-                fullWidth
-                placeholder="Search the menu..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <Search size={20} style={{ marginRight: 8 }} />
-                    ),
-                    endAdornment: searchTerm ? (
-                      <Button
-                        onClick={() => setSearchTerm("")}
-                        sx={{
-                          minWidth: "auto",
-                          p: 0.5,
-                          color: "text.secondary",
-                          "&:hover": {
-                            backgroundColor: "transparent",
-                            color: "text.primary",
-                          },
-                        }}
-                      >
-                        ✕
-                      </Button>
-                    ) : null,
-                  },
+      <Box sx={{ width: "100%", mb: 3 }}>
+        {sessionId ? (
+          <>
+            <TextField
+              fullWidth
+              placeholder="Search the menu..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <Search size={20} style={{ marginRight: 8 }} />
+                  ),
+                  endAdornment: searchTerm ? (
+                    <Button
+                      onClick={() => setSearchTerm("")}
+                      sx={{
+                        minWidth: "auto",
+                        p: 0.5,
+                        color: "text.secondary",
+                        "&:hover": {
+                          backgroundColor: "transparent",
+                          color: "text.primary",
+                        },
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  ) : null,
+                },
+              }}
+              sx={{ mb: 2 }}
+            />
+
+            {categories.length > 0 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  overflowX: "auto",
+                  pb: 1,
+                  mb: 2,
+                  "&::-webkit-scrollbar": { display: "none" },
                 }}
-                sx={{ mb: 2 }}
-              />
-
-              {categories.length > 0 && (
-                <Box
+              >
+                <Button
+                  variant={
+                    selectedCategory === "all" ? "contained" : "outlined"
+                  }
+                  onClick={() => setSelectedCategory("all")}
                   sx={{
-                    display: "flex",
-                    gap: 1,
-                    overflowX: "auto",
-                    pb: 1,
-                    mb: 2,
-                    "&::-webkit-scrollbar": { display: "none" },
+                    minWidth: "max-content",
+                    bgcolor:
+                      selectedCategory === "all" ? "#C01E2E" : "transparent",
+                    color: selectedCategory === "all" ? "#fff" : "#C01E2E",
+                    borderColor: "#C01E2E",
                   }}
                 >
+                  Full Menu
+                </Button>
+
+                {categories.map((category) => (
                   <Button
+                    key={`cat-btn-${category.category_id}`}
                     variant={
-                      selectedCategory === "all" ? "contained" : "outlined"
+                      selectedCategory === category.category_id
+                        ? "contained"
+                        : "outlined"
                     }
-                    onClick={() => setSelectedCategory("all")}
+                    onClick={() => setSelectedCategory(category.category_id)}
                     sx={{
                       minWidth: "max-content",
                       bgcolor:
-                        selectedCategory === "all" ? "#C01E2E" : "transparent",
-                      color: selectedCategory === "all" ? "#fff" : "#C01E2E",
+                        selectedCategory === category.category_id
+                          ? "#C01E2E"
+                          : "transparent",
+                      color:
+                        selectedCategory === category.category_id
+                          ? "#fff"
+                          : "#C01E2E",
                       borderColor: "#C01E2E",
                     }}
                   >
-                    Full Menu
+                    {category.name || `Category ${category.category_id}`}
                   </Button>
-
-                  {categories.map((category) => (
-                    <Button
-                      key={`cat-btn-${category.category_id}`}
-                      variant={
-                        selectedCategory === category.category_id
-                          ? "contained"
-                          : "outlined"
-                      }
-                      onClick={() => setSelectedCategory(category.category_id)}
-                      sx={{
-                        minWidth: "max-content",
-                        bgcolor:
-                          selectedCategory === category.category_id
-                            ? "#C01E2E"
-                            : "transparent",
-                        color:
-                          selectedCategory === category.category_id
-                            ? "#fff"
-                            : "#C01E2E",
-                        borderColor: "#C01E2E",
-                      }}
-                    >
-                      {category.name || `Category ${category.category_id}`}
-                    </Button>
-                  ))}
-                </Box>
-              )}
-            </>
-          ) : (
-            // Only once the check is done; before that sessionId is just not known yet
-            sessionChecked && (
-              <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
-            )
-          )}
-        </Box>
-
-        {/* Seated, but the menu is still on its way */}
-        {sessionId && !itemsLoaded && !error && (
-          <Box sx={{ width: "100%", mb: 4 }}>
-            <Divider sx={{ mb: 2 }} />
-            <MenuListSkeleton />
-          </Box>
+                ))}
+              </Box>
+            )}
+          </>
+        ) : (
+          // Only once the check is done; before that sessionId is just not known yet
+          sessionChecked && (
+            <Alert severity="info">{error || NOT_SEATED_MESSAGE}</Alert>
+          )
         )}
+      </Box>
 
-        {sessionId && menuId && itemsLoaded && (
-          <Box sx={{ width: "100%", mb: 4 }}>
-            <Divider sx={{ mb: 2 }} />
+      {/* Seated, but the menu is still on its way */}
+      {sessionId && !itemsLoaded && !error && (
+        <Box sx={{ width: "100%", mb: 4 }}>
+          <Divider sx={{ mb: 2 }} />
+          <MenuListSkeleton />
+        </Box>
+      )}
 
-            {selectedBillId && billRequested && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                {BILL_REQUESTED_MESSAGE}
-              </Alert>
-            )}
+      {sessionId && menuId && itemsLoaded && (
+        <Box sx={{ width: "100%", mb: 4 }}>
+          <Divider sx={{ mb: 2 }} />
 
-            {!selectedBillId && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Your menu is available, but there is no open bill for this
-                session yet. Ask a staff member to open a bill before placing an
-                order.
-              </Alert>
-            )}
+          {selectedBillId && billRequested && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {BILL_REQUESTED_MESSAGE}
+            </Alert>
+          )}
 
-            {selectedCategory === "all" && (
+          {!selectedBillId && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Your menu is available, but there is no open bill for this
+              session yet. Ask a staff member to open a bill before placing an
+              order.
+            </Alert>
+          )}
+
+          {selectedCategory === "all" && (
+            <Typography
+              variant="h6"
+              component="h2"
+              sx={{
+                fontWeight: 600,
+                mb: 2,
+                color: "#1f2937",
+                textAlign: "left",
+              }}
+            >
+              Viewing Full Menu{" "}
               <Typography
-                variant="h6"
-                component="h2"
+                component="span"
                 sx={{
-                  fontWeight: 600,
-                  mb: 2,
-                  color: "#1f2937",
-                  textAlign: "left",
+                  fontSize: "0.75rem",
+                  fontWeight: 400,
+                  color: "#6b7280",
+                  ml: 0.5,
                 }}
               >
-                Viewing Full Menu{" "}
+                {allMenuItemCount} items
+              </Typography>
+            </Typography>
+          )}
+
+          {filteredMenuGroups.length === 0 ? (
+            <Alert severity="info">No items match your search.</Alert>
+          ) : (
+            filteredMenuGroups.map(({ category, items }) => (
+              <Box key={`group-${category.category_id}`} sx={{ mb: 3 }}>
                 <Typography
-                  component="span"
+                  variant="h5"
+                  component="h2"
                   sx={{
-                    fontSize: "0.75rem",
-                    fontWeight: 400,
-                    color: "#6b7280",
-                    ml: 0.5,
+                    fontWeight: 600,
+                    mb: 1.5,
+                    color: "#1f2937",
+                    textAlign: "left",
                   }}
                 >
-                  {allMenuItemCount} items
-                </Typography>
-              </Typography>
-            )}
-
-            {filteredMenuGroups.length === 0 ? (
-              <Alert severity="info">No items match your search.</Alert>
-            ) : (
-              filteredMenuGroups.map(({ category, items }) => (
-                <Box key={`group-${category.category_id}`} sx={{ mb: 3 }}>
+                  {category.name || `Category ${category.category_id}`}{" "}
                   <Typography
-                    variant="h5"
-                    component="h2"
+                    component="span"
                     sx={{
-                      fontWeight: 600,
-                      mb: 1.5,
-                      color: "#1f2937",
-                      textAlign: "left",
+                      fontSize: "0.75rem",
+                      fontWeight: 400,
+                      color: "#6b7280",
+                      ml: 0.5,
                     }}
                   >
-                    {category.name || `Category ${category.category_id}`}{" "}
-                    <Typography
-                      component="span"
-                      sx={{
-                        fontSize: "0.75rem",
-                        fontWeight: 400,
-                        color: "#6b7280",
-                        ml: 0.5,
-                      }}
-                    >
-                      {items.length} items
-                    </Typography>
+                    {items.length} items
                   </Typography>
+                </Typography>
 
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1.5,
-                    }}
-                  >
-                    {items.map((item) => (
-                      // Records how long the card is on screen (browsing behavior analytics)
-                      <TrackedItem
-                        key={`item-${category.category_id}-${item.item_id}`}
-                        itemId={item.item_id}
-                        sessionId={sessionId}
-                      >
-                        <MenuItemCard
-                          item={item}
-                          categoryId={category.category_id}
-                          quantity={
-                            quantities[category.category_id]?.[item.item_id] ||
-                            0
-                          }
-                          onQuantityChange={handleQuantityChange}
-                        />
-                      </TrackedItem>
-                    ))}
-                  </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1.5,
+                  }}
+                >
+                  {items.map((item) => (
+                    // Records how long the card is on screen (browsing behavior analytics)
+                    <TrackedItem
+                      key={`item-${category.category_id}-${item.item_id}`}
+                      itemId={item.item_id}
+                      sessionId={sessionId}
+                    >
+                      <MenuItemCard
+                        item={item}
+                        categoryId={category.category_id}
+                        quantity={
+                          quantities[category.category_id]?.[item.item_id] ||
+                          0
+                        }
+                        onQuantityChange={handleQuantityChange}
+                      />
+                    </TrackedItem>
+                  ))}
                 </Box>
-              ))
-            )}
+              </Box>
+            ))
+          )}
 
-            {orderSuccess && (
-              <Alert severity="success" sx={{ mb: 2 }}>
-                Order placed successfully!
-              </Alert>
-            )}
-          </Box>
-        )}
+          {orderSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Order placed successfully!
+            </Alert>
+          )}
+        </Box>
+      )}
 
-        <CartDrawer
-          open={cartDrawerOpen}
-          onClose={() => setCartDrawerOpen(false)}
-          categories={categories}
-          quantities={quantities}
-          menuItems={menuItems}
-          onQuantityChange={handleQuantityChange}
-          onConfirmOrder={handleConfirmOrder}
-          isLoading={isLoading}
-          selectedBillId={selectedBillId}
-          bills={openBills}
-          onBillChange={chooseBill}
-          orderingLocked={billRequested}
-          lockedMessage={BILL_REQUESTED_MESSAGE}
-          itemCount={getTotalStats().itemCount}
-          totalQuantity={getTotalStats().totalQuantity}
-        />
-      </Box>
-    </Container>
+      <CartDrawer
+        open={cartDrawerOpen}
+        onClose={() => setCartDrawerOpen(false)}
+        categories={categories}
+        quantities={quantities}
+        menuItems={menuItems}
+        onQuantityChange={handleQuantityChange}
+        onConfirmOrder={handleConfirmOrder}
+        isLoading={isLoading}
+        selectedBillId={selectedBillId}
+        bills={openBills}
+        onBillChange={chooseBill}
+        orderingLocked={billRequested}
+        lockedMessage={BILL_REQUESTED_MESSAGE}
+        itemCount={getTotalStats().itemCount}
+        totalQuantity={getTotalStats().totalQuantity}
+      />
+    </CustomerPageContainer>
   );
 };
 

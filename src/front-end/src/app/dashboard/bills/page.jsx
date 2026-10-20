@@ -5,7 +5,6 @@ import {
   Card,
   Typography,
   Alert,
-  Container,
   IconButton,
   Dialog,
   Button,
@@ -17,6 +16,7 @@ import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import { setPageLoading } from "@/utils/pageLoading";
 import NewBillDialog from "@/components/staff/SessionDashboard/components/dialogs/NewBillDialog";
 import CustomerBillDialog from "@/components/customer/CustomerBillDialog";
+import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import { SessionProvider } from "@/components/staff/SessionDashboard/context/SessionContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import { getStatusColorValue, formatDateTime, formatBillStatus, getTableDescription, sortBillsByStatus } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
@@ -175,95 +175,93 @@ const BillsDashboard = () => {
 
   return (
     <SessionProvider sessionId={sessionId}>
-      <Container maxWidth="lg">
-        <Box sx={{ py: 3 }}>
+      <CustomerPageContainer>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 4,
+          }}
+        >
+          <Typography variant="h4">Your Table's Bills</Typography>
+
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {typeof error === "string" ? error : "Error loading bills"}
+          </Alert>
+        )}
+
+        {/* While loading, the app bar shows the spinner and nothing is listed yet */}
+        {loading ? null : !bills || bills.length === 0 ? (
+          <Alert severity="info">No bills yet. Create your first bill to get started.</Alert>
+        ) : (
           <Box
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 4,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: 2,
+              width: "100%",
             }}
           >
-            <Typography variant="h4">Your Table's Bills</Typography>
+            {sortedBills.map((bill) => {
+              if (!bill?.bill_id) return null;
+              const statusColor = getStatusColorValue(bill.status);
 
+              return (
+                <BillCard key={bill.bill_id} $statusColor={statusColor}>
+                  <Typography variant="h6" component="div" noWrap>
+                    {bill.bill_name || `Bill #${bill.bill_id}`}
+                  </Typography>
+
+                  <StatusChip $statusColor={statusColor}>
+                    {formatBillStatus(bill.status)}
+                  </StatusChip>
+
+                  <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: "medium" }}>
+                    Total: {bill.total_count || 0} guest{bill.total_count !== 1 ? 's' : ''}
+                  </Typography>
+
+                  {bill.created_at && (
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      Created: {formatDateTime(bill.created_at)}
+                    </Typography>
+                  )}
+
+                  {bill.table_numbers?.length > 0 && (
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {getTableDescription(bill.table_numbers)}
+                    </Typography>
+                  )}
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Receipt size={16} />}
+                    onClick={() => handleViewSummary(bill.bill_id)}
+                    sx={{ mt: 1 }}
+                  >
+                    View Summary
+                  </Button>
+                </BillCard>
+              );
+            })}
           </Box>
+        )}
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-              {typeof error === "string" ? error : "Error loading bills"}
-            </Alert>
-          )}
-
-          {/* While loading, the app bar shows the spinner and nothing is listed yet */}
-          {loading ? null : !bills || bills.length === 0 ? (
-            <Alert severity="info">No bills yet. Create your first bill to get started.</Alert>
-          ) : (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: 2,
-                width: "100%",
-              }}
-            >
-              {sortedBills.map((bill) => {
-                if (!bill?.bill_id) return null;
-                const statusColor = getStatusColorValue(bill.status);
-
-                return (
-                  <BillCard key={bill.bill_id} $statusColor={statusColor}>
-                    <Typography variant="h6" component="div" noWrap>
-                      {bill.bill_name || `Bill #${bill.bill_id}`}
-                    </Typography>
-
-                    <StatusChip $statusColor={statusColor}>
-                      {formatBillStatus(bill.status)}
-                    </StatusChip>
-
-                    <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: "medium" }}>
-                      Total: {bill.total_count || 0} guest{bill.total_count !== 1 ? 's' : ''}
-                    </Typography>
-
-                    {bill.created_at && (
-                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                        Created: {formatDateTime(bill.created_at)}
-                      </Typography>
-                    )}
-
-                    {bill.table_numbers?.length > 0 && (
-                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                        {getTableDescription(bill.table_numbers)}
-                      </Typography>
-                    )}
-
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<Receipt size={16} />}
-                      onClick={() => handleViewSummary(bill.bill_id)}
-                      sx={{ mt: 1 }}
-                    >
-                      View Summary
-                    </Button>
-                  </BillCard>
-                );
-              })}
-            </Box>
-          )}
-
-          {/* Bill Summary Dialog */}
-          <CustomerBillDialog
-            open={summaryDialogOpen}
-            sessionId={sessionId}
-            billId={selectedBillId}
-            onClose={() => {
-              setSummaryDialogOpen(false);
-              setSelectedBillId(null);
-            }}
-          />
-        </Box>
-      </Container>
+        {/* Bill Summary Dialog */}
+        <CustomerBillDialog
+          open={summaryDialogOpen}
+          sessionId={sessionId}
+          billId={selectedBillId}
+          onClose={() => {
+            setSummaryDialogOpen(false);
+            setSelectedBillId(null);
+          }}
+        />
+      </CustomerPageContainer>
     </SessionProvider>
   );
 };
