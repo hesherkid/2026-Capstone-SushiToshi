@@ -54,6 +54,9 @@ export const TableOrderProvider = ({ children }) => {
   const [openBills, setOpenBills] = useState([]);
   const [selectedBillId, setSelectedBillId] = useState("");
   const [quantities, setQuantities] = useState({});
+  // What the table can still order before a limit that blocks: { items: {id: ...}, categories: {id: ...} }.
+  // null until loaded (or if it failed); the server still checks every order either way
+  const [limits, setLimits] = useState(null);
   // Where the guest was on the menu, so coming back from Review order puts them there again
   const menuScrollY = useRef(0);
   // True when Review order was opened from the menu, so its back arrow can just go back
@@ -135,6 +138,21 @@ export const TableOrderProvider = ({ children }) => {
     }
   }, []);
 
+  const loadLimits = useCallback(async (forSession) => {
+    try {
+      const { data } = await api.get(`/Order/session/${forSession}/limits`);
+      const byId = (rows, key) =>
+        Object.fromEntries((Array.isArray(rows) ? rows : []).map((row) => [String(row[key]), row]));
+      setLimits({
+        items: byId(data?.items, "item_id"),
+        categories: byId(data?.categories, "category_id"),
+      });
+    } catch (err) {
+      console.error("Error fetching order limits:", err);
+      setLimits(null);
+    }
+  }, []);
+
   const loadCategories = useCallback(async () => {
     if (categoriesLoaded.current) return;
     try {
@@ -177,6 +195,7 @@ export const TableOrderProvider = ({ children }) => {
       setLocationId(null);
       setOpenBills([]);
       setSelectedBillId("");
+      setLimits(null);
       menuScrollY.current = 0;
     }
 
@@ -188,8 +207,8 @@ export const TableOrderProvider = ({ children }) => {
       return;
     }
 
-    await Promise.all([loadBills(mySessionId), loadMenu(mySessionId)]);
-  }, [loadBills, loadCategories, loadMenu]);
+    await Promise.all([loadBills(mySessionId), loadMenu(mySessionId), loadLimits(mySessionId)]);
+  }, [loadBills, loadCategories, loadLimits, loadMenu]);
 
   // Menu items for the session's menu, priced for its location
   useEffect(() => {
@@ -239,16 +258,62 @@ export const TableOrderProvider = ({ children }) => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ sessionId, quantities }));
   }, [sessionId, quantities]);
 
-  // Same function every render, so it's safe to use in effects and memoised children
-  const changeQuantity = useCallback((categoryId, itemId, delta) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [categoryId]: {
-        ...prev[categoryId],
-        [itemId]: Math.max(0, (prev[categoryId]?.[itemId] || 0) + delta),
-      },
-    }));
-  }, []);
+  // Most of this item the cart can hold before a limit that blocks: the item's own caps, and
+  // whatever its category has left after the other items from that category already in the cart.
+  // null = no limit that blocks
+  const maxFor = useCallback(
+    (cart, categoryId, itemId) => {
+      if (!limits) return null;
+      const lowest = (row) => {
+        const caps = [row?.per_order, row?.session_left].filter((n) => n != null);
+        return caps.length ? Math.min(...caps) : null;
+      };
+
+      const itemCap = lowest(limits.items[String(itemId)]);
+      const categoryCap = lowest(limits.categories[String(categoryId)]);
+      const othersInCategory = Object.entries(cart[categoryId] || {})
+        .filter(([id]) => String(id) !== String(itemId))
+        .reduce((total, [, quantity]) => total + quantity, 0);
+      const categoryRoom = categoryCap == null ? null : Math.max(0, categoryCap - othersInCategory);
+
+      const caps = [itemCap, categoryRoom].filter((n) => n != null);
+      return caps.length ? Math.min(...caps) : null;
+    },
+    [limits],
+  );
+
+  // How the cart stands against the limit for one item
+  const limitStatus = useCallback(
+    (categoryId, itemId) => {
+      const max = maxFor(quantities, categoryId, itemId);
+      const quantity = quantities[categoryId]?.[itemId] || 0;
+      return {
+        max,
+        atLimit: max != null && quantity >= max,
+        overLimit: max != null && quantity > max,
+      };
+    },
+    [maxFor, quantities],
+  );
+
+  // Adding stops at the limit (the + button is hidden there too); removing works
+  const changeQuantity = useCallback(
+    (categoryId, itemId, delta) => {
+      setQuantities((prev) => {
+        const current = prev[categoryId]?.[itemId] || 0;
+        const max = maxFor(prev, categoryId, itemId);
+        if (delta > 0 && max != null && current + delta > max) return prev;
+        return {
+          ...prev,
+          [categoryId]: {
+            ...prev[categoryId],
+            [itemId]: Math.max(0, current + delta),
+          },
+        };
+      });
+    },
+    [maxFor],
+  );
 
   const clearCart = useCallback(() => setQuantities({}), []);
 
@@ -302,6 +367,7 @@ export const TableOrderProvider = ({ children }) => {
     billRequested,
     quantities,
     changeQuantity,
+    limitStatus,
     clearCart,
     cartLines,
     cartCount,

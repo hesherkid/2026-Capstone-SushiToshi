@@ -20,4 +20,13 @@ describe("Quantity stepper", () => {
     expect(onIncrease).toHaveBeenCalledTimes(1);
     expect(onDecrease).toHaveBeenCalledTimes(1);
   });
+
+  it("hides the plus once the item's limit is reached", () => {
+    render(
+      <QuantityStepper itemName="Miso Soup" quantity={2} onDecrease={jest.fn()} onIncrease={jest.fn()} canIncrease={false} />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove one Miso Soup" })).toBeEnabled();
+  });
 });

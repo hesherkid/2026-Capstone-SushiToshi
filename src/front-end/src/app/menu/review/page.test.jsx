@@ -149,6 +149,21 @@ describe("Review order page", () => {
     expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeDisabled();
   });
 
+  it("won't place an order that's gone over the table's limit since the cart was filled", async () => {
+    withCart(); // 2 Miso Soup
+    api.get.mockImplementation(
+      tableApi({
+        bills: [LEE],
+        limits: { items: [{ item_id: 11, category_id: 1, per_order: null, session_left: 1 }], categories: [] },
+      }),
+    );
+    renderPage();
+
+    expect(await screen.findByText(/Too many Miso Soup for your table's limit/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+  });
+
   it("shows an empty bag with a way back to the menu", async () => {
     renderPage();
 

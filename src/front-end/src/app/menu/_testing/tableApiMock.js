@@ -22,9 +22,10 @@ export const SALMON_ROLL = {
   item_image_url: "",
 };
 
-// `bills` is what /Bill/get_bills/42 returns (none open by default)
+// `bills` is what /Bill/get_bills/42 returns (none open by default);
+// `limits` is what's left before a blocking limit (none by default)
 export const tableApi =
-  ({ bills = [], items = [MISO_SOUP, SALMON_ROLL] } = {}) =>
+  ({ bills = [], items = [MISO_SOUP, SALMON_ROLL], limits = { items: [], categories: [] } } = {}) =>
   (url) => {
     // The page asks the server which session the guest is seated in
     if (url === "/DiningSession/participants/active-session-id") {
@@ -44,6 +45,9 @@ export const tableApi =
           { category_id: 2, category_name: "Sushi Rolls" },
         ],
       });
+    }
+    if (url === "/Order/session/42/limits") {
+      return Promise.resolve({ status: 200, data: limits });
     }
     if (url.includes("/Menu/7/item")) {
       return Promise.resolve({ status: 200, data: items });

@@ -43,6 +43,7 @@ const FullMenu = () => {
     billRequested,
     quantities,
     changeQuantity,
+    limitStatus,
     cartCount,
     menuScrollY,
     reviewOpenedFromMenu,
@@ -398,6 +399,9 @@ const FullMenu = () => {
                           0
                         }
                         onQuantityChange={changeQuantity}
+                        atLimit={
+                          limitStatus(category.category_id, item.item_id).atLimit
+                        }
                       />
                     </TrackedItem>
                   ))}

@@ -2,7 +2,7 @@ import React from "react";
 import { render as rtlRender, screen, waitFor, fireEvent } from "@testing-library/react";
 import FullMenu from "./page";
 import { TableOrderProvider } from "@/contexts/TableOrderContext";
-import { tableApi } from "../_testing/tableApiMock";
+import { tableApi, MISO_SOUP, SALMON_ROLL } from "../_testing/tableApiMock";
 
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({
@@ -98,6 +98,63 @@ describe("FullMenu guest flow", () => {
     placeSections(-900, 40);
     expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  describe("order limits", () => {
+    it("stops adding at the limit: the plus goes and the note turns red", async () => {
+      api.get.mockImplementation(
+        tableApi({
+          items: [{ ...MISO_SOUP, itemLimits: { perOrder: 2 } }, SALMON_ROLL],
+          limits: { items: [{ item_id: 11, category_id: 1, per_order: 2, session_left: null }], categories: [] },
+        }),
+      );
+      render(<FullMenu />);
+
+      const add = await screen.findByRole("button", { name: "Add one Miso Soup" });
+      fireEvent.click(add);
+      expect(screen.getByText("2 per order")).toHaveStyle({ fontWeight: 400 });
+
+      fireEvent.click(screen.getByRole("button", { name: "Add one Miso Soup" }));
+
+      expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+      expect(screen.getByText("2 per order")).toHaveStyle({ fontWeight: 600 });
+      // Taking one out brings the plus back
+      fireEvent.click(screen.getByRole("button", { name: "Remove one Miso Soup" }));
+      expect(screen.getByRole("button", { name: "Add one Miso Soup" })).toBeInTheDocument();
+    });
+
+    it("shares a category's limit between its items", async () => {
+      const greenTea = { ...MISO_SOUP, item_id: 14, name: "Green Tea" };
+      api.get.mockImplementation(
+        tableApi({
+          items: [MISO_SOUP, greenTea, SALMON_ROLL],
+          limits: { items: [], categories: [{ category_id: 1, per_order: 2, session_left: null }] },
+        }),
+      );
+      render(<FullMenu />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Add one Miso Soup" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add one Green Tea" }));
+
+      // Two in Appetizers: neither can take more, other categories can
+      expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Add one Green Tea" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add one Salmon Roll" })).toBeInTheDocument();
+    });
+
+    it("can't add an item the table has already used up", async () => {
+      api.get.mockImplementation(
+        tableApi({
+          limits: { items: [{ item_id: 12, category_id: 2, per_order: null, session_left: 0 }], categories: [] },
+        }),
+      );
+      render(<FullMenu />);
+
+      await screen.findByRole("button", { name: "Add one Miso Soup" });
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: "Add one Salmon Roll" })).not.toBeInTheDocument(),
+      );
+    });
   });
 
   it("shows the location price for add-on items", async () => {

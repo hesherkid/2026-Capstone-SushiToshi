@@ -62,6 +62,22 @@ namespace back_end.Helpers
         }
 
         /// <summary>
+        /// Per-order cap that always blocks, or null when there is none.
+        /// </summary>
+        public static int? PerOrderCap(Limits limits) => limits.PerOrder == 0 ? null : limits.PerOrder;
+
+        /// <summary>
+        /// Units the table can still order this session before a Block limit stops them, or null
+        /// when nothing blocks. Charge limits never block (the extra is billed at Full_Price).
+        /// </summary>
+        public static int? SessionLeftBeforeBlock(Limits limits, Headcount heads, int sessionUsed)
+        {
+            if (limits.Behavior != OverLimitBehavior.Block) return null;
+            var cap = SessionCap(limits, heads);
+            return cap == int.MaxValue ? null : Math.Max(0, cap - sessionUsed);
+        }
+
+        /// <summary>
         /// Works out the order lines for one requested item, or an error if a Block limit is exceeded.
         /// </summary>
         public static LimitResult ApplyLimits(

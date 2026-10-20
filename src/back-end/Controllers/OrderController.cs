@@ -33,6 +33,109 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
+        // Headcount for per-person limits; all non-cancelled bills in the session
+        private async Task<OrderLimitRules.Headcount> SessionHeadcountAsync(int sessionId)
+        {
+            var bills = await _context.Bills
+                .Where(b => b.Session_Id == sessionId && b.Status != BillStatus.Cancelled)
+                .ToListAsync();
+
+            var heads = new OrderLimitRules.Headcount(
+                bills.Sum(b => b.Adult_Count),
+                bills.Sum(b => b.Child_Count),
+                bills.Sum(b => b.Senior_Count),
+                bills.Sum(b => b.Tot_Count));
+            return heads.IsEmpty ? OrderLimitRules.Headcount.Fallback : heads;
+        }
+
+        private sealed record UsedUnits(int Order_Key, int Item_Id, int Category_id, int Quantity);
+
+        // Units already ordered this session (cancelled orders/items don't count)
+        private Task<List<UsedUnits>> SessionUsageAsync(int sessionId) =>
+            _context.OrderItems
+                .Where(oi => oi.SessionOrder.session_id == sessionId
+                        && oi.SessionOrder.Status != OrderStatus.Cancelled
+                        && oi.Order_Item_Status != OrderStatus.Cancelled)
+                .Select(oi => new UsedUnits(oi.Order_Key, oi.Item_Id, oi.MenuItem.Category_id, oi.Quantity))
+                .ToListAsync();
+
+        /// <summary>
+        /// How much of each menu item and category the table can still order before a limit
+        /// that blocks would reject it, so the menu can stop guests before they hit an error.
+        /// </summary>
+        /// <param name="sessionId">The dining session</param>
+        /// <response code="200">The remaining amounts; null means no blocking limit</response>
+        /// <response code="403">If a customer asks about a table they aren't seated at</response>
+        /// <response code="404">If the session doesn't exist</response>
+        /// <remarks>
+        /// Uses the same headcount and usage as adding items to an order. Per-order limits are
+        /// for a new order. Limits set to Charge are left out: going over them is allowed and
+        /// billed at full price.
+        /// </remarks>
+        [Authorize]
+        [HttpGet("session/{sessionId}/limits")]
+        [ProducesResponseType(typeof(SessionOrderLimitsDTO), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetSessionOrderLimits(int sessionId)
+        {
+            if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
+            {
+                return Forbid();
+            }
+
+            var session = await _context.DiningSessions.FirstOrDefaultAsync(s => s.Session_Id == sessionId);
+            if (session == null)
+            {
+                return NotFound(new { message = "Session was not found" });
+            }
+
+            var assignments = (await _context.MenuItemAssignments
+                    .ForLocation(session.Menu_Id, session.Location_Id)
+                    .Include(a => a.MenuItem)
+                        .ThenInclude(mi => mi.Category)
+                    .ToListAsync())
+                .Effective();
+
+            var heads = await SessionHeadcountAsync(sessionId);
+            var used = await SessionUsageAsync(sessionId);
+            var itemUsed = used.GroupBy(u => u.Item_Id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+            var categoryUsed = used.GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+
+            static OrderLimitRules.Limits CategoryLimits(Category c) => new(c.adult_limit, c.child_limit,
+                c.senior_limit, c.toddler_limit, c.per_order_limit, c.over_limit_behavior);
+            static OrderLimitRules.Limits ItemLimits(MenuItemAssignment a) => new(a.Adult_Limit, a.Child_limit,
+                a.Senior_limit, a.Tot_Limit, a.Per_Order_Limit, a.Over_Limit_Behavior);
+
+            var result = new SessionOrderLimitsDTO
+            {
+                Items = assignments.Select(a =>
+                {
+                    var limits = ItemLimits(a);
+                    return new ItemOrderLimitDTO
+                    {
+                        Item_Id = a.Item_Id,
+                        Category_Id = a.MenuItem.Category_id,
+                        Per_Order = OrderLimitRules.PerOrderCap(limits),
+                        Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
+                    };
+                }).ToList(),
+                Categories = assignments
+                    .Select(a => a.MenuItem.Category)
+                    .DistinctBy(c => c.Category_id)
+                    .Select(c =>
+                    {
+                        var limits = CategoryLimits(c);
+                        return new CategoryOrderLimitDTO
+                        {
+                            Category_Id = c.Category_id,
+                            Per_Order = OrderLimitRules.PerOrderCap(limits),
+                            Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
+                        };
+                    }).ToList(),
+            };
+
+            return Ok(result);
+        }
+
         /// <summary>
         /// Creates a new order for a dining session.
         /// </summary>
@@ -667,25 +770,8 @@ namespace back_end.Controllers
                         .ThenInclude(mi => mi.Category)
                     .ToListAsync();
 
-                // Headcount for per-person limits; all non-cancelled bills in the session
-                var bills = await _context.Bills
-                    .Where(b => b.Session_Id == session.Session_Id && b.Status != BillStatus.Cancelled)
-                    .ToListAsync();
-
-                var heads = new OrderLimitRules.Headcount(
-                    bills.Sum(b => b.Adult_Count),
-                    bills.Sum(b => b.Child_Count),
-                    bills.Sum(b => b.Senior_Count),
-                    bills.Sum(b => b.Tot_Count));
-                if (heads.IsEmpty) heads = OrderLimitRules.Headcount.Fallback;
-
-                // Units already ordered this session (cancelled orders/items don't count)
-                var used = await _context.OrderItems
-                    .Where(oi => oi.SessionOrder.session_id == session.Session_Id
-                            && oi.SessionOrder.Status != OrderStatus.Cancelled
-                            && oi.Order_Item_Status != OrderStatus.Cancelled)
-                    .Select(oi => new { oi.Order_Key, oi.Item_Id, oi.MenuItem.Category_id, oi.Quantity })
-                    .ToListAsync();
+                var heads = await SessionHeadcountAsync(session.Session_Id);
+                var used = await SessionUsageAsync(session.Session_Id);
 
                 var sessionItemUsed = used.GroupBy(u => u.Item_Id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
                 var sessionCategoryUsed = used.GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));

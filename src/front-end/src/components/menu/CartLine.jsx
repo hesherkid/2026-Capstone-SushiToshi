@@ -6,7 +6,8 @@ const money = (value) => `$${(Number(value) || 0).toFixed(2)}`;
 
 // One row of the Review order list: just the name, what it costs, and a quantity stepper.
 // The full card (photo, description, tags) is for browsing the menu
-const CartLine = ({ item, categoryId, quantity, onQuantityChange }) => {
+// atLimit: the cart holds as many as the limit allows, so no more adding and the note turns red
+const CartLine = ({ item, categoryId, quantity, onQuantityChange, atLimit = false }) => {
   const limits = limitText(item);
 
   return (
@@ -35,6 +36,7 @@ const CartLine = ({ item, categoryId, quantity, onQuantityChange }) => {
           quantity={quantity}
           onDecrease={() => onQuantityChange(categoryId, item.item_id, -1)}
           onIncrease={() => onQuantityChange(categoryId, item.item_id, 1)}
+          canIncrease={!atLimit}
         />
       </Box>
 
@@ -45,10 +47,10 @@ const CartLine = ({ item, categoryId, quantity, onQuantityChange }) => {
             px: 1.5,
             py: 0.75,
             borderRadius: 1.5,
-            bgcolor: "grey.100",
-            color: "text.secondary",
+            bgcolor: atLimit ? "rgba(192, 30, 46, 0.08)" : "grey.100",
+            color: atLimit ? "error.main" : "text.secondary",
             fontSize: "0.8rem",
-            fontWeight: 400,
+            fontWeight: atLimit ? 600 : 400,
             lineHeight: 1.4,
           }}
         >

@@ -41,6 +41,8 @@ const MenuItemCard = ({
   quantity,
   onQuantityChange,
   showQuantityControls = true,
+  // The cart holds as many as the item's limit allows: no more adding, and the note turns red
+  atLimit = false,
 }) => {
   const limits = limitText(item);
 
@@ -139,8 +141,12 @@ const MenuItemCard = ({
           {limits && (
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ mt: 1.5, lineHeight: 1.35 }}
+              sx={{
+                mt: 1.5,
+                lineHeight: 1.35,
+                color: atLimit ? "error.main" : "text.secondary",
+                fontWeight: atLimit ? 600 : 400,
+              }}
             >
               {limits}
             </Typography>
@@ -187,6 +193,7 @@ const MenuItemCard = ({
                   onQuantityChange(categoryId, item.item_id, -1)
                 }
                 onIncrease={() => onQuantityChange(categoryId, item.item_id, 1)}
+                canIncrease={!atLimit}
               />
             ) : (
               <Typography

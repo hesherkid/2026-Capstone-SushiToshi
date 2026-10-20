@@ -53,6 +53,7 @@ const ReviewOrderPage = () => {
     chooseBill,
     billRequested,
     changeQuantity,
+    limitStatus,
     clearCart,
     cartLines,
     cartCount,
@@ -244,9 +245,23 @@ const ReviewOrderPage = () => {
     );
   }
 
+  // The table's limits can drop after this cart was filled (e.g. someone else at the table ordered)
+  const overLimit = cartLines.filter(
+    ({ category, item }) => limitStatus(category.category_id, item.item_id).overLimit,
+  );
   const canPlaceOrder =
-    !isLoading && !!selectedBillId && !billRequested && itemCount > 0 && !!menuId;
-  const shownError = orderError || actionError;
+    !isLoading &&
+    !!selectedBillId &&
+    !billRequested &&
+    itemCount > 0 &&
+    !!menuId &&
+    overLimit.length === 0;
+  const shownError =
+    orderError ||
+    actionError ||
+    (overLimit.length > 0
+      ? `Too many ${overLimit.map(({ item }) => item.name).join(", ")} for your table's limit. Remove some to place your order.`
+      : null);
   const multipleBills = openBills.length > 1;
   const selectedBill = openBills.find((bill) => bill.bill_id === selectedBillId);
   // Cart items need the menu to show; the saved cart may arrive before it
@@ -373,6 +388,7 @@ const ReviewOrderPage = () => {
                   categoryId={category.category_id}
                   quantity={quantity}
                   onQuantityChange={handleQuantityChange}
+                  atLimit={limitStatus(category.category_id, item.item_id).atLimit}
                 />
               </Box>
             ))}
