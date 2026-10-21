@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Toolbar, Typography } from "@mui/material";
 import AppBarWithTitle from "./AppBarWithTitle";
 import CustomerBottomNav from "./customer/CustomerBottomNav";
+import { FLOATING_BUTTON_ATTR, FLOATING_BUTTON_SPACE } from "./menu/ReviewOrderButton";
 
 const Layout = ({ children }) => {
   return (
@@ -32,17 +33,21 @@ const Layout = ({ children }) => {
       <Box
         component="footer"
         sx={{
-          // Phones show the copyright in the side menu instead
-          display: { xs: "none", md: "block" },
           py: 2,
           px: 3,
           mt: "auto",
-          backgroundColor: "#14171a",
-          color: "#657786",
           textAlign: "center",
+          // Phones and tablets: a quiet line at the end of the page, above the tab bar.
+          // Desktop: the dark bar
+          backgroundColor: { xs: "transparent", md: "#14171a" },
+          color: { xs: "text.secondary", md: "#657786" },
+          // Room for the floating Review order button, so it doesn't cover the copyright
+          [`body:has([${FLOATING_BUTTON_ATTR}]) &`]: {
+            pb: `${FLOATING_BUTTON_SPACE}px`,
+          },
         }}
       >
-        <Typography component="p" variant="body2">
+        <Typography component="p" variant="body2" sx={{ fontSize: { xs: "0.75rem", md: "0.875rem" } }}>
           &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
         </Typography>
       </Box>

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BottomNavigation, BottomNavigationAction, Box, Paper } from "@mui/material";
 import { useAuth } from "@/hooks/useAuth";
-import { TABLE_VISIT_EVENT } from "@/utils/tableVisit";
+import { TABLE_VISIT_EVENT, THANK_YOU_PATH } from "@/utils/tableVisit";
 import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import { REVIEW_ORDER_PATH } from "@/contexts/TableOrderContext";
@@ -27,8 +27,14 @@ const CustomerBottomNav = () => {
   }, [pathname]);
 
   const isCustomer = isGuest || userRole === "customer";
-  // Review order has its own Place order bar at the bottom, so the tabs step aside there
-  if (!isCustomer || pathname.startsWith("/auth") || pathname.startsWith(REVIEW_ORDER_PATH)) {
+  // Review order has its own Place order bar at the bottom, so the tabs step aside there.
+  // After the visit ends there's nothing left to go to
+  if (
+    !isCustomer ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith(REVIEW_ORDER_PATH) ||
+    pathname.startsWith(THANK_YOU_PATH)
+  ) {
     return null;
   }
 

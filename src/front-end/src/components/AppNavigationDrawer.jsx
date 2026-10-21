@@ -9,7 +9,6 @@ import {
   Box, 
   Button,
   Divider,
-  Typography,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -131,7 +130,9 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
     </List>
 
 
-    {/* Sticky so Logout stays visible when the menu is taller than the screen */}
+    {/* Sticky so Logout stays visible when the menu is taller than the screen.
+        Customers don't log out (staff end their visit), so they don't get this */}
+    {onLogout && (
     <Box
     sx={{
         mt: "auto",
@@ -160,21 +161,8 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
         >
             Logout
         </Button>
-
-        {/* Phones hide the page footer, so the copyright lives here instead */}
-        <Typography
-            component="p"
-            variant="caption"
-            sx={{
-            display: { xs: "block", md: "none" },
-            mt: 1.5,
-            textAlign: "center",
-            color: "text.secondary",
-            }}
-        >
-            &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
-        </Typography>
     </Box>
+    )}
 
     </Drawer>
     );

@@ -196,7 +196,12 @@ const handleLogout = () => {
               color="inherit"
               aria-label="menu"
               onClick={() => setDrawerOpen(true)}
-              sx={{ p: { xs: 1, sm: 1.5 }, flexShrink: 0,}}
+              sx={{
+                p: { xs: 1, sm: 1.5 },
+                flexShrink: 0,
+                // Customers on phones and tablets get around with the bottom tab bar instead
+                ...(effectiveRole === "customer" && { display: { xs: "none", md: "inline-flex" } }),
+              }}
             >
               <MenuIcon />
             </IconButton>
@@ -349,7 +354,8 @@ const handleLogout = () => {
             role={effectiveRole}
             onClose={() => setDrawerOpen(false)}
             onNavigate={handleNavigation}
-            onLogout={handleLogout}
+            // Customers don't log out: their visit ends when staff close the table's session
+            onLogout={effectiveRole === "customer" ? undefined : handleLogout}
           />
         )}
       </Toolbar>
