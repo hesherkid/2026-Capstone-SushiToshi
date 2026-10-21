@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import ServiceRequestForm from "../OrderDashboard/components/ServiceRequestForm";
 import api from "@/config/api";
 import { fetchMySessionId } from "@/services/tableSession";
@@ -11,23 +11,24 @@ jest.mock("@/config/api", () => {
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 
-// The real dialog is covered by its own tests; here we only care which bill it opens
-jest.mock("@/components/customer/CustomerBillDialog", () => ({
-  __esModule: true,
-  default: ({ open, billId }) => (open ? <div>Bill dialog for {billId}</div> : null),
-}));
-
 jest.mock("@/services/tableSession", () => ({
   fetchMySessionId: jest.fn(),
   NOT_SEATED_MESSAGE: "Not seated",
 }));
 
-const sendWaterRequest = async () => {
+const sendButton = () => screen.getByRole("button", { name: /send request/i });
+
+const renderSeated = async () => {
   render(<ServiceRequestForm />);
-  const send = screen.getByRole("button", { name: /send request/i });
-  fireEvent.click(screen.getByRole("button", { name: "Need water refill" }));
-  await waitFor(() => expect(send).toBeEnabled());
-  fireEvent.click(send);
+  // The session loads first; until then nothing can be sent
+  await waitFor(() => expect(api.get).toHaveBeenCalledWith("/ServiceRequest/by-session/8"));
+};
+
+const sendWaterRequest = async () => {
+  await renderSeated();
+  fireEvent.click(screen.getByRole("button", { name: "Water refill" }));
+  await waitFor(() => expect(sendButton()).toBeEnabled());
+  fireEvent.click(sendButton());
 };
 
 describe("Call server form", () => {
@@ -35,6 +36,7 @@ describe("Call server form", () => {
     jest.clearAllMocks();
     localStorage.clear();
     fetchMySessionId.mockResolvedValue(8);
+    api.get.mockResolvedValue({ data: [] });
   });
 
   // Nothing ever saves a table_id, so the request must not depend on one
@@ -43,7 +45,7 @@ describe("Call server form", () => {
 
     await sendWaterRequest();
 
-    expect(await screen.findByText("Request submitted successfully!")).toBeInTheDocument();
+    expect(await screen.findByText("Sent! Your server will be right over.")).toBeInTheDocument();
     expect(api.post).toHaveBeenCalledWith("/ServiceRequest/8", { notes: "Need water refill" });
   });
 
@@ -55,48 +57,61 @@ describe("Call server form", () => {
     expect(await screen.findByText("Session has ended")).toBeInTheDocument();
   });
 
-  describe("Ready for bill", () => {
-    const bills = (...list) => api.get.mockResolvedValue({ data: list });
-    const tapReadyForBill = async () => {
-      render(<ServiceRequestForm />);
-      // Let the session load first, or the tap is ignored
-      await act(async () => {});
-      fireEvent.click(screen.getByRole("button", { name: "Ready for bill" }));
-    };
+  it("sends several quick requests and a typed note together", async () => {
+    api.post.mockResolvedValue({ status: 201, data: {} });
+    await renderSeated();
 
-    it("opens the bill summary for the table's only open bill instead of sending a note", async () => {
-      bills({ bill_id: 80, status: "Open" }, { bill_id: 79, status: "Closed" });
+    expect(sendButton()).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Napkins" }));
+    fireEvent.click(screen.getByRole("button", { name: "Soy sauce" }));
+    expect(screen.getByRole("button", { name: /Napkins/ })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(screen.getByLabelText(/Anything else/), { target: { value: "Could we get a high chair?" } });
+    fireEvent.click(sendButton());
 
-      await tapReadyForBill();
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/ServiceRequest/8", {
+        notes: "Need napkins, soy sauce. Could we get a high chair?",
+      })
+    );
+    // Cleared for the next request
+    expect(await screen.findByText(/Sent!/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Napkins/ })).toHaveAttribute("aria-pressed", "false");
+  });
 
-      expect(await screen.findByText("Bill dialog for 80")).toBeInTheDocument();
-      expect(api.get).toHaveBeenCalledWith("/Bill/get_bills/8");
-      expect(api.post).not.toHaveBeenCalled();
+  it("unpicks a quick request when it's tapped again", async () => {
+    await renderSeated();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wasabi" }));
+    fireEvent.click(screen.getByRole("button", { name: /Wasabi/ }));
+
+    expect(screen.getByRole("button", { name: /Wasabi/ })).toHaveAttribute("aria-pressed", "false");
+    expect(sendButton()).toBeDisabled();
+  });
+
+  it("lists the table's requests still waiting for a server", async () => {
+    api.get.mockResolvedValue({
+      data: [{ request_id: 5, notes: "Need ginger", status: "Pending", created_at: "2026-10-21T01:30:00" }],
     });
+    await renderSeated();
 
-    it("opens the bill this phone last ordered on when the table has several", async () => {
-      localStorage.setItem("currentBillId", "81");
-      bills({ bill_id: 80, status: "Open" }, { bill_id: 81, status: "Open" });
+    const waiting = await screen.findByRole("list", { name: "Requests waiting for your server" });
+    expect(within(waiting).getByText("Need ginger")).toBeInTheDocument();
+  });
 
-      await tapReadyForBill();
+  it("points guests to the Bill page to ask for the bill", async () => {
+    await renderSeated();
 
-      expect(await screen.findByText("Bill dialog for 81")).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole("button", { name: /Ready to pay/ }));
 
-    it("sends guests to Bill Summary to pick when it can't tell which bill is theirs", async () => {
-      bills({ bill_id: 80, status: "Open" }, { bill_id: 81, status: "Open" });
+    expect(mockPush).toHaveBeenCalledWith("/dashboard/bills");
+  });
 
-      await tapReadyForBill();
+  it("only says so when the guest isn't seated", async () => {
+    fetchMySessionId.mockResolvedValue(null);
+    render(<ServiceRequestForm />);
 
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/dashboard/bills"));
-    });
-
-    it("explains when the table has no open bill yet", async () => {
-      bills();
-
-      await tapReadyForBill();
-
-      expect(await screen.findByText(/doesn't have an open bill yet/)).toBeInTheDocument();
-    });
+    expect(await screen.findByText("Not seated")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /send request/i })).not.toBeInTheDocument();
+    expect(api.get).not.toHaveBeenCalled();
   });
 });

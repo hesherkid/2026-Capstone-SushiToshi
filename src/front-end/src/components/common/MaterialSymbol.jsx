@@ -6,6 +6,7 @@ export const MATERIAL_SYMBOL_NAMES = [
   "add",
   "arrow_back",
   "check_circle",
+  "chevron_right",
   "close",
   "delete",
   "expand_more",
