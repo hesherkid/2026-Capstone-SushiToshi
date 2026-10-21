@@ -131,12 +131,10 @@ describe("Bill page", () => {
     expect(await screen.findByRole("heading", { name: "Your table's bills" })).toBeInTheDocument();
     expect(await screen.findByRole("tab", { name: "Park (yours)", selected: true })).toBeInTheDocument();
     expect(await screen.findAllByText("$90.20")).toHaveLength(2);
-    expect(screen.getByText(/Orders from this phone go on this bill/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Lee" }));
 
     expect(await screen.findAllByText("$139.49")).toHaveLength(2);
-    expect(screen.queryByText(/Orders from this phone go on this bill/)).not.toBeInTheDocument();
   });
 
   it("leaves out cancelled bills", async () => {

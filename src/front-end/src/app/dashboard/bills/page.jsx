@@ -161,8 +161,6 @@ const BillsPage = () => {
               key={selectedBillId}
               sessionId={sessionId}
               billId={selectedBillId}
-              // Only worth saying when there's more than one to choose from
-              ordersGoHere={bills.length > 1 && selectedBillId === ordersGoOn}
             />
           )}
         </>
