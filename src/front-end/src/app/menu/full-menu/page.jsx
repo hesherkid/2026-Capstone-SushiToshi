@@ -105,7 +105,7 @@ const FullMenu = () => {
 
       if (searchTerms.length === 0) return true;
 
-      return searchTerms.some((term) => {
+      return searchTerms.every((term) => {
         return (
           item.name.toLowerCase().includes(term) ||
           (item.description && item.description.toLowerCase().includes(term)) ||

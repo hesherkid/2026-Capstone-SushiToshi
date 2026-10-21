@@ -9,10 +9,12 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn() }),
 }));
 
+// What's typed in the search box; set before rendering
+let mockSearchTerm = "";
 jest.mock("@/components/menu/searchUtils", () => ({
   __esModule: true,
   default: () => ({
-    searchTerm: "",
+    searchTerm: mockSearchTerm,
     setSearchTerm: jest.fn(),
     searchResults: [],
   }),
@@ -35,6 +37,7 @@ describe("FullMenu guest flow", () => {
     localStorage.clear();
     localStorage.setItem("guest", "true");
     localStorage.setItem("session_id", "42");
+    mockSearchTerm = "";
     mockPush.mockReset();
     // jsdom doesn't scroll; the category bar scrolls to sections
     window.scrollTo = jest.fn();
@@ -368,6 +371,27 @@ describe("FullMenu guest flow", () => {
     expect(
       screen.queryByText(/You're not seated at a table yet/),
     ).not.toBeInTheDocument();
+  });
+
+  it("matches search words across name, description and tags", async () => {
+    // "miso" is in the name, "popular" is a tag
+    mockSearchTerm = "Miso popular";
+    render(<FullMenu />);
+
+    expect(await screen.findByText("Miso Soup")).toBeInTheDocument();
+    expect(screen.queryByText("Salmon Roll")).not.toBeInTheDocument();
+  });
+
+  it("only shows items that match every search word", async () => {
+    // "miso" matches Miso Soup and "rice" matches Salmon Roll, but neither has both
+    mockSearchTerm = "miso rice";
+    render(<FullMenu />);
+
+    expect(
+      await screen.findByText("No items match your search."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Miso Soup")).not.toBeInTheDocument();
+    expect(screen.queryByText("Salmon Roll")).not.toBeInTheDocument();
   });
 
   it("shows placeholder cards, not 'no items', while the menu loads", async () => {
