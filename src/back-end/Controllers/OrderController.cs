@@ -842,6 +842,11 @@ namespace back_end.Controllers
                 }
                 if (errors.Any())
                 {
+                    if (!order.OrderItems.Any())
+                    {
+                        _context.SessionOrders.Remove(order);
+                        await _context.SaveChangesAsync();
+                    }
                     return BadRequest(new { message = $"Nothing was added. {string.Join(" ", errors)}", errors });
                 }
 
