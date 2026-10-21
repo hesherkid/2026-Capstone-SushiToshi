@@ -761,8 +761,21 @@ namespace back_end.controllers
         decimal overLimitSubtotal = overLimitItems.Sum(item => item.Line_Total);
         decimal leftoverSubtotal = leftoverItems.Sum(item => item.Line_Total);
         decimal subtotal = baseChargesSubtotal + addOnSubtotal + overLimitSubtotal + leftoverSubtotal;
-        decimal taxAmount = Math.Round(subtotal * pricing.TaxRate, 2);
-        decimal totalAmount = subtotal + taxAmount;
+
+        // Party size is everyone at the table, so a big group splitting into small bills
+        // still gets the gratuity on each one
+        var partySize = await _context.Bills
+          .Where(b => b.Session_Id == _session_id && b.Status != BillStatus.Cancelled)
+          .SumAsync(b => b.Adult_Count + b.Senior_Count + b.Child_Count + b.Tot_Count);
+        var gratuityRate =
+          pricing.GratuityMinPartySize > 0 && partySize >= pricing.GratuityMinPartySize
+            ? pricing.GratuityRate
+            : 0m;
+        decimal gratuityAmount = Math.Round(subtotal * gratuityRate, 2);
+
+        // A mandatory gratuity is part of the price, so GST applies to it too (unlike a tip)
+        decimal taxAmount = Math.Round((subtotal + gratuityAmount) * pricing.TaxRate, 2);
+        decimal totalAmount = subtotal + gratuityAmount + taxAmount;
 
         var summary = new BillSummaryResponse
         {
@@ -796,6 +809,10 @@ namespace back_end.controllers
 
           // Totals
           Subtotal = subtotal,
+          Party_Size = partySize,
+          Gratuity_Rate = gratuityRate,
+          Gratuity_Amount = gratuityAmount,
+          Gratuity_Min_Party_Size = pricing.GratuityMinPartySize,
           Tax_Rate = pricing.TaxRate,
           Tax_Amount = taxAmount,
           Total_Amount = totalAmount,
@@ -812,7 +829,8 @@ namespace back_end.controllers
         _logger.LogInformation(
             $"Generated {pricing.PricingType} bill summary for Bill {_bill_id}: " +
             $"Total ${totalAmount:F2} (Base: ${baseChargesSubtotal:F2}, Add-ons: ${addOnSubtotal:F2}, " +
-            $"Over-limit: ${overLimitSubtotal:F2}, Leftovers: ${leftoverSubtotal:F2}, Tax: ${taxAmount:F2})");
+            $"Over-limit: ${overLimitSubtotal:F2}, Leftovers: ${leftoverSubtotal:F2}, " +
+            $"Gratuity: ${gratuityAmount:F2}, GST: ${taxAmount:F2})");
 
         return Ok(summary);
       }
