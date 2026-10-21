@@ -218,4 +218,17 @@ public class OrderLimitRulesTests
     {
         OrderLimitRules.SessionLeftBeforeBlock(Unlimited, TwoAdults, sessionUsed: 0).Should().BeNull();
     }
+
+    [Fact]
+    public void ItemCharge_CannotPushPastCategoryBlock()
+    {
+        // Category Block: 5 per person x 2 = 10, 5 used -> 5 left. Item Charge: 1 per person x 2 = 2, 2 used -> 0 left
+        var result = Apply(requested: 6,
+                           category: PerPerson(5, OverLimitBehavior.Block),
+                           item: PerPerson(1, OverLimitBehavior.Charge),
+                           used: new OrderLimitRules.Usage(0, 0, SessionCategory: 5, SessionItem: 2),
+                           fullPrice: 5.00m);
+
+        result.IsValid.Should().BeFalse();   // the 6th is over the category's Block limit
+    }
 }
