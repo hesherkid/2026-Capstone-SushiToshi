@@ -1,57 +1,70 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography,
-  Box,
-  Alert,
-  Chip,
-  IconButton,
-  Button,
-  ToggleButton,
-  ToggleButtonGroup,
-} from "@mui/material";
-import MaterialSymbol from "@/components/common/MaterialSymbol";
-import { Plus } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Alert, Box, Button, Chip, Divider, Paper, Skeleton, Tab, Tabs, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 import api from "@/config/api";
 import { fetchMySessionId, getMyUserId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import { setPageLoading } from "@/utils/pageLoading";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
+import MaterialSymbol from "@/components/common/MaterialSymbol";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
+import { formatCurrency, formatTime } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+
+const MENU_PATH = "/menu/full-menu";
 
 // "table": every order at the table, so when one person orders for everyone the rest can see it.
 // "mine": only orders this person placed.
 const VIEWS = { TABLE: "table", MINE: "mine" };
 
-const OrdersAccordion = () => {
+// Where an order or item is at, in the customer's words. Sections show in this order
+const STATUSES = {
+  PENDING: { section: "Sent to the kitchen", chip: "Ordered", color: "warning" },
+  PROCESSING: { section: "Being prepared", chip: "Preparing", color: "info" },
+  DELIVERED: { section: "Served", chip: "Served", color: "success" },
+  CANCELLED: { section: "Cancelled", chip: "Cancelled", color: "default" },
+};
+const STATUS_ORDER = Object.keys(STATUSES);
+
+const statusKey = (status) => {
+  const key = String(status || "PENDING").toUpperCase();
+  return STATUSES[key] ? key : "PENDING";
+};
+
+// Add-ons and over-limit extras show what they cost; all you can eat items are included
+const itemPrice = (item) => {
+  // "Mine" sends price; the table view sends priceAtTime
+  const price = Number(item.price ?? item.priceAtTime);
+  if (!price) return null;
+  const quantity = item.quantity || 1;
+  return quantity > 1
+    ? `${formatCurrency(price * quantity)} (${formatCurrency(price)} each)`
+    : formatCurrency(price);
+};
+
+const OrdersSkeleton = () => (
+  <Box aria-label="Loading orders" role="status">
+    <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3, mb: 1.5 }} />
+    <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
+  </Box>
+);
+
+// The guest's orders as the kitchen works through them, with every item's status in view.
+// Grouped by where each order is at; "Whole table" also shows orders others placed
+const OrdersPage = () => {
   const router = useRouter();
   const [groupedOrders, setGroupedOrders] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [view, setView] = useState(VIEWS.MINE);
+  // Set when a background refresh fails; the orders on screen are from lastUpdated
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const latestRequest = useRef(0);
   const myUserId = getMyUserId();
 
-  const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
-
-  const statusOrder = ["PENDING", "PROCESSING", "DELIVERED", "CANCELLED"];
-  const statusColors = {
-    PENDING: "#ff9800",
-    PROCESSING: "#2196f3",
-    DELIVERED: "#4caf50",
-    CANCELLED: "#f44336",
-  };
-
-  // TODO: Double check API endpoints and modify router push paths if needed.
-  // Fetch active session ID
   useEffect(() => {
-    const getActiveSession = async (billId = "") => {
-
-      const apiClient = api;
-
+    const getActiveSession = async () => {
       try {
         // Ask the server (guests included) rather than trusting a saved session_id
         const mySessionId = await fetchMySessionId();
@@ -75,63 +88,59 @@ const OrdersAccordion = () => {
     getActiveSession();
   }, []);
 
-// quiet: a background refresh. No spinner, and if it fails the orders already shown stay up
-const fetchOrders = async ({ quiet = false } = {}) => {
+  // quiet: a background refresh. No spinner, and if it fails the orders already shown stay up
+  const fetchOrders = async ({ quiet = false } = {}) => {
+    // Only the latest request may update the page, so a slow refresh for the old tab
+    // can't overwrite the tab the guest just switched to
+    const requestId = ++latestRequest.current;
+    const isStale = () => requestId !== latestRequest.current;
 
-  const apiClient = api;
+    try {
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
 
-  try {
-    if (!quiet) {
-      setLoading(true);
+      // Whole table: every order in the session. Mine: the server finds this person's own orders.
+      const response =
+        view === VIEWS.TABLE
+          ? await api.get(`/Order/session/${sessionId.session_id}`)
+          : await api.get("/Order/active-session/orders");
+      if (isStale()) return;
+
+      const orders = response.data || [];
+      const grouped = orders.reduce((acc, order) => {
+        const status = statusKey(order.status);
+        if (!acc[status]) acc[status] = [];
+        acc[status].push(order);
+        return acc;
+      }, {});
+
+      setGroupedOrders(grouped);
       setError(null);
-    }
-
-    // Whole table: every order in the session. Mine: the server finds this person's own orders.
-    const response =
-      view === VIEWS.TABLE
-        ? await apiClient.get(`/Order/session/${sessionId.session_id}`)
-        : await apiClient.get("/Order/active-session/orders");
-
-
-    //Check if there are no orders
-    const orders = response.data || [];
-    if (!orders.length) {
+      setRefreshFailed(false);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      if (isStale()) return;
+      // A failed background refresh leaves the orders up and just says they may be out of date
+      if (quiet) {
+        setRefreshFailed(true);
+        return;
+      }
+      const msg =
+        typeof err?.response?.data?.message === "string"
+          ? err.response.data.message
+          : typeof err?.response?.data === "string"
+            ? err.response.data
+            : "Error loading orders";
+      setError(msg);
       setGroupedOrders({});
-      setLoading(false);
-      return;
+    } finally {
+      if (!quiet && !isStale()) setLoading(false);
     }
-
-    //Sort each type of order into groups (Pending, Delivered, Processing and Cancelled)
-    const grouped = orders.reduce((acc, order) => {
-      const status = String(order.status || "PENDING").toUpperCase();
-      if (!acc[status]) acc[status] = [];
-      acc[status].push(order);
-      return acc;
-    }, {});
-
-    setGroupedOrders(grouped);
-    setLoading(false);
-  } catch (err) {
-    console.error("Error fetching orders:", err);
-    if (quiet) return;
-    const msg =
-      typeof err?.response?.data?.message === "string"
-        ? err.response.data.message
-        : typeof err?.response?.data === "string"
-        ? err.response.data
-        : "Error loading orders";
-    setError(msg);
-    setGroupedOrders({});
-    setLoading(false);
-  }
-};
-
-  // TODO: Check if this is needed
-  const handleNewOrder = (event) => {
-    event.preventDefault();
-    router.push("/menu/full-menu");
   };
-  
+
   // The app bar's spinner is the page's only loading indicator
   useEffect(() => {
     setPageLoading(loading);
@@ -141,7 +150,11 @@ const fetchOrders = async ({ quiet = false } = {}) => {
   useEffect(() => {
     // The table view needs the session; it's ready after fetchMySessionId
     if (!sessionId) return;
+    // The other tab's orders aren't these, so don't leave them up while these load
+    setGroupedOrders({});
+    setRefreshFailed(false);
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, sessionId]);
 
   // Order status changes as the kitchen works through it
@@ -155,211 +168,234 @@ const fetchOrders = async ({ quiet = false } = {}) => {
     return parts.join(" · ");
   };
 
-  const renderOrderAccordion = (order, groupStatus) => (
-    <Accordion
-      key={order.orderId}
-      sx={{
-        mb: 1,
-        border: groupStatus === "PENDING" ? "1px solid #ff9800" : "none",
-      }}
-    >
-      <AccordionSummary
-        expandIcon={<MaterialSymbol name="expand_more" />}
-        sx={{
-          backgroundColor:
-            groupStatus === "PENDING"
-              ? "rgba(255, 152, 0, 0.05)"
-              : "rgba(0, 0, 0, 0.03)",
-        }}
+  // One card per order, laid out open so each item's status shows without tapping into anything
+  const renderOrderCard = (order) => {
+    const items = order.items || [];
+    const itemCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const placedAt = formatTime(order.createdAt);
+    const label = view === VIEWS.TABLE ? orderLabel(order) : "";
+
+    return (
+      <Paper
+        key={order.orderId}
+        component="section"
+        aria-label={`Order #${order.orderId}`}
+        variant="outlined"
+        sx={{ borderRadius: 3, overflow: "hidden", textAlign: "left" }}
       >
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "space-between",
-            width: "100%",
-            pr: 2,
+            gap: 2,
+            px: 2,
+            py: 1.75,
           }}
         >
-          {/* Item count sits under the order number, leaving room for the name beside it */}
-          <Box>
-            <Typography>Order #{order.orderId}</Typography>
-            {order.items && (
-              <Typography variant="body2" color="textSecondary">
-                ({order.items.length} items)
-              </Typography>
-            )}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="h3" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
+              Order #{order.orderId}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              {[placedAt, `${itemCount} ${itemCount === 1 ? "item" : "items"}`]
+                .filter(Boolean)
+                .join(" · ")}
+            </Typography>
           </Box>
-          {view === VIEWS.TABLE && (
-            <Typography variant="body2" color="text.secondary">
-              {orderLabel(order)}
+          {label && (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: "right", flexShrink: 0 }}>
+              {label}
             </Typography>
           )}
         </Box>
-      </AccordionSummary>
-      <AccordionDetails>
-        {order.items && order.items.length > 0 ? (
-          <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }}>
-            {order.items.map((item) => (
-              <Box
-                component="li"
-                key={item.order_item_id ?? item.orderItemId ?? `${order.orderId}-${item.item_id ?? item.itemId}-${index}`}
-                sx={{
-                  py: 1.5,
-                  borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-                  "&:last-child": { borderBottom: "none" },
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Box>
-                  <Typography variant="body1" align="left">
-                    {item.name || `Item #${item.item_id}`} - Quantity:{" "}
-                    {item.quantity}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="textSecondary"
-                    align="left"
-                  >
-                    {(() => {
-                      // "Mine" sends price; the table view sends priceAtTime
-                      const price = item.price ?? item.priceAtTime;
-                      if (price === 0) return "Included item";
-                      return price ? `Price: $${Number(price).toFixed(2)}` : "Price unavailable";
-                    })()}
-                  </Typography>
-                </Box>
 
-                <Chip
-                  label={item.status}
-                  size="small"
-                  sx={{
-                    backgroundColor: statusColors[item.status.toUpperCase()],
-                    color: "white",
-                  }}
-                />
-              </Box>
-            ))}
+        {items.length > 0 ? (
+          <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }}>
+            {items.map((item, index) => {
+              const status = statusKey(item.status);
+              const cancelled = status === "CANCELLED";
+              const price = itemPrice(item);
+              return (
+                <Box
+                  component="li"
+                  key={item.order_item_id ?? item.orderItemId ?? `${order.orderId}-${item.item_id ?? item.itemId}-${index}`}
+                >
+                  <Divider />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5 }}>
+                    <Typography sx={{ fontWeight: 700, minWidth: 28 }}>{item.quantity}×</Typography>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 600,
+                          lineHeight: 1.3,
+                          overflowWrap: "anywhere",
+                          textDecoration: cancelled ? "line-through" : "none",
+                          color: cancelled ? "text.secondary" : "text.primary",
+                        }}
+                      >
+                        {item.name || `Item #${item.item_id ?? item.itemId}`}
+                      </Typography>
+                      {/* Same wording as Review order */}
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                        {price ? (
+                          <>
+                            Add-on{" "}
+                            <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
+                              {price}
+                            </Box>
+                          </>
+                        ) : (
+                          "Included"
+                        )}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={STATUSES[status].chip}
+                      color={STATUSES[status].color}
+                      size="small"
+                      sx={{ fontWeight: 600, flexShrink: 0 }}
+                    />
+                  </Box>
+                </Box>
+              );
+            })}
           </Box>
         ) : (
-          <Typography color="textSecondary">
-            No items found for this order.
-          </Typography>
+          <>
+            <Divider />
+            <Typography color="text.secondary" sx={{ px: 2, py: 1.5 }}>
+              No items found for this order.
+            </Typography>
+          </>
         )}
-      </AccordionDetails>
-    </Accordion>
-  );
-
-  if (error) {
-    return (
-      <Box p={2}>
-        <Alert severity="error">
-          {typeof error === "string" ? error : "An unexpected error occurred"}
-        </Alert>
-      </Box>
+      </Paper>
     );
-  }
+  };
+
+  const hasOrders = Object.keys(groupedOrders).length > 0;
+  // Without a session there's nothing to show or switch between, so only the message stays up
+  const sessionProblem = !sessionId && error;
 
   return (
-    <CustomerPageContainer>
-      <Typography
-        variant="h4"
-        component="h1"
-        sx={{ mt: 4, mb: 4, textAlign: "left", width: "100%", fontWeight: 200 }}
-      >
-        Table Orders
+    <CustomerPageContainer sx={{ maxWidth: 720 }}>
+      <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
+        {view === VIEWS.TABLE ? "Your table's orders" : "Your orders"}
       </Typography>
 
-      {/* Tabs on the left, Order More on the right of the same row */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 2,
-          mb: 3,
-        }}
-      >
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={view}
-          onChange={(event, next) => next && setView(next)}
-          aria-label="Which orders to show"
-        >
-          <ToggleButton value={VIEWS.MINE}>My orders</ToggleButton>
-          <ToggleButton value={VIEWS.TABLE}>Whole table</ToggleButton>
-        </ToggleButtonGroup>
-
-        <Button
-          variant="contained"
-          startIcon={<Plus size={20} />}
-          onClick={() => router.push("/menu/full-menu")}
-          sx={{
-            borderRadius: 2,
-            px: { xs: 1.5, sm: 2.5 },
-            py: 1.25,
-            fontSize: { xs: "0.875rem", sm: "1rem" },
-            fontWeight: 600,
-            textTransform: "none",
-            whiteSpace: "nowrap",
-            boxShadow: "none",
-            "&:hover": {
-              boxShadow: 1,
-            },
-          }}
-        >
-          Order More
-        </Button>
-      </Box>
-
-      {/* While loading, keep the current list; the app bar shows the spinner */}
-      {Object.keys(groupedOrders).length === 0 ? (
-        !loading && (
-        <Alert severity="info">
-          {view === VIEWS.MINE
-            ? "You haven't ordered anything yet."
-            : "No one at your table has ordered yet."}
+      {sessionProblem ? (
+        <Alert severity={error === NOT_SEATED_MESSAGE ? "info" : "error"}>
+          {typeof error === "string" ? error : "An unexpected error occurred"}
         </Alert>
-        )
       ) : (
-        statusOrder.map((status) => {
-          if (!groupedOrders[status]?.length) return null;
+        <>
+          {/* Same underlined tabs as the Bill page might make a component in the future*/}
+          <Tabs
+            value={view}
+            onChange={(_, next) => setView(next)}
+            variant="scrollable"
+            scrollButtons={false}
+            aria-label="Which orders to show"
+            sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+          >
+            {[
+              { value: VIEWS.MINE, label: "My orders" },
+              { value: VIEWS.TABLE, label: "Whole table" },
+            ].map(({ value, label }) => (
+              <Tab
+                key={value}
+                value={value}
+                label={label}
+                sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.95rem" }}
+              />
+            ))}
+          </Tabs>
 
-          return (
-            <Box key={status} sx={{ mb: 4 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                  mb: 2,
-                }}
+          {error && (
+            <Alert
+              severity="error"
+              sx={{ mb: 3 }}
+              action={
+                <Button color="inherit" size="small" onClick={() => fetchOrders()}>
+                  Retry
+                </Button>
+              }
+            >
+              {typeof error === "string" ? error : "An unexpected error occurred"}
+            </Alert>
+          )}
+
+          {refreshFailed && hasOrders && (
+            <Typography variant="body2" color="text.secondary" role="status" sx={{ mb: 2 }}>
+              Couldn&apos;t refresh
+              {lastUpdated ? ` — showing orders as of ${formatTime(lastUpdated.toISOString())}` : ""}
+              . Trying again shortly.
+            </Typography>
+          )}
+
+          {!hasOrders ? (
+            loading ? (
+              <OrdersSkeleton />
+            ) : (
+              !error && (
+                // ---- Nothing ordered yet ----
+                <Box sx={{ textAlign: "center", py: 6 }}>
+                  <MaterialSymbol name="room_service" size={56} sx={{ color: "text.disabled" }} />
+                  <Typography variant="h6" component="h2" sx={{ mt: 1.5 }}>
+                    No orders yet
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
+                    {view === VIEWS.MINE
+                      ? "You haven't ordered anything yet."
+                      : "No one at your table has ordered yet."}
+                  </Typography>
+                  <Button variant="contained" onClick={() => router.push(MENU_PATH)}>
+                    Browse the menu
+                  </Button>
+                </Box>
+              )
+            )
+          ) : (
+            <>
+              {STATUS_ORDER.map((status) => {
+                const orders = groupedOrders[status];
+                if (!orders?.length) return null;
+
+                return (
+                  <Box key={status} sx={{ mb: 4 }}>
+                    {/* Section heading with its count, like the menu's categories */}
+                    <Typography variant="h6" component="h2" sx={{ fontWeight: 600, mb: 1.5, textAlign: "left" }}>
+                      {STATUSES[status].section}{" "}
+                      <Typography
+                        component="span"
+                        sx={{ fontSize: "0.75rem", fontWeight: 400, color: "text.secondary", ml: 0.5 }}
+                      >
+                        {orders.length} {orders.length === 1 ? "order" : "orders"}
+                      </Typography>
+                    </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                      {orders.map(renderOrderCard)}
+                    </Box>
+                  </Box>
+                );
+              })}
+
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                onClick={() => router.push(MENU_PATH)}
+                startIcon={<MaterialSymbol name="add" size={22} />}
+                sx={{ mb: 3, minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
               >
-                <Typography variant="h6">
-                  {status.charAt(0) + status.slice(1).toLowerCase()} Orders
-                </Typography>
-                <Chip
-                  label={groupedOrders[status].length}
-                  size="small"
-                  sx={{
-                    backgroundColor: statusColors[status],
-                    color: "white",
-                    fontWeight: "bold",
-                  }}
-                />
-              </Box>
-              {groupedOrders[status].map((order) =>
-                renderOrderAccordion(order, status)
-              )}
-            </Box>
-          );
-        })
+                Order more
+              </Button>
+            </>
+          )}
+        </>
       )}
     </CustomerPageContainer>
   );
 };
 
-export default OrdersAccordion;
+export default OrdersPage;
