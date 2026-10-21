@@ -17,6 +17,7 @@ import { setPageLoading } from "@/utils/pageLoading";
 import NewBillDialog from "@/components/staff/SessionDashboard/components/dialogs/NewBillDialog";
 import CustomerBillDialog from "@/components/customer/CustomerBillDialog";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
+import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { SessionProvider } from "@/components/staff/SessionDashboard/context/SessionContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import { getStatusColorValue, formatDateTime, formatBillStatus, getTableDescription, sortBillsByStatus } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
@@ -123,13 +124,19 @@ const BillsDashboard = () => {
     }
   }, [sessionId]);
 
-  const fetchBills = async (sid) => {
+  // Shows a bill as soon as staff open it, and its status as it changes
+  useAutoRefresh(() => fetchBills(sessionId, { quiet: true }), { enabled: !!sessionId });
+
+  // quiet: a background refresh. No spinner, and if it fails the bills already shown stay up
+  const fetchBills = async (sid, { quiet = false } = {}) => {
 
     const apiClient = api;
 
     try {
-      setLoading(true);
-      setError(null);
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
 
       const res = await apiClient.get(`/Bill/get_bills/${sid}`);
 
@@ -147,7 +154,7 @@ const BillsDashboard = () => {
       if (err?.response?.status === 404) {
         setBills([]);
         setError(null);
-      } else {
+      } else if (!quiet) {
         notifyError(
           err?.response?.data?.detail ||
           err?.response?.data?.message ||
@@ -196,7 +203,9 @@ const BillsDashboard = () => {
 
         {/* While loading, the app bar shows the spinner and nothing is listed yet */}
         {loading ? null : !bills || bills.length === 0 ? (
-          <Alert severity="info">No bills yet. Create your first bill to get started.</Alert>
+          <Alert severity="info">
+            No bills yet. Your server will open a bill for your table, and it will show up here.
+          </Alert>
         ) : (
           <Box
             sx={{

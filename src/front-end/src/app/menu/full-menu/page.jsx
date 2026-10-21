@@ -18,6 +18,7 @@ import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import TrackedItem from "@/components/menu/TrackedItem";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import useMenuSearch from "@/components/menu/searchUtils";
+import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import {
   useTableOrder,
@@ -53,6 +54,9 @@ const FullMenu = () => {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Keep bills and limits current while the guest browses (others at the table order too)
+  useAutoRefresh(refresh);
 
   // Put the guest back where they were on the menu after Review order.
   // Read once on arrival, before scrolling to the top of this page can overwrite it

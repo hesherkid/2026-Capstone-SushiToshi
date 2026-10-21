@@ -20,6 +20,7 @@ import api from "@/config/api";
 import { fetchMySessionId, getMyUserId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import { setPageLoading } from "@/utils/pageLoading";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
+import useAutoRefresh from "@/hooks/useAutoRefresh";
 
 // "table": every order at the table, so when one person orders for everyone the rest can see it.
 // "mine": only orders this person placed.
@@ -74,13 +75,16 @@ const OrdersAccordion = () => {
     getActiveSession();
   }, []);
 
-const fetchOrders = async () => {
+// quiet: a background refresh. No spinner, and if it fails the orders already shown stay up
+const fetchOrders = async ({ quiet = false } = {}) => {
 
   const apiClient = api;
 
   try {
-    setLoading(true);
-    setError(null);
+    if (!quiet) {
+      setLoading(true);
+      setError(null);
+    }
 
     // Whole table: every order in the session. Mine: the server finds this person's own orders.
     const response =
@@ -109,6 +113,7 @@ const fetchOrders = async () => {
     setLoading(false);
   } catch (err) {
     console.error("Error fetching orders:", err);
+    if (quiet) return;
     const msg =
       typeof err?.response?.data?.message === "string"
         ? err.response.data.message
@@ -137,9 +142,10 @@ const fetchOrders = async () => {
     // The table view needs the session; it's ready after fetchMySessionId
     if (!sessionId) return;
     fetchOrders();
-    const interval = setInterval(fetchOrders, 30000);
-    return () => clearInterval(interval);
   }, [view, sessionId]);
+
+  // Order status changes as the kitchen works through it
+  useAutoRefresh(() => fetchOrders({ quiet: true }), { enabled: !!sessionId });
 
   // Other guests' orders show only the bill they're on, never who placed them
   const orderLabel = (order) => {
