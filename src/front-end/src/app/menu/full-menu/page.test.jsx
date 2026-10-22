@@ -269,6 +269,18 @@ describe("FullMenu guest flow", () => {
         /You've asked for your bill, so no more orders can be added/,
       ),
     ).not.toHaveLength(0);
+    // Items still show, but there's no -/+ to put them in the bag, and no way to Review order
+    expect(screen.getAllByRole("heading", { level: 3 }).length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole("button", { name: /^Add one / })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: /^Remove one / })).toHaveLength(0);
+    expect(screen.queryByText(/^Qty /)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Review order/ })).not.toBeInTheDocument();
+  });
+
+  it("has the -/+ on every item while the bill is still open", async () => {
+    render(<FullMenu />);
+
+    expect((await screen.findAllByRole("button", { name: /^Add one / })).length).toBeGreaterThan(0);
   });
 
   it("keeps ordering on the bill this phone used last when the table has several", async () => {

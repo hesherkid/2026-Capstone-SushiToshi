@@ -396,6 +396,8 @@ const FullMenu = () => {
                         atLimit={
                           limitStatus(category.category_id, item.item_id).atLimit
                         }
+                        // The bill's been asked for, so nothing more can be ordered onto it
+                        showQuantityControls={!billRequested}
                       />
                     </TrackedItem>
                   ))}
@@ -406,7 +408,8 @@ const FullMenu = () => {
         </Box>
       )}
 
-      <ReviewOrderButton count={cartCount} onClick={reviewOrder} />
+      {/* Ordering is over once the bill's been asked for */}
+      {!billRequested && <ReviewOrderButton count={cartCount} onClick={reviewOrder} />}
     </CustomerPageContainer>
   );
 };
