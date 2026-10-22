@@ -95,7 +95,7 @@ describe("Customer orders page", () => {
     window.removeEventListener(PAGE_LOADING_EVENT, record);
   });
 
-  it("has no bill filter, and says when this person hasn't ordered yet", async () => {
+  it("has no bill filter, and says when no one at the table has ordered yet", async () => {
     api.get.mockImplementation((url) =>
       url === "/DiningSession/participants/active-session-id"
         ? Promise.resolve({ data: { session_id: 269 } })
@@ -103,10 +103,47 @@ describe("Customer orders page", () => {
     );
     render(<OrdersPage />);
 
-    expect(await screen.findByText("You haven't ordered anything yet.")).toBeInTheDocument();
+    // Nothing of their own, so it opens on the table, which has nothing either
+    expect(await screen.findByText("No one at your table has ordered yet.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Whole table" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: "Browse the menu" })).toBeInTheDocument();
+    expect(screen.queryByText("You haven't ordered anything yet.")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByText(/Select Bill/)).not.toBeInTheDocument();
+  });
+
+  it("opens on the whole table when someone else ordered for this person", async () => {
+    api.get.mockImplementation((url) => {
+      if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+      if (url === "/Order/session/269") return Promise.resolve({ data: [tableOrders[0]] });
+      return Promise.resolve({ data: [] });
+    });
+    render(<OrdersPage />);
+
+    expect(await screen.findByText("Order #900")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Whole table" })).toHaveAttribute("aria-selected", "true");
+    // No "you haven't ordered" flash on the way
+    expect(screen.queryByText("You haven't ordered anything yet.")).not.toBeInTheDocument();
+  });
+
+  it("stays on My orders once the guest picks it, with a way back to the table", async () => {
+    api.get.mockImplementation((url) => {
+      if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+      if (url === "/Order/session/269") return Promise.resolve({ data: [tableOrders[0]] });
+      return Promise.resolve({ data: [] });
+    });
+    render(<OrdersPage />);
+    await screen.findByText("Order #900");
+
+    fireEvent.click(screen.getByRole("tab", { name: "My orders" }));
+
+    expect(await screen.findByText("You haven't ordered anything yet.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "My orders" })).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "See the whole table's orders" }));
+
+    expect(await screen.findByText("Order #900")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Whole table" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("shows each item's status without expanding anything", async () => {

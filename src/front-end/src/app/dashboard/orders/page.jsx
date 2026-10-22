@@ -61,6 +61,8 @@ const OrdersPage = () => {
   const [refreshFailed, setRefreshFailed] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const latestRequest = useRef(0);
+  // Set once the page has picked its opening tab (see fetchOrders)
+  const openingTabChosen = useRef(false);
   const myUserId = getMyUserId();
 
   useEffect(() => {
@@ -94,6 +96,8 @@ const OrdersPage = () => {
     // can't overwrite the tab the guest just switched to
     const requestId = ++latestRequest.current;
     const isStale = () => requestId !== latestRequest.current;
+    // Moving to the other tab: it loads next, so the spinner stays on and nothing flashes
+    let switchingTab = false;
 
     try {
       if (!quiet) {
@@ -109,6 +113,18 @@ const OrdersPage = () => {
       if (isStale()) return;
 
       const orders = response.data || [];
+
+      // Opens on My orders, but when someone else ordered for this person the table's
+      // orders are what they want. Only on arrival, so it never flips the tab under them
+      if (!openingTabChosen.current && !quiet) {
+        openingTabChosen.current = true;
+        if (view === VIEWS.MINE && orders.length === 0) {
+          switchingTab = true;
+          setView(VIEWS.TABLE);
+          return;
+        }
+      }
+
       const grouped = orders.reduce((acc, order) => {
         const status = statusKey(order.status);
         if (!acc[status]) acc[status] = [];
@@ -137,7 +153,7 @@ const OrdersPage = () => {
       setError(msg);
       setGroupedOrders({});
     } finally {
-      if (!quiet && !isStale()) setLoading(false);
+      if (!quiet && !isStale() && !switchingTab) setLoading(false);
     }
   };
 
@@ -349,9 +365,17 @@ const OrdersPage = () => {
                       ? "You haven't ordered anything yet."
                       : "No one at your table has ordered yet."}
                   </Typography>
-                  <Button variant="contained" onClick={() => router.push(MENU_PATH)}>
-                    Browse the menu
-                  </Button>
+                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <Button variant="contained" onClick={() => router.push(MENU_PATH)}>
+                      Browse the menu
+                    </Button>
+                    {/* Someone else at the table may have ordered for them */}
+                    {view === VIEWS.MINE && (
+                      <Button onClick={() => setView(VIEWS.TABLE)} sx={{ textTransform: "none", fontWeight: 600 }}>
+                        See the whole table&apos;s orders
+                      </Button>
+                    )}
+                  </Box>
                 </Box>
               )
             )
