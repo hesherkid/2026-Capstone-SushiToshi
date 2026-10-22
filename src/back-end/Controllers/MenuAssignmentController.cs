@@ -46,7 +46,6 @@ namespace back_end.Controllers
         ///         "menu_Id": 123,
         ///         "item_Id": 456,
         ///         "price": 15.99,
-        ///         "full_Price": 15.99,
         ///         "over_Limit_Behavior": "Charge",
         ///         "adult_Limit": 100,
         ///         "senior_Limit": 50,
@@ -61,8 +60,8 @@ namespace back_end.Controllers
         /// adult_Limit, child_Limit, and senior_Limit are required (0 = unlimited).
         /// tot_Limit is optional: 0 or omitted = same as child_Limit.
         /// Rules: child and senior ≤ adult, toddler ≤ child.
-        /// full_Price defaults to price if not provided; over_Limit_Behavior defaults to "Block".
-        /// over_Limit_Behavior "Charge" requires full_Price greater than 0.
+        /// Over_Limit_Behavior defaults to "Block".
+        /// over_Limit_Behavior "Charge" requires price greater than 0.
         /// Add-on items must have a price greater than 0.
         /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Item views are recorded separately (POST api/menu-item-views).
@@ -156,7 +155,6 @@ namespace back_end.Controllers
         ///     PUT /api/menuassignment/123/456
         ///     {
         ///         "price": 15.99,
-        ///         "full_Price": 15.99,
         ///         "adult_Limit": 1,
         ///         "child_Limit": 1,
         ///         "senior_Limit": 1,
@@ -171,7 +169,7 @@ namespace back_end.Controllers
         /// All fields are optional - fields not sent keep their current values.
         /// A limit of 0 means unlimited, except tot_Limit: 0 means "same as child_Limit".
         /// Rules: child and senior ≤ adult, toddler ≤ child.
-        /// over_Limit_Behavior "Charge" requires full_Price greater than 0.
+        /// over_Limit_Behavior "Charge" requires price greater than 0.
         /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Add-on items require price greater than 0.
         /// </remarks>

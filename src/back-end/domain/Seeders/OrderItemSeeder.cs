@@ -17,7 +17,7 @@ namespace back_end.domain.Seeders
     ///   - Per-order limits (item and category) always block, e.g. Nigiri 1 of each type, Sashimi 30 combined.
     ///   - Per-person limits are per dining session: limit x headcount per age group (from the session's bills).
     ///     Block limits are clamped; Charge limits (Hot Stone) split into a free line and an over-limit line
-    ///     charged at Full_Price with Charge_Reason = OverLimit.
+    ///     charged at Price with Charge_Reason = OverLimit.
     ///   - AYCE lines are priced at 0; add-ons and drinks at the assignment Price.
     /// Cancelled orders do not count toward limits.
     /// </summary>

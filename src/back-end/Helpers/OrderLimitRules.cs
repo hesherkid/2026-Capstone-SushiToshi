@@ -9,8 +9,8 @@ namespace back_end.Helpers
     ///   - Per-order: the whole table, reset for every order. Always blocks.
     ///   - Per-person: per dining session; cap = limit x headcount per age group.
     ///     Block limits are hard stops, whichever is tighter. Units over a Charge limit
-    ///     (but within every Block limit) go on a separate line at Full_Price (Charge_Reason = OverLimit).
-    /// 0 = unlimited; toddler 0 = same as child (see LimitRules).
+    ///     (but within every Block limit) go on a separate line at Price (Charge_Reason = OverLimit).
+    ///     /// 0 = unlimited; toddler 0 = same as child (see LimitRules).
     /// </summary>
 
     public static class OrderLimitRules
@@ -68,7 +68,7 @@ namespace back_end.Helpers
 
         /// <summary>
         /// Units the table can still order this session before a Block limit stops them, or null
-        /// when nothing blocks. Charge limits never block (the extra is billed at Full_Price).
+        /// when nothing blocks. Charge limits never block (the extra is billed at Price).
         /// </summary>
         public static int? SessionLeftBeforeBlock(Limits limits, Headcount heads, int sessionUsed)
         {
