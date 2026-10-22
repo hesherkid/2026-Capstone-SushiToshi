@@ -24,16 +24,10 @@ import {
   LogOut,
 } from "lucide-react";
 import TableIcon from "@/components/common/TableIcon";
-import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
-import MaterialSymbol from "@/components/common/MaterialSymbol";
 
+// Staff and admin only: customers get around with the bottom tabs and side rail
+// (see CustomerBottomNav and CustomerSideNav)
 const menuItemsByRole = {
-  // Same pages and icons as the phone tab bar
-  customer: CUSTOMER_NAV_ITEMS.map(({ label, path, symbol }) => ({
-    icon: () => <MaterialSymbol name={symbol} size={22} />,
-    label,
-    path,
-  })),
   staff: [
     { icon: Home, label: "Home", path: "/" },
     { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
@@ -130,9 +124,7 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
     </List>
 
 
-    {/* Sticky so Logout stays visible when the menu is taller than the screen.
-        Customers don't log out (staff end their visit), so they don't get this */}
-    {onLogout && (
+    {/* Sticky so Logout stays visible when the menu is taller than the screen */}
     <Box
     sx={{
         mt: "auto",
@@ -162,7 +154,6 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
             Logout
         </Button>
     </Box>
-    )}
 
     </Drawer>
     );

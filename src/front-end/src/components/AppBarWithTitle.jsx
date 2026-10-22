@@ -360,14 +360,13 @@ const handleLogout = () => {
           )}
         </Box>
 
-        {canShowDrawer && (
+        {canShowDrawer && effectiveRole !== "customer" && (
           <AppNavigationDrawer
             open={drawerOpen}
             role={effectiveRole}
             onClose={() => setDrawerOpen(false)}
             onNavigate={handleNavigation}
-            // Customers don't log out: their visit ends when staff close the table's session
-            onLogout={effectiveRole === "customer" ? undefined : handleLogout}
+            onLogout={handleLogout}
           />
         )}
       </Toolbar>
