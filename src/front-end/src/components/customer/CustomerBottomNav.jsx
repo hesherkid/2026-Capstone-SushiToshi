@@ -1,44 +1,19 @@
 "use client";
-import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { BottomNavigation, BottomNavigationAction, Box, Paper } from "@mui/material";
-import { useAuth } from "@/hooks/useAuth";
-import { TABLE_VISIT_EVENT, THANK_YOU_PATH } from "@/utils/tableVisit";
 import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
-import { REVIEW_ORDER_PATH } from "@/contexts/TableOrderContext";
+import useCustomerNav from "@/components/customer/useCustomerNav";
 
 export const NAV_HEIGHT = 64;
-const INACTIVE_COLOR = "#6b6f73";
+export const INACTIVE_COLOR = "#6b6f73";
 
 // Phone tab bar for guests: every customer page is one tap away.
 const CustomerBottomNav = () => {
-  const pathname = usePathname();
   const router = useRouter();
-  const { userRole } = useAuth();
-  const [isGuest, setIsGuest] = useState(false);
+  const { show, current } = useCustomerNav();
 
-  // Same signal the app bar uses: the guest flag is saved at QR login
-  useEffect(() => {
-    const readGuest = () => setIsGuest(localStorage.getItem("guest") === "true");
-    readGuest();
-    window.addEventListener(TABLE_VISIT_EVENT, readGuest);
-    return () => window.removeEventListener(TABLE_VISIT_EVENT, readGuest);
-  }, [pathname]);
-
-  const isCustomer = isGuest || userRole === "customer";
-  // Review order has its own Place order bar at the bottom, so the tabs step aside there.
-  // After the visit ends there's nothing left to go to
-  if (
-    !isCustomer ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith(REVIEW_ORDER_PATH) ||
-    pathname.startsWith(THANK_YOU_PATH)
-  ) {
-    return null;
-  }
-
-  const current = CUSTOMER_NAV_ITEMS.find((item) => pathname.startsWith(item.path))?.path ?? false;
+  if (!show) return null;
 
   return (
     <Box sx={{ display: { xs: "block", md: "none" } }}>
