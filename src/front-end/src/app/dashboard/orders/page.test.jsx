@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent, within } from "@testing-library/rea
 import OrdersPage from "./page";
 import api from "@/config/api";
 import { PAGE_LOADING_EVENT } from "@/utils/pageLoading";
+import { TABLE_VISIT_ENDED_EVENT } from "@/utils/tableVisit";
 
 jest.mock("@/config/api", () => {
   const mockApi = { get: jest.fn() };
@@ -173,6 +174,27 @@ describe("Customer orders page", () => {
     expect(screen.getByText("Miso Soup")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Whole table" })).toBeInTheDocument();
     expect(screen.queryByText("Server error")).not.toBeInTheDocument();
+  });
+
+  // The server answers "no active session" (404) once staff close the table
+  it("ends the visit instead of showing an error when staff close the table", async () => {
+    const ended = jest.fn();
+    window.addEventListener(TABLE_VISIT_ENDED_EVENT, ended);
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    render(<OrdersPage />);
+    await screen.findByText("Order #901");
+
+    // Staff close the table
+    api.get.mockImplementation(() => Promise.reject({ response: { status: 404 } }));
+    fireEvent(document, new Event("visibilitychange"));
+
+    await waitFor(() => expect(ended).toHaveBeenCalled());
+    expect(screen.queryByText(/Couldn't refresh/)).not.toBeInTheDocument();
+    expect(consoleError).not.toHaveBeenCalledWith("Error fetching orders:", expect.anything());
+
+    consoleError.mockRestore();
+    window.removeEventListener(TABLE_VISIT_ENDED_EVENT, ended);
   });
 
   it("shows a failed load inline, with the page controls still there and a retry", async () => {

@@ -137,8 +137,19 @@ const OrdersPage = () => {
       setRefreshFailed(false);
       setLastUpdated(new Date());
     } catch (err) {
-      console.error("Error fetching orders:", err);
       if (isStale()) return;
+
+      // "No active session": staff closed the table. Not an error; fetchMySessionId sees the
+      // session is gone and ends the visit, which shows the thank-you page
+      if (err?.response?.status === 404 && view === VIEWS.MINE) {
+        try {
+          if (!(await fetchMySessionId())) return;
+        } catch {
+          // Couldn't check; handled as a failed load below
+        }
+      }
+
+      console.error("Error fetching orders:", err);
       // A failed background refresh leaves the orders up and just says they may be out of date
       if (quiet) {
         setRefreshFailed(true);
