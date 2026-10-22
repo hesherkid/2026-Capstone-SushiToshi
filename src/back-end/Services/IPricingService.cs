@@ -19,5 +19,7 @@ namespace back_end.Services
         // Automatic gratuity once the table has this many guests; 0 = never
         public decimal GratuityRate { get; set; }
         public int GratuityMinPartySize { get; set; }
+
+        public decimal LeftoverFee { get; set; }
     }
 }

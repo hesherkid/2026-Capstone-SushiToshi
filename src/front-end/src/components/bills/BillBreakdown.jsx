@@ -63,7 +63,7 @@ const ReceiptLine = ({ label, amount, quantity, unitPrice, bold, large }) => (
   </Box>
 );
 
-// One priced section (add-ons, over-limit, leftovers); hidden when empty
+// One priced section of order lines (add-ons, over-limit); hidden when empty
 const ChargeSection = ({ title, items, subtotalLabel, subtotal }) =>
   items?.length > 0 && (
     <>
@@ -83,7 +83,7 @@ const ChargeSection = ({ title, items, subtotalLabel, subtotal }) =>
   );
 
 /**
- * A bill's priced breakdown: guests by age, add-ons, tax and total.
+ * A bill's priced breakdown: guests by age, add-ons, over-limit charges, leftovers, tax and total.
  * Shared by the staff and customer bill dialogs so both always show the same numbers.
  * showHeader = false leaves out the name, status and dates (the customer Bill page shows its own)
  */
@@ -149,12 +149,18 @@ const BillBreakdown = ({ summary, showHeader = true }) => (
       subtotalLabel="Over limit"
       subtotal={summary.overlimit_subtotal}
     />
-    <ChargeSection
-      title="Leftovers"
-      items={summary.leftover_items}
-      subtotalLabel="Leftovers"
-      subtotal={summary.leftover_subtotal}
-    />
+
+    {summary.leftover_charge > 0 && (
+      <>
+        <ReceiptRule />
+        <SectionHeading>Leftovers</SectionHeading>
+        <ReceiptLine
+          label="Leftover charge (table, split evenly across bills)"
+          amount={summary.leftover_charge}
+          bold
+        />
+      </>
+    )}
 
     <ReceiptRule />
 

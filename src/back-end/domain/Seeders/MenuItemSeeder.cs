@@ -13,10 +13,10 @@ namespace back_end.domain.Seeders
     /// Seeds menu items and their menu assignments from the Sushi Toshi dine-in menu.
     ///
     /// Pricing:
-    ///   - AYCE items: Price = 0 (included in the all you can eat price).
+    ///   - AYCE items: free; Price is only what an extra costs over a Charge limit (0 otherwise).
     ///   - Add-ons and drinks: Is_Add_On = true, charged at Price every time.
-    ///   - Hot Stone: Full_Price = 5.00, charged for each item over the category's 1-per-person limit.
-    ///   - Leftover pricing is unresolved, so other AYCE items keep Full_Price = 0 for now.
+    ///   - Hot Stone: Price = 5.00, charged only for each item over the category's 1-per-person limit.
+    ///   - Leftovers are a flat fee per table on the bill, not per item.
     ///
     /// Limits (0 = unlimited; toddler 0 = same as child):
     ///   - Per-order limits apply to each item type, set from the category config below.
@@ -40,24 +40,24 @@ namespace back_end.domain.Seeders
         private static readonly Dictionary<string, CategoryConfig> CategoryConfigs = new()
         {
             // AYCE
-            ["Sashimi"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, FullPrice: 0m), // 30 per order is a category limit
-            ["Nigiri"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, FullPrice: 0m),
-            ["Maki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, FullPrice: 0m),
-            ["Rolls"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, FullPrice: 0m),
-            ["Temaki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, FullPrice: 0m),
-            ["Hot Stone"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, FullPrice: 5.00m),
-            ["Cooked/Hot"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, FullPrice: 0m),
-            ["Kitchen"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, FullPrice: 0m),
-            ["Deep Fried"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, FullPrice: 0m),
+            ["Sashimi"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m), // 30 per order is a category limit
+            ["Nigiri"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, OverLimitPrice: 0m),
+            ["Maki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, OverLimitPrice: 0m),
+            ["Rolls"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, OverLimitPrice: 0m),
+            ["Temaki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, OverLimitPrice: 0m),
+            ["Hot Stone"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 5.00m),
+            ["Cooked/Hot"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Kitchen"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, OverLimitPrice: 0m),
+            ["Deep Fried"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, OverLimitPrice: 0m),
 
             // Charged
-            ["Add On"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, FullPrice: 0m),
-            ["Wine"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, FullPrice: 0m),
-            ["Beer"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, FullPrice: 0m),
-            ["Sake & Soju"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, FullPrice: 0m),
-            ["Specialty Drinks"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, FullPrice: 0m),
-            ["Liquor"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, FullPrice: 0m),
-            ["Other Beverages"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, FullPrice: 0m),
+            ["Add On"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Wine"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Beer"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Sake & Soju"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Specialty Drinks"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Liquor"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Other Beverages"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
         };
 
         public void Seed()
@@ -141,17 +141,14 @@ namespace back_end.domain.Seeders
                     }
 
                     var seed = entry.Seed;
-                    var price = config.IsAddOn ? seed.Price ?? 0m : 0m;
-                    var fullPrice = config.FullPrice > 0 ? config.FullPrice
-                                  : config.IsAddOn ? price
-                                  : 0m;
+                    // Add-ons: their menu price. Included items: what an extra costs over a Charge limit (or 0)
+                    var price = config.IsAddOn ? seed.Price ?? 0m : config.OverLimitPrice;
 
                     _context.MenuItemAssignments.Add(new MenuItemAssignment
                     {
                         Menu_Id = menu.Menu_id,
                         Item_Id = item.item_id,
                         Price = price,
-                        Full_Price = fullPrice,
                         Is_Add_On = config.IsAddOn,
                         Status = MenuItemStatus.Available,
                         Adult_Limit = seed.AdultLimit ?? 0,
@@ -418,6 +415,6 @@ namespace back_end.domain.Seeders
         }
 
         /// <summary>Defaults for every item in a category.</summary>
-        private sealed record CategoryConfig(bool IsAddOn, int PerOrderLimit, decimal FullPrice);
+        private sealed record CategoryConfig(bool IsAddOn, int PerOrderLimit, decimal OverLimitPrice);
     }
 }

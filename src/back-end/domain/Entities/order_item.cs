@@ -29,10 +29,6 @@ namespace back_end.domain.Entities
 
         public ChargeReason Charge_Reason { get; set; } = ChargeReason.None;
 
-        public int Leftover_Quantity { get; set; } = 0;
-
-        public decimal Leftover_Price_At_Time { get; set; } = 0m;
-
         public SessionOrder SessionOrder { get; set; } = null!;
         public Menu Menu { get; set; } = null!;
         public Menu_Item MenuItem { get; set; } = null!;

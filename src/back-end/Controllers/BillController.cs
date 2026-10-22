@@ -445,6 +445,114 @@ namespace back_end.controllers
     }
 
     /// <summary>
+    /// The table's leftover fee: the default amount, and each open bill's current share.
+    /// </summary>
+    /// <param name="_session_id">The dining session (table)</param>
+    /// <response code="200">The default fee, the current total and each open bill's share</response>
+    /// <response code="404">If the session doesn't exist</response>
+    /// <remarks>
+    /// Used to fill in the "Add leftover fee" dialog before staff apply it.
+    /// </remarks>
+    [HttpGet("leftover_fee/{_session_id}")]
+    [Authorize(Policy = "staffOnly")]
+    [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetLeftoverFee(int _session_id)
+    {
+      if (!await _context.DiningSessions.AnyAsync(s => s.Session_Id == _session_id))
+      {
+        return NotFound(new { message = "Session was not found" });
+      }
+
+      var openBills = await OpenBillsAsync(_session_id);
+      return Ok(LeftoverFeeResult(_session_id, openBills));
+    }
+
+    /// <summary>
+    /// Applies a leftover fee to the table, split evenly across its open bills.
+    /// </summary>
+    /// <param name="_session_id">The dining session (table)</param>
+    /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
+    /// <response code="200">The fee was applied; returns each open bill's share</response>
+    /// <response code="400">If the amount is negative or the table has no open bills</response>
+    /// <response code="404">If the session doesn't exist</response>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/leftover_fee/456
+    ///     { "amount": 15.00 }
+    ///
+    /// Staff decide when a table has left too much food. The fee is for the whole table and is
+    /// split evenly across its open bills ($15.00 over 2 bills = $7.50 each), replacing any fee
+    /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
+    /// The fee is taxed with the rest of the bill.
+    /// </remarks>
+    [HttpPut("leftover_fee/{_session_id}")]
+    [Authorize(Policy = "staffOnly")]
+    [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ApplyLeftoverFee(int _session_id, [FromBody] LeftoverFeeRequest request)
+    {
+      try
+      {
+        if (!await _context.DiningSessions.AnyAsync(s => s.Session_Id == _session_id))
+        {
+          return NotFound(new { message = "Session was not found" });
+        }
+
+        var amount = request?.Amount ?? _pricingService.GetCurrentPricing().LeftoverFee;
+        if (amount < 0)
+        {
+          return BadRequest(new { message = "The leftover fee can't be negative." });
+        }
+
+        var openBills = await OpenBillsAsync(_session_id);
+        if (openBills.Count == 0)
+        {
+          return BadRequest(new { message = "This table has no open bills to add a leftover fee to." });
+        }
+
+        var shares = LeftoverFee.SplitEvenly(amount, openBills.Count);
+        for (var i = 0; i < openBills.Count; i++)
+        {
+          openBills[i].Leftover_Charge = shares[i];
+        }
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Leftover fee {Amount:F2} applied to session {SessionId} across {Count} bills",
+            amount, _session_id, openBills.Count);
+
+        return Ok(LeftoverFeeResult(_session_id, openBills));
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error applying leftover fee to session {SessionId}", _session_id);
+        return StatusCode(500, new { message = "Error applying leftover fee" });
+      }
+    }
+
+    // Open bills in a fixed order (oldest first), so any extra cent always lands on the same bill
+    private Task<List<Billing>> OpenBillsAsync(int sessionId) =>
+        _context.Bills
+            .Where(b => b.Session_Id == sessionId && b.Status == BillStatus.Open)
+            .OrderBy(b => b.Bill_Id)
+            .ToListAsync();
+
+    private LeftoverFeeResponse LeftoverFeeResult(int sessionId, List<Billing> openBills) => new()
+    {
+      Session_Id = sessionId,
+      Default_Fee = _pricingService.GetCurrentPricing().LeftoverFee,
+      Amount = openBills.Sum(b => b.Leftover_Charge),
+      Bills = openBills.Select(b => new LeftoverFeeBillShare
+      {
+        Bill_Id = b.Bill_Id,
+        Bill_Name = b.Bill_Name ?? string.Empty,
+        Leftover_Charge = b.Leftover_Charge,
+      }).ToList(),
+    };
+
+    /// <summary>
     /// Guests ask for their bill ("Ready for Bill").
     /// </summary>
     /// <remarks>
@@ -736,7 +844,7 @@ namespace back_end.controllers
               oi.SessionOrder.Bill_Id == _bill_id &&
               oi.SessionOrder.Status != OrderStatus.Cancelled &&
               oi.Order_Item_Status != OrderStatus.Cancelled &&
-              (oi.Price_At_Time > 0 || (oi.Leftover_Quantity > 0 && oi.Leftover_Price_At_Time > 0)))
+              oi.Price_At_Time > 0)
           .ToListAsync();
 
         // Add-ons and drinks (charged every time); also any line staff priced manually
@@ -751,16 +859,10 @@ namespace back_end.controllers
           .Select(oi => ToBillItem(oi, oi.Quantity, oi.Price_At_Time))
           .ToList();
 
-        // Leftovers marked by staff
-        var leftoverItems = chargedLines
-          .Where(oi => oi.Leftover_Quantity > 0 && oi.Leftover_Price_At_Time > 0)
-          .Select(oi => ToBillItem(oi, oi.Leftover_Quantity, oi.Leftover_Price_At_Time))
-          .ToList();
-
         decimal addOnSubtotal = addOnItems.Sum(item => item.Line_Total);
         decimal overLimitSubtotal = overLimitItems.Sum(item => item.Line_Total);
-        decimal leftoverSubtotal = leftoverItems.Sum(item => item.Line_Total);
-        decimal subtotal = baseChargesSubtotal + addOnSubtotal + overLimitSubtotal + leftoverSubtotal;
+        decimal leftoverCharge = bill.Leftover_Charge;   // this bill's share of the table's leftover fee
+        decimal subtotal = baseChargesSubtotal + addOnSubtotal + overLimitSubtotal + leftoverCharge;
 
         // Party size is everyone at the table, so a big group splitting into small bills
         // still gets the gratuity on each one
@@ -804,8 +906,7 @@ namespace back_end.controllers
           // Over-limit and leftover charges
           OverLimit_Items = overLimitItems,
           OverLimit_Subtotal = overLimitSubtotal,
-          Leftover_Items = leftoverItems,
-          Leftover_Subtotal = leftoverSubtotal,
+          Leftover_Charge = leftoverCharge,
 
           // Totals
           Subtotal = subtotal,
@@ -829,7 +930,7 @@ namespace back_end.controllers
         _logger.LogInformation(
             $"Generated {pricing.PricingType} bill summary for Bill {_bill_id}: " +
             $"Total ${totalAmount:F2} (Base: ${baseChargesSubtotal:F2}, Add-ons: ${addOnSubtotal:F2}, " +
-            $"Over-limit: ${overLimitSubtotal:F2}, Leftovers: ${leftoverSubtotal:F2}, " +
+            $"Over-limit: ${overLimitSubtotal:F2}, Leftovers: ${leftoverCharge:F2}, " +
             $"Gratuity: ${gratuityAmount:F2}, GST: ${taxAmount:F2})");
 
         return Ok(summary);

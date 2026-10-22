@@ -21,7 +21,6 @@ import {
   Switch,
   FormControlLabel,
   FormHelperText,
-  Grid,
   Button,
   CircularProgress,
 } from "@mui/material";
@@ -42,7 +41,6 @@ const emptyForm = {
   tot_limit: 0,
   per_order_limit: 0,
   over_limit_behavior: "Block",
-  full_price: "",
 };
 
 const toForm = (a) => ({
@@ -55,7 +53,6 @@ const toForm = (a) => ({
   tot_limit: a.tot_Limit || 0,
   per_order_limit: a.per_Order_Limit || 0,
   over_limit_behavior: a.over_Limit_Behavior || "Block",
-  full_price: a.full_Price != null ? a.full_Price.toString() : "",
 });
 
 // Mirrors Limit Rules so problems show before saving
@@ -78,11 +75,8 @@ const formProblem = (f) => {
     return "Toddler limit cannot exceed Child limit.";
   if (f.is_add_on && !(parseFloat(f.price) > 0))
     return "Add-on items must have a price greater than 0.";
-  if (
-    f.over_limit_behavior === "Charge" &&
-    !(parseFloat(f.full_price || f.price) > 0)
-  )
-    return "Items that charge over the limit need a full price greater than 0.";
+  if (f.over_limit_behavior === "Charge" && !(parseFloat(f.price) > 0))
+    return "Items that charge over the limit need a price greater than 0.";
   return null;
 };
 
@@ -100,7 +94,7 @@ const limitSummary = (a) => {
   if (a.adult_Limit) parts.push(`${a.adult_Limit}/adult`);
   if (a.per_Order_Limit) parts.push(`${a.per_Order_Limit}/order`);
   if (parts.length && a.over_Limit_Behavior === "Charge")
-    parts.push(`then $${Number(a.full_Price).toFixed(2)}`);
+    parts.push(`then $${Number(a.price).toFixed(2)}`);
   return parts.length ? parts.join(", ") : "None";
 };
 
@@ -219,8 +213,6 @@ const MenuAssignmentDialog = ({
         ? `/menuassignment/${editingAssignment.menu_Id}/${selectedItem.item_id}${locationQuery(editingAssignment.location_Id)}`
         : "/menuassignment";
 
-      const fullPrice = parseFloat(formData.full_price);
-
       await api({
         method: editingAssignment ? "PUT" : "POST",
         url,
@@ -238,8 +230,6 @@ const MenuAssignmentDialog = ({
           tot_limit: parseInt(formData.tot_limit) || 0,
           per_order_limit: parseInt(formData.per_order_limit) || 0,
           over_limit_behavior: formData.over_limit_behavior,
-          // Blank = server default (price on create, unchanged on update)
-          full_price: Number.isNaN(fullPrice) ? null : fullPrice,
           status: formData.status,
           is_add_on: formData.is_add_on,
         },
@@ -296,17 +286,16 @@ const MenuAssignmentDialog = ({
   }, [formData.menu_id, formData.location_id]);
 
   const limitField = (field, label, helperText) => (
-    <Grid item xs={6}>
-      <TextField
-        fullWidth
-        label={label}
-        type="number"
-        value={formData[field]}
-        onChange={setField(field)}
-        slotProps={{ htmlInput: { min: 0, max: 99 } }}
-        helperText={helperText}
-      />
-    </Grid>
+    <TextField
+      key={field}
+      fullWidth
+      label={label}
+      type="number"
+      value={formData[field]}
+      onChange={setField(field)}
+      slotProps={{ htmlInput: { min: 0, max: 99 } }}
+      helperText={helperText}
+    />
   );
 
   return (
@@ -473,13 +462,16 @@ const MenuAssignmentDialog = ({
             <Stack direction="row" spacing={2}>
               <TextField
                 label="Price"
+                helperText={
+                  formData.is_add_on
+                    ? "Charged every time"
+                    : "Included: only charged past a per-person limit set to Charge (0 = never)"
+                }
                 type="number"
                 value={formData.price}
                 onChange={setField("price")}
                 required
-                disabled={!formData.is_add_on}
-                inputProps={{ step: "0.01", min: "0" }}
-                helperText="Charged every time (add-ons only)"
+                slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
                 sx={{ flex: 1 }}
               />
 
@@ -505,7 +497,6 @@ const MenuAssignmentDialog = ({
                     setFormData((prev) => ({
                       ...prev,
                       is_add_on: e.target.checked,
-                      price: e.target.checked ? prev.price : "0",
                     }))
                   }
                 />
@@ -515,51 +506,56 @@ const MenuAssignmentDialog = ({
 
             {/* Per person, per dining session. 0 = unlimited */}
             <Typography variant="subtitle2" color="text.secondary">
-              Item limits per person (whole dining session). 0 = unlimited.
-              Category limits also apply.
+              Limits per person (whole dining session). 0 = unlimited.
             </Typography>
-            <Grid container spacing={2}>
-              {limitField("adult_limit", "Adult Limit")}
-              {limitField("senior_limit", "Senior Limit", "Can't exceed adult")}
-              {limitField("child_limit", "Child Limit", "Can't exceed adult")}
-              {limitField("tot_limit", "Toddler Limit", "0 = same as child")}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "repeat(2, 1fr)",
+                  sm: "repeat(4, 1fr)",
+                },
+                gap: 2,
+              }}
+            >
+              {limitField("adult_limit", "Adult", " ")}
+              {limitField("senior_limit", "Senior", "Max: adult")}
+              {limitField("child_limit", "Child", "Max: adult")}
+              {limitField("tot_limit", "Toddler", "0 = same as child")}
+            </Box>
+
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 3fr" },
+                gap: 2,
+                alignItems: "start",
+              }}
+            >
               {limitField(
                 "per_order_limit",
-                "Per Order Limit",
-                "Whole table, each order. 0 = no cap",
+                "Per order limit",
+                "Whole table · 0 = no cap · always blocks",
               )}
-            </Grid>
 
-            <Stack direction="row" spacing={2} alignItems="flex-start">
-              <FormControl sx={{ flex: 1 }}>
+              <FormControl fullWidth>
                 <InputLabel id="assignment-over-limit-label">
-                  Over Limit
+                  Past per-person limit
                 </InputLabel>
                 <Select
                   labelId="assignment-over-limit-label"
-                  label="Over Limit"
+                  label="Past per-person limit"
                   value={formData.over_limit_behavior}
                   onChange={setField("over_limit_behavior")}
                 >
                   <MenuItem value="Block">Block</MenuItem>
-                  <MenuItem value="Charge">Charge full price</MenuItem>
+                  <MenuItem value="Charge">Charge the item's price</MenuItem>
                 </Select>
                 <FormHelperText>
-                  Per-person limits only; per-order limits always block
+                  Charge bills the price for each extra over the limits above
                 </FormHelperText>
               </FormControl>
-
-              <TextField
-                label="Full Price"
-                type="number"
-                value={formData.full_price}
-                onChange={setField("full_price")}
-                slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
-                helperText="Charged per item over a Charge limit (category or item)"
-                required={formData.over_limit_behavior === "Charge"}
-                sx={{ flex: 1 }}
-              />
-            </Stack>
+            </Box>
 
             <Stack direction="row" spacing={2}>
               {editingAssignment && (

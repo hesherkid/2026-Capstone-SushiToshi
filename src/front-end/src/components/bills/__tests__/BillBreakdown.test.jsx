@@ -60,19 +60,18 @@ describe("BillBreakdown", () => {
     expect(screen.getByText("Added for parties of 6 or more (your table has 8)")).toBeInTheDocument();
   });
 
-  it("shows leftover charges", () => {
-    render(
-      <BillBreakdown
-        summary={{
-          ...summary,
-          leftover_items: [{ order_item_id: 7, item_name: "Salmon Roll", quantity: 3, price_per_unit: 2, line_total: 6 }],
-          leftover_subtotal: 6,
-        }}
-      />,
-    );
+  // One fee for the table's leftovers, split across its bills (not per item)
+  it("shows the bill's share of the leftover fee", () => {
+    render(<BillBreakdown summary={{ ...summary, leftover_charge: 7.5 }} />);
 
     expect(screen.getByText("Leftovers", { selector: "h3" })).toBeInTheDocument();
-    expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
-    expect(screen.getByText("3 × $2.00")).toBeInTheDocument();
+    expect(screen.getByText("Leftover charge (table, split evenly across bills)")).toBeInTheDocument();
+    expect(screen.getByText("$7.50")).toBeInTheDocument();
+  });
+
+  it("leaves out leftovers when there's no fee", () => {
+    render(<BillBreakdown summary={{ ...summary, leftover_charge: 0 }} />);
+
+    expect(screen.queryByText("Leftovers", { selector: "h3" })).not.toBeInTheDocument();
   });
 });

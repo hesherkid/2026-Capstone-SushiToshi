@@ -17,7 +17,7 @@ namespace back_end.domain.Seeders
     ///   - Per-order limits (item and category) always block, e.g. Nigiri 1 of each type, Sashimi 30 combined.
     ///   - Per-person limits are per dining session: limit x headcount per age group (from the session's bills).
     ///     Block limits are clamped; Charge limits (Hot Stone) split into a free line and an over-limit line
-    ///     charged at Full_Price with Charge_Reason = OverLimit.
+    ///     charged at Price with Charge_Reason = OverLimit.
     ///   - AYCE lines are priced at 0; add-ons and drinks at the assignment Price.
     /// Cancelled orders do not count toward limits.
     /// </summary>
@@ -141,7 +141,7 @@ namespace back_end.domain.Seeders
                         if (behavior == OverLimitBehavior.Block) overQty = 0;   // blocked: drop the excess
                         if (freeQty + overQty <= 0) continue;
 
-                        // Lines: within-limit (AYCE free / add-on price) and over-limit (charged at Full_Price)
+                        // Lines: within-limit (AYCE free / add-on price) and over-limit (charged at Price)
                         if (freeQty > 0)
                         {
                             AddLine(order, menuId, item.item_id, freeQty,
@@ -149,7 +149,7 @@ namespace back_end.domain.Seeders
                         }
                         if (overQty > 0)
                         {
-                            AddLine(order, menuId, item.item_id, overQty, assignment.Full_Price, ChargeReason.OverLimit);
+                            AddLine(order, menuId, item.item_id, overQty, assignment.Price, ChargeReason.OverLimit);
                             overLimitLines++;
                         }
 

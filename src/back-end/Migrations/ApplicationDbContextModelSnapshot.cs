@@ -85,6 +85,9 @@ namespace back_end.Migrations
                     b.Property<DateTime>("Created_At")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<decimal>("Leftover_Charge")
+                        .HasColumnType("decimal(65,30)");
+
                     b.Property<DateTime?>("Requested_At")
                         .HasColumnType("datetime(6)");
 
@@ -304,9 +307,6 @@ namespace back_end.Migrations
                     b.Property<int>("Child_limit")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Full_Price")
-                        .HasColumnType("decimal(65,30)");
-
                     b.Property<bool>("Is_Add_On")
                         .HasColumnType("tinyint(1)");
 
@@ -484,12 +484,6 @@ namespace back_end.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<int>("Item_Id")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Leftover_Price_At_Time")
-                        .HasColumnType("decimal(65,30)");
-
-                    b.Property<int>("Leftover_Quantity")
                         .HasColumnType("int");
 
                     b.Property<int>("Menu_Id")

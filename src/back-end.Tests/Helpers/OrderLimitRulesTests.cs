@@ -58,8 +58,7 @@ public class OrderLimitRulesTests
         OrderLimitRules.Limits? item = null,
         OrderLimitRules.Usage? used = null,
         bool isAddOn = false,
-        decimal price = 0m,
-        decimal fullPrice = 0m)
+        decimal price = 0m)
     {
         var result = OrderLimitRules.ApplyLimits(
             itemName: "Test Item",
@@ -70,8 +69,7 @@ public class OrderLimitRulesTests
             heads: TwoAdults,
             used: used ?? NothingUsed,
             isAddOn: isAddOn,
-            price: price,
-            fullPrice: fullPrice);
+            price: price);
 
         return (result.IsValid, result.Error,
                 result.Lines.Select(l => (l.Quantity, l.Price, l.Reason)).ToList());
@@ -138,8 +136,8 @@ public class OrderLimitRulesTests
     [Fact]
     public void PerPersonCharge_SplitsIntoFreeAndChargedLines()
     {
-        // 1 per person x 2 adults = 2 free; the 3rd is charged at full price
-        var result = Apply(requested: 3, category: PerPerson(1, OverLimitBehavior.Charge), fullPrice: 5.00m);
+        // 1 per person x 2 adults = 2 free; the 3rd is charged at price
+        var result = Apply(requested: 3, category: PerPerson(1, OverLimitBehavior.Charge), price: 5.00m);
 
         result.IsValid.Should().BeTrue();
         result.Lines.Count.Should().Be(2);
@@ -153,7 +151,7 @@ public class OrderLimitRulesTests
     [Fact]
     public void PerPersonCharge_AllUsedUp_ChargesEverything()
     {
-        var result = Apply(requested: 2, category: PerPerson(1, OverLimitBehavior.Charge), fullPrice: 5.00m,
+        var result = Apply(requested: 2, category: PerPerson(1, OverLimitBehavior.Charge), price: 5.00m,
                            used: new OrderLimitRules.Usage(0, 0, SessionCategory: 2, 0));
 
         result.Lines.Count.Should().Be(1);
@@ -162,9 +160,9 @@ public class OrderLimitRulesTests
     }
 
     [Fact]
-    public void Charge_WithoutFullPrice_IsRejected()
+    public void Charge_WithoutPrice_IsRejected()
     {
-        var result = Apply(requested: 3, category: PerPerson(1, OverLimitBehavior.Charge), fullPrice: 0m);
+        var result = Apply(requested: 3, category: PerPerson(1, OverLimitBehavior.Charge), price: 0m);
 
         result.IsValid.Should().BeFalse();
     }
@@ -178,7 +176,7 @@ public class OrderLimitRulesTests
                            category: PerPerson(5, OverLimitBehavior.Charge),
                            item: PerPerson(1, OverLimitBehavior.Block),
                            used: new OrderLimitRules.Usage(0, 0, 0, SessionItem: 1),
-                           fullPrice: 5.00m);
+                           price: 5.00m);
 
         result.IsValid.Should().BeFalse();
     }
@@ -217,5 +215,18 @@ public class OrderLimitRulesTests
     public void SessionLeftBeforeBlock_UnlimitedIsNull()
     {
         OrderLimitRules.SessionLeftBeforeBlock(Unlimited, TwoAdults, sessionUsed: 0).Should().BeNull();
+    }
+
+    [Fact]
+    public void ItemCharge_CannotPushPastCategoryBlock()
+    {
+        // Category Block: 5 per person x 2 = 10, 5 used -> 5 left. Item Charge: 1 per person x 2 = 2, 2 used -> 0 left
+        var result = Apply(requested: 6,
+                           category: PerPerson(5, OverLimitBehavior.Block),
+                           item: PerPerson(1, OverLimitBehavior.Charge),
+                           used: new OrderLimitRules.Usage(0, 0, SessionCategory: 5, SessionItem: 2),
+                           price: 5.00m);
+
+        result.IsValid.Should().BeFalse();   // the 6th is over the category's Block limit
     }
 }
