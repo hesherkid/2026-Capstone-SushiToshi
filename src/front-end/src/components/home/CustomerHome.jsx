@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { decodeToken, isTokenExpired } from "@/config/auth";
-import { getAuthToken } from "@/utils/auth";
+import { getAuthToken, isGuestClaims } from "@/utils/auth";
 import { useRouter } from "next/navigation";
 import { api } from '@/config/api'
 import useAuth from "@/hooks/useAuth";
@@ -21,9 +21,7 @@ const isGuestAccount = () => {
     return false;
   }
 
-  const claims = decodeToken(token);
-  const email = (claims?.email || claims?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || "").toLowerCase();
-  return email === "guestemail@email.com";
+  return isGuestClaims(decodeToken(token));
 };
 
 // Home page for customers (and signed-out visitors); guests are sent to the menu

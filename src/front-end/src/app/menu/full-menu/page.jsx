@@ -206,17 +206,7 @@ const FullMenu = () => {
     <CustomerPageContainer>
       {/* Not seated: only the info message below shows, without a menu title */}
       {sessionId && (
-        <Typography
-          variant="h5"
-          component="h1"
-          sx={{
-            mt: 4,
-            mb: 4,
-            textAlign: "left",
-            width: "100%",
-            fontWeight: 200,
-          }}
-        >
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
           All You Can Eat Menu
         </Typography>
       )}

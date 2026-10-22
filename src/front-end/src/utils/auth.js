@@ -69,10 +69,17 @@ export const GUEST_REUSE_MARGIN_MS = 15 * 60 * 1000;
 const GUEST_EMAIL_DOMAIN = "@guest.sushitoshi.invalid";
 const EMAIL_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
 
+// Whether a decoded token belongs to a "Continue as Guest" account. Tokens from before the
+// "guest" claim was added are recognised by their email domain.
+export const isGuestClaims = (claims) => {
+  if (!claims) return false;
+  const email = claims[EMAIL_CLAIM] ?? claims.email ?? "";
+  return claims.guest === "true" || email.toLowerCase().endsWith(GUEST_EMAIL_DOMAIN);
+};
+
 // The saved token, if it belongs to a guest and has time left. "Continue as Guest" reuses it so
 // a phone that rescans the QR code (or refreshes the login page) stays the same guest instead
-// of adding another participant to the table. Tokens from before the "guest" claim was added
-// are recognised by their email domain.
+// of adding another participant to the table.
 export const getReusableGuestToken = () => {
   if (typeof window === "undefined") return null;
 
@@ -80,11 +87,9 @@ export const getReusableGuestToken = () => {
   const claims = token ? decodeToken(token) : null;
   if (!claims) return null;
 
-  const email = claims[EMAIL_CLAIM] ?? claims.email ?? "";
-  const isGuest = claims.guest === "true" || email.toLowerCase().endsWith(GUEST_EMAIL_DOMAIN);
   const hasTimeLeft = claims.exp * 1000 > Date.now() + GUEST_REUSE_MARGIN_MS;
 
-  return isGuest && hasTimeLeft ? token : null;
+  return isGuestClaims(claims) && hasTimeLeft ? token : null;
 };
 
 // "Continue as Guest": the server creates a throwaway account for this guest

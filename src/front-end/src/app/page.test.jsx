@@ -28,6 +28,7 @@ jest.mock('@/config/auth', () => ({
 jest.mock('@/utils/auth', () => ({
   getAuthToken: jest.fn(() => null),
   loginUser: jest.fn(),
+  isGuestClaims: jest.requireActual('@/utils/auth').isGuestClaims,
 }));
 
 describe('HomePage', () => {
@@ -59,9 +60,9 @@ describe('HomePage', () => {
     const { default: defaultUseAuth, useAuth: namedUseAuth } = require('@/hooks/useAuth');
 
     getAuthToken.mockReturnValue('token');
-    decodeToken.mockReturnValue({ email: 'guestemail@email.com' });
-    defaultUseAuth.mockReturnValue({ isAuthenticated: true, userEmail: 'guestemail@email.com' });
-    namedUseAuth.mockReturnValue({ isAuthenticated: true, userEmail: 'guestemail@email.com' });
+    decodeToken.mockReturnValue({ email: 'guest-3f9c2a@guest.sushitoshi.invalid' });
+    defaultUseAuth.mockReturnValue({ isAuthenticated: true, userEmail: 'guest-3f9c2a@guest.sushitoshi.invalid' });
+    namedUseAuth.mockReturnValue({ isAuthenticated: true, userEmail: 'guest-3f9c2a@guest.sushitoshi.invalid' });
 
     render(<HomePage />);
 
