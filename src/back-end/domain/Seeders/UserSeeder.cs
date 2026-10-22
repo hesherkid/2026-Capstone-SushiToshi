@@ -16,6 +16,11 @@ namespace back_end.domain.Seeders
     /// </summary>
     public class UserSeeder : ISeeder
     {
+        // A customer with only sign-in details: no sessions, orders, bills or requests.
+        // For trying the registered-customer flow from the start (home page, then scan a QR code).
+        // The session-driven seeders leave this account out
+        public const string NewCustomerEmail = "noah.clarke@email.com";
+
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserSeeder> _logger;
 
@@ -214,6 +219,19 @@ namespace back_end.domain.Seeders
                     Password_hash = HashPassword("Customer123!"),
                     First_name = "Ethan",
                     Last_name = "Thomas",
+                    Role = UserRoles.Customer,
+                    Status = UserStatus.Active,
+                    Is_email_confirmed = true,
+                    Created_at = DateTime.UtcNow,
+                    Last_Interaction_at = DateTime.UtcNow
+                },
+                // Sign-in details only (see NewCustomerEmail)
+                new()
+                {
+                    Email = NewCustomerEmail,
+                    Password_hash = HashPassword("Customer123!"),
+                    First_name = "Noah",
+                    Last_name = "Clarke",
                     Role = UserRoles.Customer,
                     Status = UserStatus.Active,
                     Is_email_confirmed = true,
