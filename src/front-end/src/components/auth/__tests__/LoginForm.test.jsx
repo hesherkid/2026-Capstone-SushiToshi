@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
 import LoginForm from "../LoginForm";
@@ -25,6 +25,7 @@ jest.mock("@/utils/auth", () => ({
   loginAsGuest: jest.fn(),
   getReusableGuestToken: jest.fn(),
   getAuthToken: jest.fn(),
+  isGuestClaims: jest.requireActual("@/utils/auth").isGuestClaims,
 }));
 
 const fillLoginForm = async (
@@ -55,6 +56,7 @@ describe("LoginForm", () => {
     });
     useSearchParams.mockReturnValue(new URLSearchParams());
     getReusableGuestToken.mockReturnValue(null);
+    getAuthToken.mockReturnValue(null);
   });
 
   describe("Rendering", () => {
@@ -224,6 +226,8 @@ describe("LoginForm", () => {
     it("signs in as a new guest and marks the session as guest", async () => {
       const user = userEvent.setup();
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
+      api.post.mockResolvedValue({ data: { session_Id: 55 } });
 
       render(<LoginForm />);
       await user.click(
@@ -234,9 +238,29 @@ describe("LoginForm", () => {
       await waitFor(() => expect(loginAsGuest).toHaveBeenCalledTimes(1));
       expect(loginUser).not.toHaveBeenCalled();
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith("/");
+        expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu");
       });
       expect(localStorage.getItem("guest")).toBe("true");
+    });
+
+    it("won't let a guest in without a table to join", async () => {
+      render(<LoginForm />);
+      const guest = screen.getByRole("button", { name: /Continue as Guest/i });
+
+      expect(guest).toBeDisabled();
+      expect(guest).toHaveAccessibleDescription("To continue as a guest, scan the QR code on your table.");
+      fireEvent.click(guest);
+      expect(loginAsGuest).not.toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("offers Continue as Guest once a table's QR code has been scanned", () => {
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
+
+      render(<LoginForm />);
+
+      expect(screen.getByRole("button", { name: /Continue as Guest/i })).toBeEnabled();
+      expect(screen.queryByText(/scan the QR code on your table/)).not.toBeInTheDocument();
     });
 
     it("joins the session for the table in the scanned QR code", async () => {
@@ -265,6 +289,7 @@ describe("LoginForm", () => {
     it("asks guests to wait when guest sign-in is rate limited", async () => {
       const user = userEvent.setup();
       loginAsGuest.mockRejectedValue({ response: { status: 429, data: "" } });
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
 
       render(<LoginForm />);
       await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
@@ -436,6 +461,69 @@ describe("LoginForm", () => {
           { headers: { Authorization: "Bearer mia-token" } }
         );
         expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu");
+      });
+    });
+
+    describe("already signed in, then scans the QR code", () => {
+      // An unsigned token: the form only reads its claims
+      const tokenFor = (claims) =>
+        `x.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 3600, ...claims }))}.x`;
+      const ROLE = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+
+      beforeEach(() => {
+        useSearchParams.mockReturnValue(new URLSearchParams("locationId=1&tableNumber=4"));
+      });
+
+      it("joins a registered customer to the table without asking for the password", async () => {
+        const token = tokenFor({ [ROLE]: "Customer", email: "mia@example.com" });
+        getAuthToken.mockReturnValue(token);
+        api.post.mockResolvedValue({ data: { session_Id: 55 } });
+
+        render(<LoginForm />);
+
+        expect(screen.getByText("Joining Table 4…")).toBeInTheDocument();
+        await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu"));
+        expect(api.post).toHaveBeenCalledWith(
+          "/DiningSession/join",
+          { Table_Number: 4, Location_Id: 1 },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        expect(loginUser).not.toHaveBeenCalled();
+      });
+
+      it("offers Try again when the table hasn't been started yet", async () => {
+        getAuthToken.mockReturnValue(tokenFor({ [ROLE]: "Customer" }));
+        api.post.mockRejectedValue({
+          response: { status: 404, data: { message: "Table 4 doesn't have an active session yet." } },
+        });
+
+        render(<LoginForm />);
+
+        expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
+        expect(screen.queryByText("Joining Table 4…")).not.toBeInTheDocument();
+        expect(mockReplace).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ["a guest", { [ROLE]: "Customer", guest: "true" }],
+        ["staff", { [ROLE]: "Staff" }],
+      ])("leaves %s on the sign-in form", async (_, claims) => {
+        getAuthToken.mockReturnValue(tokenFor(claims));
+
+        render(<LoginForm />);
+        await act(async () => {});
+
+        expect(api.post).not.toHaveBeenCalled();
+        expect(screen.getByRole("button", { name: /Continue as Guest/i })).toBeEnabled();
+      });
+
+      it("leaves an expired sign-in on the form", async () => {
+        getAuthToken.mockReturnValue(tokenFor({ [ROLE]: "Customer", exp: Date.now() / 1000 - 60 }));
+
+        render(<LoginForm />);
+        await act(async () => {});
+
+        expect(api.post).not.toHaveBeenCalled();
       });
     });
 
