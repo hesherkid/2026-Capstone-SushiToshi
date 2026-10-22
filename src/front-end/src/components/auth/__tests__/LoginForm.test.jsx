@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
 import LoginForm from "../LoginForm";
-import { loginUser, loginAsGuest, getReusableGuestToken } from "@/utils/auth";
+import { loginUser, loginAsGuest, getReusableGuestToken, getAuthToken } from "@/utils/auth";
 import api from "@/config/api";
 
 jest.mock("@/config/api", () => ({
@@ -24,6 +24,7 @@ jest.mock("@/utils/auth", () => ({
   loginUser: jest.fn(),
   loginAsGuest: jest.fn(),
   getReusableGuestToken: jest.fn(),
+  getAuthToken: jest.fn(),
 }));
 
 const fillLoginForm = async (
@@ -296,6 +297,54 @@ describe("LoginForm", () => {
       expect(mockReplace).not.toHaveBeenCalled();
       expect(localStorage.getItem("session_id")).toBeNull();
     });
+
+    it("joins with the saved sign-in when Try again is tapped after staff start the table", async () => {
+      const user = userEvent.setup();
+      loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
+      getAuthToken.mockReturnValue("guest-token");
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
+      api.post.mockRejectedValueOnce({
+        response: {
+          status: 404,
+          data: { message: "Table 8 doesn't have an active session yet. Please ask staff to start your table." },
+        },
+      });
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+      await screen.findByText(/Please ask staff to start your table/);
+
+      // Staff start the table
+      api.post.mockResolvedValueOnce({ data: { session_Id: 55 } });
+      await user.click(screen.getByRole("button", { name: "Try again" }));
+
+      await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu"));
+      expect(api.post).toHaveBeenLastCalledWith(
+        "/DiningSession/join",
+        { Table_Number: 8, Location_Id: 3 },
+        { headers: { Authorization: "Bearer guest-token" } },
+      );
+      // The same guest: no second guest account
+      expect(loginAsGuest).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem("session_id")).toBe("55");
+    });
+
+    it("keeps Try again up when the table still hasn't been started", async () => {
+      const user = userEvent.setup();
+      loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
+      getAuthToken.mockReturnValue("guest-token");
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
+      api.post.mockRejectedValue({
+        response: { status: 404, data: { message: "Table 8 doesn't have an active session yet." } },
+      });
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+      await user.click(await screen.findByRole("button", { name: "Try again" }));
+
+      expect(await screen.findByRole("button", { name: "Try again" })).toBeEnabled();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
   });
 
   describe("Returning guest", () => {
@@ -417,6 +466,8 @@ describe("LoginForm", () => {
       await waitFor(() => {
         expect(screen.getByText("Invalid credentials")).toBeInTheDocument();
       });
+      // A wrong password isn't fixed by retrying the table
+      expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
     });
 
     it("displays a default error message when no detail is provided", async () => {

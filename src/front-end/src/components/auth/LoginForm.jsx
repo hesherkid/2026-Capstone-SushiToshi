@@ -19,7 +19,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
 import api from "@/config/api";
-import { loginUser, loginAsGuest, getReusableGuestToken } from "@/utils/auth";
+import { loginUser, loginAsGuest, getReusableGuestToken, getAuthToken } from "@/utils/auth";
 import { startTableVisit } from "@/utils/tableVisit";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -44,6 +44,8 @@ const LoginFormContent = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  // Signed in, but the table couldn't be joined (e.g. staff haven't started it yet)
+  const [joinFailed, setJoinFailed] = useState(false);
 
   // Keep the context from the restaurant QR code.
   const locationId = searchParams.get("locationId");
@@ -86,7 +88,7 @@ const LoginFormContent = () => {
       // e.g. "Table 4 doesn't have an active session yet. Please ask staff to start your table."
       throw new TableJoinError(
         err.response?.data?.message ||
-          "We couldn't join your table. Please ask staff for help.",
+        "We couldn't join your table. Please ask staff for help.",
         err.response?.status,
       );
     }
@@ -117,6 +119,8 @@ const LoginFormContent = () => {
   };
 
   const handleAuthError = (err) => {
+    setJoinFailed(err instanceof TableJoinError);
+
     if (err instanceof TableJoinError) {
       setNeedsVerification(false);
       setError(err.message);
@@ -236,10 +240,35 @@ const LoginFormContent = () => {
       router.refresh();
     } catch (err) {
       if (err.response?.status === 401) {
+        setJoinFailed(false);
         setError("Something went wrong. Please try again.");
       } else {
         handleAuthError(err);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // The sign-in already worked and its token is saved, so only the join is tried again
+  // (no new guest account, no typing the password again)
+  const handleRetryJoin = async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setJoinFailed(false);
+      setError("Please sign in again.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const sessionId = await startQrDiningSession(token);
+      router.replace(sessionId ? "/menu/full-menu" : "/");
+      router.refresh();
+    } catch (err) {
+      handleAuthError(err);
     } finally {
       setLoading(false);
     }
@@ -362,11 +391,25 @@ const LoginFormContent = () => {
           severity={
             needsVerification ? "warning" : "error"
           }
-          sx={{ width: "100%" }}
+          sx={{ width: "100%", "& .MuiAlert-message": { flexGrow: 1 } }}
         >
           <Typography variant="body2">
             {error}
           </Typography>
+
+          {joinFailed && (
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              fullWidth
+              onClick={handleRetryJoin}
+              disabled={loading}
+              sx={{ mt: 2, textTransform: "none", fontWeight: 600, }}
+            >
+              Try again
+            </Button>
+          )}
 
           {
             needsVerification && (
