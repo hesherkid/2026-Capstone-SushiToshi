@@ -307,9 +307,6 @@ namespace back_end.Migrations
                     b.Property<int>("Child_limit")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Full_Price")
-                        .HasColumnType("decimal(65,30)");
-
                     b.Property<bool>("Is_Add_On")
                         .HasColumnType("tinyint(1)");
 

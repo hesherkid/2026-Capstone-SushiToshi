@@ -89,8 +89,7 @@ namespace back_end.Helpers
             Headcount heads,
             Usage used,
             bool isAddOn,
-            decimal price,
-            decimal fullPrice
+            decimal price
         )
         {
             // Per-order limits = always block
@@ -118,12 +117,12 @@ namespace back_end.Helpers
             var freeQty = Math.Min(requested, Math.Min(categoryLeft, itemLeft));
             var overQty = requested - freeQty;
 
-            if (overQty > 0 && fullPrice <= 0)
+            if (overQty > 0 && price <= 0)
                 return Fail($"{itemName}: over the limit but no full price is set. Ask staff for help.");
 
             var lines = new List<LimitLine>();
             if (freeQty > 0) lines.Add(new LimitLine(freeQty, isAddOn ? price : 0m, ChargeReason.None));
-            if (overQty > 0) lines.Add(new LimitLine(overQty, fullPrice, ChargeReason.OverLimit));
+            if (overQty > 0) lines.Add(new LimitLine(overQty, price, ChargeReason.OverLimit));
 
             return new LimitResult(lines, null);
         }

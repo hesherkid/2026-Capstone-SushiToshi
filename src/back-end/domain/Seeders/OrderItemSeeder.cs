@@ -141,7 +141,7 @@ namespace back_end.domain.Seeders
                         if (behavior == OverLimitBehavior.Block) overQty = 0;   // blocked: drop the excess
                         if (freeQty + overQty <= 0) continue;
 
-                        // Lines: within-limit (AYCE free / add-on price) and over-limit (charged at Full_Price)
+                        // Lines: within-limit (AYCE free / add-on price) and over-limit (charged at Price)
                         if (freeQty > 0)
                         {
                             AddLine(order, menuId, item.item_id, freeQty,
@@ -149,7 +149,7 @@ namespace back_end.domain.Seeders
                         }
                         if (overQty > 0)
                         {
-                            AddLine(order, menuId, item.item_id, overQty, assignment.Full_Price, ChargeReason.OverLimit);
+                            AddLine(order, menuId, item.item_id, overQty, assignment.Price, ChargeReason.OverLimit);
                             overLimitLines++;
                         }
 
