@@ -217,7 +217,7 @@ const CategoryManagementDialog = ({
 
               <Stack direction="row" spacing={2}>
                 <TextField
-                  label="Adult Limit"
+                  label="Adult"
                   type="number"
                   value={formData.adult_limit}
                   onChange={setNumber("adult_limit")}
@@ -226,7 +226,7 @@ const CategoryManagementDialog = ({
                   fullWidth
                 />
                 <TextField
-                  label="Senior Limit"
+                  label="Senior"
                   type="number"
                   value={formData.senior_limit}
                   onChange={setNumber("senior_limit")}
@@ -239,7 +239,7 @@ const CategoryManagementDialog = ({
 
               <Stack direction="row" spacing={2}>
                 <TextField
-                  label="Child Limit"
+                  label="Child"
                   type="number"
                   value={formData.child_limit}
                   onChange={setNumber("child_limit")}
@@ -249,7 +249,7 @@ const CategoryManagementDialog = ({
                   fullWidth
                 />
                 <TextField
-                  label="Toddler Limit"
+                  label="Toddler"
                   type="number"
                   value={formData.toddler_limit}
                   onChange={setNumber("toddler_limit")}
@@ -269,7 +269,7 @@ const CategoryManagementDialog = ({
                   helperText="Whole table, all items in this category combined. 0 = no cap"
                   fullWidth
                 />
-                <FormControl fullWidth>
+                {/* <FormControl fullWidth>
                   <InputLabel id="over-limit-label">Over Limit</InputLabel>
                   <Select
                     labelId="over-limit-label"
@@ -283,10 +283,34 @@ const CategoryManagementDialog = ({
                     }
                   >
                     <MenuItem value="Block">Block</MenuItem>
-                    <MenuItem value="Charge">Charge full price</MenuItem>
+                    <MenuItem value="Charge">Charge the item's price</MenuItem>
                   </Select>
                   <FormHelperText>
-                    Per-person limits only. Charge uses each item's full price.
+                    Per-person limits only. Charge bills each item's price.
+                  </FormHelperText>
+                </FormControl> */}
+                <FormControl fullWidth>
+                  <InputLabel id="over-limit-label">
+                    Past per-person limit
+                  </InputLabel>
+                  <Select
+                    labelId="over-limit-label"
+                    label="Past per-person limit"
+                    value={formData.over_limit_behavior}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        over_limit_behavior: e.target.value,
+                      }))
+                    }
+                  >
+                    <MenuItem value="Block">Block</MenuItem>
+                    <MenuItem value="Charge">Charge the item's price</MenuItem>
+                  </Select>
+                  <FormHelperText>
+                    Charge bills each item's price for every extra over the
+                    limits above. Items need a price set in their menu
+                    assignment.
                   </FormHelperText>
                 </FormControl>
               </Stack>
