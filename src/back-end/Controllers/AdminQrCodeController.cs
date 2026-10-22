@@ -353,59 +353,5 @@ namespace back_end.Controllers
             _logger.LogInformation("Cleared cached QRs for L{loc} T{table}", locationId, table);
             return Ok(new { success = true, message = $"Cleared QR codes for Location {locationId}, Table {table}" });
         }
-
-        // FIXME: Is this needed? not called anywhere in the current code.
-        // <summary>
-        // Draw a QR code on a page with exact print dimensions (1.75" × 1.75")
-        // </summary>
-        // private void DrawQRCodeForPrint(SKCanvas canvas, string qrPath, string label, int tableNumber,
-        //     string locationName, float pageWidth, float pageHeight, float qrPrintSize)
-        // {
-        //     using var bitmap = SKBitmap.Decode(qrPath);
-
-        //     // Center QR code on page
-        //     float x = (pageWidth - qrPrintSize) / 2;
-        //     float y = 150f; // Top margin
-
-        //     // Draw title
-        //     using var titlePaint = new SKPaint
-        //     {
-        //         Color = SKColors.Black,
-        //         TextSize = 24,
-        //         IsAntialias = true,
-        //         Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
-        //     };
-        //     var titleText = $"{locationName} - Table {tableNumber}";
-        //     var titleWidth = titlePaint.MeasureText(titleText);
-        //     canvas.DrawText(titleText, (pageWidth - titleWidth) / 2, 80, titlePaint);
-
-        //     // Draw label
-        //     using var labelPaint = new SKPaint
-        //     {
-        //         Color = SKColors.Black,
-        //         TextSize = 18,
-        //         IsAntialias = true,
-        //         Typeface = SKTypeface.FromFamilyName("Arial")
-        //     };
-        //     var labelWidth = labelPaint.MeasureText(label);
-        //     canvas.DrawText(label, (pageWidth - labelWidth) / 2, 120, labelPaint);
-
-        //     // Draw QR code at exact print size (1.75" × 1.75")
-        //     // The image will be scaled to fit this size when printed
-        //     var destRect = new SKRect(x, y, x + qrPrintSize, y + qrPrintSize);
-        //     canvas.DrawBitmap(bitmap, destRect);
-
-        //     // Add print specifications note at bottom
-        //     using var notePaint = new SKPaint
-        //     {
-        //         Color = SKColors.Gray,
-        //         TextSize = 10,
-        //         IsAntialias = true,
-        //         Typeface = SKTypeface.FromFamilyName("Arial")
-        //     };
-        //     var noteText = "Print size: 1.75\" × 1.75\" | 300 DPI | ECC Level H";
-        //     var noteWidth = notePaint.MeasureText(noteText);
-        //     canvas.DrawText(noteText, (pageWidth - noteWidth) / 2, pageHeight - 50, notePaint);
-        // }
     }
 }
