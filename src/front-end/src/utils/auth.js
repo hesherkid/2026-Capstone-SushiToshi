@@ -191,6 +191,26 @@ export const logoutUser = () => {
   window.location.href = "/auth/login";
 };
 
+// Everything saved for a table visit, plus the guest flag
+const CUSTOMER_VISIT_KEYS = [
+  "guest",
+  "guest_oid",
+  "session_id",
+  "tableNumber",
+  "locationId",
+  "currentBillId",
+  "menuCart",
+  "pendingOrder",
+];
+
+// Customer log out: forgets the table visit too, so the next sign-in starts clean.
+// Only offered when the customer isn't seated (see CustomerHome and the thank-you page)
+export const logoutCustomer = () => {
+  if (typeof window === "undefined") return;
+  CUSTOMER_VISIT_KEYS.forEach((key) => localStorage.removeItem(key));
+  logoutUser();
+};
+
 // --------------------------------------------------
 // CURRENT USER
 // --------------------------------------------------

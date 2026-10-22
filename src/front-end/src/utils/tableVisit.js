@@ -21,6 +21,12 @@ export const startTableVisit = ({ locationId, tableNumber }) => {
   window.dispatchEvent(new Event(TABLE_VISIT_EVENT));
 };
 
+// Whether this phone has joined a table and the visit is still on. Set by the QR join and
+// cleared when the visit ends, so a session the server still lists but this phone never
+// joined (e.g. seed data) doesn't count
+export const hasTableVisit = () =>
+  typeof window !== "undefined" && !!localStorage.getItem("session_id");
+
 // Fired when staff close the table's session; customers are shown the thank-you screen
 export const TABLE_VISIT_ENDED_EVENT = "table-visit-ended";
 
