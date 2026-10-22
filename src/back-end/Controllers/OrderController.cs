@@ -812,8 +812,7 @@ namespace back_end.Controllers
                             sessionCategoryUsed.GetValueOrDefault(categoryId),
                             sessionItemUsed.GetValueOrDefault(itemId)),
                         isAddOn: assignment.Is_Add_On,
-                        price: assignment.Price,
-                        fullPrice: assignment.Full_Price);
+                        price: assignment.Price);
 
                     if (!plan.IsValid)
                     {

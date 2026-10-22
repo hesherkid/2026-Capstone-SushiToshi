@@ -29,8 +29,6 @@ import {
 } from "@/contexts/TableOrderContext";
 
 const ORDERS_PATH = "/dashboard/orders";
-// Order created but its items not added yet (e.g. a limit was hit); reused on the next try
-const PENDING_ORDER_KEY = "pendingOrder";
 // The bill reminder, button and padding
 const ACTION_BAR_HEIGHT = 112;
 
@@ -64,7 +62,6 @@ const ReviewOrderPage = () => {
   // The items just sent, for the confirmation screen
   const [placedItems, setPlacedItems] = useState(null);
   const sending = useRef([]);
-  const [pendingOrderId, setPendingOrderIdState] = useState(null);
 
   // Re-check the table and bills (staff may have opened one since the menu loaded)
   useEffect(() => {
@@ -81,48 +78,20 @@ const ReviewOrderPage = () => {
     }
   };
 
-  const setPendingOrderId = (orderId) => {
-    setPendingOrderIdState(orderId);
-    if (orderId) {
-      localStorage.setItem(
-        PENDING_ORDER_KEY,
-        JSON.stringify({ orderId, sessionId, billId: selectedBillId }),
-      );
-    } else {
-      localStorage.removeItem(PENDING_ORDER_KEY);
-    }
-  };
-
-  // Restore it once the session and bill are known
-  useEffect(() => {
-    if (!sessionId || !selectedBillId) return;
-    try {
-      const saved = JSON.parse(localStorage.getItem(PENDING_ORDER_KEY) || "null");
-      if (
-        saved?.orderId &&
-        String(saved.sessionId) === String(sessionId) &&
-        String(saved.billId) === String(selectedBillId)
-      ) {
-        setPendingOrderIdState(Number(saved.orderId));
-      } else {
-        localStorage.removeItem(PENDING_ORDER_KEY);
-        setPendingOrderIdState(null);
-      }
-    } catch {
-      localStorage.removeItem(PENDING_ORDER_KEY);
-      setPendingOrderIdState(null);
-    }
-  }, [sessionId, selectedBillId]);
-
   const handleOrderSuccess = () => {
     setPlacedItems(sending.current);
     clearCart();
-    setPendingOrderId(null);
+    refresh(); // NOTE: AW - added to reload the tables limits so the menu shows what's left after this order, remove if redundant
     window.scrollTo(0, 0);
   };
 
-  const { createOrder, addOrderItems, actionError, isLoading, clearActionError } =
-    useOrderActions(handleOrderSuccess);
+  const {
+    createOrder,
+    addOrderItems,
+    actionError,
+    isLoading,
+    clearActionError,
+  } = useOrderActions(handleOrderSuccess);
 
   // A changed cart may fix the last error (e.g. over a limit), so clear it
   const handleQuantityChange = useCallback(
@@ -135,7 +104,10 @@ const ReviewOrderPage = () => {
   );
 
   const itemCount = cartLines.length;
-  const unitCount = cartLines.reduce((total, { quantity }) => total + quantity, 0);
+  const unitCount = cartLines.reduce(
+    (total, { quantity }) => total + quantity,
+    0,
+  );
   const subtotal = cartLines.reduce(
     (total, { item, quantity }) =>
       total + (item.is_add_on ? (Number(item.price) || 0) * quantity : 0),
@@ -144,7 +116,9 @@ const ReviewOrderPage = () => {
 
   const handlePlaceOrder = async () => {
     if (!selectedBillId) {
-      setOrderError("There's no open bill for your table yet. Ask your server to open one.");
+      setOrderError(
+        "There's no open bill for your table yet. Ask your server to open one.",
+      );
       return;
     }
     if (!sessionId || !menuId) {
@@ -171,39 +145,27 @@ const ReviewOrderPage = () => {
       // Not stored; names the items in the "added to order" notification
       name: item.name,
     }));
-    sending.current = orderItems.map(({ item_id, name, quantity }) => ({ item_id, name, quantity }));
+    sending.current = orderItems.map(({ item_id, name, quantity }) => ({
+      item_id,
+      name,
+      quantity,
+    }));
 
     try {
-      let orderId = pendingOrderId;
+      // NOTE: AW - The cart can't go over a limit (+ stops there, and Place order is disabled when it is)
+      // so the server should accept these items, it still checks every order.
 
-      // The saved order may have been cancelled, approved, or filled since; only reuse it
-      // while it still exists, is pending, and has no items
-      if (orderId) {
-        const existing = await api
-          .get(`/Order/${orderId}`)
-          .then((res) => res.data)
-          .catch(() => null);
-        const reusable =
-          existing &&
-          String(existing.status).toLowerCase() === "pending" &&
-          (existing.items?.length ?? 0) === 0;
-        if (!reusable) {
-          setPendingOrderId(null);
-          orderId = null;
-        }
-      }
-
-      if (!orderId) {
-        const orderResponse = await createOrder(sessionId, selectedBillId);
-        if (!orderResponse) throw new Error("Couldn't start your order. Please try again.");
-        orderId = Number(orderResponse.order_Id);
-        setPendingOrderId(orderId);
-      }
+      const orderResponse = await createOrder(sessionId, selectedBillId);
+      if (!orderResponse)
+        throw new Error("Couldn't start your order. Please try again.");
+      const orderId = Number(orderResponse.order_Id);
 
       await addOrderItems(orderId, orderItems);
     } catch (err) {
       console.error("Error processing order:", err);
-      setOrderError(err.message || "Couldn't place your order. Please try again.");
+      setOrderError(
+        err.message || "Couldn't place your order. Please try again.",
+      );
     }
   };
 
@@ -212,8 +174,17 @@ const ReviewOrderPage = () => {
     return (
       <CustomerPageContainer sx={{ maxWidth: 640 }}>
         <Box sx={{ textAlign: "center", pt: { xs: 3, sm: 5 } }}>
-          <MaterialSymbol name="check_circle" filled size={72} sx={{ color: "success.main" }} />
-          <Typography variant="h5" component="h1" sx={{ mt: 1.5, fontWeight: 700 }}>
+          <MaterialSymbol
+            name="check_circle"
+            filled
+            size={72}
+            sx={{ color: "success.main" }}
+          />
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{ mt: 1.5, fontWeight: 700 }}
+          >
             Order sent!
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 1 }}>
@@ -221,12 +192,17 @@ const ReviewOrderPage = () => {
           </Typography>
         </Box>
 
-        <Paper variant="outlined" sx={{ mt: 3, borderRadius: 3, overflow: "hidden" }}>
+        <Paper
+          variant="outlined"
+          sx={{ mt: 3, borderRadius: 3, overflow: "hidden" }}
+        >
           {placedItems.map(({ item_id, name, quantity }, index) => (
             <Box key={item_id}>
               {index > 0 && <Divider />}
               <Box sx={{ display: "flex", gap: 1.5, px: 2, py: 1.5 }}>
-                <Typography sx={{ fontWeight: 700, minWidth: 28 }}>{quantity}×</Typography>
+                <Typography sx={{ fontWeight: 700, minWidth: 28 }}>
+                  {quantity}×
+                </Typography>
                 <Typography>{name}</Typography>
               </Box>
             </Box>
@@ -234,10 +210,18 @@ const ReviewOrderPage = () => {
         </Paper>
 
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 3 }}>
-          <Button variant="contained" size="large" onClick={() => router.push(ORDERS_PATH)}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => router.push(ORDERS_PATH)}
+          >
             Track my order
           </Button>
-          <Button variant="outlined" size="large" onClick={() => router.push(MENU_PATH)}>
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => router.push(MENU_PATH)}
+          >
             Order more
           </Button>
         </Box>
@@ -247,7 +231,8 @@ const ReviewOrderPage = () => {
 
   // The table's limits can drop after this cart was filled (e.g. someone else at the table ordered)
   const overLimit = cartLines.filter(
-    ({ category, item }) => limitStatus(category.category_id, item.item_id).overLimit,
+    ({ category, item }) =>
+      limitStatus(category.category_id, item.item_id).overLimit,
   );
   const canPlaceOrder =
     !isLoading &&
@@ -263,14 +248,28 @@ const ReviewOrderPage = () => {
       ? `Too many ${overLimit.map(({ item }) => item.name).join(", ")} for your table's limit. Remove some to place your order.`
       : null);
   const multipleBills = openBills.length > 1;
-  const selectedBill = openBills.find((bill) => bill.bill_id === selectedBillId);
+  const selectedBill = openBills.find(
+    (bill) => bill.bill_id === selectedBillId,
+  );
   // Cart items need the menu to show; the saved cart may arrive before it
   const menuLoading = !!sessionId && !itemsLoaded && cartCount > 0;
 
   return (
     <CustomerPageContainer sx={{ maxWidth: 720 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: { xs: 3, sm: 2 }, mb: 3 }}>
-        <IconButton aria-label="Back to menu" onClick={backToMenu} sx={{ ml: -1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mt: { xs: 3, sm: 2 },
+          mb: 3,
+        }}
+      >
+        <IconButton
+          aria-label="Back to menu"
+          onClick={backToMenu}
+          sx={{ ml: -1 }}
+        >
           <MaterialSymbol name="arrow_back" />
         </IconButton>
         <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
@@ -285,7 +284,11 @@ const ReviewOrderPage = () => {
       ) : itemCount === 0 ? (
         // ---- Empty bag ----
         <Box sx={{ textAlign: "center", py: 6 }}>
-          <MaterialSymbol name="shopping_bag" size={56} sx={{ color: "text.disabled" }} />
+          <MaterialSymbol
+            name="shopping_bag"
+            size={56}
+            sx={{ color: "text.disabled" }}
+          />
           <Typography variant="h6" component="h2" sx={{ mt: 1.5 }}>
             Your bag is empty
           </Typography>
@@ -313,8 +316,8 @@ const ReviewOrderPage = () => {
                 </Button>
               }
             >
-              Your table doesn&apos;t have an open bill yet. Ask your server to open one, then
-              check again.
+              Your table doesn&apos;t have an open bill yet. Ask your server to
+              open one, then check again.
             </Alert>
           )}
 
@@ -326,19 +329,29 @@ const ReviewOrderPage = () => {
                 p: 2.5,
                 mb: 4,
                 borderRadius: 3,
-                ...(multipleBills && { borderColor: "primary.main", borderWidth: 2 }),
+                ...(multipleBills && {
+                  borderColor: "primary.main",
+                  borderWidth: 2,
+                }),
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <MaterialSymbol name="receipt_long" size={32} sx={{ color: "primary.main" }} />
+                <MaterialSymbol
+                  name="receipt_long"
+                  size={32}
+                  sx={{ color: "primary.main" }}
+                />
                 <Box sx={{ minWidth: 0 }}>
-
                   {multipleBills ? (
                     <Typography variant="body2" color="text.secondary">
                       Your table has {openBills.length} bills. Select your bill.
                     </Typography>
                   ) : (
-                    <Typography variant="h6" component="p" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
+                    <Typography
+                      variant="h6"
+                      component="p"
+                      sx={{ fontWeight: 700, lineHeight: 1.3 }}
+                    >
                       {billName(openBills[0])}
                     </Typography>
                   )}
@@ -347,7 +360,9 @@ const ReviewOrderPage = () => {
 
               {multipleBills && (
                 <FormControl fullWidth sx={{ mt: 2.5 }}>
-                  <InputLabel id="order-bill-label">Put this order on</InputLabel>
+                  <InputLabel id="order-bill-label">
+                    Put this order on
+                  </InputLabel>
                   <Select
                     labelId="order-bill-label"
                     label="Put this order on"
@@ -357,7 +372,11 @@ const ReviewOrderPage = () => {
                   >
                     {openBills.map((bill) => (
                       // Bills the guests have asked for can't take more orders
-                      <MenuItem key={bill.bill_id} value={bill.bill_id} disabled={!!bill.requested_at}>
+                      <MenuItem
+                        key={bill.bill_id}
+                        value={bill.bill_id}
+                        disabled={!!bill.requested_at}
+                      >
                         {billName(bill)}
                         {bill.requested_at ? " (bill requested)" : ""}
                       </MenuItem>
@@ -370,16 +389,28 @@ const ReviewOrderPage = () => {
 
           {/* ---- Items ---- */}
           <Box
-            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
           >
             <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>
               Your items
             </Typography>
-            <Button size="small" onClick={backToMenu} sx={{ minHeight: 0, py: 0.5 }}>
+            <Button
+              size="small"
+              onClick={backToMenu}
+              sx={{ minHeight: 0, py: 0.5 }}
+            >
               Add more
             </Button>
           </Box>
-          <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+          <Paper
+            variant="outlined"
+            sx={{ borderRadius: 3, overflow: "hidden" }}
+          >
             {cartLines.map(({ category, item, quantity }, index) => (
               <Box key={`${category.category_id}-${item.item_id}`}>
                 {index > 0 && <Divider />}
@@ -388,7 +419,9 @@ const ReviewOrderPage = () => {
                   categoryId={category.category_id}
                   quantity={quantity}
                   onQuantityChange={handleQuantityChange}
-                  atLimit={limitStatus(category.category_id, item.item_id).atLimit}
+                  atLimit={
+                    limitStatus(category.category_id, item.item_id).atLimit
+                  }
                 />
               </Box>
             ))}
@@ -402,14 +435,17 @@ const ReviewOrderPage = () => {
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
               <Typography sx={{ fontWeight: 700 }}>Add-ons subtotal</Typography>
-              <Typography sx={{ fontWeight: 700 }}>${subtotal.toFixed(2)}</Typography>
+              <Typography sx={{ fontWeight: 700 }}>
+                ${subtotal.toFixed(2)}
+              </Typography>
             </Box>
             <Typography
               variant="caption"
               color="text.secondary"
               sx={{ display: "block", mt: 1.5, lineHeight: 1.5 }}
             >
-              All-you-can-eat items are included. Your total and taxes are on your bill summary.
+              All-you-can-eat items are included. Your total and taxes are on
+              your bill summary.
             </Typography>
           </Paper>
 
@@ -435,10 +471,14 @@ const ReviewOrderPage = () => {
           >
             <Box sx={{ maxWidth: 720, mx: "auto" }}>
               {shownError && (
-                <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => {
-                  setOrderError(null);
-                  clearActionError();
-                }}>
+                <Alert
+                  severity="error"
+                  sx={{ mb: 1.5 }}
+                  onClose={() => {
+                    setOrderError(null);
+                    clearActionError();
+                  }}
+                >
                   {shownError}
                 </Alert>
               )}
@@ -460,7 +500,11 @@ const ReviewOrderPage = () => {
                 sx={{ borderRadius: 999, minHeight: 52 }}
               >
                 {isLoading ? (
-                  <CircularProgress size={24} color="inherit" aria-label="Placing order" />
+                  <CircularProgress
+                    size={24}
+                    color="inherit"
+                    aria-label="Placing order"
+                  />
                 ) : (
                   `Place order · ${plural(unitCount, "item")}`
                 )}

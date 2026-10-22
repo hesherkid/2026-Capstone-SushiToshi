@@ -124,8 +124,8 @@ namespace back_end.DTO.bill
     [JsonPropertyName("leftover_items")]
     public List<BillAddOnItem> Leftover_Items { get; set; } = new List<BillAddOnItem>();
 
-    [JsonPropertyName("leftover_subtotal")]
-    public decimal Leftover_Subtotal { get; set; }
+    [JsonPropertyName("leftover_charge")]
+    public decimal Leftover_Charge { get; set; }
 
     // Totals
     [JsonPropertyName("subtotal")]
@@ -183,5 +183,40 @@ namespace back_end.DTO.bill
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
+  }
+
+  public class LeftoverFeeRequest
+  {
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+  }
+
+  public class LeftoverFeeResponse
+  {
+    [JsonPropertyName("session_id")]
+    public int Session_Id { get; set; }
+
+    // The default the dialog starts with (from pricing)
+    [JsonPropertyName("default_fee")]
+    public decimal Default_Fee { get; set; }
+
+    // The table's current fee: the open bills' shares added up
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+
+    [JsonPropertyName("bills")]
+    public List<LeftoverFeeBillShare> Bills { get; set; } = new List<LeftoverFeeBillShare>();
+  }
+
+  public class LeftoverFeeBillShare
+  {
+    [JsonPropertyName("bill_id")]
+    public int Bill_Id { get; set; }
+
+    [JsonPropertyName("bill_name")]
+    public string Bill_Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("leftover_charge")]
+    public decimal Leftover_Charge { get; set; }
   }
 }

@@ -46,7 +46,6 @@ namespace back_end.Controllers
         ///         "menu_Id": 123,
         ///         "item_Id": 456,
         ///         "price": 15.99,
-        ///         "full_Price": 15.99,
         ///         "over_Limit_Behavior": "Charge",
         ///         "adult_Limit": 100,
         ///         "senior_Limit": 50,
@@ -61,8 +60,8 @@ namespace back_end.Controllers
         /// adult_Limit, child_Limit, and senior_Limit are required (0 = unlimited).
         /// tot_Limit is optional: 0 or omitted = same as child_Limit.
         /// Rules: child and senior ≤ adult, toddler ≤ child.
-        /// full_Price defaults to price if not provided; over_Limit_Behavior defaults to "Block".
-        /// over_Limit_Behavior "Charge" requires full_Price greater than 0.
+        /// Over_Limit_Behavior defaults to "Block".
+        /// over_Limit_Behavior "Charge" requires price greater than 0.
         /// Add-on items must have a price greater than 0.
         /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Item views are recorded separately (POST api/menu-item-views).
@@ -83,8 +82,7 @@ namespace back_end.Controllers
                 if (limitError != null) return BadRequest(limitError);
 
                 var behavior = assignmentData.Over_Limit_Behavior ?? OverLimitBehavior.Block;
-                var fullPrice = assignmentData.Full_Price ?? assignmentData.Price;
-                if (behavior == OverLimitBehavior.Charge && fullPrice <= 0)
+                if (behavior == OverLimitBehavior.Charge && assignmentData.Price <= 0)
                     return BadRequest("Items that charge over the limit need a full price greater than 0");
 
                 if (assignmentData.Is_Add_on && assignmentData.Price <= 0)
@@ -105,7 +103,6 @@ namespace back_end.Controllers
                     Item_Id = assignmentData.Item_Id,
                     Price = assignmentData.Price,
                     Over_Limit_Behavior = behavior,
-                    Full_Price = fullPrice,
                     Adult_Limit = assignmentData.Adult_Limit!.Value,
                     Child_limit = assignmentData.Child_Limit!.Value,
                     Senior_limit = assignmentData.Senior_Limit!.Value,
@@ -158,7 +155,6 @@ namespace back_end.Controllers
         ///     PUT /api/menuassignment/123/456
         ///     {
         ///         "price": 15.99,
-        ///         "full_Price": 15.99,
         ///         "adult_Limit": 1,
         ///         "child_Limit": 1,
         ///         "senior_Limit": 1,
@@ -173,7 +169,7 @@ namespace back_end.Controllers
         /// All fields are optional - fields not sent keep their current values.
         /// A limit of 0 means unlimited, except tot_Limit: 0 means "same as child_Limit".
         /// Rules: child and senior ≤ adult, toddler ≤ child.
-        /// over_Limit_Behavior "Charge" requires full_Price greater than 0.
+        /// over_Limit_Behavior "Charge" requires price greater than 0.
         /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Add-on items require price greater than 0.
         /// </remarks>
@@ -207,14 +203,13 @@ namespace back_end.Controllers
                 var finalTotLimit = updateData.Tot_Limit ?? assignment.Tot_Limit;
                 var finalPerOrder = updateData.Per_Order_Limit ?? assignment.Per_Order_Limit;
                 var finalBehavior = updateData.Over_Limit_Behavior ?? assignment.Over_Limit_Behavior;
-                var finalFullPrice = updateData.Full_Price ?? assignment.Full_Price;
                 var finalPrice = updateData.Price ?? assignment.Price;
                 var finalIsAddOn = updateData.Is_Add_on ?? assignment.Is_Add_On;
 
                 var limitError = LimitRules.Validate(finalAdultLimit, finalChildLimit, finalSeniorLimit, finalTotLimit, finalPerOrder);
                 if (limitError != null) return BadRequest(limitError);
 
-                if (finalBehavior == OverLimitBehavior.Charge && finalFullPrice <= 0)
+                if (finalBehavior == OverLimitBehavior.Charge && finalPrice <= 0)
                     return BadRequest("Items that charge over the limit need a full price greater than 0");
 
                 if (finalIsAddOn && finalPrice <= 0)
@@ -226,7 +221,6 @@ namespace back_end.Controllers
                 assignment.Tot_Limit = finalTotLimit;
                 assignment.Per_Order_Limit = finalPerOrder;
                 assignment.Over_Limit_Behavior = finalBehavior;
-                assignment.Full_Price = finalFullPrice;
                 assignment.Price = finalPrice;
                 assignment.Is_Add_On = finalIsAddOn;
                 assignment.Status = updateData.Status ?? assignment.Status;
@@ -355,7 +349,6 @@ namespace back_end.Controllers
                         Item_Id = element.Item_Id,
                         Price = element.Price,
                         Over_Limit_Behavior = element.Over_Limit_Behavior,
-                        Full_Price = element.Full_Price,
                         Adult_Limit = element.Adult_Limit,
                         Child_limit = element.Child_limit,
                         Senior_limit = element.Senior_limit,

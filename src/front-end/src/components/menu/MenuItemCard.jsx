@@ -23,11 +23,11 @@ export const limitText = (item) => {
     const limit = Math.min(...perPerson);
     // Charge applies when the limit that binds is set to Charge (e.g. Hot Stone)
     const binding = own.adult === limit ? own : cat;
-    const charges =
-      binding.overLimitBehavior === "Charge" && item.fullPrice > 0;
+    // An included item's price is what an extra costs past a Charge limit
+    const charges = binding.overLimitBehavior === "Charge" && item.price > 0;
     parts.push(
       charges
-        ? `${limit} per person, then ${money(item.fullPrice)} each`
+        ? `${limit} per person, then ${money(item.price)} each`
         : `Limit ${limit} per person`,
     );
   }

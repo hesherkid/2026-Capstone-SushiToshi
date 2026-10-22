@@ -67,12 +67,12 @@ public class OrderLimitEnforcementTests : IDisposable
         AddItem(SalmonNigiri, "Salmon Nigiri", categoryId: 1, a => a.Per_Order_Limit = 1);
         AddItem(SalmonSashimi, "Salmon Sashimi", categoryId: 2);
         AddItem(TunaSashimi, "Tuna Sashimi", categoryId: 2);
-        AddItem(HotStoneSteak, "Hot Stone Steak", categoryId: 3, a => a.Full_Price = 5.00m);
+        AddItem(HotStoneSteak, "Hot Stone Steak", categoryId: 3, a => a.Price = 5.00m);
         AddItem(ChopChop, "Chop Chop Nigiri", categoryId: 1, a =>
         {
             a.Adult_Limit = 2; a.Child_limit = 2; a.Senior_limit = 2; a.Per_Order_Limit = 1;
         });
-        AddItem(Toro, "Toro Nigiri", categoryId: 4, a => { a.Is_Add_On = true; a.Price = 1.00m; a.Full_Price = 1.00m; });
+        AddItem(Toro, "Toro Nigiri", categoryId: 4, a => { a.Is_Add_On = true; a.Price = 1.00m; });
 
         _context.SaveChanges();
     }

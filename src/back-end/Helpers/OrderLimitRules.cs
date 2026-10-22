@@ -8,9 +8,9 @@ namespace back_end.Helpers
     /// Two scopes, category and item limits both apply:
     ///   - Per-order: the whole table, reset for every order. Always blocks.
     ///   - Per-person: per dining session; cap = limit x headcount per age group.
-    ///     Over the cap the binding limit's behavior decides: Block rejects, Charge splits
-    ///     the excess into a line charged at Full_Price (Charge_Reason = OverLimit).
-    /// 0 = unlimited; toddler 0 = same as child (see LimitRules).
+    ///     Block limits are hard stops, whichever is tighter. Units over a Charge limit
+    ///     (but within every Block limit) go on a separate line at Price (Charge_Reason = OverLimit).
+    ///     /// 0 = unlimited; toddler 0 = same as child (see LimitRules).
     /// </summary>
 
     public static class OrderLimitRules
@@ -68,7 +68,7 @@ namespace back_end.Helpers
 
         /// <summary>
         /// Units the table can still order this session before a Block limit stops them, or null
-        /// when nothing blocks. Charge limits never block (the extra is billed at Full_Price).
+        /// when nothing blocks. Charge limits never block (the extra is billed at Price).
         /// </summary>
         public static int? SessionLeftBeforeBlock(Limits limits, Headcount heads, int sessionUsed)
         {
@@ -89,8 +89,7 @@ namespace back_end.Helpers
             Headcount heads,
             Usage used,
             bool isAddOn,
-            decimal price,
-            decimal fullPrice
+            decimal price
         )
         {
             // Per-order limits = always block
@@ -102,35 +101,28 @@ namespace back_end.Helpers
             if (requested > categoryOrderLeft)
                 return Fail($"{categoryName}: maximum {category.PerOrder} combined per order ({Math.Max(0, categoryOrderLeft)} left in this order).");
 
-            // Per-person limits for the dining session - both apply, tighter one binds
+            // Per-person limits for the dining session (category and item both apply)
             var categoryCap = SessionCap(category, heads);
             var itemCap = SessionCap(item, heads);
-            var categoryLeft = categoryCap == int.MaxValue ? int.MaxValue : categoryCap - used.SessionCategory;
-            var itemLeft = itemCap == int.MaxValue ? int.MaxValue : itemCap - used.SessionItem;
+            var categoryLeft = categoryCap == int.MaxValue ? int.MaxValue : Math.Max(0, categoryCap - used.SessionCategory);
+            var itemLeft = itemCap == int.MaxValue ? int.MaxValue : Math.Max(0, itemCap - used.SessionItem);
 
-            var left = Math.Max(0, Math.Min(categoryLeft, itemLeft));
-            var freeQty = Math.Min(requested, left);
+            // Block limits are hard stops, whichever is tighter
+            if (category.Behavior == OverLimitBehavior.Block && requested > categoryLeft)
+                return Fail($"{categoryName}: limit for this table is {categoryCap} per dining session ({categoryLeft} left).");
+            if (item.Behavior == OverLimitBehavior.Block && requested > itemLeft)
+                return Fail($"{itemName}: limit for this table is {itemCap} per dining session ({itemLeft} left).");
+
+            // Anything over the remaining Charge limit is billed at full price
+            var freeQty = Math.Min(requested, Math.Min(categoryLeft, itemLeft));
             var overQty = requested - freeQty;
 
+            if (overQty > 0 && price <= 0)
+                return Fail($"{itemName}: over the limit but no full price is set. Ask staff for help.");
+
             var lines = new List<LimitLine>();
-            var basePrice = isAddOn ? price : 0m;
-            if (freeQty > 0) lines.Add(new LimitLine(freeQty, basePrice, ChargeReason.None));
-
-            if (overQty > 0)
-            {
-                var categoryBinds = categoryLeft <= itemLeft;
-                var binding = categoryBinds ? category : item;
-                var scope = categoryBinds ? categoryName : itemName;
-                var cap = categoryBinds ? categoryCap : itemCap;
-
-                if (binding.Behavior == OverLimitBehavior.Block)
-                    return Fail($"{scope}: limit for this table is {cap} per dining session ({left} left).");
-
-                if (fullPrice <= 0)
-                    return Fail($"{itemName}: over the limit but no full price is set. Ask staff for help.");
-
-                lines.Add(new LimitLine(overQty, fullPrice, ChargeReason.OverLimit));
-            }
+            if (freeQty > 0) lines.Add(new LimitLine(freeQty, isAddOn ? price : 0m, ChargeReason.None));
+            if (overQty > 0) lines.Add(new LimitLine(overQty, price, ChargeReason.OverLimit));
 
             return new LimitResult(lines, null);
         }

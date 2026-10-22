@@ -38,7 +38,7 @@ namespace back_end.Services
             // Check if it's a holiday first
             var holidays = _config.GetSection("Pricing:Holiday:Dates").Get<List<string>>() ?? new List<string>();
             var dateStr = date.ToString("yyyy-MM-dd");
-            
+
             if (holidays.Contains(dateStr))
             {
                 _logger.LogInformation($"Using holiday pricing for {dateStr}");
@@ -49,14 +49,17 @@ namespace back_end.Services
                     SeniorBasePrice = _config.GetValue<decimal>("Pricing:Holiday:SeniorBasePrice", 39.95m),
                     ChildBasePrice = _config.GetValue<decimal>("Pricing:Holiday:ChildBasePrice", 28.95m),
                     ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Holiday:ToddlerBasePrice", 7.95m),
-                    TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m)
+                    TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m),
+                    //TODO: move to location managed pricing with the other prices
+                    // currently in appsettings.Development.json
+                    LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m)
                 };
             }
 
             // Check if it's a weekend (Friday, Saturday, Sunday)
             var dayOfWeek = date.DayOfWeek.ToString();
             var weekendDays = _config.GetSection("Pricing:Weekend:Days").Get<List<string>>() ?? new List<string>();
-            
+
             if (weekendDays.Contains(dayOfWeek))
             {
                 _logger.LogInformation($"Using weekend pricing for {dayOfWeek}");
@@ -67,7 +70,10 @@ namespace back_end.Services
                     SeniorBasePrice = _config.GetValue<decimal>("Pricing:Weekend:SeniorBasePrice", 39.95m),
                     ChildBasePrice = _config.GetValue<decimal>("Pricing:Weekend:ChildBasePrice", 28.95m),
                     ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekend:ToddlerBasePrice", 7.95m),
-                    TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m)
+                    TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m),
+                    //TODO: move to location managed pricing with the other prices
+                    // currently in appsettings.Development.json
+                    LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m)
                 };
             }
 
@@ -80,7 +86,10 @@ namespace back_end.Services
                 SeniorBasePrice = _config.GetValue<decimal>("Pricing:Weekday:SeniorBasePrice", 35.95m),
                 ChildBasePrice = _config.GetValue<decimal>("Pricing:Weekday:ChildBasePrice", 25.95m),
                 ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekday:ToddlerBasePrice", 7.95m),
-                TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m)
+                TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m),
+                //TODO: move to location managed pricing with the other prices
+                // currently in appsettings.Development.json
+                LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m)
             };
         }
     }

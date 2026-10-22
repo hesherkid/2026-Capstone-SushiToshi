@@ -240,7 +240,6 @@ namespace back_end.Controllers
             {
                 var menu = await _context.Menus.FindAsync(id);
 
-                //See if menu exists
                 if (menu != null)
                 {
                     return Ok(menu);
@@ -290,18 +289,15 @@ namespace back_end.Controllers
 
             try
             {
-                //Check if time was given
                 if (string.IsNullOrEmpty(time))
                 {
                     currentTime = TimeOnly.FromDateTime(DateTime.UtcNow);
                 }
-                //Check if time given is proper
                 else if (!TimeOnly.TryParse(time, out currentTime))
                 {
                     return BadRequest(new { message = "Improper time given." });
                 }
-                //Get the correct menu for time slot
-                //*note to self* Test this part more
+                //TODO: Test this part more
                 var currentMenu = await _context.Menus.Where(m => m.Is_active &&
                                             m.Start_time <= currentTime &&
                                             m.End_time >= currentTime)
@@ -355,14 +351,12 @@ namespace back_end.Controllers
             {
                 var currentMenu = await _context.Menus.FindAsync(menu);
 
-                //Check if menu exists
                 if (currentMenu == null)
                 {
                     return NotFound(new { message = $"Can't find Menu with ID:{menu}" });
                 }
                 else
                 {
-                    //Get all details, category and tags for all menu items
                     var rows = await _context.MenuItemAssignments
                             .ForLocation(menu, locationId)
                             .Include(m => m.MenuItem).ThenInclude(me => me.Category)
@@ -383,7 +377,7 @@ namespace back_end.Controllers
                         description = m.MenuItem.Description,
                         category = m.MenuItem.Category.Category_name,
                         price = m.Price,
-                        fullPrice = m.Full_Price,
+                        fullPrice = m.Price,
                         categoryID = m.MenuItem.Category_id,
                         categoryLimits = new
                         {
@@ -454,14 +448,12 @@ namespace back_end.Controllers
             {
                 var locationID = await _context.Locations.FindAsync(location);
 
-                //Check if location exists
                 if (locationID == null)
                 {
 
                     return NotFound(new { message = $"Can't find location with ID: {location}" });
                 }
 
-                //Get all the menus at the inputted location
                 var menus = await _context.MenuLocations
                                 .Where(m => m.Location_Id == location)
                                 .Include(m => m.Menu)
@@ -626,8 +618,5 @@ namespace back_end.Controllers
                 return StatusCode(500, "Internal Server Error");
             }
         }
-
-
-
     }
 }

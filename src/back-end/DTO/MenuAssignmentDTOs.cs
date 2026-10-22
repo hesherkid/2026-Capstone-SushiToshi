@@ -13,7 +13,6 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal Price { get; set; }
         [Range(0, double.MaxValue, ErrorMessage = "Full price cannot be negative")]
-        public decimal? Full_Price { get; set; }
         public OverLimitBehavior? Over_Limit_Behavior { get; set; }
         public int? Tot_Limit { get; set; } = 0; // optional: 0 = same as child
         public int? Per_Order_Limit { get; set; } = 0;
@@ -37,7 +36,6 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal? Price { get; set; }
         [Range(0, double.MaxValue, ErrorMessage = "Full price cannot be negative")]
-        public decimal? Full_Price { get; set; }
         public OverLimitBehavior? Over_Limit_Behavior { get; set; }
         public int? Adult_Limit { get; set; }
         public int? Child_Limit { get; set; }

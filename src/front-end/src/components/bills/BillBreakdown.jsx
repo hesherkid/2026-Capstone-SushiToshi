@@ -80,7 +80,7 @@ const ChargeSection = ({ title, items, subtotalLabel, subtotal }) =>
   );
 
 /**
- * A bill's priced breakdown: guests by age, add-ons, tax and total.
+ * A bill's priced breakdown: guests by age, add-ons, over-limit charges, leftovers, tax and total.
  * Shared by the staff and customer bill dialogs so both always show the same numbers.
  */
 const BillBreakdown = ({ summary }) => (
@@ -144,7 +144,9 @@ const BillBreakdown = ({ summary }) => (
             amount={item.line_total}
           />
         ))}
-        <SectionHeading>Over Limit Charges</SectionHeading>
+        {summary.overlimit_items?.length > 0 && (
+          <SectionHeading>Over Limit Charges</SectionHeading>
+        )}
         {summary.overlimit_items?.map((item) => (
           <ReceiptLine
             key={`over-${item.order_item_id}`}
@@ -159,6 +161,18 @@ const BillBreakdown = ({ summary }) => (
           amount={
             (summary.addon_subtotal ?? 0) + (summary.overlimit_subtotal ?? 0)
           }
+          bold
+        />
+      </>
+    )}
+
+    {summary.leftover_charge > 0 && (
+      <>
+        <ReceiptRule />
+        <SectionHeading>Leftovers</SectionHeading>
+        <ReceiptLine
+          label="Leftover charge (table, split evenly across bills)"
+          amount={summary.leftover_charge}
           bold
         />
       </>

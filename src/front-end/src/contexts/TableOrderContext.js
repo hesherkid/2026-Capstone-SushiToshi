@@ -1,5 +1,13 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 
@@ -25,11 +33,13 @@ const normalizeItem = (it) => ({
   tags: it.tags ?? [],
   categoryLimits: it.categoryLimits,
   itemLimits: it.itemLimits,
-  fullPrice: it.fullPrice,
 });
 
 const apiMessage = (err, fallback) =>
-  err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message ?? fallback;
+  err?.response?.data?.detail ??
+  err?.response?.data?.message ??
+  err?.message ??
+  fallback;
 
 const TableOrderContext = createContext(null);
 
@@ -111,16 +121,27 @@ export const TableOrderProvider = ({ children }) => {
 
   const loadMenu = useCallback(async (forSession) => {
     try {
-      const response = await api.get(`/DiningSession/session-menu/${forSession}`);
-      if (!(response?.status >= 200 && response.status < 300 && response.data)) {
+      const response = await api.get(
+        `/DiningSession/session-menu/${forSession}`,
+      );
+      if (
+        !(response?.status >= 200 && response.status < 300 && response.data)
+      ) {
         console.warn("No menu found", response?.data);
         setError("No menu found for this session");
         return;
       }
 
       const raw = response.data;
-      const id = raw.menu_id ?? raw.menuId ?? raw.Menu_Id ?? raw.menu_Id ?? raw.MenuID ?? raw;
-      const foundMenuId = typeof id === "number" ? id : parseInt(String(id), 10);
+      const id =
+        raw.menu_id ??
+        raw.menuId ??
+        raw.Menu_Id ??
+        raw.menu_Id ??
+        raw.MenuID ??
+        raw;
+      const foundMenuId =
+        typeof id === "number" ? id : parseInt(String(id), 10);
 
       if (Number.isNaN(foundMenuId) || foundMenuId < 1) {
         console.warn("Menu ID is invalid:", raw);
@@ -129,7 +150,9 @@ export const TableOrderProvider = ({ children }) => {
       }
 
       // Location decides which prices this table sees
-      const loc = Number(raw.location_Id ?? raw.location_id ?? raw.locationId ?? raw.Location_Id);
+      const loc = Number(
+        raw.location_Id ?? raw.location_id ?? raw.locationId ?? raw.Location_Id,
+      );
       setLocationId(Number.isNaN(loc) || loc < 1 ? null : loc);
       setMenuId(foundMenuId);
     } catch (err) {
@@ -142,7 +165,12 @@ export const TableOrderProvider = ({ children }) => {
     try {
       const { data } = await api.get(`/Order/session/${forSession}/limits`);
       const byId = (rows, key) =>
-        Object.fromEntries((Array.isArray(rows) ? rows : []).map((row) => [String(row[key]), row]));
+        Object.fromEntries(
+          (Array.isArray(rows) ? rows : []).map((row) => [
+            String(row[key]),
+            row,
+          ]),
+        );
       setLimits({
         items: byId(data?.items, "item_id"),
         categories: byId(data?.categories, "category_id"),
@@ -207,7 +235,11 @@ export const TableOrderProvider = ({ children }) => {
       return;
     }
 
-    await Promise.all([loadBills(mySessionId), loadMenu(mySessionId), loadLimits(mySessionId)]);
+    await Promise.all([
+      loadBills(mySessionId),
+      loadMenu(mySessionId),
+      loadLimits(mySessionId),
+    ]);
   }, [loadBills, loadCategories, loadLimits, loadMenu]);
 
   // Menu items for the session's menu, priced for its location
@@ -244,8 +276,14 @@ export const TableOrderProvider = ({ children }) => {
     if (!sessionId || cartRestoredFor.current === sessionId) return;
     cartRestoredFor.current = sessionId;
     try {
-      const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null");
-      setQuantities(saved?.sessionId === sessionId && saved.quantities ? saved.quantities : {});
+      const saved = JSON.parse(
+        localStorage.getItem(CART_STORAGE_KEY) || "null",
+      );
+      setQuantities(
+        saved?.sessionId === sessionId && saved.quantities
+          ? saved.quantities
+          : {},
+      );
     } catch {
       localStorage.removeItem(CART_STORAGE_KEY);
       setQuantities({});
@@ -255,7 +293,10 @@ export const TableOrderProvider = ({ children }) => {
   useEffect(() => {
     // Wait until the saved cart has been read, or the empty starting cart would replace it
     if (!sessionId || cartRestoredFor.current !== sessionId) return;
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ sessionId, quantities }));
+    localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify({ sessionId, quantities }),
+    );
   }, [sessionId, quantities]);
 
   // Most of this item the cart can hold before a limit that blocks: the item's own caps, and
@@ -265,7 +306,9 @@ export const TableOrderProvider = ({ children }) => {
     (cart, categoryId, itemId) => {
       if (!limits) return null;
       const lowest = (row) => {
-        const caps = [row?.per_order, row?.session_left].filter((n) => n != null);
+        const caps = [row?.per_order, row?.session_left].filter(
+          (n) => n != null,
+        );
         return caps.length ? Math.min(...caps) : null;
       };
 
@@ -274,7 +317,10 @@ export const TableOrderProvider = ({ children }) => {
       const othersInCategory = Object.entries(cart[categoryId] || {})
         .filter(([id]) => String(id) !== String(itemId))
         .reduce((total, [, quantity]) => total + quantity, 0);
-      const categoryRoom = categoryCap == null ? null : Math.max(0, categoryCap - othersInCategory);
+      const categoryRoom =
+        categoryCap == null
+          ? null
+          : Math.max(0, categoryCap - othersInCategory);
 
       const caps = [itemCap, categoryRoom].filter((n) => n != null);
       return caps.length ? Math.min(...caps) : null;
@@ -340,7 +386,9 @@ export const TableOrderProvider = ({ children }) => {
   const cartCount = useMemo(
     () =>
       Object.values(quantities).reduce(
-        (total, items) => total + Object.values(items).reduce((sum, quantity) => sum + quantity, 0),
+        (total, items) =>
+          total +
+          Object.values(items).reduce((sum, quantity) => sum + quantity, 0),
         0,
       ),
     [quantities],
@@ -375,11 +423,16 @@ export const TableOrderProvider = ({ children }) => {
     reviewOpenedFromMenu,
   };
 
-  return <TableOrderContext.Provider value={value}>{children}</TableOrderContext.Provider>;
+  return (
+    <TableOrderContext.Provider value={value}>
+      {children}
+    </TableOrderContext.Provider>
+  );
 };
 
 export const useTableOrder = () => {
   const context = useContext(TableOrderContext);
-  if (!context) throw new Error("useTableOrder must be used inside TableOrderProvider");
+  if (!context)
+    throw new Error("useTableOrder must be used inside TableOrderProvider");
   return context;
 };

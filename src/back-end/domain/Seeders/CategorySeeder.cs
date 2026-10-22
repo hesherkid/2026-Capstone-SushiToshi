@@ -10,7 +10,7 @@ namespace back_end.domain.Seeders
     /// Limit rules: 0 = unlimited; toddler 0 = same as child.
     /// Category-level limits only where the menu applies them to the whole section:
     ///   - Sashimi: max 30 per order (whole table, all sashimi combined), Block
-    ///   - Hot Stone: max 1 per person per dining session, extras charged (Full_Price on each item), Charge
+    ///   - Hot Stone: max 1 per person per dining session, extras charged (each items price), Charge
     /// Per-item per-order limits (Nigiri, Maki, Rolls, Temaki, Kitchen, Deep Fried) are set on the
     /// menu assignments in MenuItemSeeder, because they apply to each item type separately.
     /// </summary>

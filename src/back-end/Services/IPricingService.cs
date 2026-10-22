@@ -14,5 +14,6 @@ namespace back_end.Services
         public decimal ChildBasePrice { get; set; }
         public decimal ToddlerBasePrice { get; set; }
         public decimal TaxRate { get; set; }
+        public decimal LeftoverFee { get; set; }
     }
 }

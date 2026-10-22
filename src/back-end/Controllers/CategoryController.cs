@@ -96,7 +96,7 @@ namespace back_end.Controllers
         /// Rules: child and senior ≤ adult, toddler ≤ child.
         /// per_order_limit: max combined units from this category per order for the whole table (0 = no limit cap, always blocks).
         /// over_limit_behavior ("Block" or "Charge", default "Block") controls what happens when a limit is exceeded;
-        /// "Charge" bills each item's full_Price from its menu assignment.
+        /// "Charge" bills each item's price from its menu assignment.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
