@@ -294,6 +294,43 @@ describe('QRCodeManagement Component', () => {
     }, { timeout: 3000 });
   });
 
+  test('shows the API error text from a blob error response', async () => {
+    api.get.mockImplementation((url) => {
+      if (url === '/location') {
+        return Promise.resolve({ data: mockLocations });
+      }
+      if (url === '/TableEntity') {
+        return Promise.resolve({ data: [] });
+      }
+      if (url === '/admin/qr/wifi') {
+        // Blob downloads get their error body as a Blob, like the real 404 from the API
+        return Promise.reject({
+          response: {
+            status: 404,
+            data: new Blob(['Location 1 not found or WiFi credentials not configured'], { type: 'text/plain' }),
+          },
+        });
+      }
+      return Promise.reject(new Error('Not found'));
+    });
+
+    render(<QRCodeManagement />);
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith('/location');
+    });
+
+    fireEvent.change(screen.getByLabelText(/Table Number/i), { target: { value: '5' } });
+
+    const previewButton = await screen.findAllByRole('button', { name: /Preview/i });
+    await waitFor(() => expect(previewButton[0]).not.toBeDisabled());
+    fireEvent.click(previewButton[0]);
+
+    expect(
+      await screen.findByText('Location 1 not found or WiFi credentials not configured')
+    ).toBeInTheDocument();
+  });
+
   test('handles location selection change', async () => {
     api.get.mockImplementation((url) => {
       if (url === '/location') {
