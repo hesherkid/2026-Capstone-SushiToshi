@@ -4,6 +4,11 @@ import { NAV_HEIGHT } from "@/components/customer/CustomerBottomNav";
 const BUTTON_HEIGHT = 52;
 const GAP = 12;
 
+// Marks the button on the page; the footer leaves this much room under the copyright while
+// it's there, so at the end of the menu the button floats over empty space, not content
+export const FLOATING_BUTTON_ATTR = "data-floating-button";
+export const FLOATING_BUTTON_SPACE = BUTTON_HEIGHT + GAP * 2;
+
 // Sticky "Review order" button on the menu: the way to the Review order page, with the
 // cart count in a white circle.
 // Floats bottom-right, just above the customer tab bar on phones
@@ -14,10 +19,8 @@ const ReviewOrderButton = ({ count, onClick }) => {
 
   return (
     <>
-      {/* Room at the end of the menu so the button never covers the last items */}
-      <Box sx={{ height: BUTTON_HEIGHT + GAP * 2 }} />
-
       <Box
+        {...{ [FLOATING_BUTTON_ATTR]: true }}
         sx={{
           position: "fixed",
           left: 0,

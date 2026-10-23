@@ -42,18 +42,14 @@ namespace back_end.Services
             if (holidays.Contains(dateStr))
             {
                 _logger.LogInformation($"Using holiday pricing for {dateStr}");
-                return new PricingInfo
+                return WithTaxAndGratuity(new PricingInfo
                 {
                     PricingType = "Holiday",
                     AdultBasePrice = _config.GetValue<decimal>("Pricing:Holiday:AdultBasePrice", 42.95m),
                     SeniorBasePrice = _config.GetValue<decimal>("Pricing:Holiday:SeniorBasePrice", 39.95m),
                     ChildBasePrice = _config.GetValue<decimal>("Pricing:Holiday:ChildBasePrice", 28.95m),
-                    ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Holiday:ToddlerBasePrice", 7.95m),
-                    TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m),
-                    //TODO: move to location managed pricing with the other prices
-                    // currently in appsettings.Development.json
-                    LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m)
-                };
+                    ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Holiday:ToddlerBasePrice", 7.95m)
+                });
             }
 
             // Check if it's a weekend (Friday, Saturday, Sunday)
@@ -63,34 +59,40 @@ namespace back_end.Services
             if (weekendDays.Contains(dayOfWeek))
             {
                 _logger.LogInformation($"Using weekend pricing for {dayOfWeek}");
-                return new PricingInfo
+                return WithTaxAndGratuity(new PricingInfo
                 {
                     PricingType = "Weekend",
                     AdultBasePrice = _config.GetValue<decimal>("Pricing:Weekend:AdultBasePrice", 42.95m),
                     SeniorBasePrice = _config.GetValue<decimal>("Pricing:Weekend:SeniorBasePrice", 39.95m),
                     ChildBasePrice = _config.GetValue<decimal>("Pricing:Weekend:ChildBasePrice", 28.95m),
-                    ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekend:ToddlerBasePrice", 7.95m),
-                    TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m),
-                    //TODO: move to location managed pricing with the other prices
-                    // currently in appsettings.Development.json
-                    LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m)
-                };
+                    ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekend:ToddlerBasePrice", 7.95m)
+                });
             }
 
             // Default to weekday pricing
             _logger.LogInformation($"Using weekday pricing for {dayOfWeek}");
-            return new PricingInfo
+            return WithTaxAndGratuity(new PricingInfo
             {
                 PricingType = "Weekday",
                 AdultBasePrice = _config.GetValue<decimal>("Pricing:Weekday:AdultBasePrice", 40.95m),
                 SeniorBasePrice = _config.GetValue<decimal>("Pricing:Weekday:SeniorBasePrice", 35.95m),
                 ChildBasePrice = _config.GetValue<decimal>("Pricing:Weekday:ChildBasePrice", 25.95m),
-                ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekday:ToddlerBasePrice", 7.95m),
-                TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.13m),
-                //TODO: move to location managed pricing with the other prices
-                // currently in appsettings.Development.json
-                LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m)
-            };
+                ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekday:ToddlerBasePrice", 7.95m)
+            });
+        }
+
+        // Same every day: Alberta has no provincial sales tax, so only the 5% GST applies.
+        // Large parties get an automatic gratuity (18% for 6 or more guests by default),
+        // and leftovers are charged a flat fee
+        private PricingInfo WithTaxAndGratuity(PricingInfo pricing)
+        {
+            pricing.TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.05m);
+            pricing.GratuityRate = _config.GetValue<decimal>("Pricing:Gratuity:Rate", 0.18m);
+            pricing.GratuityMinPartySize = _config.GetValue<int>("Pricing:Gratuity:MinPartySize", 6);
+            //TODO: move to location managed pricing with the other prices
+            // currently in appsettings.Development.json
+            pricing.LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m);
+            return pricing;
         }
     }
 }

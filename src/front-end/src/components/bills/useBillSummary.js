@@ -10,20 +10,23 @@ export const useBillSummary = ({ open, sessionId, billId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const reload = useCallback(async () => {
+  // quiet: a background refresh. No loading state, and if it fails the summary shown stays up
+  const reload = useCallback(async ({ quiet = false } = {}) => {
     if (!sessionId || !billId) return;
     try {
-      setLoading(true);
-      setError(null);
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
       const { data } = await api.get(`/Bill/summary/${billId}`, {
         params: { _session_id: sessionId },
       });
       setSummary(data);
     } catch (err) {
       console.error("Error fetching bill summary:", err);
-      setError(err.response?.data?.message || "Failed to load bill summary");
+      if (!quiet) setError(err.response?.data?.message || "Failed to load bill summary");
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [sessionId, billId]);
 

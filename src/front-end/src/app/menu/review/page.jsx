@@ -21,6 +21,7 @@ import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import api from "@/config/api";
 import { useOrderActions } from "@/hooks/useOrderActions";
+import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import {
   useTableOrder,
@@ -92,6 +93,10 @@ const ReviewOrderPage = () => {
     isLoading,
     clearActionError,
   } = useOrderActions(handleOrderSuccess);
+
+  // Picks up a bill staff just opened, or limits used up by others at the table.
+  // Paused while the order is being sent, and on the confirmation screen
+  useAutoRefresh(refresh, { enabled: !isLoading && !placedItems });
 
   // A changed cart may fix the last error (e.g. over a limit), so clear it
   const handleQuantityChange = useCallback(

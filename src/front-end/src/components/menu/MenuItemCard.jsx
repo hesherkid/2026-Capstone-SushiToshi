@@ -196,18 +196,21 @@ const MenuItemCard = ({
                 canIncrease={!atLimit}
               />
             ) : (
-              <Typography
-                variant="body2"
-                sx={{
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: 1,
-                  bgcolor: "grey.100",
-                  fontWeight: 700,
-                }}
-              >
-                Qty {quantity}
-              </Typography>
+              // Browsing only (e.g. after the bill's been asked for)
+              quantity > 0 && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: 1,
+                    bgcolor: "grey.100",
+                    fontWeight: 700,
+                  }}
+                >
+                  Qty {quantity}
+                </Typography>
+              )
             )}
           </Box>
         </Box>

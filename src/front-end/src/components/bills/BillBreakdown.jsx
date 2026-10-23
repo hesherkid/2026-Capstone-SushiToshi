@@ -15,6 +15,9 @@ const GUEST_TYPES = [
   { label: "Toddlers", count: "tot_count", price: "toddler_base_price" },
 ];
 
+// 0.05 -> "5%"
+const percent = (rate) => `${Number((rate * 100).toFixed(2))}%`;
+
 // Dashed rule between receipt sections
 const ReceiptRule = () => <Divider sx={{ my: 1.5, borderStyle: "dashed" }} />;
 
@@ -60,7 +63,7 @@ const ReceiptLine = ({ label, amount, quantity, unitPrice, bold, large }) => (
   </Box>
 );
 
-// One priced section (add-ons, over-limit, leftovers); hidden when empty
+// One priced section of order lines (add-ons, over-limit); hidden when empty
 const ChargeSection = ({ title, items, subtotalLabel, subtotal }) =>
   items?.length > 0 && (
     <>
@@ -82,37 +85,41 @@ const ChargeSection = ({ title, items, subtotalLabel, subtotal }) =>
 /**
  * A bill's priced breakdown: guests by age, add-ons, over-limit charges, leftovers, tax and total.
  * Shared by the staff and customer bill dialogs so both always show the same numbers.
+ * showHeader = false leaves out the name, status and dates (the customer Bill page shows its own)
  */
-const BillBreakdown = ({ summary }) => (
-  <Box>
-    <Box sx={{ mb: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        {summary.bill_name}
-      </Typography>
-      <Box display="flex" gap={2} flexWrap="wrap" alignItems="center">
-        <Chip
-          label={formatBillStatus(summary.status)}
-          color={getBillStatusColor(summary.status)}
-          size="small"
-        />
-        <Chip
-          label={formatPricingType(summary.pricing_type)}
-          variant="outlined"
-          size="small"
-        />
-        <Typography variant="body2" color="text.secondary">
-          Created: {formatDateTime(summary.created_at)}
+const BillBreakdown = ({ summary, showHeader = true }) => (
+  // Left-aligned like a receipt; pages sit in <main>, which centres text (globals.css)
+  <Box sx={{ textAlign: "left" }}>
+    {showHeader && (
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          {summary.bill_name}
         </Typography>
-        {summary.table_numbers?.length > 0 && (
+        <Box display="flex" gap={2} flexWrap="wrap" alignItems="center">
+          <Chip
+            label={formatBillStatus(summary.status)}
+            color={getBillStatusColor(summary.status)}
+            size="small"
+          />
+          <Chip
+            label={formatPricingType(summary.pricing_type)}
+            variant="outlined"
+            size="small"
+          />
           <Typography variant="body2" color="text.secondary">
-            Tables: {summary.table_numbers.join(", ")}
+            Created: {formatDateTime(summary.created_at)}
           </Typography>
-        )}
+          {summary.table_numbers?.length > 0 && (
+            <Typography variant="body2" color="text.secondary">
+              Tables: {summary.table_numbers.join(", ")}
+            </Typography>
+          )}
+        </Box>
       </Box>
-    </Box>
+    )}
 
     {/* Laid out like a receipt: guests, add-ons, then the totals */}
-    <ReceiptRule />
+    {showHeader && <ReceiptRule />}
 
     <SectionHeading>Guests</SectionHeading>
     {GUEST_TYPES.filter((type) => summary[type.count] > 0).map((type) => (
@@ -130,41 +137,18 @@ const BillBreakdown = ({ summary }) => (
       bold
     />
 
-    {(summary.addon_items?.length > 0 ||
-      summary.overlimit_items?.length > 0) && (
-      <>
-        <ReceiptRule />
-        <SectionHeading>Premium Add-ons</SectionHeading>
-        {summary.addon_items?.map((item) => (
-          <ReceiptLine
-            key={item.order_item_id}
-            label={item.item_name}
-            quantity={item.quantity}
-            unitPrice={item.price_per_unit}
-            amount={item.line_total}
-          />
-        ))}
-        {summary.overlimit_items?.length > 0 && (
-          <SectionHeading>Over Limit Charges</SectionHeading>
-        )}
-        {summary.overlimit_items?.map((item) => (
-          <ReceiptLine
-            key={`over-${item.order_item_id}`}
-            label={`${item.item_name}`}
-            quantity={item.quantity}
-            unitPrice={item.price_per_unit}
-            amount={item.line_total}
-          />
-        ))}
-        <ReceiptLine
-          label="Add-ons"
-          amount={
-            (summary.addon_subtotal ?? 0) + (summary.overlimit_subtotal ?? 0)
-          }
-          bold
-        />
-      </>
-    )}
+    <ChargeSection
+      title="Premium Add-ons"
+      items={summary.addon_items}
+      subtotalLabel="Add-ons"
+      subtotal={summary.addon_subtotal}
+    />
+    <ChargeSection
+      title="Over Limit Charges"
+      items={summary.overlimit_items}
+      subtotalLabel="Over limit"
+      subtotal={summary.overlimit_subtotal}
+    />
 
     {summary.leftover_charge > 0 && (
       <>
@@ -181,10 +165,20 @@ const BillBreakdown = ({ summary }) => (
     <ReceiptRule />
 
     <ReceiptLine label="Subtotal" amount={summary.subtotal} />
-    <ReceiptLine
-      label={`Tax (${(summary.tax_rate * 100).toFixed(0)}%)`}
-      amount={summary.tax_amount}
-    />
+    {/* Automatic for big tables (6 or more guests by default) */}
+    {summary.gratuity_amount > 0 && (
+      <Box>
+        <ReceiptLine
+          label={`Gratuity (${percent(summary.gratuity_rate)})`}
+          amount={summary.gratuity_amount}
+        />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: -0.25, mb: 0.5 }}>
+          Added for parties of {summary.gratuity_min_party_size} or more (your table has{" "}
+          {summary.party_size})
+        </Typography>
+      </Box>
+    )}
+    <ReceiptLine label={`GST (${percent(summary.tax_rate)})`} amount={summary.tax_amount} />
 
     <ReceiptRule />
 

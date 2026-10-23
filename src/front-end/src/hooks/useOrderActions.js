@@ -117,38 +117,13 @@ export const useOrderActions = (onSuccess) => {
         "addOrderItems",
         async () => {
           const result = await orderService.addOrderItems(orderId, items);
-
-          // Generate list of items ordered from 1 to 4+ before counting.
-          // Callers that don't send names get a count instead of "undefined, undefined..."
-          // "2 × Salmon Roll"
-          const label = (item) =>
-            item.quantity ? `${item.quantity} × ${item.name}` : item.name;
-
-          let message;
-          if (items.some((item) => !item.name)) {
-            const units = items.reduce(
-              (total, item) => total + (Number(item.quantity) || 1),
-              0,
-            );
-            message = `${units} item${units === 1 ? "" : "s"} added to order`;
-          } else if (items.length === 1) {
-            message = `${label(items[0])} added to order`;
-          } else if (items.length === 2) {
-            message = `${label(items[0])} and ${label(items[1])} added to order`;
-          } else if (items.length === 3) {
-            message = `${label(items[0])}, ${label(items[1])}, and ${label(items[2])} added to order`;
-          } else {
-            // For 4+ items, show first 2 and count
-            message = `${label(items[0])}, ${label(items[1])}, and ${items.length - 2} other item${items.length - 2 > 1 ? "s" : ""} added to order`;
-          }
-
-          notifySuccess(message);
+          // No toast: Review order shows its own "Order sent!" screen with the items
           return result;
         },
         { triggerSuccess: true },
       );
     },
-    [apiWrapper, notifySuccess],
+    [apiWrapper],
   );
 
   const updateOrderItem = useCallback(

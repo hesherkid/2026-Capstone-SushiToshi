@@ -15,6 +15,8 @@ describe("Customer bottom nav", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    // Seated at a table from this phone, unless a test says otherwise
+    localStorage.setItem("session_id", "42");
     mockPathname = "/menu/full-menu";
     useAuth.mockReturnValue({ userRole: null });
   });
@@ -58,6 +60,15 @@ describe("Customer bottom nav", () => {
     localStorage.setItem("guest", "true");
     mockPathname = "/auth/login";
     render(<CustomerBottomNav />);
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
+  it("stays hidden for a customer who hasn't joined a table", () => {
+    localStorage.removeItem("session_id");
+    useAuth.mockReturnValue({ userRole: "customer" });
+
+    render(<CustomerBottomNav />);
+
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 });

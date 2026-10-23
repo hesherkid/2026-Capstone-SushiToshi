@@ -1,5 +1,6 @@
 import api from "@/config/api";
 import { decodeToken } from "@/config/auth";
+import { endTableVisit } from "@/utils/tableVisit";
 
 const NAME_IDENTIFIER = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
 
@@ -20,8 +21,13 @@ export const getMyUserId = () => {
  * Customer pages use this instead of trusting a session_id saved in the browser: a leftover
  * value (another tab, an earlier visit) pointed them at another table's bills.
  * The answer is saved as session_id for code that still reads it from localStorage.
+ *
+ * If this phone was seated and the server now has no session for it, staff ended the
+ * session: the visit is cleared and the thank-you screen is shown (see endTableVisit).
  */
 export const fetchMySessionId = async () => {
+  const wasSeated = !!localStorage.getItem("session_id");
+
   try {
     const { data } = await api.get("/DiningSession/participants/active-session-id");
     const sessionId = Number(data?.session_id);
@@ -35,6 +41,7 @@ export const fetchMySessionId = async () => {
   }
 
   localStorage.removeItem("session_id");
+  if (wasSeated) endTableVisit();
   return null;
 };
 

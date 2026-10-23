@@ -137,8 +137,12 @@ namespace back_end.domain.Seeders
 
     private void CreateUserIdMapping()
     {
-      // Create a simple mapping using existing users
-      var users = _context.Users.Take(20).ToList(); // Get first 20 users
+      // Create a simple mapping using existing users. These are who sessions, orders and bills
+      // are seeded for, so the sign-in-only customer is left out
+      var users = _context.Users
+          .Where(u => u.Email != UserSeeder.NewCustomerEmail)
+          .Take(20)
+          .ToList(); // Get first 20 users
       _userIdSeedData = new Dictionary<int, (string DisplayName, string GivenName, string Surname)>();
 
       foreach (var user in users)

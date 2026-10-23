@@ -131,6 +131,22 @@ namespace back_end.DTO.bill
     [JsonPropertyName("subtotal")]
     public decimal Subtotal { get; set; }
 
+    // Guests at the whole table (every bill in the session); decides the gratuity
+    [JsonPropertyName("party_size")]
+    public int Party_Size { get; set; }
+
+    // 0 unless the party is big enough
+    [JsonPropertyName("gratuity_rate")]
+    public decimal Gratuity_Rate { get; set; }
+
+    [JsonPropertyName("gratuity_amount")]
+    public decimal Gratuity_Amount { get; set; }
+
+    // Guests it takes for the gratuity to apply (0 = never), so the bill can explain it
+    [JsonPropertyName("gratuity_min_party_size")]
+    public int Gratuity_Min_Party_Size { get; set; }
+
+    // GST, on the subtotal and any gratuity
     [JsonPropertyName("tax_rate")]
     public decimal Tax_Rate { get; set; }
 

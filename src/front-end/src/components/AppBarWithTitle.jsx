@@ -16,6 +16,7 @@ import {
 import {
   Menu as MenuIcon,
   LogIn,
+  CircleUserRound,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -191,12 +192,16 @@ const handleLogout = () => {
             minWidth: 0,
           }}
         >
-          {canShowDrawer && (
+          {/* Customers get around with the bottom tabs (phones) and side rail (desktop) instead */}
+          {canShowDrawer && effectiveRole !== "customer" && (
             <IconButton
               color="inherit"
               aria-label="menu"
               onClick={() => setDrawerOpen(true)}
-              sx={{ p: { xs: 1, sm: 1.5 }, flexShrink: 0,}}
+              sx={{
+                p: { xs: 1, sm: 1.5 },
+                flexShrink: 0,
+              }}
             >
               <MenuIcon />
             </IconButton>
@@ -264,6 +269,18 @@ const handleLogout = () => {
                 Table {tableNumber}
               </Typography>
             </Box>
+          )}
+
+          {/* Customers with an account (not guests) get back to their home page from here */}
+          {userRole === "customer" && !isGuest && (
+            <IconButton
+              color="inherit"
+              aria-label="Account"
+              onClick={() => handleNavigation("/")}
+              sx={{ p: { xs: 1, sm: 1.25 }, flexShrink: 0 }}
+            >
+              <CircleUserRound size={26} />
+            </IconButton>
           )}
 
           {/* Location Dropdown - Only visible for staff and admin */}
@@ -343,7 +360,7 @@ const handleLogout = () => {
           )}
         </Box>
 
-        {canShowDrawer && (
+        {canShowDrawer && effectiveRole !== "customer" && (
           <AppNavigationDrawer
             open={drawerOpen}
             role={effectiveRole}
