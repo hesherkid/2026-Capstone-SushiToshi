@@ -44,8 +44,8 @@ export default function QRCodesPage() {
           return;
         }
 
-        // Allow both admin and staff to access QR code generation
-        if (userRole === 'admin' || userRole === 'staff') {
+        // Admin only, matching the API (AdminQrCodeController)
+        if (userRole === 'admin') {
           setIsAuthorized(true);
         } else {
           router.push('/unauthorized');

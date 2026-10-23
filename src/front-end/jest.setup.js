@@ -22,6 +22,18 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// jsdom's Blob has no text() (every current browser does)
+if (typeof Blob !== 'undefined' && !Blob.prototype.text) {
+  Blob.prototype.text = function text() {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(this)
+    })
+  }
+}
+
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
