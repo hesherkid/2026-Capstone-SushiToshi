@@ -124,7 +124,7 @@ describe("BillBreakdown", () => {
 
     expect(screen.getByText("Over Limit Charges")).toBeInTheDocument();
     expect(screen.getByText("Hot Stone Steak")).toBeInTheDocument();
-    expect(screen.getByText("1 x $5.00")).toBeInTheDocument();
+    expect(screen.getByText("1 × $5.00")).toBeInTheDocument();
     expect(screen.getByText("Over limit").nextSibling).toHaveTextContent(
       "$5.00",
     );
