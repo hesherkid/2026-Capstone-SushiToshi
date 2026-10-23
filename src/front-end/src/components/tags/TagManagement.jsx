@@ -4,12 +4,6 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";
 import {
   Box,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   DialogTitle,
   DialogContent,
@@ -17,18 +11,16 @@ import {
   Typography,
   Alert,
   InputAdornment,
-  IconButton,
-  CircularProgress,
-  Tooltip,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
-import { Edit, Image as ImageIcon, Trash2, Eye, X } from "lucide-react";
+import { Edit, Trash2, Eye } from "lucide-react";
 import api from "@/config/api";
 import TagChip from "./TagChip";
+import DeleteTagDialog from "./DeleteTagDialog";
+import TagMenuItemsDialog from "./TagMenuItemsDialog.";
+import { serverMessage } from "@/utils/serverMessage";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
-//import { isAuthenticated } from "@/utils/token";
-// import { userAgentFromString } from "next/server";F
 
 const calculateColorDifference = (color1, color2) => {
   const hex2rgb = (hex) => {
@@ -140,12 +132,11 @@ const generateColorSet = (count, existingColors) => {
   return Array.from(colors);
 };
 
-
 const TagManagement = () => {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-const [currentTag, setCurrentTag] = useState({tag_name: "", tag_color: "" });
+  const [currentTag, setCurrentTag] = useState({ tag_name: "", tag_color: "" });
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -159,67 +150,67 @@ const [currentTag, setCurrentTag] = useState({tag_name: "", tag_color: "" });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tagToDelete, setTagToDelete] = useState(null);
 
-const columns = [
-  {
-    field: "tag_name",  // Changed from "name" to "tag_name"
-    headerName: "Preview",
-    flex: 0.25,
-    sortable: true,
-    renderCell: (params) => {
-      if (!params?.row) return null;
-      return (
-        <Box sx={{ display: "flex", justifyContent: "left", width: "100%" }}>
-          <TagChip tag={params.row} size="xl" />
-        </Box>
-      );
+  const columns = [
+    {
+      field: "tag_name",
+      headerName: "Preview",
+      flex: 0.25,
+      sortable: true,
+      renderCell: (params) => {
+        if (!params?.row) return null;
+        return (
+          <Box sx={{ display: "flex", justifyContent: "left", width: "100%" }}>
+            <TagChip tag={params.row} size="xl" />
+          </Box>
+        );
+      },
     },
-  },
-  {
-    field: "tag_color",  // Changed from "color_code" to "tag_color"
-    headerName: "Color Code",
-    flex: 0.25,
-    renderCell: (params) => {
-      if (!params?.value) {
-        return <Typography>N/A</Typography>;
-      }
-      return (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Box
-            sx={{
-              width: 24,
-              height: 24,
-              bgcolor: params.value,
-              borderRadius: 1,
-              border: "1px solid rgba(0, 0, 0, 0.1)",
-            }}
-          />
-          <Typography>{params.value}</Typography>
-        </Box>
-      );
+    {
+      field: "tag_color",
+      headerName: "Color Code",
+      flex: 0.25,
+      renderCell: (params) => {
+        if (!params?.value) {
+          return <Typography>N/A</Typography>;
+        }
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              sx={{
+                width: 24,
+                height: 24,
+                bgcolor: params.value,
+                borderRadius: 1,
+                border: "1px solid rgba(0, 0, 0, 0.1)",
+              }}
+            />
+            <Typography>{params.value}</Typography>
+          </Box>
+        );
+      },
     },
-  },
-  actionsColumn(
-    (tag) => [
-      {
-        label: "Edit",
-        icon: Edit,
-        onClick: () => handleOpenDialog("update", tag),
-      },
-      {
-        label: "View Items",
-        icon: Eye,
-        onClick: () => handleOpenItemsDialog(tag),
-      },
-      {
-        label: "Delete",
-        icon: Trash2,
-        color: "error",
-        onClick: () => handleDelete(tag),
-      },
-    ],
-    { flex: 0.25 }
-  ),
-];
+    actionsColumn(
+      (tag) => [
+        {
+          label: "Edit",
+          icon: Edit,
+          onClick: () => handleOpenDialog("update", tag),
+        },
+        {
+          label: "View Items",
+          icon: Eye,
+          onClick: () => handleOpenItemsDialog(tag),
+        },
+        {
+          label: "Delete",
+          icon: Trash2,
+          color: "error",
+          onClick: () => handleDelete(tag),
+        },
+      ],
+      { flex: 0.25 },
+    ),
+  ];
 
   const handleDelete = async (tag) => {
     setError(null);
@@ -255,7 +246,7 @@ const columns = [
       setMenuItems(response.data);
     } catch (err) {
       setItemsError(
-        err?.response?.data?.detail || "Failed to fetch menu items"
+        err?.response?.data?.detail || "Failed to fetch menu items",
       );
       setMenuItems([]);
     } finally {
@@ -269,189 +260,17 @@ const columns = [
     fetchMenuItemsForTag(tag.tag_id);
   };
 
-  const DeleteConfirmationDialog = () => (
-    <AppDialog
-      open={deleteDialogOpen}
-      onClose={() => setDeleteDialogOpen(false)}
-      maxWidth="xs"
-    >
-      <DialogTitle>Confirm Delete</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <Typography>Are you sure you want to delete this tag?</Typography>
-          {tagToDelete && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography>Tag:</Typography>
-              <TagChip tag={tagToDelete} size="l" />
-            </Box>
-          )}
-          <Typography color="error">
-            This action will remove the tag from all menu items and cannot be
-            undone.
-          </Typography>
-          {error && <Alert severity="error">{error}</Alert>}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-        <Button onClick={handleDeleteConfirm} variant="contained" color="error">
-          Delete
-        </Button>
-      </DialogActions>
-    </AppDialog>
-  );
-
-  const MenuItemsDialog = () => {
-    const handleRemoveTag = async (itemId) => {
-      try {
-        const response = await api.delete(`/menu-items/${itemId}/tags/${selectedTagForItems.tag_id}`);
-
-        if (response.status !== 200) {
-          throw new Error("Failed to remove tag from item");
-        }
-        setMenuItems(menuItems.filter((item) => item.item_id !== itemId));
-
-        setSuccessMessage(
-          `Tag removed from ${
-            menuItems.find((i) => i.item_id === itemId)?.name
-          }`
-        );
-      } catch (err) {
-        setError(
-          err?.response?.data?.detail || "Failed to remove tag from item"
-        );
-      }
-    };
-
-    return (
-      <AppDialog
-        open={itemsDialogOpen}
-        onClose={() => setItemsDialogOpen(false)}
-        maxWidth="md"
-      >
-        <DialogTitle>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography>Menu Items with Tag:</Typography>
-            {selectedTagForItems && (
-              <TagChip tag={selectedTagForItems} size="l" />
-            )}
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-          {loadingItems ? (
-            <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : itemsError ? (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {itemsError}
-            </Alert>
-          ) : menuItems.length === 0 ? (
-            <Typography color="text.secondary" align="center" sx={{ py: 3 }}>
-              No menu items found with this tag
-            </Typography>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ color: "white" }}>Image</TableCell>
-                    <TableCell sx={{ color: "white" }}>Name</TableCell>
-                    <TableCell sx={{ color: "white" }}>Description</TableCell>
-                    <TableCell sx={{ color: "white" }} align="center">
-                      Actions
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {menuItems.map((item) => (
-                    <TableRow key={item.item_id} hover>
-                      <TableCell sx={{ width: 100 }}>
-                        {item.item_image_url ? (
-                          <Box
-                            component="img"
-                            src={item.item_image_url}
-                            alt={item.name}
-                            sx={{
-                              width: 60,
-                              height: 60,
-                              objectFit: "cover",
-                              borderRadius: 1,
-                            }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: 60,
-                              height: 60,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              bgcolor: "grey.100",
-                              borderRadius: 1,
-                            }}
-                          >
-                            <ImageIcon size={24} color="grey" />
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body1">{item.name}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {item.description}
-                        </Typography>
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{
-                          width: "100px",
-                          padding: "0 16px",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            height: "100%",
-                          }}
-                        >
-                          <Tooltip title="Remove tag">
-                            <IconButton
-                              onClick={() => handleRemoveTag(item.item_id)}
-                              color="error"
-                              size="small"
-                              sx={{
-                                "&:hover": {
-                                  backgroundColor: "error.light",
-                                  color: "error.dark",
-                                },
-                              }}
-                            >
-                              <X size={18} />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setItemsDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </AppDialog>
-    );
+  const handleRemoveTagFromItem = async (item) => {
+    setError(null);
+    try {
+      await api.delete(
+        `/menuItem/${item.item_id}/tags/${selectedTagForItems.tag_id}`,
+      );
+      setMenuItems((prev) => prev.filter((i) => i.item_id !== item.item_id));
+      setSuccessMessage(`Tag removed from ${item.name}`);
+    } catch (err) {
+      setError(serverMessage(err, "Failed to remove tag from item"));
+    }
   };
 
   const fetchTags = async () => {
@@ -480,10 +299,9 @@ const columns = [
     }
   };
 
-    useEffect(() => {
-        fetchTags();
-      
-    }, []);
+  useEffect(() => {
+    fetchTags();
+  }, []);
 
   const handleOpenDialog = (mode, tag = null) => {
     const existingColors = tags.map((t) => t.tag_color);
@@ -492,8 +310,7 @@ const columns = [
 
     if (mode === "add") {
       setCurrentTag({ tag_name: "", tag_color: newColors[0] });
-    } 
-    else {
+    } else {
       setCurrentTag({
         tag_id: tag.tag_id,
         tag_name: tag.tag_name,
@@ -509,7 +326,7 @@ const columns = [
     setDialogOpen(false);
     setError(null);
     setShowColorPicker(false);
-    setCurrentTag({ name: "", color_code: "" });
+    setCurrentTag({ tag_name: "", tag_color: "" });
   };
 
   const handleColorClick = (color) => {
@@ -525,16 +342,13 @@ const columns = [
       }
 
       if (dialogMode === "add") {
-        const response = await api.post("/Tag" , currentTag);
+        const response = await api.post("/Tag", currentTag);
         if (response.status !== 201) {
           throw new Error("Failed to create tag");
         }
         setSuccessMessage("Tag created successfully");
       } else {
-        const response = await api.put(
-          `/Tag/${currentTag.tag_id}`,
-          currentTag
-        );
+        const response = await api.put(`/Tag/${currentTag.tag_id}`, currentTag);
         if (response.status !== 200) {
           throw new Error("Failed to update tag");
         }
@@ -564,10 +378,7 @@ const columns = [
         getRowId: (row) => row.tag_id,
       }}
     >
-      <AppDialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
-      >
+      <AppDialog open={dialogOpen} onClose={handleCloseDialog}>
         <DialogTitle>
           {dialogMode === "add" ? "Add New Tag" : "Update Tag"}
         </DialogTitle>
@@ -592,33 +403,35 @@ const columns = [
               fullWidth
               error={Boolean(error && !currentTag.tag_name.trim())}
               helperText={
-                error && !currentTag.tag_name.trim() ? "Tag name is required" : ""
+                error && !currentTag.tag_name.trim()
+                  ? "Tag name is required"
+                  : ""
               }
             />
-              <TextField
-                label="Color"
-                value={currentTag.tag_color}
-                onClick={() => setShowColorPicker(true)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Box
-                        sx={{
-                          width: 24,
-                          height: 24,
-                          backgroundColor: currentTag.tag_color,
-                          borderRadius: 1,
-                          border: "1px solid rgba(0, 0, 0, 0.23)",
-                          cursor: "pointer",
-                        }}
-                      />
-                    </InputAdornment>
-                  ),
-                  readOnly: true,
-                  sx: { cursor: "pointer" },
-                }}
-                fullWidth
-              />
+            <TextField
+              label="Color"
+              value={currentTag.tag_color}
+              onClick={() => setShowColorPicker(true)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        backgroundColor: currentTag.tag_color,
+                        borderRadius: 1,
+                        border: "1px solid rgba(0, 0, 0, 0.23)",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </InputAdornment>
+                ),
+                readOnly: true,
+                sx: { cursor: "pointer" },
+              }}
+              fullWidth
+            />
 
             {showColorPicker && (
               <Box sx={{ width: "100%" }}>
@@ -678,7 +491,7 @@ const columns = [
                           borderRadius: 1,
                           cursor: "pointer",
                           border:
-                            currentTag.tag_color  === color
+                            currentTag.tag_color === color
                               ? "2px solid black"
                               : "1px solid rgba(0, 0, 0, 0.23)",
                           "&:hover": {
@@ -709,9 +522,25 @@ const columns = [
         </DialogActions>
       </AppDialog>
 
-      <DeleteConfirmationDialog />
-      <MenuItemsDialog />
+      <DeleteTagDialog
+        open={deleteDialogOpen}
+        tag={tagToDelete}
+        error={deleteDialogOpen ? error : null}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+      />
 
+      <TagMenuItemsDialog
+        open={itemsDialogOpen}
+        tag={selectedTagForItems}
+        items={menuItems}
+        loading={loadingItems}
+        loadError={itemsError}
+        error={itemsDialogOpen ? error : null}
+        onErrorClose={() => setError(null)}
+        onClose={() => setItemsDialogOpen(false)}
+        onRemoveItem={handleRemoveTagFromItem}
+      />
     </ManagementPage>
   );
 };

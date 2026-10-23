@@ -6,13 +6,16 @@ import {
   IconButton,
   DialogContent,
   Divider,
+  Alert,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
 import { X } from "lucide-react";
 import TagChip from "@/components/tags/TagChip";
+import { serverMessage } from "@/utils/serverMessage";
 
 const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
   const [selectedTagIds, setSelectedTagIds] = useState(new Set());
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (selectedItem?.tags) {
@@ -20,16 +23,15 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
     } else {
       setSelectedTagIds(new Set());
     }
+    setError(null);
   }, [selectedItem, open]);
 
   const handleTagToggle = async (tagId) => {
     const isSelected = selectedTagIds.has(tagId);
+    const action = isSelected ? "remove" : "add";
+    setError(null);
     try {
-      await onTagAction(
-        selectedItem.item_id,
-        tagId,
-        isSelected ? "remove" : "add"
-      );
+      await onTagAction(selectedItem.item_id, tagId, action);
       setSelectedTagIds((prev) => {
         const newSet = new Set(prev);
         if (isSelected) {
@@ -41,6 +43,7 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
       });
     } catch (err) {
       console.error("Failed to update tags:", err);
+      setError(serverMessage(err, `Failed to ${action} tag`));
     }
   };
 
@@ -82,6 +85,11 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
         </IconButton>
       </Box>
       <DialogContent sx={{ pt: 2 }}>
+        {error && (
+          <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <Typography variant="h6" sx={{ mb: 1 }}>
           Applied Tags
         </Typography>

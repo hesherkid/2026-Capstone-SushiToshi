@@ -17,6 +17,9 @@ import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
 import MenuItemForm from "@/components/admin/MenuItemForm";
+import { serverMessage } from "@/utils/serverMessage";
+
+const UNDO_AUTO_HIDE_MS = 10000;
 
 const MenuItemManagement = () => {
   const [items, setItems] = useState([]);
@@ -38,6 +41,7 @@ const MenuItemManagement = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [formKey, setFormKey] = useState(0);
+  const [undoTag, setUndoTag] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -75,17 +79,47 @@ const MenuItemManagement = () => {
   }, []);
 
   const handleTagAction = async (itemId, tagId, action) => {
-    try {
-      if (action === "add") {
-        await api.post(`/menuitem/${itemId}/tags/${tagId}`);
-      } else {
-        await api.delete(`/menuitem/${itemId}/tags/${tagId}`);
-      }
-      await fetchData();
-    } catch (err) {
-      console.error(`Error ${action}ing tag:`, err);
-      setError(`Failed to ${action} tag`);
+    if (action === "add") {
+      await api.post(`/menuitem/${itemId}/tags/${tagId}`);
+    } else {
+      await api.delete(`/menuitem/${itemId}/tags/${tagId}`);
     }
+    await fetchData();
+  };
+
+  const clearSuccess = () => {
+    setSuccessMessage("");
+    setUndoTag(null);
+  };
+
+  const handleGridTagRemove = async (item, tag) => {
+    setError(null);
+    try {
+      await handleTagAction(item.item_id, tag.tag_id, "remove");
+    } catch (err) {
+      console.error("Error removing tag:", err);
+      setError(serverMessage(err, "Failed to remove tag"));
+      return;
+    }
+    const tagName = tag.name || tag.tag_name || "Tag";
+    setUndoTag({ itemId: item.item_id, tagId: tag.tag_id, tagName });
+    setSuccessMessage(`Removed "${tagName}" from ${item.name}`);
+  };
+
+  const handleUndoTagRemove = async () => {
+    if (!undoTag) return;
+    const { itemId, tagId, tagName } = undoTag;
+    clearSuccess();
+    try {
+      await api.post(`/menuitem/${itemId}/tags/${tagId}`);
+    } catch (err) {
+      if (err?.response?.status !== 409) {
+        setError(serverMessage(err, "Failed to undo tag removal"));
+        return;
+      }
+    }
+    await fetchData();
+    setSuccessMessage(`Restored "${tagName}"`);
   };
 
   const handleCreate = () => {
@@ -104,14 +138,6 @@ const MenuItemManagement = () => {
     setError(null);
     setFormKey((k) => k + 1);
     setDialogOpen(true);
-  };
-
-  const serverMessage = (err, fallback) => {
-    const data = err?.response?.data;
-    if (typeof data === "string" && data.trim()) return data;
-    if (typeof data?.message === "string" && data.message.trim())
-      return data.message;
-    return fallback;
   };
 
   const handleDelete = async (item) => {
@@ -220,9 +246,7 @@ const MenuItemManagement = () => {
                 tag={tag}
                 isActionChip={true}
                 isUsedFor="menu-item"
-                onToggle={() =>
-                  handleTagAction(params.row.item_id, tag.tag_id, "remove")
-                }
+                onToggle={() => handleGridTagRemove(params.row, tag)}
               />
             ))}
             <IconButton
@@ -297,6 +321,7 @@ const MenuItemManagement = () => {
       setDialogOpen(false);
       setImageFile(null);
       setImagePreview("");
+      setUndoTag(null);
       setSuccessMessage(
         selectedItem
           ? "Menu item updated successfully"
@@ -318,7 +343,15 @@ const MenuItemManagement = () => {
       error={error}
       onErrorClose={() => setError(null)}
       success={successMessage}
-      onSuccessClose={() => setSuccessMessage("")}
+      onSuccessClose={clearSuccess}
+      successAction={
+        undoTag ? (
+          <Button color="inherit" size="small" onClick={handleUndoTagRemove}>
+            Undo
+          </Button>
+        ) : null
+      }
+      successAutoHideMs={undoTag ? UNDO_AUTO_HIDE_MS : undefined}
       gridProps={{
         rows: items,
         columns,
