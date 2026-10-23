@@ -19,7 +19,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 
 import api from "@/config/api";
-import { loginUser, loginAsGuest, getReusableGuestToken } from "@/utils/auth";
+import { loginUser, loginAsGuest, getReusableGuestToken, getAuthToken, isGuestClaims } from "@/utils/auth";
+import { decodeToken, extractRoles, isTokenExpired } from "@/config/auth";
 import { startTableVisit } from "@/utils/tableVisit";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -44,10 +45,17 @@ const LoginFormContent = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  // Signed in, but the table couldn't be joined (e.g. staff haven't started it yet)
+  const [joinFailed, setJoinFailed] = useState(false);
+  // A signed-in customer scanned a table's QR code and is being joined to it
+  const [joiningTable, setJoiningTable] = useState(false);
 
   // Keep the context from the restaurant QR code.
   const locationId = searchParams.get("locationId");
   const tableNumber = searchParams.get("tableNumber");
+  // Guests have no account to come back to, so they can only get in by joining a table,
+  // and the table comes from its QR code
+  const hasTable = !!(locationId && tableNumber);
 
   // A scanned QR code is a new visit: show its table right away (not the last visit's)
   // and drop the old session so nothing can order onto it
@@ -86,7 +94,7 @@ const LoginFormContent = () => {
       // e.g. "Table 4 doesn't have an active session yet. Please ask staff to start your table."
       throw new TableJoinError(
         err.response?.data?.message ||
-          "We couldn't join your table. Please ask staff for help.",
+        "We couldn't join your table. Please ask staff for help.",
         err.response?.status,
       );
     }
@@ -117,6 +125,8 @@ const LoginFormContent = () => {
   };
 
   const handleAuthError = (err) => {
+    setJoinFailed(err instanceof TableJoinError);
+
     if (err instanceof TableJoinError) {
       setNeedsVerification(false);
       setError(err.message);
@@ -200,6 +210,7 @@ const LoginFormContent = () => {
   };
 
   const handleContinueAsGuest = async () => {
+    if (!hasTable) return;
     setLoading(true);
     setError("");
     setNeedsVerification(false);
@@ -236,6 +247,7 @@ const LoginFormContent = () => {
       router.refresh();
     } catch (err) {
       if (err.response?.status === 401) {
+        setJoinFailed(false);
         setError("Something went wrong. Please try again.");
       } else {
         handleAuthError(err);
@@ -244,6 +256,48 @@ const LoginFormContent = () => {
       setLoading(false);
     }
   };
+
+  // The sign-in already worked and its token is saved, so only the join is tried again
+  // (no new guest account, no typing the password again)
+  const handleRetryJoin = async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setJoinFailed(false);
+      setError("Please sign in again.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const sessionId = await startQrDiningSession(token);
+      router.replace(sessionId ? "/menu/full-menu" : "/");
+      router.refresh();
+    } catch (err) {
+      handleAuthError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // A customer who signed in first (and saw their home page) then scanned the table's QR code:
+  // join with that sign-in instead of asking for the password again. Guests still tap
+  // Continue as Guest, and staff accounts never join a table this way
+  useEffect(() => {
+    if (!locationId || !tableNumber) return;
+
+    const token = getAuthToken();
+    if (!token || isTokenExpired(token) || localStorage.getItem("guest") === "true") return;
+
+    const claims = decodeToken(token);
+    const isCustomer = extractRoles(claims).some((role) => String(role).toLowerCase() === "customer");
+    if (!isCustomer || isGuestClaims(claims)) return;
+
+    setJoiningTable(true);
+    handleRetryJoin().finally(() => setJoiningTable(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationId, tableNumber]);
 
   // --------------------------------------------------
   // GOOGLE LOGIN
@@ -338,10 +392,22 @@ const LoginFormContent = () => {
         onClick={handleContinueAsGuest}
         fullWidth
         variant="contained"
-        disabled={loading}
+        disabled={loading || !hasTable}
+        aria-describedby={hasTable ? undefined : "guest-needs-table"}
       >
         Continue as Guest
       </Button>
+
+      {!hasTable && (
+        <Typography
+          id="guest-needs-table"
+          variant="body2"
+          color="text.secondary"
+          sx={{ width: "100%", textAlign: "center", mt: -1 }}
+        >
+          To continue as a guest, scan the QR code on your table.
+        </Typography>
+      )}
 
       <Divider sx={{ width: "100%" }}>
         <Typography variant="body2" color="text.secondary">
@@ -356,17 +422,37 @@ const LoginFormContent = () => {
         </Alert>
       )}
 
+      {joiningTable && (
+        <Alert severity="info" icon={<CircularProgress size={20} />} sx={{ width: "100%" }}>
+          Joining Table {tableNumber}…
+        </Alert>
+      )}
+
       {/* Authentication errors */}
       {error && (
         <Alert
           severity={
             needsVerification ? "warning" : "error"
           }
-          sx={{ width: "100%" }}
+          sx={{ width: "100%", "& .MuiAlert-message": { flexGrow: 1 } }}
         >
           <Typography variant="body2">
             {error}
           </Typography>
+
+          {joinFailed && (
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              fullWidth
+              onClick={handleRetryJoin}
+              disabled={loading}
+              sx={{ mt: 2, textTransform: "none", fontWeight: 600, }}
+            >
+              Try again
+            </Button>
+          )}
 
           {
             needsVerification && (

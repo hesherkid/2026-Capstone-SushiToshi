@@ -1,84 +1,35 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Card,
-  Typography,
-  Alert,
-  IconButton,
-  Dialog,
-  Button,
-} from "@mui/material";
-import { Plus, Receipt } from "lucide-react";
-import { styled } from "@mui/material/styles";
+import { useState, useEffect } from "react";
+import { Alert, Box, Tab, Tabs, Typography } from "@mui/material";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import { setPageLoading } from "@/utils/pageLoading";
-import NewBillDialog from "@/components/staff/SessionDashboard/components/dialogs/NewBillDialog";
-import CustomerBillDialog from "@/components/customer/CustomerBillDialog";
+import BillDetails from "@/components/customer/BillDetails";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
-import { SessionProvider } from "@/components/staff/SessionDashboard/context/SessionContext";
+import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { useNotification } from "@/contexts/NotificationContext";
-import { getStatusColorValue, formatDateTime, formatBillStatus, getTableDescription, sortBillsByStatus } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { sortBillsByStatus } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 
-const AddButton = styled(IconButton)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.main,
-  color: "white",
-  padding: theme.spacing(1),
-  minWidth: "auto",
-  "&:hover": {
-    backgroundColor: theme.palette.primary.dark,
-  },
-  "& svg": {
-    width: 20,
-    height: 20,
-  },
-}));
+const billName = (bill) => bill.bill_name || `Bill #${bill.bill_id}`;
 
-const StatusChip = styled(Typography, {
-  shouldForwardProp: (prop) => prop !== '$statusColor',
-})(({ theme, $statusColor }) => ({
-  color: "white",
-  backgroundColor: $statusColor,
-  padding: `${theme.spacing(0.5)} ${theme.spacing(1)}`,
-  borderRadius: theme.shape.borderRadius,
-  alignSelf: "flex-start",
-  fontWeight: "medium",
-  fontSize: "0.875rem",
-  userSelect: "none",
-}));
+// The bill this phone orders on (set on the menu and Review order), if it's still at the table
+const myBillId = (bills) => {
+  // Also runs while rendering, which happens on the server too
+  if (typeof window === "undefined") return null;
+  const saved = Number(localStorage.getItem("currentBillId"));
+  return bills.some((bill) => bill.bill_id === saved) ? saved : null;
+};
 
-const BillCard = styled(Card, {
-  shouldForwardProp: (prop) => prop !== '$statusColor',
-})(({ theme, $statusColor }) => ({
-  padding: theme.spacing(3),
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(1),
-  backgroundColor: "white",
-  borderRadius: theme.shape.borderRadius,
-  borderLeft: `6px solid ${$statusColor}`,
-  minHeight: "200px",
-  position: "relative",
-  boxShadow: theme.shadows[2],
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  "&:hover": {
-    boxShadow: theme.shadows[4],
-    transform: "translateY(-4px)",
-  },
-}));
-
-const BillsDashboard = () => {
-  const { notifySuccess, notifyError } = useNotification();
+// The guest's bill, right on the page: the total, where it's at and Ready for bill, then the
+// receipt. A table with several bills gets tabs, starting on the one this phone orders on
+const BillsPage = () => {
+  const { notifyError } = useNotification();
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notSeated, setNotSeated] = useState(false);
   const [error, setError] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
-  const [selectedBillId, setSelectedBillId] = useState(null)
   const [sessionId, setSessionId] = useState(null);
-
-  const isGuest = () => localStorage.getItem("guest") === "true";
+  const [selectedBillId, setSelectedBillId] = useState(null);
 
   // The app bar's spinner is the page's only loading indicator
   useEffect(() => {
@@ -86,28 +37,24 @@ const BillsDashboard = () => {
   }, [loading]);
   useEffect(() => () => setPageLoading(false), []);
 
-  // Fetch active session ID first
   useEffect(() => {
     const fetchActiveSession = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
         // Ask the server (guests included) rather than trusting a saved session_id
         const mySessionId = await fetchMySessionId();
         if (mySessionId) {
           // Still loading: the bills are fetched next
           setSessionId(mySessionId);
         } else {
-          setError(NOT_SEATED_MESSAGE);
+          setNotSeated(true);
           setLoading(false);
         }
       } catch (err) {
         console.error("Error fetching active session:", err);
         setError(
           err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          "Unable to fetch your active session"
+            err?.response?.data?.message ||
+            "Unable to fetch your active session",
         );
         setLoading(false);
       }
@@ -116,154 +63,110 @@ const BillsDashboard = () => {
     fetchActiveSession();
   }, []);
 
-  // Fetch bills when sessionId is available
-  useEffect(() => {
-    if (sessionId) {
-      fetchBills(sessionId);
-    }
-  }, [sessionId]);
-
-  const fetchBills = async (sid) => {
-
-    const apiClient = api;
-
+  // quiet: a background refresh. No spinner, and if it fails the bills already shown stay up
+  const fetchBills = async (sid, { quiet = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!quiet) setLoading(true);
 
-      const res = await apiClient.get(`/Bill/get_bills/${sid}`);
+      const res = await api.get(`/Bill/get_bills/${sid}`);
+      if (res.status !== 200) throw new Error("Failed to fetch bills");
 
-      if (res.status !== 200) {
-        throw new Error("Failed to fetch bills");
-      }
+      // Cancelled bills are nothing to pay; open ones first
+      const list = sortBillsByStatus(
+        (Array.isArray(res.data) ? res.data : []).filter(
+          (bill) => bill?.bill_id && String(bill.status ?? "").toUpperCase() !== "CANCELLED",
+        ),
+      );
+      setBills(list);
 
-      const billsData = Array.isArray(res.data) ? res.data : [];
-
-      setBills(billsData);
+      // Keep the bill being looked at; otherwise this phone's bill, otherwise the first
+      setSelectedBillId((current) =>
+        list.some((bill) => bill.bill_id === current) ? current : myBillId(list) ?? list[0]?.bill_id ?? null,
+      );
     } catch (err) {
       console.error("Error fetching bills:", err);
 
       // 404 means no bills exist - not an error
       if (err?.response?.status === 404) {
         setBills([]);
-        setError(null);
-      } else {
-        notifyError(
-          err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          "Error loading bills"
-        );
+        setSelectedBillId(null);
+      } else if (!quiet) {
+        notifyError(err?.response?.data?.detail || err?.response?.data?.message || "Error loading bills");
       }
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   };
 
-  const handleBillCreated = async () => {
-    if (sessionId) {
-      await fetchBills(sessionId);
-    }
-    setDialogOpen(false);
-  };
+  useEffect(() => {
+    if (sessionId) fetchBills(sessionId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
-  const handleViewSummary = (billId) => {
-    setSelectedBillId(billId);
-    setSummaryDialogOpen(true);
-  };
+  // Shows a bill as soon as staff open it, and its status as it changes
+  useAutoRefresh(() => fetchBills(sessionId, { quiet: true }), { enabled: !!sessionId });
 
-  const sortedBills = sortBillsByStatus(bills || []);
+  const ordersGoOn = myBillId(bills);
 
   return (
-    <SessionProvider sessionId={sessionId}>
-      <CustomerPageContainer>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 4,
-          }}
-        >
-          <Typography variant="h4">Your Table's Bills</Typography>
+    <CustomerPageContainer sx={{ maxWidth: 720 }}>
+      <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
+        {bills.length > 1 ? "Your table's bills" : "Your bill"}
+      </Typography>
 
-        </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            {typeof error === "string" ? error : "Error loading bills"}
-          </Alert>
-        )}
-
-        {/* While loading, the app bar shows the spinner and nothing is listed yet */}
-        {loading ? null : !bills || bills.length === 0 ? (
-          <Alert severity="info">No bills yet. Create your first bill to get started.</Alert>
-        ) : (
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: 2,
-              width: "100%",
-            }}
-          >
-            {sortedBills.map((bill) => {
-              if (!bill?.bill_id) return null;
-              const statusColor = getStatusColorValue(bill.status);
-
-              return (
-                <BillCard key={bill.bill_id} $statusColor={statusColor}>
-                  <Typography variant="h6" component="div" noWrap>
-                    {bill.bill_name || `Bill #${bill.bill_id}`}
-                  </Typography>
-
-                  <StatusChip $statusColor={statusColor}>
-                    {formatBillStatus(bill.status)}
-                  </StatusChip>
-
-                  <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: "medium" }}>
-                    Total: {bill.total_count || 0} guest{bill.total_count !== 1 ? 's' : ''}
-                  </Typography>
-
-                  {bill.created_at && (
-                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                      Created: {formatDateTime(bill.created_at)}
-                    </Typography>
-                  )}
-
-                  {bill.table_numbers?.length > 0 && (
-                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                      {getTableDescription(bill.table_numbers)}
-                    </Typography>
-                  )}
-
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<Receipt size={16} />}
-                    onClick={() => handleViewSummary(bill.bill_id)}
-                    sx={{ mt: 1 }}
-                  >
-                    View Summary
-                  </Button>
-                </BillCard>
-              );
-            })}
+      {/* While loading, the app bar shows the spinner and nothing is listed yet */}
+      {loading ? null : notSeated ? (
+        <Alert severity="info">{NOT_SEATED_MESSAGE}</Alert>
+      ) : bills.length === 0 ? (
+        !error && (
+          <Box sx={{ textAlign: "center", py: 6 }}>
+            <Typography variant="h6" component="h2">
+              No bills yet
+            </Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+              Your server will open a bill for your table, and it will show up here.
+            </Typography>
           </Box>
-        )}
+        )
+      ) : (
+        <>
+          {bills.length > 1 && (
+            <Tabs
+              value={selectedBillId ?? false}
+              onChange={(_, billId) => setSelectedBillId(billId)}
+              variant="scrollable"
+              scrollButtons={false}
+              aria-label="Bills at your table"
+              sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
+            >
+              {bills.map((bill) => (
+                <Tab
+                  key={bill.bill_id}
+                  value={bill.bill_id}
+                  label={bill.bill_id === ordersGoOn ? `${billName(bill)} (yours)` : billName(bill)}
+                  sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.95rem" }}
+                />
+              ))}
+            </Tabs>
+          )}
 
-        {/* Bill Summary Dialog */}
-        <CustomerBillDialog
-          open={summaryDialogOpen}
-          sessionId={sessionId}
-          billId={selectedBillId}
-          onClose={() => {
-            setSummaryDialogOpen(false);
-            setSelectedBillId(null);
-          }}
-        />
-      </CustomerPageContainer>
-    </SessionProvider>
+          {selectedBillId && (
+            <BillDetails
+              key={selectedBillId}
+              sessionId={sessionId}
+              billId={selectedBillId}
+            />
+          )}
+        </>
+      )}
+    </CustomerPageContainer>
   );
 };
 
-export default BillsDashboard;
+export default BillsPage;

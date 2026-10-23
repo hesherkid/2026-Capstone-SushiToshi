@@ -1,140 +1,156 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { decodeToken, isTokenExpired } from "@/config/auth";
-import { getAuthToken } from "@/utils/auth";
 import { useRouter } from "next/navigation";
-import { api } from '@/config/api'
+import { Box, Button, Paper, Typography } from "@mui/material";
+import { decodeToken, isTokenExpired } from "@/config/auth";
+import { getAuthToken, isGuestClaims, logoutCustomer } from "@/utils/auth";
+import { hasTableVisit } from "@/utils/tableVisit";
 import useAuth from "@/hooks/useAuth";
+import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
+import MaterialSymbol from "@/components/common/MaterialSymbol";
+
+const MENU_PATH = "/menu/full-menu";
+const LOGIN_PATH = "/auth/login";
+
+const STEPS = [
+  { symbol: "qr_code_scanner", title: "Scan your table's QR code", text: "It's on the table, and joins you to your table's order." },
+  { symbol: "menu_book_2", title: "Order from the menu", text: "Order as many rounds as you like. We'll bring them to your table." },
+  { symbol: "receipt_long", title: "Ask for your bill", text: "Tap Ready for bill when you're done, and your server will bring it." },
+];
 
 const isGuestAccount = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  if (localStorage.getItem("guest") === "true") {
-    return true;
-  }
+  if (typeof window === "undefined") return false;
+  if (localStorage.getItem("guest") === "true") return true;
 
   const token = getAuthToken();
-  if (!token || isTokenExpired(token)) {
-    return false;
-  }
-
-  const claims = decodeToken(token);
-  const email = (claims?.email || claims?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] || "").toLowerCase();
-  return email === "guestemail@email.com";
+  if (!token || isTokenExpired(token)) return false;
+  return isGuestClaims(decodeToken(token));
 };
 
-// Home page for customers (and signed-out visitors); guests are sent to the menu
+// Saved after a Google sign-in; email sign-in doesn't send a name
+const savedFirstName = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null")?.first_name || "";
+  } catch {
+    return "";
+  }
+};
+
+/**
+ * Home page for registered customers: how to get started (scan the QR code). Guests go
+ * straight to the menu, and signed-out visitors to sign in.
+ */
 const CustomerHome = () => {
-  const [userName, setUserName] = useState(null);
-  const [isGuest, setIsGuest] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [locations, setLocations] = useState([]); // ← Changed from location to locations
-  const [selectedLocation, setSelectedLocation] = useState(""); // ← Added this state
-  const [selectedLocationName , setSelectedLocationName] = useState("")
-  const [loading, setLoading] = useState(false); // ← Added loading state
   const router = useRouter();
-  const { isAuthenticated: isAuthenticatedHook, userEmail } = useAuth();
+  // Every useAuth call starts signed out and loading; only its answer after loading counts
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  // Whether to show the page yet: guests and signed-out visitors are sent elsewhere
+  const [ready, setReady] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  // Seated at a table from this phone: no logging out until the visit ends
+  const [seated, setSeated] = useState(false);
+  const [tableNumber, setTableNumber] = useState("");
 
-
-useEffect(() => {
-  const getLocation = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/location");
-      setLocations(response.data);
-      
-      // Auto-select first location if only one exists
-      if (response.data && response.data.length === 1) {
-        setSelectedLocation(response.data[0].name);
-      }
-      
-      // Use response.data instead of selectedLocation
-      const locationId = Number(localStorage.getItem("locationId"));
-      const filteredLocation = response.data.find(loc => loc.location_Id === locationId);
-      
-      // If you want to set it in state
-      if (filteredLocation) {
-        setSelectedLocationName(filteredLocation.name);
-      }
-      
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  getLocation();
-}, []);
-
-
+  // Only guests skip this page. A registered customer joins a table by scanning its QR code,
+  // never just by signing in, so they always get the steps here. It's their page, so
+  // signing in comes first
   useEffect(() => {
-    const init = async () => {
-      let name = null;
-      let guestMode = false;
-
-      // Check if user is authenticated via token
-      const token = getAuthToken();
-      if (token && !isTokenExpired(token)) {
-        const claims = decodeToken(token);
-        if (claims) {
-          // Try to get name from different possible claim fields
-          name = claims.name || 
-                 claims.given_name || 
-                 claims.email?.split('@')[0] || 
-                 userEmail?.split('@')[0] ||
-                 "User";
-        }
-      }
-
-      // Check if guest mode
-      if (!name && isGuestAccount()) {
-        guestMode = true;
-        name = "Guest";
-      }
-
-      setIsGuest(guestMode);
-      setUserName(name);
-      setReady(true);
-    };
-
-    init();
-  }, [userEmail]);
-
-  useEffect(() => {
+    if (authLoading) return;
     if (isGuestAccount()) {
-      router.replace("/menu/full-menu");
+      router.replace(MENU_PATH);
+      return;
     }
-  }, [router, userEmail]);
+    if (!isAuthenticated) {
+      router.replace(LOGIN_PATH);
+      return;
+    }
+    setFirstName(savedFirstName());
+    setSeated(hasTableVisit());
+    setTableNumber(localStorage.getItem("tableNumber") || "");
+    setReady(true);
+  }, [authLoading, isAuthenticated, router]);
 
   if (!ready) return null;
-  if (isGuestAccount()) {
-    return null;
-  }
 
   return (
-    <div>
-      <div
-        style={{
-          padding: "3rem 2rem",
-          maxWidth: "800px",
-          margin: "0 auto",
-          textAlign: "center",
-        }}
-      >
-        <h1 style={{ fontSize: "2.2rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-          Welcome to Sushi Toshi{userName ? `, ${userName}` : ""}!
-        </h1>
+    <CustomerPageContainer sx={{ maxWidth: 560 }}>
+      {/* ---- Welcome ---- */}
+      <Box sx={{ textAlign: "center", pt: { xs: 5, sm: 6 }, pb: 3 }}>
 
-        <p style={{ color: "#555", fontSize: "1.1rem", marginBottom: "2rem" }}>
-          All You Can Eat Authentic Japanese Food.
-        </p>
+        <Typography variant="h4" component="h1" sx={{ mt: 2.5, fontWeight: 700 }}>
+          {firstName ? `Welcome back, ${firstName}!` : "Welcome back!"}
+        </Typography>
+      </Box>
 
-      </div>
-    </div>
+      {/* ---- How it works ---- */}
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden", textAlign: "left" }}>
+        <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 700, px: 2.5, pt: 2, pb: 0.5 }}>
+          How it works
+        </Typography>
+        <Box component="ol" sx={{ listStyle: "none", p: 0, m: 0 }}>
+          {STEPS.map(({ symbol, title, text }, index) => (
+            <Box
+              component="li"
+              key={title}
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 2,
+                px: 2.5,
+                py: 1.75,
+                borderTop: index > 0 ? "1px solid" : "none",
+                borderColor: "divider",
+              }}
+            >
+              <MaterialSymbol name={symbol} size={26} sx={{ color: "primary.main", mt: 0.25, flexShrink: 0 }} />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                  {index + 1}. {title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                  {text}
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+      {/* ---- Account: log out only between visits ---- */}
+      <Box sx={{ mt: 4, mb: 3 }}>
+        {seated ? (
+          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, textAlign: "left" }}>
+            <Typography sx={{ fontWeight: 700 }}>
+              {tableNumber ? `You're seated at Table ${tableNumber}` : "You're seated at a table"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              You can log out once your visit ends.
+            </Typography>
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              onClick={() => router.push(MENU_PATH)}
+              sx={{ mt: 2, minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
+            >
+              Back to your table
+            </Button>
+          </Paper>
+        ) : (
+          <Button
+            variant="outlined"
+            fullWidth
+            size="large"
+            onClick={logoutCustomer}
+            startIcon={<MaterialSymbol name="logout" size={22} />}
+            sx={{ minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
+          >
+            Log out
+          </Button>
+        )}
+      </Box>
+    </CustomerPageContainer>
   );
 };
 

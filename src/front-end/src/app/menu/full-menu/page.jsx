@@ -18,6 +18,7 @@ import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import TrackedItem from "@/components/menu/TrackedItem";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import useMenuSearch from "@/components/menu/searchUtils";
+import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import {
   useTableOrder,
@@ -53,6 +54,9 @@ const FullMenu = () => {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Keep bills and limits current while the guest browses (others at the table order too)
+  useAutoRefresh(refresh);
 
   // Put the guest back where they were on the menu after Review order.
   // Read once on arrival, before scrolling to the top of this page can overwrite it
@@ -105,7 +109,7 @@ const FullMenu = () => {
 
       if (searchTerms.length === 0) return true;
 
-      return searchTerms.some((term) => {
+      return searchTerms.every((term) => {
         return (
           item.name.toLowerCase().includes(term) ||
           (item.description && item.description.toLowerCase().includes(term)) ||
@@ -202,17 +206,7 @@ const FullMenu = () => {
     <CustomerPageContainer>
       {/* Not seated: only the info message below shows, without a menu title */}
       {sessionId && (
-        <Typography
-          variant="h5"
-          component="h1"
-          sx={{
-            mt: 4,
-            mb: 4,
-            textAlign: "left",
-            width: "100%",
-            fontWeight: 200,
-          }}
-        >
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
           All You Can Eat Menu
         </Typography>
       )}
@@ -402,6 +396,8 @@ const FullMenu = () => {
                         atLimit={
                           limitStatus(category.category_id, item.item_id).atLimit
                         }
+                        // The bill's been asked for, so nothing more can be ordered onto it
+                        showQuantityControls={!billRequested}
                       />
                     </TrackedItem>
                   ))}
@@ -412,7 +408,8 @@ const FullMenu = () => {
         </Box>
       )}
 
-      <ReviewOrderButton count={cartCount} onClick={reviewOrder} />
+      {/* Ordering is over once the bill's been asked for */}
+      {!billRequested && <ReviewOrderButton count={cartCount} onClick={reviewOrder} />}
     </CustomerPageContainer>
   );
 };

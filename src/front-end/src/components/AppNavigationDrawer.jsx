@@ -9,7 +9,6 @@ import {
   Box, 
   Button,
   Divider,
-  Typography,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -25,16 +24,10 @@ import {
   LogOut,
 } from "lucide-react";
 import TableIcon from "@/components/common/TableIcon";
-import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
-import MaterialSymbol from "@/components/common/MaterialSymbol";
 
+// Staff and admin only: customers get around with the bottom tabs and side rail
+// (see CustomerBottomNav and CustomerSideNav)
 const menuItemsByRole = {
-  // Same pages and icons as the phone tab bar
-  customer: CUSTOMER_NAV_ITEMS.map(({ label, path, symbol }) => ({
-    icon: () => <MaterialSymbol name={symbol} size={22} />,
-    label,
-    path,
-  })),
   staff: [
     { icon: Home, label: "Home", path: "/" },
     { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
@@ -160,20 +153,6 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
         >
             Logout
         </Button>
-
-        {/* Phones hide the page footer, so the copyright lives here instead */}
-        <Typography
-            component="p"
-            variant="caption"
-            sx={{
-            display: { xs: "block", md: "none" },
-            mt: 1.5,
-            textAlign: "center",
-            color: "text.secondary",
-            }}
-        >
-            &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
-        </Typography>
     </Box>
 
     </Drawer>

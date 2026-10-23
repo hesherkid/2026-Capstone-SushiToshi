@@ -32,7 +32,8 @@ namespace back_end.domain.Seeders
             // Fetch some existing dining sessions, tables, and users to relate to
             var diningSession = _context.DiningSessions.FirstOrDefault();
             var table = _context.Tables.FirstOrDefault();
-            var userRequester = _context.Users.FirstOrDefault(u => u.Role == UserRoles.Customer);
+            var userRequester = _context.Users.FirstOrDefault(u =>
+                u.Role == UserRoles.Customer && u.Email != UserSeeder.NewCustomerEmail);
             var userClaimer = _context.Users.FirstOrDefault(u => u.Role != UserRoles.Customer);
 
             if (diningSession == null || table == null || userRequester == null)

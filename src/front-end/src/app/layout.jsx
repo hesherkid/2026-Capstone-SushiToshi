@@ -10,6 +10,7 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { OrderProvider } from "@/contexts/OrderContext";
 import { TableOrderProvider } from "@/contexts/TableOrderContext";
 import NotificationSystem from "@/components/common/NotificationSystem";
+import VisitEndedWatcher from "@/components/customer/VisitEndedWatcher";
 import Layout from "@/components/Layout.jsx";
 import { MATERIAL_SYMBOLS_URL } from "@/components/common/MaterialSymbol";
 import "@/styles/global.css";
@@ -146,6 +147,7 @@ export default function RootLayout({ children }) {
               <OrderProvider>
                 <TableOrderProvider>
                   <Layout>{children}</Layout>
+                  <VisitEndedWatcher />
                 </TableOrderProvider>
               </OrderProvider>
             </MenuProvider>

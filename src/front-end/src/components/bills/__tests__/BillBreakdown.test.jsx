@@ -26,7 +26,8 @@ describe("BillBreakdown", () => {
     expect(screen.getByText("Wagyu Nigiri")).toBeInTheDocument();
     expect(screen.getByText("2 × $9.00")).toBeInTheDocument();
 
-    expect(screen.getByText("Tax (5%)")).toBeInTheDocument();
+    expect(screen.getByText("GST (5%)")).toBeInTheDocument();
+    expect(screen.queryByText(/Gratuity/)).not.toBeInTheDocument();
     expect(screen.getByText("Total")).toBeInTheDocument();
     expect(screen.getByText("$139.49")).toBeInTheDocument();
   });
@@ -35,5 +36,42 @@ describe("BillBreakdown", () => {
     render(<BillBreakdown summary={{ ...summary, addon_items: [] }} />);
 
     expect(screen.queryByText("Premium Add-ons")).not.toBeInTheDocument();
+  });
+
+  it("only shows over-limit charges when there are some", () => {
+    render(<BillBreakdown summary={summary} />);
+
+    expect(screen.getByText("Premium Add-ons")).toBeInTheDocument();
+    expect(screen.queryByText("Over Limit Charges")).not.toBeInTheDocument();
+  });
+
+  it("adds the gratuity line for a big table, with why", () => {
+    render(
+      <BillBreakdown
+        summary={{
+          ...summary,
+          party_size: 8, gratuity_rate: 0.18, gratuity_amount: 23.91, gratuity_min_party_size: 6,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Gratuity (18%)")).toBeInTheDocument();
+    expect(screen.getByText("$23.91")).toBeInTheDocument();
+    expect(screen.getByText("Added for parties of 6 or more (your table has 8)")).toBeInTheDocument();
+  });
+
+  // One fee for the table's leftovers, split across its bills (not per item)
+  it("shows the bill's share of the leftover fee", () => {
+    render(<BillBreakdown summary={{ ...summary, leftover_charge: 7.5 }} />);
+
+    expect(screen.getByText("Leftovers", { selector: "h3" })).toBeInTheDocument();
+    expect(screen.getByText("Leftover charge (table, split evenly across bills)")).toBeInTheDocument();
+    expect(screen.getByText("$7.50")).toBeInTheDocument();
+  });
+
+  it("leaves out leftovers when there's no fee", () => {
+    render(<BillBreakdown summary={{ ...summary, leftover_charge: 0 }} />);
+
+    expect(screen.queryByText("Leftovers", { selector: "h3" })).not.toBeInTheDocument();
   });
 });

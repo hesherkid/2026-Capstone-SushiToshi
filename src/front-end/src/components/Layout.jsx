@@ -2,6 +2,14 @@ import React from "react";
 import { Box, Toolbar, Typography } from "@mui/material";
 import AppBarWithTitle from "./AppBarWithTitle";
 import CustomerBottomNav from "./customer/CustomerBottomNav";
+import CustomerSideNav, { SIDE_NAV_ATTR, SIDE_NAV_WIDTH } from "./customer/CustomerSideNav";
+import DevResetButton from "./dev/DevResetButton";
+import { FLOATING_BUTTON_ATTR, FLOATING_BUTTON_SPACE } from "./menu/ReviewOrderButton";
+
+// While the customer side rail is up (desktop), the page and footer sit to its right
+const besideSideNav = {
+  [`body:has([${SIDE_NAV_ATTR}]) &`]: { ml: { md: `${SIDE_NAV_WIDTH}px` } },
+};
 
 const Layout = ({ children }) => {
   return (
@@ -24,6 +32,7 @@ const Layout = ({ children }) => {
           // Phones get thin gutters so customer pages use most of the screen
           px: { xs: 1.5, sm: 2 },
           py: { xs: 2, sm: 4 },
+          ...besideSideNav,
         }}
       >
         {children}
@@ -32,22 +41,28 @@ const Layout = ({ children }) => {
       <Box
         component="footer"
         sx={{
-          // Phones show the copyright in the side menu instead
-          display: { xs: "none", md: "block" },
           py: 2,
           px: 3,
           mt: "auto",
-          backgroundColor: "#14171a",
-          color: "#657786",
           textAlign: "center",
+          // A quiet line at the end of the page (above the tab bar on phones)
+          backgroundColor: "transparent",
+          color: "text.secondary",
+          // Room for the floating Review order button, so it doesn't cover the copyright
+          [`body:has([${FLOATING_BUTTON_ATTR}]) &`]: {
+            pb: `${FLOATING_BUTTON_SPACE}px`,
+          },
+          ...besideSideNav,
         }}
       >
-        <Typography component="p" variant="body2">
+        <Typography component="p" variant="body2" sx={{ fontSize: "0.75rem" }}>
           &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
         </Typography>
       </Box>
 
+      <CustomerSideNav />
       <CustomerBottomNav />
+      <DevResetButton />
     </Box>
   );
 };
