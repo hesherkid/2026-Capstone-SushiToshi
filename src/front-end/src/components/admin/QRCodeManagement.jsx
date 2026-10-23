@@ -25,6 +25,7 @@ import {
   Divider,
 } from '@mui/material';
 import AppDialog from '@/components/common/AppDialog';
+import ManagementHeader from '@/components/common/ManagementHeader';
 import { Download, QrCode, Wifi, Menu } from 'lucide-react';
 import { api } from '@/config/api';
 import storage from '@/utils/storage';
@@ -344,15 +345,12 @@ export default function QRCodeManagement() {
   )?.name || '';
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-        <QrCode style={{ display: 'inline', marginRight: '10px', verticalAlign: 'middle' }} />
-        QR Code Management
-      </Typography>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3 }}>
+      <ManagementHeader title="QR Code Management" />
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Generate QR codes for WiFi access and starting customer dining sessions. QR codes are cached on the
-        server for faster access.
+        Generate QR codes for joining the restaurant WiFi and for joining a table&apos;s dining session.
+        Generated codes are saved on the server and reused until regenerated.
       </Alert>
 
       {/* Individual QR Code Generation - Location and Table Selection */}
@@ -364,7 +362,7 @@ export default function QRCodeManagement() {
           Select Location and Table
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <FormControl fullWidth>
               <InputLabel>Location</InputLabel>
               <Select
@@ -380,7 +378,7 @@ export default function QRCodeManagement() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               label="Table Number"
@@ -395,12 +393,12 @@ export default function QRCodeManagement() {
 
       {/* Individual QR Code Generation - Wifi & Session */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={12}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Wifi size={32} style={{ marginRight: '10px', color: '#1976d2' }} />
-                <Typography variant="h6">WiFi QR Code</Typography>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <CardContent sx={{ flexGrow: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, color: 'primary.main' }}>
+                <Wifi size={32} />
+                <Typography variant="h6" color="text.primary">WiFi QR Code</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Generate a QR code that customers can scan to automatically connect to the
@@ -435,16 +433,16 @@ export default function QRCodeManagement() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={12}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Menu size={32} style={{ marginRight: '10px', color: '#2e7d32' }} />
-                <Typography variant="h6">Session QR Code</Typography>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <CardContent sx={{ flexGrow: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, color: 'success.main' }}>
+                <Menu size={32} />
+                <Typography variant="h6" color="text.primary">Session QR Code</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Generate a QR code that starts a dining session and directs customers to the menu page
-                for ordering.
+                Generate a QR code that opens sign-in for this table, then joins the customer to the
+                dining session staff started for it.
               </Typography>
               <Divider sx={{ my: 2 }} />
               <Typography variant="body2" sx={{ mb: 1 }}>
@@ -514,10 +512,10 @@ export default function QRCodeManagement() {
               Download Generated QR Codes
             </Typography>
             <Alert severity="info" sx={{ mb: 2 }}>
-              QR codes are generated at 600×600px. PDF format fits 16 QR codes per page (4 across × 4 down) at 1.75" × 1.75" each, optimized for 8.5" × 11" printing.
+              PDF format fits 16 QR codes per page (4 across × 4 down) at 1.75" × 1.75" each, optimized for 8.5" × 11" printing.
             </Alert>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Button
                   fullWidth
                   variant="outlined"
@@ -528,7 +526,7 @@ export default function QRCodeManagement() {
                   Download as ZIP (Individual Files)
                 </Button>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Button
                   fullWidth
                   variant="outlined"
