@@ -30,6 +30,28 @@ import { Download, QrCode, Wifi, Menu } from 'lucide-react';
 import { api } from '@/config/api';
 import storage from '@/utils/storage';
 
+// The QR endpoints return error text (e.g. "WiFi credentials not configured"). Downloads request
+// a blob, so an error body arrives as a Blob too and has to be read before it can be shown.
+const getErrorMessage = async (error, fallback) => {
+  let data = error.response?.data;
+  if (typeof Blob !== 'undefined' && data instanceof Blob) {
+    try {
+      data = await data.text();
+    } catch {
+      return fallback;
+    }
+  }
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data);
+    } catch {
+      return data.trim() || fallback;
+    }
+  }
+  if (typeof data === 'string') return data.trim() || fallback;
+  return data?.message || data?.title || fallback;
+};
+
 export default function QRCodeManagement() {
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState('');
@@ -125,10 +147,7 @@ export default function QRCodeManagement() {
       showSnackbar(`${type === 'wifi' ? 'WiFi' : 'Session'} QR code downloaded successfully!`);
     } catch (error) {
       console.error('Error downloading QR code:', error);
-      showSnackbar(
-        error.response?.data?.message || `Failed to download ${type} QR code`,
-        'error'
-      );
+      showSnackbar(await getErrorMessage(error, `Failed to download ${type} QR code`), 'error');
     } finally {
       setLoading(false);
     }
@@ -162,10 +181,7 @@ export default function QRCodeManagement() {
       });
     } catch (error) {
       console.error('Error previewing QR code:', error);
-      showSnackbar(
-        error.response?.data?.message || `Failed to preview ${type} QR code`,
-        'error'
-      );
+      showSnackbar(await getErrorMessage(error, `Failed to preview ${type} QR code`), 'error');
     } finally {
       setLoading(false);
     }
@@ -205,20 +221,7 @@ export default function QRCodeManagement() {
     } catch (error) {
       console.error('Error generating bulk QR codes:', error);
       console.error('Error response:', error.response);
-
-      // Extract error message from various possible formats
-      let errorMessage = 'Failed to generate bulk QR codes';
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response.data.title) {
-          errorMessage = error.response.data.title;
-        }
-      }
-
-      showSnackbar(errorMessage, 'error');
+      showSnackbar(await getErrorMessage(error, 'Failed to generate bulk QR codes'), 'error');
     } finally {
       setLoading(false);
     }
@@ -264,7 +267,7 @@ export default function QRCodeManagement() {
       showSnackbar('ZIP file downloaded successfully!');
     } catch (error) {
       console.error('Error downloading ZIP:', error);
-      showSnackbar('Failed to download ZIP file', 'error');
+      showSnackbar(await getErrorMessage(error, 'Failed to download ZIP file'), 'error');
     } finally {
       setDownloadLoading(false);
     }
@@ -310,7 +313,7 @@ export default function QRCodeManagement() {
       showSnackbar('PDF downloaded successfully!');
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      showSnackbar('Failed to download PDF', 'error');
+      showSnackbar(await getErrorMessage(error, 'Failed to download PDF'), 'error');
     } finally {
       setDownloadLoading(false);
     }
