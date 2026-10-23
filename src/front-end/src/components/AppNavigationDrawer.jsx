@@ -33,7 +33,6 @@ const menuItemsByRole = {
     { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
     { icon: TableIcon, label: "Tables", path: "/dashboard/tables" },
     { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
-    { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes" },
   ],
   admin: [
     { icon: Home, label: "Home", path: "/" },
