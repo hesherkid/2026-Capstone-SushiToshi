@@ -82,7 +82,7 @@ const ReviewOrderPage = () => {
   const handleOrderSuccess = () => {
     setPlacedItems(sending.current);
     clearCart();
-    refresh(); // NOTE: AW - added to reload the tables limits so the menu shows what's left after this order, remove if redundant
+    refresh();
     window.scrollTo(0, 0);
   };
 
@@ -157,7 +157,7 @@ const ReviewOrderPage = () => {
     }));
 
     try {
-      // NOTE: AW - The cart can't go over a limit (+ stops there, and Place order is disabled when it is)
+      // The cart can't go over a limit (+ stops there, and Place order is disabled when it is)
       // so the server should accept these items, it still checks every order.
 
       const orderResponse = await createOrder(sessionId, selectedBillId);

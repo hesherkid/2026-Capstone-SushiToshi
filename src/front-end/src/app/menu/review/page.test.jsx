@@ -33,12 +33,25 @@ jest.mock("@/config/api", () => ({
 
 const api = require("@/config/api").default;
 
-const LEE = { bill_id: 8, bill_name: "Lee", status: "Open", created_at: "2026-10-18T04:00:00Z" };
-const PARK = { bill_id: 9, bill_name: "Park", status: "Open", created_at: "2026-10-18T04:10:00Z" };
+const LEE = {
+  bill_id: 8,
+  bill_name: "Lee",
+  status: "Open",
+  created_at: "2026-10-18T04:00:00Z",
+};
+const PARK = {
+  bill_id: 9,
+  bill_name: "Park",
+  status: "Open",
+  created_at: "2026-10-18T04:10:00Z",
+};
 
 // A cart saved by the menu page: 2 Miso Soup
 const withCart = (quantities = { 1: { 11: 2 } }) =>
-  localStorage.setItem("menuCart", JSON.stringify({ sessionId: 42, quantities }));
+  localStorage.setItem(
+    "menuCart",
+    JSON.stringify({ sessionId: 42, quantities }),
+  );
 
 const renderPage = () =>
   render(
@@ -61,15 +74,23 @@ describe("Review order page", () => {
     withCart();
     renderPage();
 
-    expect(await screen.findByRole("heading", { name: "Miso Soup" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add one Miso Soup" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Remove one Miso Soup" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Miso Soup" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add one Miso Soup" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Remove one Miso Soup" }),
+    ).toBeInTheDocument();
     // The bill shows at the top and again right above the button
     expect(screen.getByText("Lee", { selector: "p" })).toBeInTheDocument();
     expect(screen.getByText(/Order on/)).toHaveTextContent("Order on Lee");
     expect(screen.getByText("1 item · 2 units")).toBeInTheDocument();
     expect(screen.getByText("$0.00")).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "Place order · 2 items" })).toBeEnabled();
+    expect(
+      await screen.findByRole("button", { name: "Place order · 2 items" }),
+    ).toBeEnabled();
   });
 
   it("places the order with each item's name and shows a confirmation", async () => {
@@ -78,16 +99,25 @@ describe("Review order page", () => {
     mockAddOrderItems.mockImplementation(async () => mockOnSuccess());
     renderPage();
 
-    const placeOrder = await screen.findByRole("button", { name: "Place order · 2 items" });
+    const placeOrder = await screen.findByRole("button", {
+      name: "Place order · 2 items",
+    });
     await waitFor(() => expect(placeOrder).toBeEnabled());
     fireEvent.click(placeOrder);
 
     await waitFor(() => expect(mockCreateOrder).toHaveBeenCalledWith(42, 8));
     expect(mockAddOrderItems).toHaveBeenCalledWith(500, [
-      expect.objectContaining({ item_id: 11, quantity: 2, name: "Miso Soup", menu_id: 7 }),
+      expect.objectContaining({
+        item_id: 11,
+        quantity: 2,
+        name: "Miso Soup",
+        menu_id: 7,
+      }),
     ]);
 
-    expect(await screen.findByRole("heading", { name: "Order sent!" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Order sent!" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Miso Soup")).toBeInTheDocument();
     // The cart is emptied once the kitchen has it
     expect(JSON.parse(localStorage.getItem("menuCart")).quantities).toEqual({});
@@ -101,12 +131,18 @@ describe("Review order page", () => {
     mockCreateOrder.mockResolvedValue(null);
     renderPage();
 
-    const placeOrder = await screen.findByRole("button", { name: "Place order · 2 items" });
+    const placeOrder = await screen.findByRole("button", {
+      name: "Place order · 2 items",
+    });
     await waitFor(() => expect(placeOrder).toBeEnabled());
     fireEvent.click(placeOrder);
 
-    expect(await screen.findByText("Couldn't start your order. Please try again.")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Order sent!" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("Couldn't start your order. Please try again."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Order sent!" }),
+    ).not.toBeInTheDocument();
   });
 
   it("can't order without an open bill, and can check again", async () => {
@@ -114,15 +150,21 @@ describe("Review order page", () => {
     api.get.mockImplementation(tableApi({ bills: [] }));
     renderPage();
 
-    expect(await screen.findByText(/doesn't have an open bill yet/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeDisabled();
+    expect(
+      await screen.findByText(/doesn't have an open bill yet/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Place order · 2 items" }),
+    ).toBeDisabled();
 
     // Staff open a bill
     api.get.mockImplementation(tableApi({ bills: [LEE] }));
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeEnabled(),
+      expect(
+        screen.getByRole("button", { name: "Place order · 2 items" }),
+      ).toBeEnabled(),
     );
   });
 
@@ -132,7 +174,9 @@ describe("Review order page", () => {
     api.get.mockImplementation(tableApi({ bills: [PARK, LEE] }));
     renderPage();
 
-    expect(await screen.findByRole("combobox", { name: "Put this order on" })).toHaveTextContent("Lee");
+    expect(
+      await screen.findByRole("combobox", { name: "Put this order on" }),
+    ).toHaveTextContent("Lee");
     expect(screen.getByText(/Your table has 2 bills/)).toBeInTheDocument();
   });
 
@@ -144,9 +188,13 @@ describe("Review order page", () => {
     renderPage();
 
     expect(
-      await screen.findByText(/You've asked for your bill, so no more orders can be added/),
+      await screen.findByText(
+        /You've asked for your bill, so no more orders can be added/,
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Place order · 2 items" }),
+    ).toBeDisabled();
   });
 
   it("won't place an order that's gone over the table's limit since the cart was filled", async () => {
@@ -154,20 +202,88 @@ describe("Review order page", () => {
     api.get.mockImplementation(
       tableApi({
         bills: [LEE],
-        limits: { items: [{ item_id: 11, category_id: 1, per_order: null, session_left: 1 }], categories: [] },
+        limits: {
+          items: [
+            { item_id: 11, category_id: 1, per_order: null, session_left: 1 },
+          ],
+          categories: [],
+        },
       }),
     );
     renderPage();
 
-    expect(await screen.findByText(/Too many Miso Soup for your table's limit/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(/Too many Miso Soup for your table's limit/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Place order · 2 items" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Add one Miso Soup" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reloads the table's limits after an order goes through, so the menu shows what's left", async () => {
+    withCart();
+    mockCreateOrder.mockResolvedValue({ order_Id: 500 });
+    mockAddOrderItems.mockImplementation(async () => mockOnSuccess());
+    renderPage();
+
+    const placeOrder = await screen.findByRole("button", {
+      name: "Place order · 2 items",
+    });
+    await waitFor(() => expect(placeOrder).toBeEnabled());
+    const limitsLoads = () =>
+      api.get.mock.calls.filter(([url]) => url === "/Order/session/42/limits")
+        .length;
+    const before = limitsLoads();
+
+    fireEvent.click(placeOrder);
+
+    await screen.findByRole("heading", { name: "Order sent!" });
+    await waitFor(() => expect(limitsLoads()).toBeGreaterThan(before));
+  });
+
+  it("starts a new order on the next try instead of reusing one that failed", async () => {
+    withCart();
+    mockCreateOrder
+      .mockResolvedValueOnce({ order_Id: 500 })
+      .mockResolvedValueOnce({ order_Id: 501 });
+    mockAddOrderItems
+      .mockResolvedValueOnce(null)
+      .mockImplementationOnce(async () => mockOnSuccess());
+    renderPage();
+
+    const placeOrder = await screen.findByRole("button", {
+      name: "Place order · 2 items",
+    });
+    await waitFor(() => expect(placeOrder).toBeEnabled());
+    fireEvent.click(placeOrder);
+    await waitFor(() => expect(mockAddOrderItems).toHaveBeenCalledTimes(1));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Place order · 2 items" }),
+      ).toBeEnabled(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Place order · 2 items" }),
+    );
+
+    await waitFor(() => expect(mockAddOrderItems).toHaveBeenCalledTimes(2));
+    expect(mockCreateOrder).toHaveBeenCalledTimes(2);
+    expect(mockAddOrderItems).toHaveBeenLastCalledWith(501, expect.any(Array));
+    // No saved order to reuse, and no lookup of the old one
+    expect(localStorage.getItem("pendingOrder")).toBeNull();
+    expect(api.get).not.toHaveBeenCalledWith("/Order/500");
   });
 
   it("shows an empty bag with a way back to the menu", async () => {
     renderPage();
 
-    expect(await screen.findByRole("heading", { name: "Your bag is empty" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Your bag is empty" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Browse the menu" }));
     expect(mockPush).toHaveBeenCalledWith("/menu/full-menu");
   });
