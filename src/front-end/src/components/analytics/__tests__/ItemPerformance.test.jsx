@@ -139,7 +139,7 @@ const buildResponse = (overrides = {}) => ({
 const lastParams = () => api.get.mock.calls.at(-1)[1].params;
 
 const renderLoaded = async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   render(<ItemPerformance />);
   await screen.findByText(/units sold across/i);
   return user;

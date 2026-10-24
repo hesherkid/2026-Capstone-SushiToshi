@@ -177,7 +177,7 @@ const buildResponse = (overrides = {}) => ({
 const lastParams = () => api.get.mock.calls.at(-1)[1].params;
 
 const renderLoaded = async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   render(<BrowsingBehavior />);
   await screen.findByText(/views from 3 tables/i);
   return user;

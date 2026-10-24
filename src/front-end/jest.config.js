@@ -9,6 +9,10 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   testEnvironment: "jest-environment-jsdom",
+  // userEvent and MUI tests are slow under --coverage on busy machines (Windows, CI):
+  // allow more than Jest's default 5 s per test, and leave CPU for each worker
+  testTimeout: 30000,
+  maxWorkers: "50%",
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@/components/(.*)$": "<rootDir>/src/components/$1",
