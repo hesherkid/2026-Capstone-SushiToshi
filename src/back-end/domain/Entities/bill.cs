@@ -50,6 +50,8 @@ namespace back_end.domain.Entities
         [Precision(10, 2)] public decimal? Child_Price { get; set; }
         [Precision(10, 2)] public decimal? Toddler_Price { get; set; }
         [Precision(5, 4)] public decimal? Tax_Rate { get; set; }
+        // The gratuity rate actually charged (0 if the party was too small when the bill closed),
+        // so cancelling another bill at the table later can't change this one
         [Precision(5, 4)] public decimal? Gratuity_Rate { get; set; }
         public int? Gratuity_Min_Party_Size { get; set; }
 
