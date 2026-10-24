@@ -28,6 +28,7 @@ namespace back_end.domain.Seeders
                     Address_Primary = "13619 St Albert Trail NW",
                     City = "Edmonton",
                     Province = "Alberta",
+                    Province_Code = "AB",
                     Postal_Code = "T5L 5E7",
                     Phone_Number = "780-488-6610",
                     Created_At = new DateTime(2025, 10, 1)
@@ -38,6 +39,7 @@ namespace back_end.domain.Seeders
                     Address_Primary = "4445 Calgary Trail NW",
                     City = "Edmonton",
                     Province = "Alberta",
+                    Province_Code = "AB",
                     Postal_Code = "T6H 5R7",
                     Phone_Number = "825-404-6200",
                     Created_At = new DateTime(2025, 10, 1)

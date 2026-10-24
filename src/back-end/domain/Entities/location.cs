@@ -25,8 +25,13 @@ namespace back_end.domain.Entities
 
     public DateTime Created_At { get; set; } = DateTime.UtcNow;
 
-
     public DateTime Updated_At { get; set; }
+
+    // Two-letter code used for holidays and the canada-holidays.ca API, e.g. "AB"
+    [MaxLength(2)]
+    public string Province_Code { get; set; } = "AB";
+    // NULL = this location uses the default pricing profile
+    public PricingProfile? PricingProfile { get; set; }
 
     public ICollection<MenuLocations> MenuLocations { get; set; } = new List<MenuLocations>();
     public ICollection<DiningSession> DiningSessions { get; set; } = new List<DiningSession>();
