@@ -1,6 +1,7 @@
+using back_end.domain.enums;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using back_end.domain.enums;
 
 namespace back_end.domain.Entities
 {
@@ -36,6 +37,23 @@ namespace back_end.domain.Entities
         public DateTime? Requested_At { get; set; }
 
         public decimal Leftover_Charge { get; set; } = 0m;
+
+        // Prices frozen when the bill closes, so later price changes don't alter old bills.
+        // NULL = not closed yet (or closed before snapshots existed): prices are worked out live.
+        public PricingDayType? Pricing_Type { get; set; }
+
+        [MaxLength(100)]
+        public string? Holiday_Name { get; set; }
+
+        [Precision(10, 2)] public decimal? Adult_Price { get; set; }
+        [Precision(10, 2)] public decimal? Senior_Price { get; set; }
+        [Precision(10, 2)] public decimal? Child_Price { get; set; }
+        [Precision(10, 2)] public decimal? Toddler_Price { get; set; }
+        [Precision(5, 4)] public decimal? Tax_Rate { get; set; }
+        // The gratuity rate actually charged (0 if the party was too small when the bill closed),
+        // so cancelling another bill at the table later can't change this one
+        [Precision(5, 4)] public decimal? Gratuity_Rate { get; set; }
+        public int? Gratuity_Min_Party_Size { get; set; }
 
         public DiningSession DiningSession { get; set; } = null!;
         public ICollection<SessionOrder> Orders { get; set; } = new List<SessionOrder>();

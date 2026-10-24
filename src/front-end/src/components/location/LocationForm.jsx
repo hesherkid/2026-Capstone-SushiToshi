@@ -6,8 +6,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  MenuItem,
   Stack,
 } from "@mui/material";
+import { PROVINCE_CODES } from "@/services/holidayService";
 
 const LocationForm = ({ initialData, onSubmit, onClose, mode }) => {
   const [formData, setFormData] = useState({
@@ -16,6 +18,7 @@ const LocationForm = ({ initialData, onSubmit, onClose, mode }) => {
     address_two: initialData?.address_two || "",
     city: initialData?.city || "",
     province: initialData?.province || "",
+    province_code: initialData?.province_code || "AB",
     postal_code: initialData?.postal_code || "",
     phone_number: initialData?.phone_number || "",
   });
@@ -79,6 +82,22 @@ const LocationForm = ({ initialData, onSubmit, onClose, mode }) => {
             required
             fullWidth
           />
+          <TextField
+            select
+            name="province_code"
+            label="Province code"
+            value={formData.province_code}
+            onChange={handleChange}
+            helperText="Holiday pricing uses this province's holidays"
+            required
+            fullWidth
+          >
+            {PROVINCE_CODES.map((code) => (
+              <MenuItem key={code} value={code}>
+                {code}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             name="postal_code"
             label="Postal Code"

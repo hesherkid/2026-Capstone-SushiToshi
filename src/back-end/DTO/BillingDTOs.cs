@@ -175,6 +175,13 @@ namespace back_end.DTO.bill
 
     [JsonPropertyName("pricing_type")]
     public string Pricing_Type { get; set; } = string.Empty;  // "Weekday", "Weekend", or "Holiday"
+    // e.g. "Canada Day" when Pricing_Type is "Holiday"
+    [JsonPropertyName("holiday_name")]
+    public string? Holiday_Name { get; set; }
+
+    // True once the bill has closed: its prices no longer follow pricing changes
+    [JsonPropertyName("prices_locked")]
+    public bool Prices_Locked { get; set; }
   }
 
   public class BillAddOnItem

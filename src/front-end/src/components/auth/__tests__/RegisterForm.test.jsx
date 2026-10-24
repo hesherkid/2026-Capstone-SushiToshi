@@ -111,7 +111,7 @@ describe("RegisterForm", () => {
 
   describe("Form Interaction", () => {
     it("allows users to type in all fields", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<RegisterForm />);
 
       await fillRegisterForm(user);
@@ -128,7 +128,7 @@ describe("RegisterForm", () => {
 
   describe("Form Submission", () => {
     it("submits the entered data (email lower-cased)", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       registerUser.mockResolvedValue({});
 
       render(<RegisterForm />);
@@ -146,7 +146,7 @@ describe("RegisterForm", () => {
     });
 
     it("shows a loading spinner and disables the button while submitting", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       registerUser.mockImplementation(() => new Promise(() => { })); // never resolves
 
       render(<RegisterForm />);
@@ -159,7 +159,7 @@ describe("RegisterForm", () => {
     });
 
     it("shows the verify-email screen after successful registration", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await registerSuccessfully(user);
 
       expect(screen.getByText(/Registration successful!/i)).toBeInTheDocument();
@@ -168,7 +168,7 @@ describe("RegisterForm", () => {
     });
 
     it("navigates to the login page from the success screen", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await registerSuccessfully(user);
 
       await user.click(screen.getByRole("button", { name: /Go to Login/i }));
@@ -177,7 +177,7 @@ describe("RegisterForm", () => {
     });
 
     it("resends the verification email from the success screen", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       resendVerificationEmail.mockResolvedValue({});
       await registerSuccessfully(user);
 
@@ -196,7 +196,7 @@ describe("RegisterForm", () => {
     });
 
     it("shows an error if resending the verification email fails", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       resendVerificationEmail.mockRejectedValue({ response: { data: {} } });
       await registerSuccessfully(user);
 
@@ -212,7 +212,7 @@ describe("RegisterForm", () => {
 
   describe("Password Validation", () => {
     it("shows an error and does not submit when passwords do not match", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<RegisterForm />);
 
       await fillRegisterForm(user, { confirmPassword: "DifferentPassword" });
@@ -225,7 +225,7 @@ describe("RegisterForm", () => {
     });
 
     it("shows an error and does not submit when the password is too short", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<RegisterForm />);
 
       await fillRegisterForm(user, {
@@ -250,7 +250,7 @@ describe("RegisterForm", () => {
     };
 
     it("displays the server message for a 400 response", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await submitWithError(user, {
         response: { status: 400, data: { detail: "Invalid email format" } },
       });
@@ -261,7 +261,7 @@ describe("RegisterForm", () => {
     });
 
     it("displays the server message for a 422 response", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await submitWithError(user, {
         response: { status: 422, data: { message: "Validation error" } },
       });
@@ -270,7 +270,7 @@ describe("RegisterForm", () => {
     });
 
     it("displays a fallback message for a 400 response without details", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await submitWithError(user, { response: { status: 400, data: {} } });
 
       expect(
@@ -279,7 +279,7 @@ describe("RegisterForm", () => {
     });
 
     it('displays an "already registered" error for a 409 response', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await submitWithError(user, { response: { status: 409 } });
 
       expect(
@@ -288,7 +288,7 @@ describe("RegisterForm", () => {
     });
 
     it("displays a generic error for other status codes", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await submitWithError(user, { response: { status: 500 } });
 
       expect(
@@ -297,7 +297,7 @@ describe("RegisterForm", () => {
     });
 
     it("displays a connection error when the server does not respond", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       await submitWithError(user, { request: {}, message: "Network Error" });
 
       expect(
@@ -306,7 +306,7 @@ describe("RegisterForm", () => {
     });
 
     it("clears the previous error on a new submission", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       registerUser
         .mockRejectedValueOnce({
           response: { status: 400, data: { detail: "Error" } },

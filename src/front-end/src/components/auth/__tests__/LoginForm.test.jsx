@@ -119,7 +119,7 @@ describe("LoginForm", () => {
 
   describe("Form Interaction", () => {
     it("allows users to type in email and password fields", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<LoginForm />);
 
       await fillLoginForm(user, "user@test.com", "newpassword123");
@@ -133,7 +133,7 @@ describe("LoginForm", () => {
 
   describe("Form Submission", () => {
     it("submits the entered credentials", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockResolvedValue({ access_token: "test-token" });
 
       render(<LoginForm />);
@@ -149,7 +149,7 @@ describe("LoginForm", () => {
     });
 
     it("redirects to the home page on successful login", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockResolvedValue({ access_token: "test-token" });
 
       render(<LoginForm />);
@@ -163,7 +163,7 @@ describe("LoginForm", () => {
     });
 
     it("saves the restaurant QR context (location + table) on successful login", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=2&tableNumber=7"),
       );
@@ -180,7 +180,7 @@ describe("LoginForm", () => {
     });
 
     it("shows an error when the response has no access token", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockResolvedValue({});
 
       render(<LoginForm />);
@@ -196,7 +196,7 @@ describe("LoginForm", () => {
     });
 
     it("shows a loading spinner and disables the button while submitting", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockImplementation(() => new Promise(() => { })); // never resolves
 
       render(<LoginForm />);
@@ -209,7 +209,7 @@ describe("LoginForm", () => {
     });
 
     it("prevents a second submission while loading", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockImplementation(() => new Promise(() => { }));
 
       render(<LoginForm />);
@@ -224,7 +224,7 @@ describe("LoginForm", () => {
 
   describe("Guest Login", () => {
     it("signs in as a new guest and marks the session as guest", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
       api.post.mockResolvedValue({ data: { session_Id: 55 } });
@@ -264,7 +264,7 @@ describe("LoginForm", () => {
     });
 
     it("joins the session for the table in the scanned QR code", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=3&tableNumber=8")
@@ -287,7 +287,7 @@ describe("LoginForm", () => {
     });
 
     it("asks guests to wait when guest sign-in is rate limited", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginAsGuest.mockRejectedValue({ response: { status: 429, data: "" } });
       useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
 
@@ -301,7 +301,7 @@ describe("LoginForm", () => {
     });
 
     it("tells guests to ask staff when the table hasn't been started", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=3&tableNumber=8")
@@ -324,7 +324,7 @@ describe("LoginForm", () => {
     });
 
     it("joins with the saved sign-in when Try again is tapped after staff start the table", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       getAuthToken.mockReturnValue("guest-token");
       useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
@@ -355,7 +355,7 @@ describe("LoginForm", () => {
     });
 
     it("keeps Try again up when the table still hasn't been started", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       getAuthToken.mockReturnValue("guest-token");
       useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
@@ -379,7 +379,7 @@ describe("LoginForm", () => {
     });
 
     it("stays the same guest instead of creating another one", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       api.post.mockResolvedValue({ data: { session_Id: 101, participant_Id: 9, already_Joined: true } });
 
       render(<LoginForm />);
@@ -395,7 +395,7 @@ describe("LoginForm", () => {
     });
 
     it("becomes a new guest when the saved one is rejected", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "new-guest-token" });
       api.post
         .mockRejectedValueOnce({ response: { status: 401, data: { message: "Please sign in to join a table." } } })
@@ -415,7 +415,7 @@ describe("LoginForm", () => {
     });
 
     it("keeps the saved guest when the table just hasn't been started", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       api.post.mockRejectedValue({
         response: { status: 404, data: { message: "Table 8 doesn't have an active session yet. Please ask staff to start your table." } },
       });
@@ -443,7 +443,7 @@ describe("LoginForm", () => {
 
   describe("QR table join after sign-in", () => {
     it("joins the table with the signed-in user's token", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockResolvedValue({ access_token: "mia-token" });
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=1&tableNumber=4")
@@ -528,7 +528,7 @@ describe("LoginForm", () => {
     });
 
     it("doesn't try to join a table without QR details", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockResolvedValue({ access_token: "mia-token" });
 
       render(<LoginForm />);
@@ -542,7 +542,7 @@ describe("LoginForm", () => {
 
   describe("Error Handling", () => {
     it("displays the server error detail on failed login", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockRejectedValue({
         response: { status: 401, data: { detail: "Invalid credentials" } },
       });
@@ -559,7 +559,7 @@ describe("LoginForm", () => {
     });
 
     it("displays a default error message when no detail is provided", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockRejectedValue({ response: { status: 500, data: {} } });
 
       render(<LoginForm />);
@@ -574,7 +574,7 @@ describe("LoginForm", () => {
     });
 
     it("re-enables the form after an error", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockRejectedValue({ response: { data: { detail: "Error" } } });
 
       render(<LoginForm />);
@@ -590,7 +590,7 @@ describe("LoginForm", () => {
     });
 
     it("clears the previous error on a new submission", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser
         .mockRejectedValueOnce({ response: { data: { detail: "Error" } } })
         .mockResolvedValueOnce({ access_token: "test-token" });
@@ -611,7 +611,7 @@ describe("LoginForm", () => {
     });
 
     it("asks unverified users to verify their email and links to resend", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       loginUser.mockRejectedValue({
         response: {
           status: 403,

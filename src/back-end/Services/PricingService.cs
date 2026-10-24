@@ -1,21 +1,25 @@
+using back_end.domain.DbContexts;
+using back_end.domain.Entities;
+using back_end.domain.enums;
 using back_end.Helpers;
+using Microsoft.EntityFrameworkCore;
 
 namespace back_end.Services
 {
     public class PricingService : IPricingService
     {
-        private readonly IConfiguration _config;
+        private readonly ApplicationDbContext _context;
         private readonly ILogger<PricingService> _logger;
 
-        public PricingService(IConfiguration config, ILogger<PricingService> logger)
+        public PricingService(ApplicationDbContext context, ILogger<PricingService> logger)
         {
-            _config = config;
+            _context = context;
             _logger = logger;
         }
 
-        public PricingInfo GetCurrentPricing()
+        public Task<PricingInfo> GetCurrentPricingAsync(int locationId, CancellationToken ct = default)
         {
-            return GetPricingForDate(DateTime.UtcNow);
+            return GetPricingAsync(locationId, DateTime.UtcNow, ct);
         }
 
         // Timestamps are UTC, but weekday/weekend/holiday depends on the date in Edmonton.
@@ -31,68 +35,86 @@ namespace back_end.Services
             return TimeZoneInfo.ConvertTimeFromUtc(utc, AnalyticsDateRange.RestaurantTimeZone);
         }
 
-        public PricingInfo GetPricingForDate(DateTime timestamp)
+        public async Task<PricingInfo> GetPricingAsync(int locationId, DateTime timestamp, CancellationToken ct = default)
         {
+            var profile = await GetEffectiveProfileAsync(locationId, ct);
             var date = ToRestaurantTime(timestamp);
 
-            // Check if it's a holiday first
-            var holidays = _config.GetSection("Pricing:Holiday:Dates").Get<List<string>>() ?? new List<string>();
-            var dateStr = date.ToString("yyyy-MM-dd");
+            // Holiday first, then weekend, then weekday
+            var holidayName = profile.Apply_Holiday_Pricing
+                ? await HolidayNameAsync(locationId, DateOnly.FromDateTime(date), ct)
+                : null;
 
-            if (holidays.Contains(dateStr))
+            var dayType = holidayName != null ? PricingDayType.Holiday
+                : profile.Weekend_Days.Contains(date.DayOfWeek) ? PricingDayType.Weekend
+                : PricingDayType.Weekday;
+
+            var rate = profile.Rates.FirstOrDefault(r => r.Day_Type == dayType)
+                ?? throw new PricingNotConfiguredException(
+                    $"Pricing profile {profile.Pricing_Profile_Id} has no {dayType} prices.");
+
+            var source = profile.Location_Id == null ? "Default" : "Location";
+            _logger.LogInformation("Using {DayType} pricing ({Source}) for location {LocationId} on {Date:yyyy-MM-dd}",
+                dayType, source, locationId, date);
+
+            return new PricingInfo
             {
-                _logger.LogInformation($"Using holiday pricing for {dateStr}");
-                return WithTaxAndGratuity(new PricingInfo
-                {
-                    PricingType = "Holiday",
-                    AdultBasePrice = _config.GetValue<decimal>("Pricing:Holiday:AdultBasePrice", 42.95m),
-                    SeniorBasePrice = _config.GetValue<decimal>("Pricing:Holiday:SeniorBasePrice", 39.95m),
-                    ChildBasePrice = _config.GetValue<decimal>("Pricing:Holiday:ChildBasePrice", 28.95m),
-                    ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Holiday:ToddlerBasePrice", 7.95m)
-                });
-            }
-
-            // Check if it's a weekend (Friday, Saturday, Sunday)
-            var dayOfWeek = date.DayOfWeek.ToString();
-            var weekendDays = _config.GetSection("Pricing:Weekend:Days").Get<List<string>>() ?? new List<string>();
-
-            if (weekendDays.Contains(dayOfWeek))
-            {
-                _logger.LogInformation($"Using weekend pricing for {dayOfWeek}");
-                return WithTaxAndGratuity(new PricingInfo
-                {
-                    PricingType = "Weekend",
-                    AdultBasePrice = _config.GetValue<decimal>("Pricing:Weekend:AdultBasePrice", 42.95m),
-                    SeniorBasePrice = _config.GetValue<decimal>("Pricing:Weekend:SeniorBasePrice", 39.95m),
-                    ChildBasePrice = _config.GetValue<decimal>("Pricing:Weekend:ChildBasePrice", 28.95m),
-                    ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekend:ToddlerBasePrice", 7.95m)
-                });
-            }
-
-            // Default to weekday pricing
-            _logger.LogInformation($"Using weekday pricing for {dayOfWeek}");
-            return WithTaxAndGratuity(new PricingInfo
-            {
-                PricingType = "Weekday",
-                AdultBasePrice = _config.GetValue<decimal>("Pricing:Weekday:AdultBasePrice", 40.95m),
-                SeniorBasePrice = _config.GetValue<decimal>("Pricing:Weekday:SeniorBasePrice", 35.95m),
-                ChildBasePrice = _config.GetValue<decimal>("Pricing:Weekday:ChildBasePrice", 25.95m),
-                ToddlerBasePrice = _config.GetValue<decimal>("Pricing:Weekday:ToddlerBasePrice", 7.95m)
-            });
+                PricingType = dayType.ToString(),
+                PricingSource = source,
+                HolidayName = holidayName,
+                AdultBasePrice = rate.Adult_Price,
+                SeniorBasePrice = rate.Senior_Price,
+                ChildBasePrice = rate.Child_Price,
+                ToddlerBasePrice = rate.Toddler_Price,
+                TaxRate = profile.Tax_Rate,
+                GratuityRate = profile.Gratuity_Rate,
+                GratuityMinPartySize = profile.Gratuity_Min_Party_Size,
+                LeftoverFee = profile.Leftover_Fee,
+            };
         }
 
-        // Same every day: Alberta has no provincial sales tax, so only the 5% GST applies.
-        // Large parties get an automatic gratuity (18% for 6 or more guests by default),
-        // and leftovers are charged a flat fee
-        private PricingInfo WithTaxAndGratuity(PricingInfo pricing)
+        public async Task<PricingProfile> GetEffectiveProfileAsync(int locationId, CancellationToken ct = default)
         {
-            pricing.TaxRate = _config.GetValue<decimal>("Pricing:TaxRate", 0.05m);
-            pricing.GratuityRate = _config.GetValue<decimal>("Pricing:Gratuity:Rate", 0.18m);
-            pricing.GratuityMinPartySize = _config.GetValue<int>("Pricing:Gratuity:MinPartySize", 6);
-            //TODO: move to location managed pricing with the other prices
-            // currently in appsettings.Development.json
-            pricing.LeftoverFee = _config.GetValue<decimal>("Pricing:LeftoverFee", 15.00m);
-            return pricing;
+            // The location's own profile and the default (location_id NULL) in one query
+            var profiles = await _context.PricingProfiles
+                .AsNoTracking()
+                .Include(p => p.Rates)
+                .Where(p => p.Location_Id == locationId || p.Location_Id == null)
+                .ToListAsync(ct);
+
+            return profiles.FirstOrDefault(p => p.Location_Id == locationId)
+                ?? profiles.FirstOrDefault(p => p.Location_Id == null)
+                ?? throw new PricingNotConfiguredException("There is no default pricing profile.");
         }
+
+        // Called at startup right after migrations: without default prices every bill would be wrong,
+        // so fail now rather than on the first bill
+        public static async Task EnsureDefaultProfileAsync(ApplicationDbContext context, CancellationToken ct = default)
+        {
+            var dayTypes = await context.PricingRates
+                .Where(r => r.PricingProfile.Location_Id == null)
+                .Select(r => r.Day_Type)
+                .ToListAsync(ct);
+
+            var missing = Enum.GetValues<PricingDayType>().Except(dayTypes).ToList();
+            if (missing.Count > 0)
+            {
+                throw new PricingNotConfiguredException(
+                    $"Default pricing is missing {string.Join(", ", missing)} prices. " +
+                    "Check the LocationPricingAndHolidays migration was applied.");
+            }
+        }
+
+        // The approved holiday in the location's province on this date, or null
+        private Task<string?> HolidayNameAsync(int locationId, DateOnly date, CancellationToken ct) =>
+            _context.Locations
+                .Where(l => l.Location_Id == locationId)
+                .Join(_context.Holidays,
+                    l => l.Province_Code,
+                    h => h.Province_Code,
+                    (l, h) => h)
+                .Where(h => h.Date == date && h.Status == HolidayStatus.Approved)
+                .Select(h => (string?)h.Name)
+                .FirstOrDefaultAsync(ct);
     }
 }

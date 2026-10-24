@@ -8,6 +8,9 @@ export const serverMessage = (err, fallback) => {
   for (const key of ["message", "detail"]) {
     if (typeof data?.[key] === "string" && data[key].trim()) return data[key];
   }
+  // ASP.NET validation errors: { errors: { Rates: ["..."], Tax_Rate: ["..."] } }
+  const fieldErrors = data?.errors ? Object.values(data.errors).flat().filter(Boolean) : [];
+  if (fieldErrors.length) return fieldErrors.join(" ");
   return fallback;
 };
 

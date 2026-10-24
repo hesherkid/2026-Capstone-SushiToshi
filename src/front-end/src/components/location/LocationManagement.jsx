@@ -7,12 +7,14 @@ import {
   Typography,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
-import { Edit, Menu, AlertTriangle, Trash2 } from "lucide-react";
 import LocationForm from "@/components/location/LocationForm";
 import MenuAssignmentForm from "@/components/location/MenuAssignmentForm";
 import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
+import { Edit, Menu, AlertTriangle, Trash2, DollarSign } from "lucide-react";
+import LocationPricingDialog from "@/components/location/LocationPricingDialog";
+
 
 const LocationManagement = () => {
   const [locations, setLocations] = useState([]);
@@ -24,6 +26,8 @@ const LocationManagement = () => {
   const [formMode, setFormMode] = useState("create");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState(null);
+  const [pricingLocation, setPricingLocation] = useState(null);
+
 
   const fetchLocations = async () => {
     try {
@@ -44,6 +48,7 @@ const LocationManagement = () => {
           city: r.city ?? r.City,
           province: r.province ?? r.Province,
           postal_code: r.postal_code ?? r.postalCode ?? r.postal_Code ?? r.PostalCode,
+          province_code: r.province_code ?? r.province_Code ?? "AB",
           phone_Number: r.phone_Number ?? r.phoneNumber,
           created_At: r.created_At ?? r.createdAt ?? r.CreatedAt,
         };
@@ -191,6 +196,12 @@ const LocationManagement = () => {
           setIsMenuFormOpen(true);
         },
       },
+      {
+        label: "Pricing",
+        icon: DollarSign,
+        color: "primary",
+        onClick: () => setPricingLocation(row),
+      },
     ]),
   ];
 
@@ -231,6 +242,12 @@ const LocationManagement = () => {
           api={api}
         />
       </AppDialog>
+
+      <LocationPricingDialog
+        open={!!pricingLocation}
+        location={pricingLocation}
+        onClose={() => setPricingLocation(null)}
+      />
 
       <AppDialog
         open={deleteDialogOpen}

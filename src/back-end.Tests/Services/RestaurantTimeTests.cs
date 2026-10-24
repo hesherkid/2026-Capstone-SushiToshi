@@ -3,11 +3,11 @@ using Xunit;
 using Moq;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.Services;
+using back_end.domain.enums;
 
 namespace back_end.Tests.Services;
 
@@ -15,44 +15,58 @@ namespace back_end.Tests.Services;
 // until Alberta moved to UTC-6 year-round on 1 Nov 2026)
 public class RestaurantTimeTests
 {
-    private static PricingService Pricing()
+        private static PricingService Pricing()
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
+        var context = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options);
+
+        context.Locations.Add(new Locations { Location_Id = 1, Name = "Test", Province_Code = "AB" });
+        context.PricingProfiles.Add(new PricingProfile
+        {
+            Weekend_Days = new() { DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday },
+            Rates = new List<PricingRate>
             {
-                ["Pricing:Weekend:Days:0"] = "Friday",
-                ["Pricing:Weekend:Days:1"] = "Saturday",
-                ["Pricing:Weekend:Days:2"] = "Sunday",
-                ["Pricing:Holiday:Dates:0"] = "2026-12-25",
-            })
-            .Build();
-        return new PricingService(config, new Mock<ILogger<PricingService>>().Object);
+                new() { Day_Type = PricingDayType.Weekday },
+                new() { Day_Type = PricingDayType.Weekend },
+                new() { Day_Type = PricingDayType.Holiday },
+            },
+        });
+        context.Holidays.Add(new Holiday
+        {
+            Province_Code = "AB", Date = new DateOnly(2026, 12, 25), Name = "Christmas Day", Status = HolidayStatus.Approved,
+        });
+        context.SaveChanges();
+
+        return new PricingService(context, new Mock<ILogger<PricingService>>().Object);
     }
 
     private static DateTime Utc(int year, int month, int day, int hour, int minute = 0) =>
         new(year, month, day, hour, minute, 0, DateTimeKind.Utc);
 
-    [Fact]
-    public void ThursdayEveningInEdmonton_IsWeekdayPricing()
+
+        [Fact]
+    public async Task ThursdayEveningInEdmonton_IsWeekdayPricing()
     {
         // Thu 15 Oct 2026, 7pm MDT = Fri 01:00 UTC
-        Pricing().GetPricingForDate(Utc(2026, 10, 16, 1)).PricingType.Should().Be("Weekday");
+        (await Pricing().GetPricingAsync(1, Utc(2026, 10, 16, 1))).PricingType.Should().Be("Weekday");
     }
 
     [Fact]
-    public void SundayEveningInEdmonton_IsWeekendPricing()
+    public async Task SundayEveningInEdmonton_IsWeekendPricing()
     {
         // Sun 18 Oct 2026, 8pm MDT = Mon 02:00 UTC
-        Pricing().GetPricingForDate(Utc(2026, 10, 19, 2)).PricingType.Should().Be("Weekend");
+        (await Pricing().GetPricingAsync(1, Utc(2026, 10, 19, 2))).PricingType.Should().Be("Weekend");
     }
 
     [Fact]
-    public void ChristmasEveningInEdmonton_IsHolidayPricing()
+    public async Task ChristmasEveningInEdmonton_IsHolidayPricing()
     {
         // Sat 26 Dec 01:00 UTC is still 25 Dec in Edmonton: 7pm under the year-round UTC-6 rule,
         // or 6pm on servers whose time zone data predates it
-        Pricing().GetPricingForDate(Utc(2026, 12, 26, 1)).PricingType.Should().Be("Holiday");
+        (await Pricing().GetPricingAsync(1, Utc(2026, 12, 26, 1))).PricingType.Should().Be("Holiday");
     }
+
 
     [Fact]
     public void ValuesWithNoTimeZone_AreTreatedAsUtc()

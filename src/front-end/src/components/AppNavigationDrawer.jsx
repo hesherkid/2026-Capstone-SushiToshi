@@ -22,6 +22,8 @@ import {
   Group,
   Contact,
   LogOut,
+  DollarSign,
+  CalendarDays,
 } from "lucide-react";
 import TableIcon from "@/components/common/TableIcon";
 
@@ -46,6 +48,8 @@ const menuItemsByRole = {
     { icon: Users, label: "Manage Staff", path: "/admin/staff" },
     { icon: Contact, label: "Manage Customers", path: "/admin/customers" },
     { icon: MapPin, label: "Manage Locations", path: "/location/menu-location" },
+    { icon: DollarSign, label: "Pricing", path: "/admin/pricing" },
+    { icon: CalendarDays, label: "Holidays", path: "/admin/holidays" },
     { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes", divider: true },
     { icon: BarChart, label: "Analytics", path: "/analytics/analytic-page" },
   ],

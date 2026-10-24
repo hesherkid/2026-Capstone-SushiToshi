@@ -22,6 +22,9 @@ namespace back_end.DTO.LocationDTOs
         [MaxLength(20)]
         [MinLength(1)]
         public string Province { get; set; } = string.Empty;
+        // Two-letter code for holidays, e.g. "AB". Optional: Alberta on create, unchanged on update
+        [RegularExpression("^(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT)$")]
+        public string? Province_Code { get; set; }
         [MaxLength(8)]
         [MinLength(1)]
         public string Postal_Code { get; set; } = string.Empty;

@@ -72,8 +72,8 @@ public class BillGratuityTests : IDisposable
     private async Task<BillSummaryResponse> Summary(int billId = BillId)
     {
         var pricing = new Mock<IPricingService>();
-        pricing.Setup(p => p.GetPricingForDate(It.IsAny<DateTime>()))
-               .Returns(new PricingInfo
+        pricing.Setup(p => p.GetPricingAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(new PricingInfo
                {
                    PricingType = "Test",
                    AdultBasePrice = 40m,

@@ -154,7 +154,7 @@ const noSeatings = () => ({
 const lastParams = () => api.get.mock.calls.at(-1)[1].params;
 
 const renderLoaded = async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   render(<TableTurnover />);
   await screen.findByText(/parties seated \(/i);
   return user;

@@ -36,8 +36,8 @@ public class BillControllerTests : IDisposable
         _mockPricingService = new Mock<IPricingService>();
 
         // Setup default pricing service behavior
-        _mockPricingService.Setup(p => p.GetCurrentPricing())
-            .Returns(new PricingInfo
+        _mockPricingService.Setup(p => p.GetCurrentPricingAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        .ReturnsAsync(new PricingInfo
             {
                 PricingType = "Standard",
                 AdultBasePrice = 25.00m,

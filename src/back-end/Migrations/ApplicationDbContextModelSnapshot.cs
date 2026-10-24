@@ -71,6 +71,10 @@ namespace back_end.Migrations
                     b.Property<int>("Adult_Count")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("Adult_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<string>("Bill_Name")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -79,14 +83,32 @@ namespace back_end.Migrations
                     b.Property<int>("Child_Count")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("Child_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<DateTime?>("Closed_At")
                         .HasColumnType("datetime(6)");
 
                     b.Property<DateTime>("Created_At")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("Gratuity_Min_Party_Size")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Gratuity_Rate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<string>("Holiday_Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
                     b.Property<decimal>("Leftover_Charge")
                         .HasColumnType("decimal(65,30)");
+
+                    b.Property<int?>("Pricing_Type")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("Requested_At")
                         .HasColumnType("datetime(6)");
@@ -94,11 +116,23 @@ namespace back_end.Migrations
                     b.Property<int>("Senior_Count")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("Senior_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<int>("Session_Id")
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("Tax_Rate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal?>("Toddler_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<int>("Tot_Count")
                         .HasColumnType("int");
@@ -211,6 +245,62 @@ namespace back_end.Migrations
                         });
                 });
 
+            modelBuilder.Entity("back_end.domain.Entities.Holiday", b =>
+                {
+                    b.Property<int>("Holiday_Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Holiday_Id"));
+
+                    b.Property<DateTime>("Created_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("Imported_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateOnly?>("Observed_Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Province_Code")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<DateTime?>("Reviewed_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("Reviewed_By")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Holiday_Id");
+
+                    b.HasIndex("Reviewed_By");
+
+                    b.HasIndex("Province_Code", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("UX_holiday_province_date");
+
+                    b.HasIndex("Province_Code", "Status", "Date")
+                        .HasDatabaseName("IX_holiday_province_status_date");
+
+                    b.ToTable("holidays");
+                });
+
             modelBuilder.Entity("back_end.domain.Entities.Locations", b =>
                 {
                     b.Property<int>("Location_Id")
@@ -248,6 +338,11 @@ namespace back_end.Migrations
                     b.Property<string>("Province")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<string>("Province_Code")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
 
                     b.Property<DateTime>("Updated_At")
                         .HasColumnType("datetime(6)");
@@ -510,6 +605,104 @@ namespace back_end.Migrations
                     b.HasIndex("Order_Key");
 
                     b.ToTable("order_item");
+                });
+
+            modelBuilder.Entity("back_end.domain.Entities.PricingProfile", b =>
+                {
+                    b.Property<int>("Pricing_Profile_Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Pricing_Profile_Id"));
+
+                    b.Property<bool>("Apply_Holiday_Pricing")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("Created_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Gratuity_Min_Party_Size")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Gratuity_Rate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("Leftover_Fee")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int?>("Location_Id")
+                        .HasColumnType("int")
+                        .HasColumnName("location_id");
+
+                    b.Property<int>("Location_Key")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("int")
+                        .HasColumnName("location_key")
+                        .HasComputedColumnSql("IFNULL(location_id, 0)", true);
+
+                    b.Property<decimal>("Tax_Rate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("Updated_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Weekend_Days")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.HasKey("Pricing_Profile_Id");
+
+                    b.HasIndex("Location_Id")
+                        .IsUnique();
+
+                    b.HasIndex("Location_Key")
+                        .IsUnique()
+                        .HasDatabaseName("UX_pricing_profile_location");
+
+                    b.ToTable("pricing_profiles");
+                });
+
+            modelBuilder.Entity("back_end.domain.Entities.PricingRate", b =>
+                {
+                    b.Property<int>("Pricing_Rate_Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Pricing_Rate_Id"));
+
+                    b.Property<decimal>("Adult_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Child_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("Day_Type")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Pricing_Profile_Id")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Senior_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Toddler_Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Pricing_Rate_Id");
+
+                    b.HasIndex("Pricing_Profile_Id", "Day_Type")
+                        .IsUnique()
+                        .HasDatabaseName("UX_pricing_rate_profile_day_type");
+
+                    b.ToTable("pricing_rates");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.ServiceRequest", b =>
@@ -846,6 +1039,16 @@ namespace back_end.Migrations
                     b.Navigation("TableGroup");
                 });
 
+            modelBuilder.Entity("back_end.domain.Entities.Holiday", b =>
+                {
+                    b.HasOne("back_end.domain.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("Reviewed_By")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ReviewedByUser");
+                });
+
             modelBuilder.Entity("back_end.domain.Entities.Locations", b =>
                 {
                     b.HasOne("back_end.domain.Entities.User", null)
@@ -972,6 +1175,27 @@ namespace back_end.Migrations
                     b.Navigation("MenuItem");
 
                     b.Navigation("SessionOrder");
+                });
+
+            modelBuilder.Entity("back_end.domain.Entities.PricingProfile", b =>
+                {
+                    b.HasOne("back_end.domain.Entities.Locations", "Location")
+                        .WithOne("PricingProfile")
+                        .HasForeignKey("back_end.domain.Entities.PricingProfile", "Location_Id")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Location");
+                });
+
+            modelBuilder.Entity("back_end.domain.Entities.PricingRate", b =>
+                {
+                    b.HasOne("back_end.domain.Entities.PricingProfile", "PricingProfile")
+                        .WithMany("Rates")
+                        .HasForeignKey("Pricing_Profile_Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PricingProfile");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.ServiceRequest", b =>
@@ -1117,6 +1341,8 @@ namespace back_end.Migrations
 
                     b.Navigation("MenuLocations");
 
+                    b.Navigation("PricingProfile");
+
                     b.Navigation("TableGroups");
 
                     b.Navigation("Tables");
@@ -1140,6 +1366,11 @@ namespace back_end.Migrations
                     b.Navigation("MenuItemTags");
 
                     b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("back_end.domain.Entities.PricingProfile", b =>
+                {
+                    b.Navigation("Rates");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.SessionOrder", b =>

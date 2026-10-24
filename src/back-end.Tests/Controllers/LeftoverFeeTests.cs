@@ -44,8 +44,9 @@ namespace back_end.Tests.Controllers
         {
             var pricing = new Mock<IPricingService>();
             var info = new PricingInfo { PricingType = "Test", TaxRate = 0.05m, LeftoverFee = 10.00m };
-            pricing.Setup(p => p.GetPricingForDate(It.IsAny<DateTime>())).Returns(info);
-            pricing.Setup(p => p.GetCurrentPricing()).Returns(info);
+            pricing.Setup(p => p.GetPricingAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(info);
+            pricing.Setup(p => p.GetCurrentPricingAsync(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(info);
+
 
             return new BillController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<BillController>>().Object, pricing.Object)
             {

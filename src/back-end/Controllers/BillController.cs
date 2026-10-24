@@ -406,6 +406,11 @@ namespace back_end.controllers
           return BadRequest(new { message = "Bill is already closed" });
         }
 
+        if (bill.Status != BillStatus.Open)
+        {
+          return BadRequest(new { message = $"Only open bills can be closed (this bill is {bill.Status})." });
+        }
+
         var pendingOrders = await _context.SessionOrders
             .Where(o => o.Bill_Id == _bill_id && o.Status == OrderStatus.Pending)
             .ToListAsync();
@@ -414,6 +419,11 @@ namespace back_end.controllers
         {
           return BadRequest(new { message = "Cannot close bill with pending orders" });
         }
+
+        // Freeze this bill's prices, so later pricing changes don't alter a closed bill
+        var pricing = await _pricingService.GetPricingAsync(bill.DiningSession.Location_Id, bill.Created_At);
+        var partySize = await PartySizeAsync(_session_id);
+        BillPriceSnapshot.Freeze(bill, pricing, BillCalculator.GratuityRateFor(pricing, partySize));
 
         bill.Status = BillStatus.Closed;
         bill.Closed_At = DateTime.UtcNow;
@@ -459,35 +469,37 @@ namespace back_end.controllers
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLeftoverFee(int _session_id)
     {
-      if (!await _context.DiningSessions.AnyAsync(s => s.Session_Id == _session_id))
-      {
-        return NotFound(new { message = "Session was not found" });
-      }
+        var locationId = await SessionLocationAsync(_session_id);
+        if (locationId == null)
+        {
+            return NotFound(new { message = "Session was not found" });
+        }
 
-      var openBills = await OpenBillsAsync(_session_id);
-      return Ok(LeftoverFeeResult(_session_id, openBills));
+        var openBills = await OpenBillsAsync(_session_id);
+        var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
+        return Ok(LeftoverFeeResult(_session_id, openBills, pricing.LeftoverFee));
     }
 
-    /// <summary>
-    /// Applies a leftover fee to the table, split evenly across its open bills.
-    /// </summary>
-    /// <param name="_session_id">The dining session (table)</param>
-    /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
-    /// <response code="200">The fee was applied; returns each open bill's share</response>
-    /// <response code="400">If the amount is negative or the table has no open bills</response>
-    /// <response code="404">If the session doesn't exist</response>
-    /// <remarks>
-    /// Sample request:
-    ///
-    ///     PUT /api/bill/leftover_fee/456
-    ///     { "amount": 15.00 }
-    ///
-    /// Staff decide when a table has left too much food. The fee is for the whole table and is
-    /// split evenly across its open bills ($15.00 over 2 bills = $7.50 each), replacing any fee
-    /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
-    /// The fee is taxed with the rest of the bill.
-    /// </remarks>
-    [HttpPut("leftover_fee/{_session_id}")]
+        /// <summary>
+        /// Applies a leftover fee to the table, split evenly across its open bills.
+        /// </summary>
+        /// <param name="_session_id">The dining session (table)</param>
+        /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
+        /// <response code="200">The fee was applied; returns each open bill's share</response>
+        /// <response code="400">If the amount is negative or the table has no open bills</response>
+        /// <response code="404">If the session doesn't exist</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PUT /api/bill/leftover_fee/456
+        ///     { "amount": 15.00 }
+        ///
+        /// Staff decide when a table has left too much food. The fee is for the whole table and is
+        /// split evenly across its open bills ($15.00 over 2 bills = $7.50 each), replacing any fee
+        /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
+        /// The fee is taxed with the rest of the bill.
+        /// </remarks>
+        [HttpPut("leftover_fee/{_session_id}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -500,8 +512,14 @@ namespace back_end.controllers
         {
           return NotFound(new { message = "Session was not found" });
         }
-
-        var amount = request?.Amount ?? _pricingService.GetCurrentPricing().LeftoverFee;
+        var locationId = await SessionLocationAsync(_session_id);
+        if (locationId == null)
+        {
+            return NotFound(new { message = "Session was not found" });
+        }
+        // The location's default fee unless staff entered an amount
+        var defaultFee = (await _pricingService.GetCurrentPricingAsync(locationId.Value)).LeftoverFee;
+        var amount = request?.Amount ?? defaultFee;
         if (amount < 0)
         {
           return BadRequest(new { message = "The leftover fee can't be negative." });
@@ -523,7 +541,7 @@ namespace back_end.controllers
         _logger.LogInformation("Leftover fee {Amount:F2} applied to session {SessionId} across {Count} bills",
             amount, _session_id, openBills.Count);
 
-        return Ok(LeftoverFeeResult(_session_id, openBills));
+        return Ok(LeftoverFeeResult(_session_id, openBills, defaultFee));
       }
       catch (Exception ex)
       {
@@ -538,18 +556,31 @@ namespace back_end.controllers
             .Where(b => b.Session_Id == sessionId && b.Status == BillStatus.Open)
             .OrderBy(b => b.Bill_Id)
             .ToListAsync();
+    
+    // The session's location, or null if the session doesn't exist
+    private Task<int?> SessionLocationAsync(int sessionId) =>
+        _context.DiningSessions
+            .Where(s => s.Session_Id == sessionId)
+            .Select(s => (int?)s.Location_Id)
+            .FirstOrDefaultAsync();
 
-    private LeftoverFeeResponse LeftoverFeeResult(int sessionId, List<Billing> openBills) => new()
+    // Everyone at the table, so a big group splitting into small bills still gets the gratuity on each one
+    private Task<int> PartySizeAsync(int sessionId) =>
+        _context.Bills
+            .Where(b => b.Session_Id == sessionId && b.Status != BillStatus.Cancelled)
+            .SumAsync(b => b.Adult_Count + b.Senior_Count + b.Child_Count + b.Tot_Count);
+
+    private static LeftoverFeeResponse LeftoverFeeResult(int sessionId, List<Billing> openBills, decimal defaultFee) => new()
     {
-      Session_Id = sessionId,
-      Default_Fee = _pricingService.GetCurrentPricing().LeftoverFee,
-      Amount = openBills.Sum(b => b.Leftover_Charge),
-      Bills = openBills.Select(b => new LeftoverFeeBillShare
-      {
-        Bill_Id = b.Bill_Id,
-        Bill_Name = b.Bill_Name ?? string.Empty,
-        Leftover_Charge = b.Leftover_Charge,
-      }).ToList(),
+        Session_Id = sessionId,
+        Default_Fee = defaultFee,
+        Amount = openBills.Sum(b => b.Leftover_Charge),
+        Bills = openBills.Select(b => new LeftoverFeeBillShare
+          {
+            Bill_Id = b.Bill_Id,
+            Bill_Name = b.Bill_Name ?? string.Empty,
+            Leftover_Charge = b.Leftover_Charge,
+          }).ToList(),
     };
 
     /// <summary>
@@ -826,15 +857,13 @@ namespace back_end.controllers
           return NotFound(new { message = "Bill or session was not found" });
         }
 
-        // Get pricing based on when the bill was created
-        var pricing = _pricingService.GetPricingForDate(bill.Created_At);
+                // Closed bills use the prices frozen when they closed; open bills use the current prices
+        // for the bill's location on the day the bill was created
+        var frozen = BillPriceSnapshot.Read(bill);
+        var pricing = frozen
+          ?? await _pricingService.GetPricingAsync(bill.DiningSession.Location_Id, bill.Created_At);
 
-        // Calculate base charges using day-specific pricing
-        decimal baseChargesSubtotal =
-            (bill.Adult_Count * pricing.AdultBasePrice) +
-            (bill.Senior_Count * pricing.SeniorBasePrice) +
-            (bill.Child_Count * pricing.ChildBasePrice) +
-            (bill.Tot_Count * pricing.ToddlerBasePrice);
+        decimal baseChargesSubtotal = BillCalculator.BaseCharges(bill, pricing);
 
         // Charged lines for this bill (cancelled orders and cancelled items are excluded).
         // Prices are snapshots on each order line, so later price changes don't alter old bills.
@@ -864,20 +893,11 @@ namespace back_end.controllers
         decimal leftoverCharge = bill.Leftover_Charge;   // this bill's share of the table's leftover fee
         decimal subtotal = baseChargesSubtotal + addOnSubtotal + overLimitSubtotal + leftoverCharge;
 
-        // Party size is everyone at the table, so a big group splitting into small bills
-        // still gets the gratuity on each one
-        var partySize = await _context.Bills
-          .Where(b => b.Session_Id == _session_id && b.Status != BillStatus.Cancelled)
-          .SumAsync(b => b.Adult_Count + b.Senior_Count + b.Child_Count + b.Tot_Count);
-        var gratuityRate =
-          pricing.GratuityMinPartySize > 0 && partySize >= pricing.GratuityMinPartySize
-            ? pricing.GratuityRate
-            : 0m;
-        decimal gratuityAmount = Math.Round(subtotal * gratuityRate, 2);
+        // A closed bill keeps the gratuity it closed with, even if the table's party size changes later
+        var partySize = await PartySizeAsync(_session_id);
+        var gratuityRate = frozen?.GratuityRate ?? BillCalculator.GratuityRateFor(pricing, partySize);
+        var totals = BillCalculator.Totals(subtotal, gratuityRate, pricing.TaxRate);
 
-        // A mandatory gratuity is part of the price, so GST applies to it too (unlike a tip)
-        decimal taxAmount = Math.Round((subtotal + gratuityAmount) * pricing.TaxRate, 2);
-        decimal totalAmount = subtotal + gratuityAmount + taxAmount;
 
         var summary = new BillSummaryResponse
         {
@@ -912,15 +932,17 @@ namespace back_end.controllers
           Subtotal = subtotal,
           Party_Size = partySize,
           Gratuity_Rate = gratuityRate,
-          Gratuity_Amount = gratuityAmount,
+          Gratuity_Amount = totals.Gratuity,
           Gratuity_Min_Party_Size = pricing.GratuityMinPartySize,
           Tax_Rate = pricing.TaxRate,
-          Tax_Amount = taxAmount,
-          Total_Amount = totalAmount,
+          Tax_Amount = totals.Tax,
+          Total_Amount = totals.Total,
 
           // Status
           Status = bill.Status.ToString(),
           Pricing_Type = pricing.PricingType,
+          Holiday_Name = pricing.HolidayName,
+          Prices_Locked = frozen != null,
           Created_At = bill.Created_At,
           Closed_At = bill.Closed_At,
           Requested_At = bill.Requested_At,
@@ -929,9 +951,10 @@ namespace back_end.controllers
 
         _logger.LogInformation(
             $"Generated {pricing.PricingType} bill summary for Bill {_bill_id}: " +
-            $"Total ${totalAmount:F2} (Base: ${baseChargesSubtotal:F2}, Add-ons: ${addOnSubtotal:F2}, " +
+            $"Total ${totals.Total:F2} (Base: ${baseChargesSubtotal:F2}, Add-ons: ${addOnSubtotal:F2}, " +
             $"Over-limit: ${overLimitSubtotal:F2}, Leftovers: ${leftoverCharge:F2}, " +
-            $"Gratuity: ${gratuityAmount:F2}, GST: ${taxAmount:F2})");
+            $"Gratuity: ${totals.Gratuity:F2}, GST: ${totals.Tax:F2})");
+
 
         return Ok(summary);
       }

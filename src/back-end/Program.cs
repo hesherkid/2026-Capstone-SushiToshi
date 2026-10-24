@@ -1,20 +1,21 @@
-using Microsoft.EntityFrameworkCore;
+using back_end.Configurations;
 using back_end.domain.DbContexts;
 using back_end.domain.Seeders;
-using back_end.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
-using System.Text.Json.Serialization;
-using Microsoft.OpenApi.Models;
-using back_end.Configurations;
-using back_end.Services.Email;
-using back_end.Services.Auth;
-using back_end.Services.Analytics;
 using back_end.Helpers;
+using back_end.Services;
+using back_end.Services.Analytics;
+using back_end.Services.Auth;
+using back_end.Services.Email;
+using back_end.Services.Holidays;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using SendGrid;
+using System.Security.Claims;
+using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,15 @@ builder.Services
     .Bind(builder.Configuration.GetSection(
         AuthEmailSettings.SectionName))
     .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+// Settings for loading public holidays (canada-holidays.ca); prices themselves are in the database
+builder.Services
+    .AddOptions<HolidayApiSettings>()
+    .Bind(builder.Configuration.GetSection(
+        HolidayApiSettings.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(s => s.BaseUrl.EndsWith('/'), "HolidayApi:BaseUrl must end with '/'")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<ISendGridClient>(sp =>
@@ -224,6 +234,22 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpContextAccessor();
 // Services
 builder.Services.AddScoped<IPricingService, PricingService>();
+builder.Services.AddScoped<IHolidayService, HolidayService>();
+
+// Holiday loading (canada-holidays.ca); base URL and timeout from the HolidayApi settings
+builder.Services.AddHttpClient<IHolidayProvider, CanadaHolidaysClient>((sp, http) =>
+{
+    var settings = sp.GetRequiredService<
+        Microsoft.Extensions.Options.IOptions<HolidayApiSettings>>()
+        .Value;
+
+    http.BaseAddress = new Uri(settings.BaseUrl);
+    http.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+});
+
+
+
+
 builder.Services.AddScoped<QrGeneratorService>();
 builder.Services.AddAnalyticsServices();
 
@@ -312,6 +338,8 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Database connection successful");
             await context.Database.MigrateAsync();
             logger.LogInformation("Database migrations applied successfully");
+            // Missing default prices would make every bill wrong: stop now instead
+            await PricingService.EnsureDefaultProfileAsync(context);
 
             if (!context.MenuItems.Any())
             {

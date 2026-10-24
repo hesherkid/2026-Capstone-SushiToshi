@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using back_end.domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace back_end.domain.DbContexts
 {
@@ -26,6 +27,10 @@ namespace back_end.domain.DbContexts
         public DbSet<TableGroup> TableGroups { get; set; } = null!;
         public DbSet<Tag> Tags { get; set; } = null!;
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<Holiday> Holidays { get; set; } = null!;
+        public DbSet<PricingProfile> PricingProfiles { get; set; } = null!;
+        public DbSet<PricingRate> PricingRates { get; set; } = null!;
+
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -156,6 +161,60 @@ namespace back_end.domain.DbContexts
                 .WithMany(u => u.ClaimedServices)
                 .HasForeignKey(sr => sr.Claimed_By)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Existing and new locations default to Alberta
+            modelBuilder.Entity<Locations>()
+                .Property(l => l.Province_Code)
+                .HasDefaultValue("AB");
+
+            // Pricing: one default profile (location_id NULL) plus at most one per location
+            modelBuilder.Entity<PricingProfile>(entity =>
+            {
+                // Same trick as MenuItemAssignment: MariaDB allows many NULLs in a unique index
+                entity.Property(p => p.Location_Key)
+                    .HasComputedColumnSql("IFNULL(location_id, 0)", stored: true);
+
+                entity.HasIndex(p => p.Location_Key)
+                    .IsUnique()
+                    .HasDatabaseName("UX_pricing_profile_location");
+
+                entity.HasOne(p => p.Location)
+                    .WithOne(l => l.PricingProfile)
+                    .HasForeignKey<PricingProfile>(p => p.Location_Id)
+                    .OnDelete(DeleteBehavior.Cascade);   // deleting a location removes its pricing
+
+                entity.Property(p => p.Weekend_Days)
+                    .HasConversion(WeekendDaysConverter, WeekendDaysComparer);
+            });
+
+            modelBuilder.Entity<PricingRate>(entity =>
+            {
+                entity.HasIndex(r => new { r.Pricing_Profile_Id, r.Day_Type })
+                    .IsUnique()
+                    .HasDatabaseName("UX_pricing_rate_profile_day_type");
+
+                entity.HasOne(r => r.PricingProfile)
+                    .WithMany(p => p.Rates)
+                    .HasForeignKey(r => r.Pricing_Profile_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Holidays: one row per province per date; re-importing never duplicates
+            modelBuilder.Entity<Holiday>(entity =>
+            {
+                entity.HasIndex(h => new { h.Province_Code, h.Date })
+                    .IsUnique()
+                    .HasDatabaseName("UX_holiday_province_date");
+
+                entity.HasIndex(h => new { h.Province_Code, h.Status, h.Date })
+                    .HasDatabaseName("IX_holiday_province_status_date");
+
+                entity.HasOne(h => h.ReviewedByUser)
+                    .WithMany()
+                    .HasForeignKey(h => h.Reviewed_By)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
             ApplyUtcDateTimes(modelBuilder);
             base.OnModelCreating(modelBuilder);
         }
@@ -167,6 +226,20 @@ namespace back_end.domain.DbContexts
         private static readonly ValueConverter<DateTime, DateTime> UtcDateTimeConverter = new(
             toDb => toDb.Kind == DateTimeKind.Local ? toDb.ToUniversalTime() : toDb,
             fromDb => DateTime.SpecifyKind(fromDb, DateTimeKind.Utc));
+
+        // Weekend days are stored as "Friday,Saturday,Sunday"
+        private static readonly ValueConverter<List<DayOfWeek>, string> WeekendDaysConverter = new(
+            days => string.Join(",", days),
+            value => value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                          .Select(Enum.Parse<DayOfWeek>)
+                          .ToList());
+
+        // Lets EF notice when a day is added to or removed from the list
+        private static readonly ValueComparer<List<DayOfWeek>> WeekendDaysComparer = new(
+            (a, b) => a!.SequenceEqual(b!),
+            days => days.Aggregate(0, (hash, d) => HashCode.Combine(hash, d)),
+            days => days.ToList());
+
 
         private static void ApplyUtcDateTimes(ModelBuilder modelBuilder)
         {

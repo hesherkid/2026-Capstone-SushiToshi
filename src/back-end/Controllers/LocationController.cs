@@ -106,6 +106,7 @@ namespace back_end.Controllers
           Address_Secondary = createLocation.Address_Two,
           City = createLocation.City,
           Province = createLocation.Province,
+          Province_Code = createLocation.Province_Code ?? "AB",
           Postal_Code = createLocation.Postal_Code,
           Phone_Number = createLocation.Phone_Number
         };
@@ -233,6 +234,10 @@ namespace back_end.Controllers
         if (!string.IsNullOrEmpty(location_update.Province))
         {
           location.Province = location_update.Province;
+        }
+        if (!string.IsNullOrEmpty(location_update.Province_Code))
+        {
+          location.Province_Code = location_update.Province_Code;
         }
         if (!string.IsNullOrEmpty(location_update.Postal_Code))
         {
