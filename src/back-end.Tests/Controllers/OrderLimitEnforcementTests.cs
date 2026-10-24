@@ -121,8 +121,8 @@ public class OrderLimitEnforcementTests : IDisposable
     private BillController Bills()
     {
         var pricing = new Mock<IPricingService>();
-        pricing.Setup(p => p.GetPricingForDate(It.IsAny<DateTime>()))
-               .Returns(new PricingInfo { PricingType = "Test", TaxRate = 0m });   // base prices 0, no tax: totals are just charges
+        pricing.Setup(p => p.GetPricingAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(new PricingInfo { PricingType = "Test", TaxRate = 0m });   // base prices 0, no tax: totals are just charges
         return new BillController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<BillController>>().Object, pricing.Object)
         { ControllerContext = AsStaff() };
     }
