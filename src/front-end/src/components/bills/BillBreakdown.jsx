@@ -1,4 +1,5 @@
 import { Box, Typography, Divider, Chip } from "@mui/material";
+import { Lock } from "lucide-react";
 import {
   formatCurrency,
   formatDateTime,
@@ -6,6 +7,7 @@ import {
   formatBillStatus,
   getBillStatusColor,
 } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+
 
 // Field names from GET /Bill/summary
 const GUEST_TYPES = [
@@ -101,11 +103,19 @@ const BillBreakdown = ({ summary, showHeader = true }) => (
             color={getBillStatusColor(summary.status)}
             size="small"
           />
-          <Chip
-            label={formatPricingType(summary.pricing_type)}
+                    <Chip
+            label={
+              summary.holiday_name
+                ? `${formatPricingType(summary.pricing_type)}: ${summary.holiday_name}`
+                : formatPricingType(summary.pricing_type)
+            }
             variant="outlined"
             size="small"
           />
+          {/* Closed bills keep the prices they closed with */}
+          {summary.prices_locked && (
+            <Chip icon={<Lock size={14} />} label="Prices locked" variant="outlined" size="small" />
+          )}
           <Typography variant="body2" color="text.secondary">
             Created: {formatDateTime(summary.created_at)}
           </Typography>
@@ -122,6 +132,12 @@ const BillBreakdown = ({ summary, showHeader = true }) => (
     {showHeader && <ReceiptRule />}
 
     <SectionHeading>Guests</SectionHeading>
+    {/* The customer page has no header chips, so say why the prices are higher here */}
+    {!showHeader && summary.holiday_name && (
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+        Holiday prices for {summary.holiday_name}
+      </Typography>
+    )}
     {GUEST_TYPES.filter((type) => summary[type.count] > 0).map((type) => (
       <ReceiptLine
         key={type.label}

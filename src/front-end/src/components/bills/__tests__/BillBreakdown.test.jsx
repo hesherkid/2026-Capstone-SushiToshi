@@ -130,4 +130,28 @@ describe("BillBreakdown", () => {
     );
     expect(screen.getByText("Add-ons").nextSibling).toHaveTextContent("$18.00");
   });
+    it("names the holiday when holiday prices apply", () => {
+    render(<BillBreakdown summary={{ ...summary, pricing_type: "Holiday", holiday_name: "Canada Day" }} />);
+
+    expect(screen.getByText("Holiday Pricing: Canada Day")).toBeInTheDocument();
+  });
+
+  it("tells customers which holiday the prices are for", () => {
+    render(
+      <BillBreakdown
+        summary={{ ...summary, pricing_type: "Holiday", holiday_name: "Canada Day" }}
+        showHeader={false}
+      />,
+    );
+
+    expect(screen.getByText("Holiday prices for Canada Day")).toBeInTheDocument();
+  });
+
+  it("marks a closed bill's prices as locked", () => {
+    const { rerender } = render(<BillBreakdown summary={{ ...summary, prices_locked: true }} />);
+    expect(screen.getByText("Prices locked")).toBeInTheDocument();
+
+    rerender(<BillBreakdown summary={{ ...summary, prices_locked: false }} />);
+    expect(screen.queryByText("Prices locked")).not.toBeInTheDocument();
+  });
 });

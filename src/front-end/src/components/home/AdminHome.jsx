@@ -19,6 +19,8 @@ import {
   Timer,
   RefreshCw,
   Eye,
+  DollarSign,
+  CalendarDays,
 } from "lucide-react";
 import TableIcon from "@/components/common/TableIcon";
 import StatCard from "@/components/home/StatCard";
@@ -71,6 +73,18 @@ const shortcutSections = (pendingRequests) => [
         description: "Locations, menu types and assignments",
         href: "/location/menu-location",
         icon: MapPin,
+      },
+      {
+        title: "Pricing",
+        description: "Buffet prices, GST, gratuity and leftover fee",
+        href: "/admin/pricing",
+        icon: DollarSign,
+      },
+      {
+        title: "Holidays",
+        description: "Load and approve holidays for holiday pricing",
+        href: "/admin/holidays",
+        icon: CalendarDays,
       },
       {
         title: "Menu Items",
