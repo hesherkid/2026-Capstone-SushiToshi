@@ -33,6 +33,15 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+// Settings for loading public holidays (canada-holidays.ca); prices themselves are in the database
+builder.Services
+    .AddOptions<HolidayApiSettings>()
+    .Bind(builder.Configuration.GetSection(
+        HolidayApiSettings.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(s => s.BaseUrl.EndsWith('/'), "HolidayApi:BaseUrl must end with '/'")
+    .ValidateOnStart();
+
 builder.Services.AddSingleton<ISendGridClient>(sp =>
 {
     var settings = sp.GetRequiredService<
