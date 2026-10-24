@@ -7,7 +7,6 @@ import {
   Typography,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
-import { Edit, Menu, AlertTriangle, Trash2 } from "lucide-react";
 import LocationForm from "@/components/location/LocationForm";
 import MenuAssignmentForm from "@/components/location/MenuAssignmentForm";
 import api from "@/config/api";
