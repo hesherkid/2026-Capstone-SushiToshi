@@ -17,7 +17,7 @@ import { Edit, Trash2, Eye } from "lucide-react";
 import api from "@/config/api";
 import TagChip from "./TagChip";
 import DeleteTagDialog from "./DeleteTagDialog";
-import TagMenuItemsDialog from "./TagMenuItemsDialog.";
+import TagMenuItemsDialog from "./TagMenuItemsDialog";
 import { serverMessage } from "@/utils/serverMessage";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
@@ -143,6 +143,7 @@ const TagManagement = () => {
   const [availableColors, setAvailableColors] = useState([]);
   const [dialogMode, setDialogMode] = useState("add");
   const [itemsDialogOpen, setItemsDialogOpen] = useState(false);
+  const [itemsSuccess, setItemsSuccess] = useState(null);
   const [selectedTagForItems, setSelectedTagForItems] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -256,18 +257,27 @@ const TagManagement = () => {
 
   const handleOpenItemsDialog = (tag) => {
     setSelectedTagForItems(tag);
+    setError(null);
+    setItemsSuccess(null);
     setItemsDialogOpen(true);
     fetchMenuItemsForTag(tag.tag_id);
   };
 
+  const handleCloseItemsDialog = () => {
+    setItemsDialogOpen(false);
+    setError(null);
+    setItemsSuccess(null);
+  };
+
   const handleRemoveTagFromItem = async (item) => {
     setError(null);
+    setItemsSuccess(null);
     try {
       await api.delete(
         `/menuItem/${item.item_id}/tags/${selectedTagForItems.tag_id}`,
       );
       setMenuItems((prev) => prev.filter((i) => i.item_id !== item.item_id));
-      setSuccessMessage(`Tag removed from ${item.name}`);
+      setItemsSuccess(`Tag removed from ${item.name}`);
     } catch (err) {
       setError(serverMessage(err, "Failed to remove tag from item"));
     }
@@ -538,7 +548,9 @@ const TagManagement = () => {
         loadError={itemsError}
         error={itemsDialogOpen ? error : null}
         onErrorClose={() => setError(null)}
-        onClose={() => setItemsDialogOpen(false)}
+        success={itemsSuccess}
+        onSuccessClose={() => setItemsSuccess(null)}
+        onClose={handleCloseItemsDialog}
         onRemoveItem={handleRemoveTagFromItem}
       />
     </ManagementPage>

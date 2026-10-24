@@ -29,6 +29,8 @@ const TagMenuItemsDialog = ({
   loadError,
   error,
   onErrorClose,
+  success,
+  onSuccessClose,
   onClose,
   onRemoveItem,
 }) => (
@@ -43,6 +45,11 @@ const TagMenuItemsDialog = ({
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={onErrorClose}>
           {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={onSuccessClose}>
+          {success}
         </Alert>
       )}
       {loading ? (

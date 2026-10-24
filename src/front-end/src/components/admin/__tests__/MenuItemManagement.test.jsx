@@ -20,11 +20,32 @@ jest.mock("@/config/api", () => {
 
 jest.mock("@/components/common/ManagementPage", () => ({
   __esModule: true,
-  default: ({ title, addLabel, onAdd, error, gridProps, children }) => (
+  default: ({
+    title,
+    addLabel,
+    onAdd,
+    error,
+    success,
+    successAction,
+    successAutoHideMs,
+    onSuccessClose,
+    gridProps,
+    children,
+  }) => (
     <div>
       <h1>{title}</h1>
       <button onClick={onAdd}>{addLabel}</button>
       {error && <p data-testid="page-error">{error}</p>}
+      {success && (
+        <div
+          data-testid="page-success"
+          data-autohide={successAutoHideMs ?? "default"}
+        >
+          {success}
+          {successAction}
+          <button onClick={onSuccessClose}>Dismiss</button>
+        </div>
+      )}
       <table>
         <tbody>
           {gridProps.rows.map((row) => (
@@ -64,6 +85,7 @@ const CATEGORIES = [
   { category_id: 2, category_name: "Nigiri" },
 ];
 
+const SPICY = { tag_id: 3, name: "Spicy", color_code: "#FF5733" };
 const SALMON = {
   item_id: 7,
   name: "Salmon Nigiri",
@@ -71,7 +93,7 @@ const SALMON = {
   category_Id: 2,
   item_Image_Url: null,
   status: "Available",
-  tags: [],
+  tags: [SPICY],
 };
 
 const mockGets = (menuAssignments = []) =>
@@ -82,6 +104,9 @@ const mockGets = (menuAssignments = []) =>
     if (url === "/Category") return Promise.resolve({ data: CATEGORIES });
     return Promise.resolve({ data: [] });
   });
+
+const listReloads = () =>
+  api.get.mock.calls.filter(([url]) => url === "/menuItem").length;
 
 const nameInput = () => screen.getByLabelText(/^Name/);
 const descriptionInput = () => screen.getByLabelText(/^Description/);
@@ -316,11 +341,7 @@ describe("Menu item delete", () => {
     await confirmDelete();
 
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/menuitem/7"));
-    await waitFor(() =>
-      expect(
-        api.get.mock.calls.filter(([url]) => url === "/menuItem"),
-      ).toHaveLength(2),
-    );
+    await waitFor(() => expect(listReloads()).toBe(2));
     expect(screen.queryByTestId("page-error")).not.toBeInTheDocument();
   });
 
@@ -380,5 +401,112 @@ describe("Menu item delete", () => {
       "Menu item was not found",
     );
     expect(api.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("Removing a tag from the grid", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGets();
+    api.delete.mockResolvedValue({ data: {} });
+    api.post.mockResolvedValue({ data: {} });
+  });
+
+  const clickTagX = async (tagName) => {
+    const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
+    const chip = within(row).getByRole("button", { name: tagName });
+    fireEvent.click(chip.querySelector(".MuiChip-deleteIcon"));
+  };
+
+  const removeSpicy = async () => {
+    render(<MenuItemManagement />);
+    await clickTagX("Spicy");
+    return screen.findByTestId("page-success");
+  };
+
+  it("removes the tag and offers Undo for 10 seconds", async () => {
+    const alert = await removeSpicy();
+
+    expect(api.delete).toHaveBeenCalledWith("/menuitem/7/tags/3");
+    expect(alert).toHaveTextContent('Removed "Spicy" from Salmon Nigiri');
+    expect(
+      within(alert).getByRole("button", { name: "Undo" }),
+    ).toBeInTheDocument();
+    expect(alert).toHaveAttribute("data-autohide", "10000");
+    expect(listReloads()).toBe(2);
+  });
+
+  it("puts the tag back when Undo is clicked", async () => {
+    const alert = await removeSpicy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/menuitem/7/tags/3"),
+    );
+    expect(await screen.findByTestId("page-success")).toHaveTextContent(
+      'Restored "Spicy"',
+    );
+    expect(
+      screen.queryByRole("button", { name: "Undo" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("page-success")).toHaveAttribute(
+      "data-autohide",
+      "default",
+    );
+    await waitFor(() => expect(listReloads()).toBe(3));
+  });
+
+  it("treats 'already assigned' on Undo as done", async () => {
+    api.post.mockRejectedValue({
+      response: { status: 409, data: "Tag already assigned to this menu item" },
+    });
+    const alert = await removeSpicy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Undo" }));
+
+    expect(await screen.findByText('Restored "Spicy"')).toBeInTheDocument();
+    expect(screen.queryByTestId("page-error")).not.toBeInTheDocument();
+  });
+
+  it("shows the server's reason when Undo fails", async () => {
+    api.post.mockRejectedValue({
+      response: {
+        status: 404,
+        data: "Item you were searching for was not found.",
+      },
+    });
+    const alert = await removeSpicy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Undo" }));
+
+    expect(await screen.findByTestId("page-error")).toHaveTextContent(
+      "Item you were searching for was not found.",
+    );
+    expect(screen.queryByTestId("page-success")).not.toBeInTheDocument();
+  });
+
+  it("drops Undo when the alert is dismissed", async () => {
+    const alert = await removeSpicy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Dismiss" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Undo" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the server's reason and no Undo when the removal fails", async () => {
+    api.delete.mockRejectedValue({
+      response: { status: 409, data: "Item does not exist on menu" },
+    });
+    render(<MenuItemManagement />);
+
+    await clickTagX("Spicy");
+
+    expect(await screen.findByTestId("page-error")).toHaveTextContent(
+      "Item does not exist on menu",
+    );
+    expect(screen.queryByTestId("page-success")).not.toBeInTheDocument();
   });
 });
