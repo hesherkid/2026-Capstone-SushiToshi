@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { Box, Alert } from "@mui/material";
+import { Box, Alert, IconButton } from "@mui/material";
+import { X } from "lucide-react";
 import ManagementHeader from "@/components/common/ManagementHeader";
 import ManagementGrid from "@/components/common/ManagementGrid";
 
 const SUCCESS_AUTO_HIDE_MS = 6000;
 
-// Standard admin management layout: header, status alerts, grid, then any dialogs as children
 export const ManagementPage = ({
   title,
   addLabel,
@@ -15,12 +15,13 @@ export const ManagementPage = ({
   onErrorClose,
   success = null,
   onSuccessClose,
+  successAction = null,
+  successAutoHideMs = SUCCESS_AUTO_HIDE_MS,
   gridProps,
   children,
   sx = {},
 }) => {
   // Success messages dismiss themselves; errors stay until closed.
-  // Ref keeps an inline onSuccessClose from restarting the timer every render.
   const onSuccessCloseRef = useRef(onSuccessClose);
   onSuccessCloseRef.current = onSuccessClose;
 
@@ -28,10 +29,10 @@ export const ManagementPage = ({
     if (!success) return;
     const timer = setTimeout(
       () => onSuccessCloseRef.current?.(),
-      SUCCESS_AUTO_HIDE_MS
+      successAutoHideMs,
     );
     return () => clearTimeout(timer);
-  }, [success]);
+  }, [success, successAutoHideMs]);
 
   return (
     <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, ...sx }}>
@@ -49,7 +50,26 @@ export const ManagementPage = ({
       )}
 
       {success && (
-        <Alert severity="success" onClose={onSuccessClose} sx={{ mb: 2 }}>
+        <Alert
+          severity="success"
+          onClose={onSuccessClose}
+          action={
+            successAction ? (
+              <>
+                {successAction}
+                <IconButton
+                  aria-label="Close"
+                  color="inherit"
+                  size="small"
+                  onClick={onSuccessClose}
+                >
+                  <X size={18} />
+                </IconButton>
+              </>
+            ) : undefined
+          }
+          sx={{ mb: 2 }}
+        >
           {success}
         </Alert>
       )}

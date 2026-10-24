@@ -24,7 +24,6 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
-        //TODO: this has no front end implementation yet, DTO is also commented out.
         [Authorize(Policy = "staffOnly")]
         [HttpPost("createmenu")]
         [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]

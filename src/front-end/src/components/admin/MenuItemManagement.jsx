@@ -1,21 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  IconButton,
-  Typography,
-  CircularProgress,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Stack,
-  Card,
-  CardMedia,
-  Input,
-  TextField,
-} from "@mui/material";
+import { Box, Button, IconButton, Typography, Stack } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
 import {
   Plus,
@@ -32,7 +16,10 @@ import CategoryManagementDialog from "@/components/admin/CategoryManagementDialo
 import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
+import MenuItemForm from "@/components/admin/MenuItemForm";
+import { serverMessage } from "@/utils/serverMessage";
 
+const UNDO_AUTO_HIDE_MS = 10000;
 
 const MenuItemManagement = () => {
   const [items, setItems] = useState([]);
@@ -52,9 +39,10 @@ const MenuItemManagement = () => {
   const [submitting, setSubmitting] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [successMessage , setSuccessMessage]= useState("")
+  const [successMessage, setSuccessMessage] = useState("");
+  const [formKey, setFormKey] = useState(0);
+  const [undoTag, setUndoTag] = useState(null);
 
-  // TODO: Update APIs for menu items, categories, menu, and tags
   const fetchData = async () => {
     try {
       const [
@@ -66,7 +54,7 @@ const MenuItemManagement = () => {
         api.get("/menuItem"),
         api.get("/Category"),
         api.get("/Menu"),
-        api.get("/tag/colors"), // TODO: Need Tag Controllers
+        api.get("/tag/colors"),
       ]);
       setItems(Array.isArray(itemsData) ? itemsData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
@@ -91,47 +79,75 @@ const MenuItemManagement = () => {
   }, []);
 
   const handleTagAction = async (itemId, tagId, action) => {
-    try {
-      
-      if (action === "add") {
-        await api.post(`/menuitem/${itemId}/tags/${tagId}`)
-      } else {
-        await api.delete(`/menuitem/${itemId}/tags/${tagId}`)
-      }
-      await fetchData();
-    } catch (err) {
-      console.error(`Error ${action}ing tag:`, err);
-      setError(`Failed to ${action} tag`);
+    if (action === "add") {
+      await api.post(`/menuitem/${itemId}/tags/${tagId}`);
+    } else {
+      await api.delete(`/menuitem/${itemId}/tags/${tagId}`);
     }
+    await fetchData();
+  };
+
+  const clearSuccess = () => {
+    setSuccessMessage("");
+    setUndoTag(null);
+  };
+
+  const handleGridTagRemove = async (item, tag) => {
+    setError(null);
+    try {
+      await handleTagAction(item.item_id, tag.tag_id, "remove");
+    } catch (err) {
+      console.error("Error removing tag:", err);
+      setError(serverMessage(err, "Failed to remove tag"));
+      return;
+    }
+    const tagName = tag.name || tag.tag_name || "Tag";
+    setUndoTag({ itemId: item.item_id, tagId: tag.tag_id, tagName });
+    setSuccessMessage(`Removed "${tagName}" from ${item.name}`);
+  };
+
+  const handleUndoTagRemove = async () => {
+    if (!undoTag) return;
+    const { itemId, tagId, tagName } = undoTag;
+    clearSuccess();
+    try {
+      await api.post(`/menuitem/${itemId}/tags/${tagId}`);
+    } catch (err) {
+      if (err?.response?.status !== 409) {
+        setError(serverMessage(err, "Failed to undo tag removal"));
+        return;
+      }
+    }
+    await fetchData();
+    setSuccessMessage(`Restored "${tagName}"`);
   };
 
   const handleCreate = () => {
     setSelectedItem(null);
     setImageFile(null);
     setImagePreview("");
+    setError(null);
+    setFormKey((k) => k + 1);
     setDialogOpen(true);
   };
 
   const handleEdit = (item) => {
     setSelectedItem(item);
-    setImagePreview(item.item_Image_Url
- || "");
+    setImageFile(null);
+    setImagePreview(item.item_Image_Url || "");
+    setError(null);
+    setFormKey((k) => k + 1);
     setDialogOpen(true);
   };
 
   const handleDelete = async (item) => {
+    setError(null);
     try {
+      const { data } = await api.get(`/menuitem/${item.item_id}`);
 
-      const response = await api.get(
-        `/menuitem/${item.item_id}`
-      );
-
-      const assignments = response.data;
-
-
-      if (assignments.length > 0) {
+      if (data?.menuAssignments?.length > 0) {
         setError(
-          "Cannot delete item - it is currently assigned to one or more menus. Remove menu assignments first."
+          "Cannot delete item - it is currently assigned to one or more menus. Remove menu assignments first.",
         );
         return;
       }
@@ -139,19 +155,19 @@ const MenuItemManagement = () => {
       setItemToDelete(item);
       setDeleteDialogOpen(true);
     } catch (err) {
-      setError("Failed to check item assignments");
+      setError(serverMessage(err, "Failed to check item assignments"));
     }
   };
 
   const handleDeleteConfirm = async () => {
     try {
-
-      await api.delete(`/menuitem/${itemToDelete.item_id}`)
+      await api.delete(`/menuitem/${itemToDelete.item_id}`);
       await fetchData();
+    } catch (err) {
+      setError(serverMessage(err, "Failed to delete menu item"));
+    } finally {
       setDeleteDialogOpen(false);
       setItemToDelete(null);
-    } catch (err) {
-      setError("Failed to delete menu item");
     }
   };
 
@@ -203,8 +219,8 @@ const MenuItemManagement = () => {
         label: cat.category_name,
       })),
       renderCell: (params) =>
-        categories.find((c) => c.category_id === params.value)
-          ?.category_name || "(No category)",
+        categories.find((c) => c.category_id === params.value)?.category_name ||
+        "(No category)",
     },
     {
       field: "description",
@@ -230,9 +246,7 @@ const MenuItemManagement = () => {
                 tag={tag}
                 isActionChip={true}
                 isUsedFor="menu-item"
-                onToggle={() =>
-                  handleTagAction(params.row.item_id, tag.tag_id, "remove")
-                }
+                onToggle={() => handleGridTagRemove(params.row, tag)}
               />
             ))}
             <IconButton
@@ -268,208 +282,57 @@ const MenuItemManagement = () => {
     ]),
   ];
 
-  const ItemForm = () => {
-    const [formData, setFormData] = useState({
-      name: selectedItem?.name || "",
-      description: selectedItem?.description || "",
-      category_id: selectedItem?.category_id || "",
-    });
+  const handleImageChange = (file) => {
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
 
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      setSubmitting(true);
-      setError(null);
+  const handleFormClose = () => {
+    if (submitting) return;
+    setDialogOpen(false);
+    setError(null);
+  };
 
-      try {
-        let savedItem;
+  const handleSubmit = async (formData) => {
+    setSubmitting(true);
+    setError(null);
 
-        // Step 1: Save menu item basic data
-        if (selectedItem) {
-          // UPDATE existing item
-          savedItem = await api.put(
-            `/menuItem/${selectedItem.item_id}`,
-            formData
-          );
-        } else {
-          // CREATE new item
-          savedItem = await api.post("/menuItem", formData);
-        }
+    try {
+      // Step 1: Save menu item basic data
+      const savedItem = selectedItem
+        ? await api.put(`/menuItem/${selectedItem.item_id}`, formData)
+        : await api.post("/menuItem", formData);
 
-        // Step 2: Handle image upload if there is one
-        if (imageFile) {
-          const imageFormData = new FormData();
-          imageFormData.append("file", imageFile);
+      // Step 2: Upload the image if one was chosen
+      if (imageFile) {
+        const imageFormData = new FormData();
+        imageFormData.append("file", imageFile);
 
-          await api.post(
-            `/menuItem/${savedItem.data.item_id}/image`,
-            imageFormData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          );
-        }
-
-        // Step 3: Refresh data and close dialog
-        await fetchData();
-        setDialogOpen(false);
-        setImageFile(null);
-        setImagePreview("");
-        setError(null);
-
-        // Optional: Show success message
-        setSuccessMessage(
-          selectedItem
-            ? "Menu item updated successfully"
-            : "Menu item created successfully"
-        );
-      } catch (err) {
-        console.error("Error saving item:", err);
-        console.error("Error response:", err.response);
-        setError("Failed to save menu item");
-      } finally {
-        setSubmitting(false);
+        const itemId = selectedItem?.item_id ?? savedItem.data.item_id;
+        await api.post(`/menuItem/${itemId}/image`, imageFormData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
       }
-    };
 
-    return (
-      <AppDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-      >
-        <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            {selectedItem ? "Edit Menu Item" : "Create Menu Item"}
-          </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Stack spacing={3}>
-            <Card
-              sx={{
-                aspectRatio: "16/9",
-                overflow: "hidden",
-                position: "relative",
-              }}
-            >
-              {imagePreview ? (
-                <CardMedia
-                  component="img"
-                  image={imagePreview}
-                  alt="Item preview"
-                  sx={{ height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                <Box
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    bgcolor: "grey.100",
-                  }}
-                >
-                  <ImageIcon size={48} color="grey" />
-                </Box>
-              )}
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    setImageFile(file);
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setImagePreview(reader.result);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-                sx={{ display: "none" }}
-                id="image-input"
-              />
-              <label htmlFor="image-input">
-                <Button
-                  component="span"
-                  variant="contained"
-                  sx={{
-                    position: "absolute",
-                    bottom: 16,
-                    right: 16,
-                    bgcolor: "rgba(0, 0, 0, 0.5)",
-                    "&:hover": {
-                      bgcolor: "rgba(0, 0, 0, 0.7)",
-                    },
-                  }}
-                >
-                  Change Image
-                </Button>
-              </label>
-            </Card>
-
-            <TextField
-              label="Name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, name: e.target.value }))
-              }
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-              multiline
-              rows={3}
-              fullWidth
-            />
-
-            <FormControl fullWidth required>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={formData.category_id}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    category_id: e.target.value,
-                  }))
-                }
-                label="Category"
-              >
-                {categories.map((category) => (
-                  <MenuItem
-                    key={category.category_id}
-                    value={category.category_id}
-                  >
-                    {category.category_name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-              <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" variant="contained" disabled={submitting}>
-                {submitting ? <CircularProgress size={24} /> : "Save"}
-              </Button>
-            </Box>
-          </Stack>
-        </Box>
-      </AppDialog>
-    );
+      // Step 3: Refresh data and close dialog
+      await fetchData();
+      setDialogOpen(false);
+      setImageFile(null);
+      setImagePreview("");
+      setUndoTag(null);
+      setSuccessMessage(
+        selectedItem
+          ? "Menu item updated successfully"
+          : "Menu item created successfully",
+      );
+    } catch (err) {
+      console.error("Error saving item:", err, err.response);
+      setError("Failed to save menu item");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -480,7 +343,15 @@ const MenuItemManagement = () => {
       error={error}
       onErrorClose={() => setError(null)}
       success={successMessage}
-      onSuccessClose={() => setSuccessMessage("")}
+      onSuccessClose={clearSuccess}
+      successAction={
+        undoTag ? (
+          <Button color="inherit" size="small" onClick={handleUndoTagRemove}>
+            Undo
+          </Button>
+        ) : null
+      }
+      successAutoHideMs={undoTag ? UNDO_AUTO_HIDE_MS : undefined}
       gridProps={{
         rows: items,
         columns,
@@ -491,7 +362,18 @@ const MenuItemManagement = () => {
         sx: { "& .MuiDataGrid-row": { minHeight: "100px !important" } },
       }}
     >
-      <ItemForm />
+      <MenuItemForm
+        key={formKey}
+        open={dialogOpen}
+        onClose={handleFormClose}
+        selectedItem={selectedItem}
+        categories={categories}
+        imagePreview={imagePreview}
+        onImageChange={handleImageChange}
+        onSubmit={handleSubmit}
+        submitting={submitting}
+        error={error}
+      />
 
       <TagsDialog
         open={tagDialogOpen}
