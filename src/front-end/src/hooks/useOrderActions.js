@@ -44,15 +44,13 @@ export const useOrderActions = (onSuccess) => {
   // ORDER CREATION
 
   const createOrder = useCallback(
-    async (sessionId, billId, requestByOid = null, requestByName = null) => {
+    async (sessionId, billId) => {
       return apiWrapper(
         "createOrder",
         async () => {
           const result = await orderService.createOrder({
             session_Id: sessionId,
             bill_Id: billId,
-            request_by_Oid: requestByOid, // optional
-            request_by_Name: requestByName,
           });
           return result;
         },
@@ -222,17 +220,6 @@ export const useOrderActions = (onSuccess) => {
     [apiWrapper],
   );
 
-  const getOrdersByUser = useCallback(
-    async (userOid) => {
-      return apiWrapper(
-        "getOrdersByUser",
-        async () => orderService.getOrdersByUser(userOid),
-        { defaultReturn: [] },
-      );
-    },
-    [apiWrapper],
-  );
-
   const getActiveSessionOrders = useCallback(
     async (billId = null) => {
       return apiWrapper(
@@ -267,7 +254,6 @@ export const useOrderActions = (onSuccess) => {
     getAllOrdersByLocation,
     getOrderById,
     getOrdersBySession,
-    getOrdersByUser,
     getActiveSessionOrders,
   };
 };
