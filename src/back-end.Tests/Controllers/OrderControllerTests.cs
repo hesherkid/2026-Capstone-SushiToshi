@@ -65,20 +65,45 @@ public class OrderControllerTests : IDisposable
             Created_At = DateTime.UtcNow
         };
 
+        // A second table, so tests can try reaching an order at a table the caller isn't seated at
+        var otherSession = new DiningSession
+        {
+            Session_Id = 2,
+            Location_Id = 1,
+        };
+
+        var otherBill = new Billing
+        {
+            Bill_Id = 3,
+            Session_Id = 2,
+            Bill_Name = "Other Table Bill",
+            Senior_Count = 0,
+            Adult_Count = 1,
+            Child_Count = 0,
+            Total_Count = 1,
+            Status = BillStatus.Open,
+            Created_At = DateTime.UtcNow
+        };
+
         _context.Locations.Add(location);
-        _context.DiningSessions.Add(session);
-        _context.Bills.Add(bill);
+        _context.DiningSessions.AddRange(session, otherSession);
+        _context.Bills.AddRange(bill, otherBill);
+        _context.SessionParticipants.AddRange(
+            new SessionParticipant { Session_Id = 1, User_Id = 123, User_Name = "User One" },
+            new SessionParticipant { Session_Id = 1, User_Id = 456, User_Name = "User Two" },
+            // Left the table, so no longer counts as seated
+            new SessionParticipant { Session_Id = 1, User_Id = 789, User_Name = "Gone", Left_At = DateTime.UtcNow });
         _context.SaveChanges();
     }
 
-    private void SetupUserClaims(string userid, string userName = "Test User")
+    private void SetupUserClaims(string userid, string userName = "Test User", string role = "Customer")
     {
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, userid),
             new Claim(ClaimTypes.Name, userName),
             new Claim(ClaimTypes.Email, "test@example.com"),
-            new Claim(ClaimTypes.Role, "Customer")
+            new Claim(ClaimTypes.Role, role)
         };
 
         var identity = new ClaimsIdentity(claims, "TestAuthType");
@@ -90,7 +115,10 @@ public class OrderControllerTests : IDisposable
         };
     }
 
-    private SessionOrder SeedOrder(OrderStatus orderStatus, params OrderStatus[] itemStatuses)
+    private SessionOrder SeedOrder(OrderStatus orderStatus, params OrderStatus[] itemStatuses) =>
+        SeedOrderAt(1, 1, orderStatus, itemStatuses);
+
+    private SessionOrder SeedOrderAt(int sessionId, int billId, OrderStatus orderStatus, params OrderStatus[] itemStatuses)
     {
         if (!_context.MenuItems.Any())
         {
@@ -116,8 +144,8 @@ public class OrderControllerTests : IDisposable
 
         var order = new SessionOrder
         {
-            session_id = 1,
-            Bill_Id = 1,
+            session_id = sessionId,
+            Bill_Id = billId,
             Status = orderStatus,
             Created_At = DateTime.UtcNow.AddMinutes(-10),
             Approved_At = orderStatus == OrderStatus.Pending ? null : DateTime.UtcNow.AddMinutes(-8),
@@ -466,5 +494,155 @@ public class OrderControllerTests : IDisposable
         saved.Approved_At.Should().NotBeNull();
         saved.Approved_At!.Value.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         saved.Approved_By.Should().Be(42);
+    }
+
+    [Theory]
+    [InlineData(nameof(OrderController.CreateOrder))]
+    [InlineData(nameof(OrderController.AddOrderItems))]
+    [InlineData(nameof(OrderController.GetOrderById))]
+    [InlineData(nameof(OrderController.GetOrdersForActiveSession))]
+    public void OrderEndpoints_RequireSignIn(string methodName)
+    {
+        var method = typeof(OrderController).GetMethod(methodName)!;
+
+        method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
+            .Should().ContainSingle();
+        method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), true)
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetOrderByUser_IsRemoved()
+    {
+        typeof(OrderController).GetMethod("GetOrderByUser").Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateOrder_CustomerNotSeatedAtTable_ReturnsForbid()
+    {
+        // Arrange: customer 123 is seated at session 1, not session 2
+        SetupUserClaims("123");
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 2, Bill_Id = 3 });
+
+        // Assert
+        result.Result.Should().BeOfType<ForbidResult>();
+        _context.SessionOrders.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateOrder_CustomerWhoLeftTheTable_ReturnsForbid()
+    {
+        // Arrange
+        SetupUserClaims("789");
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+
+        // Assert
+        result.Result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task CreateOrder_CustomerSetsRequestBy_IsIgnored()
+    {
+        // Arrange
+        SetupUserClaims("123", "User One");
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO
+        {
+            Session_Id = 1,
+            Bill_Id = 1,
+            Request_By_User_Id = 456,
+            Request_By_Name = "User Two"
+        });
+
+        // Assert
+        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
+        order!.User_Id.Should().Be(123);
+        order.User_Name.Should().Be("User One");
+    }
+
+    [Fact]
+    public async Task CreateOrder_StaffOrderingForCustomer_UsesRequestBy()
+    {
+        // Arrange: staff aren't seated at the table but can order at any table
+        SetupUserClaims("42", "Server", "Staff");
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO
+        {
+            Session_Id = 1,
+            Bill_Id = 1,
+            Request_By_User_Id = 123,
+            Request_By_Name = "User One"
+        });
+
+        // Assert
+        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
+        order!.User_Id.Should().Be(123);
+        order.User_Name.Should().Be("User One");
+    }
+
+    [Fact]
+    public async Task AddOrderItems_CustomerNotSeatedAtTable_ReturnsForbid()
+    {
+        // Arrange
+        var order = SeedOrderAt(2, 3, OrderStatus.Pending, OrderStatus.Pending);
+        SetupUserClaims("123");
+
+        // Act
+        var result = await _controller.AddOrderItems(order.Order_Id,
+            new List<OrderItemCreateDTO> { new() { Item_Id = 1, Quantity = 1 } });
+
+        // Assert
+        result.Should().BeOfType<ForbidResult>();
+        var saved = await _context.SessionOrders.Include(o => o.OrderItems)
+            .SingleAsync(o => o.Order_Id == order.Order_Id);
+        saved.OrderItems.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task GetOrderById_CustomerSeatedAtTable_ReturnsOrder()
+    {
+        // Arrange
+        var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
+        SetupUserClaims("456");
+
+        // Act
+        var result = await _controller.GetOrderById(order.Order_Id);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetOrderById_CustomerNotSeatedAtTable_ReturnsForbid()
+    {
+        // Arrange
+        var order = SeedOrderAt(2, 3, OrderStatus.Pending, OrderStatus.Pending);
+        SetupUserClaims("123");
+
+        // Act
+        var result = await _controller.GetOrderById(order.Order_Id);
+
+        // Assert
+        result.Result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task GetOrderById_Staff_ReturnsAnyOrder()
+    {
+        // Arrange
+        var order = SeedOrderAt(2, 3, OrderStatus.Pending, OrderStatus.Pending);
+        SetupUserClaims("42", "Server", "Staff");
+
+        // Act
+        var result = await _controller.GetOrderById(order.Order_Id);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 }
