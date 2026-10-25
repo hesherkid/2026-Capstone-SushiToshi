@@ -147,6 +147,8 @@ namespace back_end.Controllers
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
         /// </returns>
         /// <response code="200">Returns the newly created order</response>
+        /// <response code="401">If the caller isn't signed in</response>
+        /// <response code="403">If the caller isn't staff or seated at the session's table</response>
         /// <response code="404">If the dining session is not found or the bill is not found/open</response>
         /// <response code="500">If an internal error occurs while creating the order</response>
         /// <remarks>
@@ -161,10 +163,12 @@ namespace back_end.Controllers
         /// This endpoint requires authentication.
         /// The order is automatically created with 'Pending' status.
         /// The authenticated user is automatically assigned as the order owner.
+        /// Staff may set Request_By_User_Id / Request_By_Name to order on a customer's behalf;
+        /// for anyone else those fields are ignored.
         /// The bill must be in 'Open' status to create an order.
         /// </remarks>
         [HttpPost]
-        [AllowAnonymous]
+        [Authorize]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<SessionOrder>>> CreateOrder(OrderCreateDTO order_data)
         {
@@ -174,6 +178,12 @@ namespace back_end.Controllers
                 if (session is null)
                 {
                     return NotFound("Dinning Session was not found in the current context");
+                }
+
+                // Staff can order at any table; customers only at the table they're seated at
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, session.Session_Id))
+                {
+                    return Forbid();
                 }
 
                 var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == order_data.Bill_Id && b.Status == BillStatus.Open);
@@ -190,7 +200,10 @@ namespace back_end.Controllers
                 int? userId = null;
                 string userName;
 
-                if (order_data.Request_By_User_Id.HasValue)
+                // Only staff may place an order on someone else's behalf
+                var isStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+
+                if (isStaff && order_data.Request_By_User_Id.HasValue)
                 {
                     userId = order_data.Request_By_User_Id;
                     userName = order_data.Request_By_Name ?? "Guest";
@@ -668,6 +681,8 @@ namespace back_end.Controllers
         /// </returns>
         /// <response code="200">Items added; response lists each line and any over-limit charges</response>
         /// <response code="400">Invalid request or a limit was exceeded; errors lists every problem</response>
+        /// <response code="401">If the caller isn't signed in</response>
+        /// <response code="403">If the caller isn't staff or seated at the order's table</response>
         /// <response code="404">If the order is not found</response>
         /// <response code="500">If an internal error occurs while adding items</response>
         /// <remarks>
@@ -690,7 +705,7 @@ namespace back_end.Controllers
         /// Guests can't add items once the bill has been requested ("Ready for Bill"); staff can.
         /// </remarks>
         [HttpPost("{orderId}/items")]
-        [AllowAnonymous]
+        [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -726,6 +741,12 @@ namespace back_end.Controllers
                     return NotFound(new { message = $"Order {orderId} not found" });
                 }
 
+                // Staff can add to any order; customers only to orders at the table they're seated at
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return Forbid();
+                }
+
                 // Guests can't add to a bill after pressing "Ready for Bill", but staff can
                 if (BillOrderingClosed(order.Bill))
                 {
@@ -736,28 +757,9 @@ namespace back_end.Controllers
                     return BadRequest(new { message = "Items can only be added to pending orders." });
                 }
 
-                // Determine guest or logged in user
-                int? userId = null;
-                string? userName = null;
-
-                if (User.Identity?.IsAuthenticated == true)
-                {
-                    var userIdString = ClaimsHelpers.GetUserId(User);
-                    userName = ClaimsHelpers.GetUserDisplayName(User);
-
-                    if (int.TryParse(userIdString, out var parsedUserId))
-                    {
-                        userId = parsedUserId;
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Could not parse user ID from claims: {UserIdString}", userIdString);
-                    }
-                }
-                else
-                {
-                    userName = "Guest";
-                }
+                // Signed-in user (guests have a sign-in too), returned in the response
+                var userName = ClaimsHelpers.GetUserDisplayName(User);
+                int? userId = int.TryParse(ClaimsHelpers.GetUserId(User), out var parsedUserId) ? parsedUserId : null;
 
                 var session = order.DiningSession;
                 var itemIds = requested.Select(r => r.ItemId).ToList();
@@ -1165,6 +1167,8 @@ namespace back_end.Controllers
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
         /// </returns>
         /// <response code="200">Returns the detailed order information</response>
+        /// <response code="401">If the caller isn't signed in</response>
+        /// <response code="403">If the caller isn't staff or seated at the order's table</response>
         /// <response code="404">If the order is not found</response>
         /// <response code="500">If an internal error occurs while retrieving the order</response>
         /// <remarks>
@@ -1184,7 +1188,7 @@ namespace back_end.Controllers
         //GET: api/order/{id}
         //Get an Order with all the items
         [HttpGet("{id}")]
-        [AllowAnonymous]
+        [Authorize]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -1207,6 +1211,12 @@ namespace back_end.Controllers
                 if (order == null)
                 {
                     return NotFound(new { message = $"Can't find Order with ID: {id}" });
+                }
+
+                // Staff see any order; customers only orders at the table they're seated at
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return Forbid();
                 }
 
                 //Create object to store information about the order
@@ -1367,95 +1377,11 @@ namespace back_end.Controllers
             }
         }
 
-
-        /// <summary>
-        /// Retrieves all orders placed by a specific user.
-        /// </summary>
-        /// <param name="userOid">The unique identifier of the user (OID)</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of order history objects.
-        /// Returns HTTP 200 (OK) with the list of orders sorted by most recent on success.
-        /// Returns HTTP 404 (Not Found) if the user doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the list of all orders for the specified user</response>
-        /// <response code="404">If the user is not found</response>
-        /// <response code="500">If an internal error occurs while retrieving orders</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     GET /api/order/user/{userOid}
-        ///
-        /// Returns order history including:
-        /// - Order details (ID, session, menu name, status)
-        /// - Item count and total price
-        /// - Timestamps (created and completed)
-        /// - List of items with names and quantities
-        /// 
-        /// Orders are sorted by creation date in descending order (newest first).
-        /// </remarks>
-        //GET: api/order/user/{userOid}
-        //Get all orders placed by a specific customer
-        [HttpGet("user/{userId}")]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<object>>> GetOrderByUser(int userId)
-        {
-            try
-            {
-                //Check if userId is valid
-                if (userId <= 0)
-                {
-                    return NotFound(new { message = $"Invalid user ID: {userId}" });
-                }
-
-                //Get all orders from this user and sort by the newest
-                //Include session menu and item details
-                var order = await _context.SessionOrders
-                            .Where(o => o.User_Id == userId)
-                            .Include(o => o.DiningSession)
-                                .ThenInclude(or => or.Menu)
-                            .Include(o => o.OrderItems)
-                                .ThenInclude(od => od.MenuItem)
-                            .OrderByDescending(o => o.Created_At)
-                            .ToListAsync();
-
-                //Include Order totals and items for each OrderID
-                var orderHistory = order.Select(o => new
-                {
-                    orderId = o.Order_Id,
-                    sessionId = o.session_id,
-                    billId = o.Bill_Id,
-                    menuName = o.DiningSession.Menu.Name,
-                    status = o.Status,
-                    itemCount = o.OrderItems.Count,
-                    orderTotal = o.OrderItems.Sum(or => or.Quantity * or.Price_At_Time),
-                    createdAt = o.Created_At,
-                    completedAt = o.Completed_At,
-
-                    items = o.OrderItems.Select(or => new
-                    {
-                        name = or.MenuItem.Name,
-                        quantity = or.Quantity
-                    }).ToList()
-                }).ToList();
-
-                return Ok(orderHistory);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Can't find Order for User ID: {userId}");
-                return StatusCode(500, "Internal Server Error");
-            }
-        }
-
         //GET: api/Order/active-session/orders
         //Get all of the orders for the user's ACTIVE session
         //Add an optional Bill ID parameter in-case of bill splitting
         [HttpGet("active-session/orders")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<object>>> GetOrdersForActiveSession([FromQuery] int? bill_id = null)
         {
 

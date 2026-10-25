@@ -194,7 +194,6 @@ export const logoutUser = () => {
 // Everything saved for a table visit, plus the guest flag
 const CUSTOMER_VISIT_KEYS = [
   "guest",
-  "guest_oid",
   "session_id",
   "tableNumber",
   "locationId",

@@ -118,7 +118,7 @@ const AppBarWithTitle = ({ title }) => {
   
 const handleLogout = () => {
   if (typeof window !== "undefined") {
-    ["guest", "session_id", "guest_oid", "tableNumber", "locationId", "currentBillId"].forEach(
+    ["guest", "session_id", "tableNumber", "locationId", "currentBillId"].forEach(
       (key) => localStorage.removeItem(key)
     );
   }
@@ -132,7 +132,6 @@ const handleLogout = () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("guest");
       localStorage.removeItem("session_id");
-      localStorage.removeItem("guest_oid");
       localStorage.removeItem("tableNumber");
     }
     
