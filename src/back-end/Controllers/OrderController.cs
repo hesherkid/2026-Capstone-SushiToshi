@@ -757,28 +757,9 @@ namespace back_end.Controllers
                     return BadRequest(new { message = "Items can only be added to pending orders." });
                 }
 
-                // Determine guest or logged in user
-                int? userId = null;
-                string? userName = null;
-
-                if (User.Identity?.IsAuthenticated == true)
-                {
-                    var userIdString = ClaimsHelpers.GetUserId(User);
-                    userName = ClaimsHelpers.GetUserDisplayName(User);
-
-                    if (int.TryParse(userIdString, out var parsedUserId))
-                    {
-                        userId = parsedUserId;
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Could not parse user ID from claims: {UserIdString}", userIdString);
-                    }
-                }
-                else
-                {
-                    userName = "Guest";
-                }
+                // Signed-in user (guests have a sign-in too), returned in the response
+                var userName = ClaimsHelpers.GetUserDisplayName(User);
+                int? userId = int.TryParse(ClaimsHelpers.GetUserId(User), out var parsedUserId) ? parsedUserId : null;
 
                 var session = order.DiningSession;
                 var itemIds = requested.Select(r => r.ItemId).ToList();
