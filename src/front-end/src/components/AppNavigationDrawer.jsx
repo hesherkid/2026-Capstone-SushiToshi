@@ -32,14 +32,14 @@ import TableIcon from "@/components/common/TableIcon";
 const menuItemsByRole = {
   staff: [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
-    { icon: TableIcon, label: "Tables", path: "/dashboard/tables" },
+    { icon: Clock, label: "Dining Sessions", path: "/staff/dashboard/sessions" },
+    { icon: TableIcon, label: "Tables", path: "/staff/dashboard/tables" },
     { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
   ],
   admin: [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Clock, label: "Dining Sessions", path: "/dashboard/sessions" },
-    { icon: TableIcon, label: "Tables", path: "/dashboard/tables" },
+    { icon: Clock, label: "Dining Sessions", path: "/staff/dashboard/sessions" },
+    { icon: TableIcon, label: "Tables", path: "/staff/dashboard/tables" },
     { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
     // `section` starts a labelled group; `divider` starts an unlabelled one
     { icon: Tag, label: "Manage Tags", path: "/tags/tag-management", section: "Management" },

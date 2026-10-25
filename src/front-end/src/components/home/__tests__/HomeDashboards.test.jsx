@@ -138,7 +138,7 @@ describe("Home page dashboards", () => {
     expect(within(requestsAlert).getAllByText(/^Request \d$/)).toHaveLength(5);
     expect(within(requestsAlert).queryByText("Request 6")).not.toBeInTheDocument();
     expect(within(requestsAlert).getByRole("link", { name: "+2 more requests" }))
-      .toHaveAttribute("href", "/dashboard/sessions");
+      .toHaveAttribute("href", "/staff/dashboard/sessions");
 
     const ordersAlert = screen.getByRole("status");
     expect(within(ordersAlert).getByText("6 open orders")).toBeInTheDocument();

@@ -19,8 +19,8 @@ export const StaffHome = ({ userEmail }) => {
     useRestaurantOverview({ includeOrders: true });
 
   const shortcuts = [
-    { title: "Dining Sessions", description: "Seat guests, manage sessions and bills", href: "/dashboard/sessions", icon: Clock, badge: requests.length },
-    { title: "Tables", description: "Table status and availability", href: "/dashboard/tables", icon: TableIcon },
+    { title: "Dining Sessions", description: "Seat guests, manage sessions and bills", href: "/staff/dashboard/sessions", icon: Clock, badge: requests.length },
+    { title: "Tables", description: "Table status and availability", href: "/staff/dashboard/tables", icon: TableIcon },
     { title: "Orders", description: "Incoming orders for the kitchen", href: "/staff/dashboard/orders", icon: ClipboardList, badge: orders.length },
   ];
 
@@ -36,15 +36,15 @@ export const StaffHome = ({ userEmail }) => {
       {error && <Alert severity="error">{error}</Alert>}
 
       <Box sx={statsGrid}>
-        <StatCard label="Tables active" value={activeTables} icon={TableIcon} loading={loading} href="/dashboard/tables" />
-        <StatCard label="Active sessions" value={sessions.length} icon={Users} loading={loading} href="/dashboard/sessions" />
+        <StatCard label="Tables active" value={activeTables} icon={TableIcon} loading={loading} href="/staff/dashboard/tables" />
+        <StatCard label="Active sessions" value={sessions.length} icon={Users} loading={loading} href="/staff/dashboard/sessions" />
         <StatCard
           label="Pending requests"
           value={requests.length}
           icon={Bell}
           loading={loading}
           highlight={requests.length > 0}
-          href="/dashboard/sessions"
+          href="/staff/dashboard/sessions"
         />
       </Box>
 
