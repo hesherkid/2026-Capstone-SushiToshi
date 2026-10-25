@@ -124,9 +124,22 @@ namespace back_end.domain.Seeders
           var billName = $"Table {string.Join(" & ", tableNumbersStr)} - Party of {total}";
 
           var participant = _context.SessionParticipants
-              .FirstOrDefault(p => p.Session_Id == s.Session_Id && p.User_Id == userId);
+              .Where(p => p.Session_Id == s.Session_Id)
+              .OrderBy(p => p.Joined_At)
+              .FirstOrDefault();
 
+          var tableEnd = s.Ended_At ?? DateTime.UtcNow;
           var createdAt = (participant?.Joined_At ?? s.Started_At).AddMinutes(_rng.Next(5, 31));
+          if (createdAt > tableEnd) createdAt = tableEnd;
+
+          // Closed and cancelled bills both get Closed_At. A bill closed or cancelled at a 
+          // table that's still open closed sometime between its creation and now.
+          DateTime? closedAt = status switch
+          {
+            BillStatus.Open => null,
+            _ when s.Ended_At != null => s.Ended_At,
+            _ => createdAt.AddMinutes(_rng.NextDouble() * (tableEnd - createdAt).TotalMinutes)
+          };
 
           // Track user usage
           if (!userUsageCount.ContainsKey(userId))
@@ -144,46 +157,7 @@ namespace back_end.domain.Seeders
             Total_Count = total,
             Status = status,
             Created_At = createdAt,
-            Closed_At = status == BillStatus.Closed ? s.Ended_At : null
-          };
-
-          _context.Bills.Add(bill);
-          created++;
-        }
-      }
-      // Ensure unused users get bills too (distributed across sessions)
-      var unusedUsers = _userSeedData.Keys.Where(oid => !userUsageCount.ContainsKey(oid)).ToList();
-
-      // These bills are Open and stamped "now", so they only belong on sessions that are still open.
-      var openSessions = sessions.Where(s => s.Ended_At == null).ToList();
-
-      if (unusedUsers.Any() && openSessions.Any())
-      {
-        int sessionIndex = 0;
-
-        foreach (var oid in unusedUsers)
-        {
-          // Rotate through open sessions
-          var session = openSessions[sessionIndex % openSessions.Count];
-          sessionIndex++;
-
-          var info = _userSeedData[oid];
-          var name = (!string.IsNullOrEmpty(info.GivenName) || !string.IsNullOrEmpty(info.Surname)
-              ? $"{info.GivenName} {info.Surname}".Trim()
-              : info.DisplayName);
-
-          var bill = new Billing
-          {
-            Session_Id = session.Session_Id,
-            Bill_Name = $"Bill for {name}",
-            Senior_Count = 0,
-            Adult_Count = 1,
-            Child_Count = 0,
-            Tot_Count = 0,
-            Total_Count = 1,
-            Status = BillStatus.Open,
-            Created_At = DateTime.UtcNow.AddMinutes(_rng.Next(1, 60)),
-            Closed_At = null
+            Closed_At = closedAt
           };
 
           _context.Bills.Add(bill);
@@ -195,37 +169,6 @@ namespace back_end.domain.Seeders
       var totalClosed = _context.Bills.Count(b => b.Status == BillStatus.Closed);
       var totalCancelled = _context.Bills.Count(b => b.Status == BillStatus.Cancelled);
       _logger.LogInformation($"Created {created} bills ({totalOpen} open, {totalClosed} closed, {totalCancelled} cancelled)");
-
-      // After bills are seeded, ensure closed/cancelled bills have no open/pending/processing orders/items
-      var closedOrCancelledBills = _context.Bills
-          .Include(b => b.Orders)
-              .ThenInclude(o => o.OrderItems)
-          .Where(b => b.Status == BillStatus.Closed || b.Status == BillStatus.Cancelled)
-          .ToList();
-
-      foreach (var bill in closedOrCancelledBills)
-      {
-        foreach (var order in bill.Orders)
-        {
-          // If order is not delivered or cancelled, set to delivered
-          if (order.Status == OrderStatus.Pending ||
-              order.Status == OrderStatus.Processing)
-          {
-            order.Status = OrderStatus.Delivered;
-          }
-
-          foreach (var item in order.OrderItems)
-          {
-            // If item is not delivered or cancelled, set to delivered
-            if (item.Order_Item_Status == OrderStatus.Pending ||
-                item.Order_Item_Status == OrderStatus.Processing)
-            {
-              item.Order_Item_Status = OrderStatus.Delivered;
-              item.Completed_At = DateTime.UtcNow;
-            }
-          }
-        }
-      }
     }
   }
 }

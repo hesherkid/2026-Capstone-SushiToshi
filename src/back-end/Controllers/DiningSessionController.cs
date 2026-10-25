@@ -801,13 +801,19 @@ namespace back_end.controllers
     ///     POST /api/diningsession/123/close
     ///
     /// Closes an active dining session by setting the Ended_At timestamp to the current UTC time.
+    /// Everyone still seated leaves with the table (Left_At is set to the same time), so no seat
+    /// outlives its session.
     /// Requirements:
+    /// - Staff or admin only
     /// - Session must not already be closed (Ended_At must be null)
     /// - Session must not have any open bills
     /// </remarks>
     [HttpPut("{session_id}/close")]
+    [Authorize(Roles = "Admin,Staff")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> close_dining_session(int session_id)
@@ -838,7 +844,16 @@ namespace back_end.controllers
           return BadRequest($"Cannot close session with open bills. Please settle all bills first.");
         }
 
-        session.Ended_At = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
+        session.Ended_At = now;
+
+        // The table is done, so everyone still seated leaves with it. 
+        // Seats that already left keep the time they actually left
+        foreach (var seat in session.Participants.Where(p => p.Left_At == null))
+        {
+          seat.Left_At = now;
+        }
+
         await _context.SaveChangesAsync();
 
         return Ok(new DiningSessionResponseDTO
