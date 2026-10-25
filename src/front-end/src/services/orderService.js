@@ -1,7 +1,5 @@
 import api from "@/config/api";
 
-const isGuest = () => typeof window !== "undefined" && localStorage.getItem("guest") === "true";
-
 /**
  * Service for managing orders and order items
  */
@@ -13,28 +11,13 @@ export const orderService = {
    * @param {number} orderData.bill_Id - Bill ID
    * @returns {Promise<Object>} Created order details
    */
-
-
-  //Clean this up if time
   createOrder: async (orderData) => {
-
-    if (isGuest()) {
-    orderData.Request_By_Oid = localStorage.getItem("guest_oid");
-    orderData.Request_By_Name = "Guest";
-  }
-
-    //const apiClient = api;
-    const apiClient =  api;
-
     try {
-      const response = await apiClient.post("/Order", orderData);
+      const response = await api.post("/Order", orderData);
       return response.data;
     } catch (error) {
-
-      if (error.response) {
-
-      } else {
-        console.error("⚠️ No response received from API");
+      if (!error.response) {
+        console.error("No response received from API");
       }
       throw error;
     }

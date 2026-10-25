@@ -44,15 +44,13 @@ export const useOrderActions = (onSuccess) => {
   // ORDER CREATION
 
   const createOrder = useCallback(
-    async (sessionId, billId, requestByOid = null, requestByName = null) => {
+    async (sessionId, billId) => {
       return apiWrapper(
         "createOrder",
         async () => {
           const result = await orderService.createOrder({
             session_Id: sessionId,
             bill_Id: billId,
-            request_by_Oid: requestByOid, // optional
-            request_by_Name: requestByName,
           });
           return result;
         },
