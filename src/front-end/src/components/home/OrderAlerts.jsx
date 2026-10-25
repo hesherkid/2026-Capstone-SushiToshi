@@ -100,9 +100,7 @@ export const OrderAlerts = ({ orders = [], newOrderIds = new Set() }) => {
                     </Typography>
                   </Box>
                 }
-                secondary={`Order #${order.orderId} · ${itemSummary(order.items)}${
-                  order.userName ? ` · ${order.userName}` : ""
-                }`}
+                secondary={`Order #${order.orderId} · ${itemSummary(order.items)}`}
               />
             </ListItem>
           );

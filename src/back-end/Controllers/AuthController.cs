@@ -173,7 +173,13 @@ namespace back_end.controllers
                 access_token = GenerateJwtToken(user),
                 token_type = "Bearer",
                 expires_in = int.Parse(
-                    _config["Jwt:ExpiresInMinutes"] ?? "60") * 60
+                    _config["Jwt:ExpiresInMinutes"] ?? "60") * 60,
+                // The token carries no name, so the home page greets the customer from this
+                user = new
+                {
+                    first_name = user.First_name,
+                    last_name = user.Last_name,
+                },
             });
 
         }
@@ -442,11 +448,16 @@ namespace back_end.controllers
                     return BadRequest(new { message = "Token is required" });
                 }
 
-                // Verify the Google token
+                var clientId = _config["Google:ClientId"];
+                if (string.IsNullOrWhiteSpace(clientId))
+                {
+                    Console.WriteLine("Google login error: Google:ClientId is not configured.");
+                    return StatusCode(500, new { message = "Google sign-in is not available" });
+                }
+
                 var settings = new GoogleJsonWebSignature.ValidationSettings
                 {
-                    //TODO: is there where we would add ngrok origins? Should this be somewhere else?
-                    Audience = new[] { "913755751162-t0grfn5dn2np3lds6sca84l6all5rl4d.apps.googleusercontent.com" }
+                    Audience = new[] { clientId }
                 };
 
                 GoogleJsonWebSignature.Payload payload;
@@ -529,13 +540,19 @@ namespace back_end.controllers
                 return Ok(new
                 {
                     access_token = accessToken,
-                    message = existingUser != null ? "Login successful" : "Account created successfully"
+                    message = existingUser != null ? "Login successful" : "Account created successfully",
+                    user = new
+                    {
+                        first_name = user.First_name,
+                        last_name = user.Last_name,
+                    },
                 });
             }
             catch (Exception ex)
             {
+                // The details stay in the server log; they can reveal internals to the caller
                 Console.WriteLine($"Google login error: {ex.Message}");
-                return StatusCode(500, new { message = "Authentication failed", error = ex.Message });
+                return StatusCode(500, new { message = "Authentication failed" });
             }
         }
 
@@ -570,7 +587,7 @@ namespace back_end.controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, user.User_id.ToString()),
                 new Claim(ClaimTypes.Name, user.Email),
-                new Claim(ClaimTypes.Email, user.Email), // TODO: do we want real names on orders, instead of email? Need to update Claims Helper if we do
+                new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email), // FIXME: Could we end up with two NameIdentifiers? should we set sub to user.User_id.ToString()
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),

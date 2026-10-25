@@ -28,7 +28,7 @@ const isGuestAccount = () => {
   return isGuestClaims(decodeToken(token));
 };
 
-// Saved after a Google sign-in; email sign-in doesn't send a name
+// Saved from the sign-in response; the token itself carries no name
 const savedFirstName = () => {
   try {
     return JSON.parse(localStorage.getItem("user") || "null")?.first_name || "";
