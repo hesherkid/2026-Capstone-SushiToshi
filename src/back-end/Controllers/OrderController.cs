@@ -1400,7 +1400,7 @@ namespace back_end.Controllers
         //Get all of the orders for the user's ACTIVE session
         //Add an optional Bill ID parameter in-case of bill splitting
         [HttpGet("active-session/orders")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<object>>> GetOrdersForActiveSession([FromQuery] int? bill_id = null)
         {
 

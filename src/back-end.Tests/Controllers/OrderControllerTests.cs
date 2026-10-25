@@ -500,6 +500,7 @@ public class OrderControllerTests : IDisposable
     [InlineData(nameof(OrderController.CreateOrder))]
     [InlineData(nameof(OrderController.AddOrderItems))]
     [InlineData(nameof(OrderController.GetOrderById))]
+    [InlineData(nameof(OrderController.GetOrdersForActiveSession))]
     public void OrderEndpoints_RequireSignIn(string methodName)
     {
         var method = typeof(OrderController).GetMethod(methodName)!;
