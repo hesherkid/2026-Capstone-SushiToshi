@@ -19,12 +19,22 @@ const TABS = [
 
 // Open orders oldest first so the longest-waiting table is at the top; finished orders newest first
 const sortFor = (status) => [
-  { field: "createdAt", sort: status === ORDER_STATUS.DELIVERED ? "desc" : "asc" },
+  {
+    field: "createdAt",
+    sort: status === ORDER_STATUS.DELIVERED ? "asc" : "desc",
+  },
 ];
 
 const OrderDashboardInner = () => {
-  const { isLoading, error, setError, orders, orderCounts, fetchOrders, openOrder } =
-    useOrderDashboard();
+  const {
+    isLoading,
+    error,
+    setError,
+    orders,
+    orderCounts,
+    fetchOrders,
+    openOrder,
+  } = useOrderDashboard();
   const actions = useOrderDashboardActions();
   const [activeTab, setActiveTab] = useState(ORDER_STATUS.PENDING);
 
@@ -35,7 +45,11 @@ const OrderDashboardInner = () => {
       <ManagementHeader
         title="Orders"
         actions={
-          <Button onClick={() => fetchOrders()} disabled={isLoading} sx={{ gap: 1 }}>
+          <Button
+            onClick={() => fetchOrders()}
+            disabled={isLoading}
+            sx={{ gap: 1 }}
+          >
             <RefreshCw />
             Refresh
           </Button>
@@ -49,7 +63,11 @@ const OrderDashboardInner = () => {
       )}
 
       {actions.actionError && (
-        <Alert severity="error" onClose={actions.clearActionError} sx={{ mb: 2 }}>
+        <Alert
+          severity="error"
+          onClose={actions.clearActionError}
+          sx={{ mb: 2 }}
+        >
           {actions.actionError}
         </Alert>
       )}
