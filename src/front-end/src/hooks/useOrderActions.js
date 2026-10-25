@@ -222,17 +222,6 @@ export const useOrderActions = (onSuccess) => {
     [apiWrapper],
   );
 
-  const getOrdersByUser = useCallback(
-    async (userOid) => {
-      return apiWrapper(
-        "getOrdersByUser",
-        async () => orderService.getOrdersByUser(userOid),
-        { defaultReturn: [] },
-      );
-    },
-    [apiWrapper],
-  );
-
   const getActiveSessionOrders = useCallback(
     async (billId = null) => {
       return apiWrapper(
@@ -267,7 +256,6 @@ export const useOrderActions = (onSuccess) => {
     getAllOrdersByLocation,
     getOrderById,
     getOrdersBySession,
-    getOrdersByUser,
     getActiveSessionOrders,
   };
 };

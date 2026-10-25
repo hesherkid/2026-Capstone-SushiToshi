@@ -53,7 +53,6 @@ export const OrderProvider = ({ children }) => {
     getAllOrders,
     getOrderById,
     getOrdersBySession,
-    getOrdersByUser,
     getActiveSessionOrders,
   } = useOrderActions(triggerUpdate);
 
@@ -338,7 +337,6 @@ export const OrderProvider = ({ children }) => {
     fetchAllOrders,
     getOrderById,
     fetchOrdersBySession,
-    getOrdersByUser,
     fetchActiveSessionOrders,
 
     // Selection

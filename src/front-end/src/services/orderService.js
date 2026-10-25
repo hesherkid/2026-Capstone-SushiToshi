@@ -177,16 +177,6 @@ export const orderService = {
   },
 
   /**
-   * Gets all orders placed by a specific user
-   * @param {number} userId - User ID
-   * @returns {Promise<Array>} Array of user's order history
-   */
-  getOrdersByUser: async (userOid) => {
-    const response = await api.get(`/Order/user/${userOid}`);
-    return response.data;
-  },
-
-  /**
    * Gets all orders for the current user's active session
    * @param {number} [billId] - Optional bill ID for filtering
    * @returns {Promise<Array>} Array of orders for active session
