@@ -18,7 +18,7 @@ namespace back_end.Migrations
                 type: "varchar(2)",
                 maxLength: 2,
                 nullable: false,
-                defaultValue: "")
+                defaultValue: "AB")
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.AddColumn<decimal>(

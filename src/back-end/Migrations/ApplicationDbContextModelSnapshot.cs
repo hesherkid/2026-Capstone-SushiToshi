@@ -341,8 +341,10 @@ namespace back_end.Migrations
 
                     b.Property<string>("Province_Code")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(2)
-                        .HasColumnType("varchar(2)");
+                        .HasColumnType("varchar(2)")
+                        .HasDefaultValue("AB");
 
                     b.Property<DateTime>("Updated_At")
                         .HasColumnType("datetime(6)");
