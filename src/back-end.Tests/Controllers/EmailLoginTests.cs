@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text.Json;
 using Xunit;
 using Moq;
@@ -72,5 +74,28 @@ public class EmailLoginTests : IDisposable
         var json = JsonSerializer.SerializeToElement((result as OkObjectResult)!.Value);
         json.GetProperty("user").GetProperty("first_name").GetString().Should().Be("Sam");
         json.GetProperty("user").GetProperty("last_name").GetString().Should().Be("Tanaka");
+    }
+
+    // The server reads "sub" back as a NameIdentifier, so it must be the ID like "nameid"
+    [Fact]
+    public async Task Login_TokenIdentifiesTheUserByIdOnly()
+    {
+        var user = new User
+        {
+            Email = "sam@example.com",
+            Password_hash = BCryptNet.HashPassword("Password1!"),
+            Role = UserRoles.Customer,
+            Status = UserStatus.Active,
+            Is_email_confirmed = true,
+        };
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = "Password1!" });
+
+        var json = JsonSerializer.SerializeToElement((result as OkObjectResult)!.Value);
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(json.GetProperty("access_token").GetString());
+        token.Claims.Should().Contain(c => c.Type == "sub" && c.Value == user.User_id.ToString());
+        token.Claims.Should().Contain(c => c.Type == ClaimTypes.NameIdentifier && c.Value == user.User_id.ToString());
     }
 }

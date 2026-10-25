@@ -589,7 +589,8 @@ namespace back_end.controllers
                 new Claim(ClaimTypes.Name, user.Email),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email), // FIXME: Could we end up with two NameIdentifiers? should we set sub to user.User_id.ToString()
+                // Read back as a second NameIdentifier, so it must hold the ID too
+                new Claim(JwtRegisteredClaimNames.Sub, user.User_id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 
