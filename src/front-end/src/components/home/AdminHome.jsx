@@ -41,14 +41,14 @@ const shortcutSections = (pendingRequests) => [
       {
         title: "Dining Sessions",
         description: "Live dining sessions, table requests and bills",
-        href: "/dashboard/sessions",
+        href: "/staff/dashboard/sessions",
         icon: Clock,
         badge: pendingRequests,
       },
       {
         title: "Tables",
         description: "Table status and availability",
-        href: "/dashboard/tables",
+        href: "/staff/dashboard/tables",
         icon: TableIcon,
       },
       {
@@ -191,14 +191,14 @@ export const AdminHome = ({ userEmail }) => {
           value={sessions.length}
           icon={Users}
           loading={loading}
-          href="/dashboard/sessions"
+          href="/staff/dashboard/sessions"
         />
         <StatCard
           label="Tables in use"
           value={activeTables}
           icon={TableIcon}
           loading={loading}
-          href="/dashboard/tables"
+          href="/staff/dashboard/tables"
         />
         <StatCard
           label="Pending requests"
@@ -206,7 +206,7 @@ export const AdminHome = ({ userEmail }) => {
           icon={Bell}
           loading={loading}
           highlight={requests.length > 0}
-          href="/dashboard/sessions"
+          href="/staff/dashboard/sessions"
         />
       </Box>
 

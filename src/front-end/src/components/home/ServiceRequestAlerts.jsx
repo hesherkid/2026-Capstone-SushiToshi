@@ -56,7 +56,7 @@ export const ServiceRequestAlerts = ({ requests = [], newRequestIds = new Set() 
       action={
         <Button
           component={NextLink}
-          href="/dashboard/sessions"
+          href="/staff/dashboard/sessions"
           color="inherit"
           size="small"
           sx={{ whiteSpace: "nowrap" }}
@@ -95,7 +95,7 @@ export const ServiceRequestAlerts = ({ requests = [], newRequestIds = new Set() 
       </List>
       <MoreLink
         hiddenCount={requests.length - preview.length}
-        href="/dashboard/sessions"
+        href="/staff/dashboard/sessions"
         noun={requests.length - preview.length === 1 ? "request" : "requests"}
       />
     </Alert>
