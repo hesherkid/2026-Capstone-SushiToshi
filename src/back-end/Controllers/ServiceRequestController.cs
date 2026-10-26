@@ -181,11 +181,6 @@ namespace back_end.Controllers
 
         if (serviceRequest is null)
         {
-          return NotFound(new { mesage = "The service request was not found" });
-        }
-
-        if (serviceRequest is null)
-        {
           return NotFound(new { message = "The service request was not found" });
         }
 
@@ -245,7 +240,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     POST /api/servicerequest/by-session/123
+    ///     GET /api/servicerequest/by-session/123
     ///
     /// Staff and admins can read any session. Customers can read only a session they're seated in,
     /// so the bill summary can tell them a "Ready for bill" request is already waiting.
