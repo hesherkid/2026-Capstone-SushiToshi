@@ -36,23 +36,54 @@ public class NewCustomerSeedTests
     [Fact]
     public void ServiceRequestSeeder_NeverRequestsAsTheNewCustomer()
     {
-        using var context = NewContext();
+        // Requests come only from diners seated at the table, and the new customer is never
+        // seated by the seed. The seeder is random, so seed a few times.
+        var seeded = 0;
+        for (var run = 0; run < 10; run++)
+        {
+            using var context = NewContext();
 
-        // The new customer comes first, where FirstOrDefault would otherwise pick it
-        context.Users.AddRange(
-            new User { User_id = 1, Email = UserSeeder.NewCustomerEmail, Role = UserRoles.Customer },
-            new User { User_id = 2, Email = "emma.wilson@email.com", Role = UserRoles.Customer },
-            new User { User_id = 3, Email = "staff@sushitoshi.ca", Role = UserRoles.Staff });
-        context.Locations.Add(new Locations { Location_Id = 1, Name = "Downtown" });
-        context.Menus.Add(new Menu { Menu_id = 1, Name = "Dinner" });
-        context.Tables.Add(new TableEntity { Table_Id = 1, table_number = 1, Location_Id = 1, is_active = true });
-        context.DiningSessions.Add(new DiningSession { Session_Id = 1, Location_Id = 1, Table_Id = 1, Menu_Id = 1 });
-        context.SaveChanges();
+            // The new customer comes first, where FirstOrDefault used to pick it
+            context.Users.AddRange(
+                new User { User_id = 1, Email = UserSeeder.NewCustomerEmail, Role = UserRoles.Customer },
+                new User { User_id = 2, Email = "emma.wilson@email.com", Role = UserRoles.Customer },
+                new User { User_id = 3, Email = "staff@sushitoshi.ca", Role = UserRoles.Staff, Location_id = 1 });
+            context.Locations.Add(new Locations { Location_Id = 1, Name = "Downtown" });
+            context.Menus.Add(new Menu { Menu_id = 1, Name = "Dinner" });
+            context.Tables.Add(new TableEntity { Table_Id = 1, table_number = 1, Location_Id = 1, is_active = true });
 
-        new ServiceRequestSeeder(context, new Mock<ILogger<ServiceRequestSeeder>>().Object).Seed();
-        context.SaveChanges();
+            // Several past visits by Emma, so the seeder has plenty of chances to pick the wrong user
+            for (var id = 1; id <= 20; id++)
+            {
+                var start = DateTime.UtcNow.AddDays(-id);
+                context.DiningSessions.Add(new DiningSession
+                {
+                    Session_Id = id,
+                    Location_Id = 1,
+                    Table_Id = 1,
+                    Menu_Id = 1,
+                    Started_At = start,
+                    Ended_At = start.AddHours(1)
+                });
+                context.SessionParticipants.Add(new SessionParticipant
+                {
+                    Session_Id = id,
+                    User_Id = 2,
+                    User_Name = "Emma Wilson",
+                    Joined_At = start.AddMinutes(5),
+                    Left_At = start.AddHours(1)
+                });
+            }
+            context.SaveChanges();
 
-        context.ServiceRequests.Should().NotBeEmpty();
-        context.ServiceRequests.Should().OnlyContain(r => r.Request_By == 2);
+            new ServiceRequestSeeder(context, new Mock<ILogger<ServiceRequestSeeder>>().Object).Seed();
+            context.SaveChanges();
+
+            context.ServiceRequests.Should().OnlyContain(r => r.Request_By == 2);
+            seeded += context.ServiceRequests.Count();
+        }
+
+        // Some run must have made requests, or the check above proved nothing.
+        seeded.Should().BePositive();
     }
 }
