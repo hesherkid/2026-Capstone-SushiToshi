@@ -145,19 +145,19 @@ const handleLogout = () => {
 
   const handleLocationChange = async (event) => {
     const locationId = event.target.value;
+
+    // Save on the server first, so a reload can't cancel the request
+    try {
+      await api.put(`staff/update-user-location/${locationId}`);
+    } catch (err) {
+      console.error("Error updating location:", err);
+      notifyError("Failed to change location");
+      return;
+    }
+
     setSelectedLocation(locationId);
     storage.set("branch-location", locationId);
     window.location.reload();
-
-    try {
-      const response = await api.put(
-      `staff/update-user-location/${locationId}`
-      );
-    } catch (err) {
-      console.error("Error updating location:", err);
-      // Optionally revert the selection on error
-      // setSelectedLocation(previousValue);
-    }
   };
   const effectiveRole = userRole || (isGuest ? "customer" : null);
 
