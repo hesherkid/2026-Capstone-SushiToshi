@@ -135,6 +135,18 @@ describe('HomePage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Back to your table' }));
       expect(push).toHaveBeenCalledWith('/menu/full-menu');
     });
+
+    it('checks right away whether staff have closed the table, so log out comes back sooner', async () => {
+      localStorage.setItem('session_id', '42');
+      signIn();
+
+      render(<HomePage />);
+
+      await screen.findByText("You're seated at a table");
+      await waitFor(() =>
+        expect(require('@/services/tableSession').fetchMySessionId).toHaveBeenCalled(),
+      );
+    });
   });
 
   // Each useAuth call starts out signed out while it reads the token. Acting on that sent
