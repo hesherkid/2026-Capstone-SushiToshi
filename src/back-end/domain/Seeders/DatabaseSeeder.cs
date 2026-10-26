@@ -4,6 +4,7 @@ using back_end.domain.Entities;
 using back_end.domain.DbContexts;
 using System.IO;
 using System.Collections.Generic;
+using back_end.Helpers;
 
 namespace back_end.domain.Seeders
 {
@@ -139,8 +140,10 @@ namespace back_end.domain.Seeders
     {
       // Create a simple mapping using existing users. These are who sessions, orders and bills
       // are seeded for, so the sign-in-only customer is left out
+      // Guest accounts (seeded or from "Continue as Guest") are throwaway, so never part of the pool
+      var guestSuffix = "@" + GuestAccounts.EmailDomain;
       var users = _context.Users
-          .Where(u => u.Email != UserSeeder.NewCustomerEmail)
+          .Where(u => u.Email != UserSeeder.NewCustomerEmail && !u.Email.EndsWith(guestSuffix))
           .Take(20)
           .ToList(); // Get first 20 users
       _userIdSeedData = new Dictionary<int, (string DisplayName, string GivenName, string Surname)>();
@@ -299,6 +302,9 @@ namespace back_end.domain.Seeders
       _context.SessionOrders.RemoveRange(_context.SessionOrders);
       _context.Bills.RemoveRange(_context.Bills);
       _context.SessionParticipants.RemoveRange(_context.SessionParticipants);
+      // SessionParticipantSeeder creates a guest account per open-table seat; drop them with their seats
+      var guestSuffix = "@" + GuestAccounts.EmailDomain;
+      _context.Users.RemoveRange(_context.Users.Where(u => u.Email.EndsWith(guestSuffix)));
       _context.DiningSessions.RemoveRange(_context.DiningSessions);
       _context.TableGroups.RemoveRange(_context.TableGroups);
       _context.Tables.RemoveRange(_context.Tables);
