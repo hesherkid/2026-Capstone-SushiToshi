@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import AppBarWithTitle from "../AppBarWithTitle";
 import { useAuth } from "@/hooks/useAuth";
+import api from "@/config/api";
 
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({
@@ -73,5 +74,52 @@ describe("App bar account icon", () => {
     render(<AppBarWithTitle />);
 
     expect(screen.getByRole("button", { name: "menu" })).toBeInTheDocument();
+  });
+});
+
+describe("App bar working location", () => {
+  const locations = [
+    { location_Id: 1, name: "Downtown" },
+    { location_Id: 2, name: "Southside" },
+  ];
+
+  // The location list, and the location saved on the signed-in user (null if none)
+  const serverReturns = (savedLocation) =>
+    api.get.mockImplementation((url) =>
+      Promise.resolve({ data: url === "location/" ? locations : savedLocation })
+    );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    api.get.mockResolvedValue({ data: [] });
+  });
+
+  it("uses the location saved on the staff member", async () => {
+    serverReturns(locations[1]);
+    signedInAs("staff");
+    render(<AppBarWithTitle />);
+
+    await waitFor(() => expect(localStorage.getItem("branch-location")).toBe("2"));
+  });
+
+  it("replaces a location left behind by a previous user", async () => {
+    localStorage.setItem("branch-location", "1");
+    serverReturns(locations[1]);
+    signedInAs("staff");
+    render(<AppBarWithTitle />);
+
+    await waitFor(() => expect(localStorage.getItem("branch-location")).toBe("2"));
+  });
+
+  it("falls back to the first location when none is saved", async () => {
+    serverReturns(null);
+    signedInAs("admin");
+    render(<AppBarWithTitle />);
+
+    await waitFor(() => expect(localStorage.getItem("branch-location")).toBe("1"));
   });
 });

@@ -44,7 +44,7 @@ const AppBarWithTitle = ({ title }) => {
   const [allLocations, setAllLocations] = useState([]);
   const [tableNumber, setTableNumber] = useState("");
   const { isAuthenticated, userRole, loading } = useAuth();
-  const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
+  const { notifySuccess, notifyError, notifyInfo } = useNotification();
   const [isGuest, setIsGuest] = useState(false);
   // A page loading its data (see utils/pageLoading); shown with the same spinner as sign-in
   const [pageLoading, setPageLoadingState] = useState(false);
@@ -83,18 +83,20 @@ const AppBarWithTitle = ({ title }) => {
         if (!isAuthenticated || !userRole || (userRole !== "staff" && userRole !== "admin")) {
           return;
         }
-        const response = await api.get("location/");
+        const [response, assigned] = await Promise.all([
+          api.get("location/"),
+          api.get("staff/get-initial-staff-location"),
+        ]);
         setAllLocations(response.data);
 
-        // Set initial location if not already set
-        const storedLocation = storage.get("branch-location");
-        if (!storedLocation && response.data.length > 0) {
-          const firstLocation = response.data[0].location_Id;
-          setSelectedLocation(firstLocation);
-          storage.set("branch-location", firstLocation);
+        const workingLocation = assigned.data?.location_Id ? assigned.data : response.data[0];
+        if (!workingLocation) return;
 
-          const locationName = response.data[0].name;
-          notifyInfo(`Working location set to ${locationName}`);
+        const storedLocation = storage.get("branch-location");
+        if (Number(storedLocation) !== workingLocation.location_Id) {
+          setSelectedLocation(workingLocation.location_Id);
+          storage.set("branch-location", workingLocation.location_Id);
+          notifyInfo(`Working location set to ${workingLocation.name}`);
         }
       } catch (err) {
         console.error("Error Fetching Locations", err);
@@ -115,17 +117,17 @@ const AppBarWithTitle = ({ title }) => {
   //     window.removeEventListener("auth:changed", handleAuthEvent);
   //   };
   // }, []);
-  
-const handleLogout = () => {
-  if (typeof window !== "undefined") {
-    ["guest", "session_id", "tableNumber", "locationId", "currentBillId"].forEach(
-      (key) => localStorage.removeItem(key)
-    );
-  }
 
-  setDrawerOpen(false);
-  logoutUser();
-};
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      ["guest", "session_id", "tableNumber", "locationId", "currentBillId"].forEach(
+        (key) => localStorage.removeItem(key)
+      );
+    }
+
+    setDrawerOpen(false);
+    logoutUser();
+  };
 
   const handleLogin = () => {
     // Clear guest mode
@@ -134,7 +136,7 @@ const handleLogout = () => {
       localStorage.removeItem("session_id");
       localStorage.removeItem("tableNumber");
     }
-    
+
     setDrawerOpen(false);
     router.push("/login");
   };
@@ -164,7 +166,7 @@ const handleLogout = () => {
   // Leave the dropdown empty until the stored location is one of the loaded options
   const locationValue =
     Array.isArray(allLocations) &&
-    allLocations.some((loc) => loc.location_Id === Number(selectedLocation))
+      allLocations.some((loc) => loc.location_Id === Number(selectedLocation))
       ? Number(selectedLocation)
       : "";
 
@@ -186,7 +188,7 @@ const handleLogout = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-start",
-            gap: { xs: 2, sm: 3},
+            gap: { xs: 2, sm: 3 },
             flex: "0 0 auto",
             minWidth: 0,
           }}
@@ -369,25 +371,25 @@ const handleLogout = () => {
           />
         )}
       </Toolbar>
-    {(loading || pageLoading) && (
-      <Box
-        role="status"
-        aria-label="Loading"
-        sx={{
+      {(loading || pageLoading) && (
+        <Box
+          role="status"
+          aria-label="Loading"
+          sx={{
             position: "absolute",
             top: "calc(100% + 8px)",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: theme.zIndex.drawer + 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
-        }}
-      >
-        <CircularProgress size={24} />
-      </Box>
-    )}
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: theme.zIndex.drawer + 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <CircularProgress size={24} />
+        </Box>
+      )}
     </AppBar>
   );
 };
