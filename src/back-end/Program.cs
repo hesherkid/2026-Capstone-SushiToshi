@@ -336,6 +336,14 @@ using (var scope = app.Services.CreateScope())
         if (canConnect)
         {
             logger.LogInformation("Database connection successful");
+            // Dev only: start from an empty database so everything is seeded fresh
+            // (same as `dotnet ef database drop`). Users are recreated by UserSeeder.
+            if (app.Environment.IsDevelopment() &&
+                app.Configuration.GetValue<bool>("Seeding:ResetOnStartup"))
+            {
+                logger.LogWarning("Seeding:ResetOnStartup is on: dropping the database for a fresh seed");
+                await context.Database.EnsureDeletedAsync();
+            }
             await context.Database.MigrateAsync();
             logger.LogInformation("Database migrations applied successfully");
             // Missing default prices would make every bill wrong: stop now instead
