@@ -61,7 +61,8 @@ namespace back_end.domain.Seeders
                         Is_email_confirmed = true,
                         Created_at = DateTime.UtcNow,
                         Last_Interaction_at = DateTime.UtcNow,
-                        Location_id = 2
+                        Location_id = 2,
+                        AssignedLocations = [new() { Location_Id = 2 }]
                     },
                     new ()
                     {
@@ -74,7 +75,8 @@ namespace back_end.domain.Seeders
                         Is_email_confirmed = true,
                         Created_at = DateTime.UtcNow,
                         Last_Interaction_at = DateTime.UtcNow,
-                        Location_id = 1
+                        Location_id = 1,
+                        AssignedLocations = [new() { Location_Id = 1 }]
                     },
                     new()
                     {
@@ -87,7 +89,8 @@ namespace back_end.domain.Seeders
                         Is_email_confirmed = true,
                         Created_at = DateTime.UtcNow,
                         Last_Interaction_at = DateTime.UtcNow,
-                        Location_id = 2
+                        Location_id = 2,
+                        AssignedLocations = [new() { Location_Id = 2 }]
                     }
             ];
 
