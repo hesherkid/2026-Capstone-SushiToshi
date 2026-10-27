@@ -10,25 +10,19 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  IconButton,
   MenuItem,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import { Download, Edit, Trash2 } from "lucide-react";
 import AppDialog from "@/components/common/AppDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import ManagementGrid from "@/components/common/ManagementGrid";
 import ManagementHeader from "@/components/common/ManagementHeader";
+import { actionsColumn } from "@/components/common/RowActions";
 import {
   addHoliday,
   approveHolidays,
@@ -56,6 +50,57 @@ export const formatDay = (day) => {
     year: "numeric",
   });
 };
+
+// The grid's selection as a list of ids. "Select all" can arrive as an exclude model
+const selectedIds = (model, rows) =>
+  model.type === "exclude"
+    ? rows.map((row) => row.holiday_id).filter((id) => !model.ids.has(id))
+    : [...model.ids];
+
+export const getHolidayColumns = ({ onEdit, onDelete }) => [
+  {
+    field: "date",
+    headerName: "Date",
+    flex: 1,
+    minWidth: 150,
+    valueFormatter: (value) => formatDay(value),
+  },
+  {
+    field: "name",
+    headerName: "Name",
+    flex: 1.5,
+    minWidth: 180,
+  },
+  {
+    field: "observed_date",
+    headerName: "Observed",
+    flex: 1,
+    minWidth: 150,
+    // Only shown when it differs, e.g. a Saturday Christmas observed on Monday
+    valueGetter: (value, row) => (value && value !== row.date ? value : null),
+    valueFormatter: (value) => (value ? formatDay(value) : "—"),
+  },
+  {
+    field: "source",
+    headerName: "Source",
+    flex: 0.8,
+    minWidth: 110,
+  },
+  {
+    field: "status",
+    headerName: "Status",
+    flex: 0.8,
+    minWidth: 110,
+    renderCell: ({ value }) => <Chip size="small" label={value} color={STATUS_COLORS[value]} />,
+  },
+  actionsColumn(
+    (row) => [
+      { label: `Edit ${row.name}`, icon: Edit, onClick: () => onEdit(row) },
+      { label: `Delete ${row.name}`, icon: Trash2, color: "error", onClick: () => onDelete(row) },
+    ],
+    { width: 110 },
+  ),
+];
 
 // Add (holiday = null) or edit a holiday. onSave throws on failure; the error shows here
 const HolidayDialog = ({ open, holiday, onSave, onClose }) => {
@@ -236,11 +281,10 @@ const HolidayManagement = () => {
     }
   };
 
-  const toggle = (id) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const allVisibleSelected = visible.length > 0 && visible.every((h) => selected.includes(h.holiday_id));
-  const someVisibleSelected = visible.some((h) => selected.includes(h.holiday_id));
-  const toggleAll = () => setSelected(allVisibleSelected ? [] : visible.map((h) => h.holiday_id));
+  const columns = useMemo(
+    () => getHolidayColumns({ onEdit: setEditing, onDelete: setToDelete }),
+    [],
+  );
 
   if (!options) {
     return (
@@ -348,85 +392,21 @@ const HolidayManagement = () => {
         </Stack>
       </Stack>
 
-      <TableContainer>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  checked={allVisibleSelected}
-                  indeterminate={!allVisibleSelected && someVisibleSelected}
-                  onChange={toggleAll}
-                  slotProps={{ input: { "aria-label": "Select all" } }}
-                />
-              </TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Observed</TableCell>
-              <TableCell>Source</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loadingList ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  <CircularProgress size={24} />
-                </TableCell>
-              </TableRow>
-            ) : visible.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  No {statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}holidays for{" "}
-                  {province} {year}.{statusFilter === "All" && " Press Load holidays to fetch them."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              visible.map((holiday) => (
-                <TableRow key={holiday.holiday_id} hover selected={selected.includes(holiday.holiday_id)}>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      checked={selected.includes(holiday.holiday_id)}
-                      onChange={() => toggle(holiday.holiday_id)}
-                      slotProps={{ input: { "aria-label": `Select ${holiday.name}` } }}
-                    />
-                  </TableCell>
-                  <TableCell>{formatDay(holiday.date)}</TableCell>
-                  <TableCell>{holiday.name}</TableCell>
-                  {/* Only shown when it differs, e.g. a Saturday Christmas observed on Monday */}
-                  <TableCell>
-                    {holiday.observed_date && holiday.observed_date !== holiday.date
-                      ? formatDay(holiday.observed_date)
-                      : "—"}
-                  </TableCell>
-                  <TableCell>{holiday.source}</TableCell>
-                  <TableCell>
-                    <Chip size="small" label={holiday.status} color={STATUS_COLORS[holiday.status]} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Edit">
-                      <IconButton size="small" aria-label={`Edit ${holiday.name}`} onClick={() => setEditing(holiday)}>
-                        <Edit size={18} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        aria-label={`Delete ${holiday.name}`}
-                        onClick={() => setToDelete(holiday)}
-                      >
-                        <Trash2 size={18} />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <ManagementGrid
+        rows={visible}
+        columns={columns}
+        loading={loadingList}
+        getRowId={(row) => row.holiday_id}
+        checkboxSelection
+        rowSelectionModel={{ type: "include", ids: new Set(selected) }}
+        onRowSelectionModelChange={(model) => setSelected(selectedIds(model, visible))}
+        initialState={{ sorting: { sortModel: [{ field: "date", sort: "asc" }] } }}
+        localeText={{
+          noRowsLabel:
+            `No ${statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}holidays for ${province} ${year}.` +
+            (statusFilter === "All" ? " Press Load holidays to fetch them." : ""),
+        }}
+      />
 
       <HolidayDialog
         open={editing !== undefined}
