@@ -324,6 +324,18 @@ namespace back_end.Controllers
           return BadRequest("Cannot delete location with existing table groups. Delete or reassign table groups first.");
         }
 
+        // Anyone working here moves to another location they're assigned to, or to none.
+        // (Their assignment to this location is deleted with it.)
+        var workingHere = await _context.Users.Where(u => u.Location_id == location_id).ToListAsync();
+        foreach (var user in workingHere)
+        {
+          user.Location_id = await _context.StaffLocations
+              .Where(sl => sl.User_Id == user.User_id && sl.Location_Id != location_id)
+              .OrderBy(sl => sl.Location_Id)
+              .Select(sl => (int?)sl.Location_Id)
+              .FirstOrDefaultAsync();
+        }
+
         _context.Remove(deleteLocation);
         await _context.SaveChangesAsync();
         return Ok("Location was deleted from the system.");
