@@ -1117,12 +1117,26 @@ namespace back_end.Controllers
             }
         }
 
-        // GET: api/Order/all-orders
-        // Get all orders, filtered by location
-        // Helpful for dashbaord
+        /// <summary>
+        /// Retrieves all orders, optionally filtered by location and delivered open sessions.
+        /// </summary>
+        /// <param name="locationId">Optional location filter</param>
+        /// <param name="deliveredOpenSessionsOnly"> When true, delivered orders are only returned if the dining session is still open(Ended_At = null) Pending and Processing orders are always returned</param>
+        /// <returns>The list of filtered orders</returns>
+        /// <response code="200">Returns the list of filtered orders</response>
+        /// <response code="500">If an internal error occurs while retrieving orders</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/order/all_orders?locationId=1&deliveredOpenSessionsOnly=true
+        ///
+        /// Returns all orders filtered by the specified location and delivered open sessions.
+        /// </remarks>
         [HttpGet("all_orders")]
         [Authorize(Policy = "staffOnly")]
-        public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery] int? locationId = null)
+        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery] int? locationId = null, [FromQuery] bool deliveredOpenSessionsOnly = false)
         {
             try
             {
@@ -1148,6 +1162,11 @@ namespace back_end.Controllers
                 if (locationId.HasValue)
                 {
                     query = query.Where(o => o.DiningSession.Location_Id == locationId.Value);
+                }
+
+                if (deliveredOpenSessionsOnly)
+                {
+                    query = query.Where(o => o.Status != OrderStatus.Delivered || o.DiningSession.Ended_At == null);
                 }
 
                 var orders = await query

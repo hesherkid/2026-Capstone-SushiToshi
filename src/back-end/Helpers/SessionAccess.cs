@@ -1,7 +1,9 @@
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
+using back_end.domain.Entities;
 
 namespace back_end.Helpers
 {
@@ -35,5 +37,13 @@ namespace back_end.Helpers
                 await context.SessionParticipants.AnyAsync(sp =>
                     sp.Session_Id == sessionId && sp.User_Id == userId && sp.Left_At == null);
         }
+
+        // Seated = the user hasn't left the table (Left_At == null) and the table's dining session 
+        // is still open. Every active-session lookup uses this so the menu, orders, bill and 
+        // service-request pages agree on where someone is sitting.
+        public static IQueryable<SessionParticipant> CurrentSeats(this IQueryable<SessionParticipant> participants, int userId) =>
+            participants.Where(sp => sp.User_Id == userId &&
+                                     sp.Left_At == null &&
+                                     sp.DiningSession.Ended_At == null);
     }
 }

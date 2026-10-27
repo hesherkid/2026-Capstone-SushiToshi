@@ -13,13 +13,13 @@ namespace back_end.domain.Seeders
     /// <summary>
     /// Seeds OrderItems using wave patterns (first / middle / last order of a bill) and the real menu categories.
     ///
-    /// Seeded orders follow the same limit rules the app enforces:
-    ///   - Per-order limits (item and category) always block, e.g. Nigiri 1 of each type, Sashimi 30 combined.
-    ///   - Per-person limits are per dining session: limit x headcount per age group (from the session's bills).
-    ///     Block limits are clamped; Charge limits (Hot Stone) split into a free line and an over-limit line
-    ///     charged at Price with Charge_Reason = OverLimit.
-    ///   - AYCE lines are priced at 0; add-ons and drinks at the assignment Price.
-    /// Cancelled orders do not count toward limits.
+    /// Every line goes through the same checks as POST /api/Order/{orderId}/items:
+    /// - The item's effective assignment must be Available.
+    /// - OrderLimitRules.ApplyLimits decides the lines: per-order limits always block, per-person
+    /// (per session) Block limits stop, Charge limits split off an over-limit line at Price.
+    /// - Headcount comes from the session's non-cancelled bills, usage from non-cancelled orders.
+    /// When a request would be refused, the seeder asks for less or skips the item, as a customer would.
+    /// Approved orders that end up with no items are removed, since staff can't approve an empty order.
     /// </summary>
     public class OrderItemSeeder : ISeeder
     {
@@ -55,7 +55,7 @@ namespace back_end.domain.Seeders
         {
             var orders = _context.SessionOrders
                 .Include(o => o.DiningSession)
-                .OrderBy(o => o.session_id).ThenBy(o => o.Created_At)
+                .OrderBy(o => o.Created_At)
                 .ToList();
             if (!orders.Any())
                 throw new InvalidOperationException("No session orders found. Please seed session orders first.");
@@ -67,48 +67,45 @@ namespace back_end.domain.Seeders
             var byCategory = items.GroupBy(i => i.Category.Category_name)
                                   .ToDictionary(g => g.Key, g => g.ToList());
 
-            // Default (all locations) assignments hold the price, full price, and item-level limits
             var assignments = _context.MenuItemAssignments
-                .Where(a => a.Location_Id == null)
-                .ToDictionary(a => (a.Menu_Id, a.Item_Id));
+                .Include(a => a.MenuItem).ThenInclude(mi => mi.Category)
+                .ToList();
 
-            // Headcount per dining session, summed across its bills
             var headcounts = _context.Bills
+                .Where(b => b.Status != BillStatus.Cancelled)
+                .ToList()
                 .GroupBy(b => b.Session_Id)
-                .Select(g => new
-                {
-                    SessionId = g.Key,
-                    Adults = g.Sum(b => b.Adult_Count),
-                    Children = g.Sum(b => b.Child_Count),
-                    Seniors = g.Sum(b => b.Senior_Count),
-                    Toddlers = g.Sum(b => b.Tot_Count)
-                })
-                .ToDictionary(h => h.SessionId, h => new Headcount(h.Adults, h.Children, h.Seniors, h.Toddlers));
+                .ToDictionary(g => g.Key, g => new OrderLimitRules.Headcount(
+                    g.Sum(b => b.Adult_Count), g.Sum(b => b.Child_Count),
+                    g.Sum(b => b.Senior_Count), g.Sum(b => b.Tot_Count)));
 
-            // Running totals for per-person (session) limits
             var sessionCategoryUsed = new Dictionary<(int SessionId, int CategoryId), int>();
             var sessionItemUsed = new Dictionary<(int SessionId, int ItemId), int>();
 
-            int created = 0, pending = 0, delivered = 0, overLimitLines = 0;
+            var orderBills = orders.GroupBy(o => o.Bill_Id)
+                .ToDictionary(g => g.Key, g => g.OrderBy(o => o.Created_At).Select(o => o.Order_Id).ToList());
+
+            int created = 0, overLimitLines = 0, refused = 0;
+            var emptyOrders = new List<SessionOrder>();
 
             foreach (var order in orders)
             {
-                var menuId = order.DiningSession.Menu_Id;
+                var session = order.DiningSession;
                 var sessionId = order.session_id;
-                var heads = headcounts.GetValueOrDefault(sessionId, Headcount.Fallback);
-                if (heads.IsEmpty) heads = Headcount.Fallback;
+                var heads = headcounts.GetValueOrDefault(sessionId, OrderLimitRules.Headcount.Fallback);
+                if (heads.IsEmpty) heads = OrderLimitRules.Headcount.Fallback;
                 var countsTowardLimits = order.Status != OrderStatus.Cancelled;
 
-                // Running totals for per-order limits (reset for every order)
+                // Per-order usage resets for every order
                 var orderCategoryUsed = new Dictionary<int, int>();
                 var orderItemUsed = new Dictionary<int, int>();
+                var linesAdded = 0;
 
-                foreach (var (categoryName, min, max) in WavePatterns[GetWave(order, orders)])
+                foreach (var (categoryName, min, max) in WavePatterns[GetWave(order, orderBills)])
                 {
                     if (!byCategory.TryGetValue(categoryName, out var categoryItems))
                         continue;
 
-                    var category = categoryItems[0].Category;
                     var chosenItems = categoryItems
                         .OrderBy(_ => _rng.Next())
                         .Take(Math.Min(_rng.Next(min, max + 1), categoryItems.Count))
@@ -116,87 +113,97 @@ namespace back_end.domain.Seeders
 
                     foreach (var item in chosenItems)
                     {
-                        if (!assignments.TryGetValue((menuId, item.item_id), out var assignment))
+                        var assignment = assignments.EffectiveFor(session.Menu_Id, item.item_id, session.Location_Id);
+                        if (assignment == null || assignment.Status != MenuItemStatus.Available)
                             continue;
 
-                        var requested = RequestedQuantity(categoryName);
+                        var category = assignment.MenuItem.Category;
+                        var categoryId = category.Category_id;
 
-                        // Per-order limits always block
-                        var itemOrderRemaining = LimitRules.Cap(assignment.Per_Order_Limit) - orderItemUsed.GetValueOrDefault(item.item_id);
-                        var categoryOrderRemaining = LimitRules.Cap(category.per_order_limit) - orderCategoryUsed.GetValueOrDefault(category.Category_id);
-                        requested = Math.Min(requested, Math.Min(itemOrderRemaining, categoryOrderRemaining));
-                        if (requested <= 0) continue;
-
-                        // Per-person limits for the dining session (both category and item apply)
-                        var categoryRemaining = SessionCap(category.adult_limit, category.child_limit, category.senior_limit, category.toddler_limit, heads)
-                                                - sessionCategoryUsed.GetValueOrDefault((sessionId, category.Category_id));
-                        var itemRemaining = SessionCap(assignment.Adult_Limit, assignment.Child_limit, assignment.Senior_limit, assignment.Tot_Limit, heads)
-                                            - sessionItemUsed.GetValueOrDefault((sessionId, item.item_id));
-
-                        var remaining = Math.Max(0, Math.Min(categoryRemaining, itemRemaining));
-                        var behavior = categoryRemaining <= itemRemaining ? category.over_limit_behavior : assignment.Over_Limit_Behavior;
-
-                        var freeQty = Math.Min(requested, remaining);
-                        var overQty = requested - freeQty;
-                        if (behavior == OverLimitBehavior.Block) overQty = 0;   // blocked: drop the excess
-                        if (freeQty + overQty <= 0) continue;
-
-                        // Lines: within-limit (AYCE free / add-on price) and over-limit (charged at Price)
-                        if (freeQty > 0)
+                        // Ask for less until the rules accept it, or give up on the item
+                        OrderLimitRules.LimitResult? plan = null;
+                        int quantity;
+                        for (quantity = RequestedQuantity(categoryName); quantity > 0; quantity--)
                         {
-                            AddLine(order, menuId, item.item_id, freeQty,
-                                    assignment.Is_Add_On ? assignment.Price : 0m, ChargeReason.None);
-                        }
-                        if (overQty > 0)
-                        {
-                            AddLine(order, menuId, item.item_id, overQty, assignment.Price, ChargeReason.OverLimit);
-                            overLimitLines++;
+                            plan = OrderLimitRules.ApplyLimits(
+                                itemName: assignment.MenuItem.Name,
+                                categoryName: category.Category_name,
+                                requested: quantity,
+                                category: new OrderLimitRules.Limits(category.adult_limit, category.child_limit,
+                                    category.senior_limit, category.toddler_limit, category.per_order_limit, category.over_limit_behavior),
+                                item: new OrderLimitRules.Limits(assignment.Adult_Limit, assignment.Child_limit,
+                                    assignment.Senior_limit, assignment.Tot_Limit, assignment.Per_Order_Limit, assignment.Over_Limit_Behavior),
+                                heads: heads,
+                                used: new OrderLimitRules.Usage(
+                                    orderCategoryUsed.GetValueOrDefault(categoryId),
+                                    orderItemUsed.GetValueOrDefault(item.item_id),
+                                    sessionCategoryUsed.GetValueOrDefault((sessionId, categoryId)),
+                                    sessionItemUsed.GetValueOrDefault((sessionId, item.item_id))),
+                                isAddOn: assignment.Is_Add_On,
+                                price: assignment.Price);
+
+                            if (plan.IsValid) break;
                         }
 
-                        var lines = (freeQty > 0 ? 1 : 0) + (overQty > 0 ? 1 : 0);
-                        created += lines;
-                        if (order.Status == OrderStatus.Pending) pending += lines;
-                        if (order.Status == OrderStatus.Delivered) delivered += lines;
+                        if (plan == null || !plan.IsValid || quantity == 0)
+                        {
+                            refused++;
+                            continue;
+                        }
 
-                        var total = freeQty + overQty;
-                        orderItemUsed[item.item_id] = orderItemUsed.GetValueOrDefault(item.item_id) + total;
-                        orderCategoryUsed[category.Category_id] = orderCategoryUsed.GetValueOrDefault(category.Category_id) + total;
+                        foreach (var line in plan.Lines)
+                        {
+                            _context.OrderItems.Add(new OrderItems
+                            {
+                                Order_Key = order.Order_Id,
+                                Menu_Id = session.Menu_Id,
+                                Item_Id = item.item_id,
+                                Quantity = line.Quantity,
+                                Price_At_Time = line.Price,
+                                Charge_Reason = line.Reason,
+                                Order_Item_Status = order.Status,
+                                Completed_At = order.Completed_At
+                            });
+                            created++;
+                            linesAdded++;
+                            if (line.Reason == ChargeReason.OverLimit) overLimitLines++;
+                        }
 
+                        orderItemUsed[item.item_id] = orderItemUsed.GetValueOrDefault(item.item_id) + quantity;
+                        orderCategoryUsed[categoryId] = orderCategoryUsed.GetValueOrDefault(categoryId) + quantity;
                         if (countsTowardLimits)
                         {
-                            sessionItemUsed[(sessionId, item.item_id)] = sessionItemUsed.GetValueOrDefault((sessionId, item.item_id)) + total;
-                            sessionCategoryUsed[(sessionId, category.Category_id)] = sessionCategoryUsed.GetValueOrDefault((sessionId, category.Category_id)) + total;
+                            sessionItemUsed[(sessionId, item.item_id)] = sessionItemUsed.GetValueOrDefault((sessionId, item.item_id)) + quantity;
+                            sessionCategoryUsed[(sessionId, categoryId)] = sessionCategoryUsed.GetValueOrDefault((sessionId, categoryId)) + quantity;
                         }
                     }
                 }
+
+                if (linesAdded == 0 && order.Status is OrderStatus.Processing or OrderStatus.Delivered)
+                    emptyOrders.Add(order);
+            }
+
+            _context.SessionOrders.RemoveRange(emptyOrders);
+
+            var kept = orders.Except(emptyOrders).ToList();
+            foreach (var session in orders.Select(o => o.DiningSession).Distinct())
+            {
+                session.First_Order_At = kept.Where(o => o.session_id == session.Session_Id)
+                                             .Select(o => (DateTime?)o.Created_At)
+                                             .Min();
             }
 
             _context.SaveChanges();
             _logger.LogInformation(
-                "Created {Created} order items ({Pending} pending, {Delivered} delivered, {OverLimit} over-limit charged lines)",
-                created, pending, delivered, overLimitLines);
-        }
-
-        private void AddLine(SessionOrder order, int menuId, int itemId, int quantity, decimal price, ChargeReason reason)
-        {
-            _context.OrderItems.Add(new OrderItems
-            {
-                Order_Key = order.Order_Id,
-                Menu_Id = menuId,
-                Item_Id = itemId,
-                Quantity = quantity,
-                Price_At_Time = price,
-                Charge_Reason = reason,
-                Order_Item_Status = order.Status,
-                Completed_At = order.Completed_At
-            });
+                "Created {Created} order items ({OverLimit} over-limit charged lines, {Refused} items the limits refused, {Empty} empty approved orders removed)",
+                created, overLimitLines, refused, emptyOrders.Count);
         }
 
         // First, last, or middle order on the same bill
-        private static string GetWave(SessionOrder order, List<SessionOrder> orders)
+        private static string GetWave(SessionOrder order, Dictionary<int, List<int>> orderBills)
         {
-            var sameBill = orders.Where(o => o.Bill_Id == order.Bill_Id).OrderBy(o => o.Created_At).ToList();
-            var idx = sameBill.FindIndex(o => o.Order_Id == order.Order_Id);
+            var sameBill = orderBills[order.Bill_Id];
+            var idx = sameBill.IndexOf(order.Order_Id);
             return idx == 0 ? "first_wave"
                  : idx == sameBill.Count - 1 ? "last_wave"
                  : "middle_wave";
@@ -212,33 +219,5 @@ namespace back_end.domain.Seeders
             "Add On" => _rng.Next(1, 4),
             _ => _rng.Next(1, 3)                 // drinks
         };
-
-        // Per-person session cap: limit x headcount for each age group present.
-        // 0 = unlimited for that group; toddler 0 = same as child.
-        private static int SessionCap(int adult, int child, int senior, int toddler, Headcount heads)
-        {
-            var groups = new (int Limit, int Count)[]
-            {
-                (adult, heads.Adults),
-                (child, heads.Children),
-                (senior, heads.Seniors),
-                (LimitRules.EffectToddler(toddler, child), heads.Toddlers)
-            };
-
-            long total = 0;
-            foreach (var (limit, count) in groups)
-            {
-                if (count == 0) continue;
-                if (limit == 0) return int.MaxValue;   // unlimited for someone at the table
-                total += (long)limit * count;
-            }
-            return (int)Math.Min(total, int.MaxValue);
-        }
-
-        private sealed record Headcount(int Adults, int Children, int Seniors, int Toddlers)
-        {
-            public static readonly Headcount Fallback = new(1, 0, 0, 0);
-            public bool IsEmpty => Adults + Children + Seniors + Toddlers == 0;
-        }
     }
 }

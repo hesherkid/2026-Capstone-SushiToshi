@@ -12,6 +12,7 @@ using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.OrdersDTOs;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace back_end.Tests.Controllers;
 
@@ -652,5 +653,104 @@ public class OrderControllerTests : IDisposable
 
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    private const int OpenSessionId = 10;
+    private const int EndedSessionId = 11;
+    private const int OtherLocationSessionId = 12;
+
+    private void SeedAllOrderSessions()
+    {
+        _context.DiningSessions.AddRange(
+            new DiningSession { Session_Id = OpenSessionId, Menu_Id = 1, Location_Id = 1, Started_At = DateTime.UtcNow.AddHours(-1) },
+            new DiningSession { Session_Id = EndedSessionId, Menu_Id = 1, Location_Id = 1, Started_At = DateTime.UtcNow.AddHours(-3), Ended_At = DateTime.UtcNow.AddHours(-2) },
+            new DiningSession { Session_Id = OtherLocationSessionId, Menu_Id = 1, Location_Id = 2, Started_At = DateTime.UtcNow.AddHours(-1) });
+
+        _context.Bills.AddRange(
+            new Billing { Bill_Id = OpenSessionId, Session_Id = OpenSessionId, Bill_Name = "Open", Status = BillStatus.Open, Created_At = DateTime.UtcNow },
+            new Billing { Bill_Id = EndedSessionId, Session_Id = EndedSessionId, Bill_Name = "Ended", Status = BillStatus.Closed, Created_At = DateTime.UtcNow },
+            new Billing { Bill_Id = OtherLocationSessionId, Session_Id = OtherLocationSessionId, Bill_Name = "Other", Status = BillStatus.Open, Created_At = DateTime.UtcNow });
+
+        _context.SaveChanges();
+    }
+
+    private static int[] OrderIds(ActionResult<IEnumerable<object>> result)
+    {
+        result.Result.Should().BeOfType<OkObjectResult>();
+        var json = JsonSerializer.SerializeToElement((result.Result as OkObjectResult)!.Value);
+        return json.EnumerateArray().Select(o => o.GetProperty("orderId").GetInt32()).ToArray();
+    }
+
+    [Fact]
+    public async Task GetAllOrdersByLocation_FlagOn_ExcludedDeliveredOrdersFromEndedSessions()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        var openDelivered = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
+        var endedDelivered = SeedOrderAt(EndedSessionId, EndedSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
+
+        // Act
+        var ids = OrderIds(await _controller.GetAllOrdersByLocation(locationId: 1, deliveredOpenSessionsOnly: true));
+
+        // Assert
+        ids.Should().Contain(openDelivered.Order_Id);
+        ids.Should().NotContain(endedDelivered.Order_Id);
+    }
+
+    [Fact]
+    public async Task GelAllOrdersByLocation_FlagOn_KeepsPendingAndProcessingRegardlessOfSession()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        var openPending = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Pending, OrderStatus.Pending);
+        var endedProcessing = SeedOrderAt(EndedSessionId, EndedSessionId, OrderStatus.Processing, OrderStatus.Processing);
+
+        // Act
+        var ids = OrderIds(await _controller.GetAllOrdersByLocation(locationId: 1, deliveredOpenSessionsOnly: true));
+
+        // Assert
+        ids.Should().Contain(openPending.Order_Id);
+        ids.Should().Contain(endedProcessing.Order_Id);
+    }
+
+    [Fact]
+    public async Task GetAllOrdersByLocation_FlagOff_ByDefault_ReturnsAllOrders()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        var openDelivered = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
+        var openPending = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Pending, OrderStatus.Pending);
+        var endedDelivered = SeedOrderAt(EndedSessionId, EndedSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
+        var endedProcessing = SeedOrderAt(EndedSessionId, EndedSessionId, OrderStatus.Processing, OrderStatus.Processing);
+
+        // Act
+        var ids = OrderIds(await _controller.GetAllOrdersByLocation(locationId: 1));
+
+        // Assert
+        ids.Should().BeEquivalentTo(new[]
+        {
+            openDelivered.Order_Id, openPending.Order_Id,
+            endedDelivered.Order_Id, endedProcessing.Order_Id
+        });
+
+    }
+
+    [Fact]
+    public async Task GetAllOrdersByLocation_FlagOn_StillRespectsLocationFilter()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
+        var otherLocation = SeedOrderAt(OtherLocationSessionId, OtherLocationSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
+
+        // Act
+        var ids = OrderIds(await _controller.GetAllOrdersByLocation(locationId: 2, deliveredOpenSessionsOnly: true));
+
+        // Assert
+        ids.Should().Equal(otherLocation.Order_Id);
     }
 }
