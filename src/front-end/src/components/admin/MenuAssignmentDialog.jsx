@@ -6,13 +6,8 @@ import {
   Typography,
   IconButton,
   Alert,
-  TableContainer,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Paper,
+  DialogTitle,
+  DialogContent,
   FormControl,
   InputLabel,
   Select,
@@ -25,6 +20,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
+import ManagementGrid from "@/components/common/ManagementGrid";
+import { actionsColumn } from "@/components/common/RowActions";
 import { X, Edit, Trash2 } from "lucide-react";
 
 const ALL_LOCATIONS = ""; // "" in the form = default row (location_id null)
@@ -97,6 +94,61 @@ const limitSummary = (a) => {
     parts.push(`then $${Number(a.price).toFixed(2)}`);
   return parts.length ? parts.join(", ") : "None";
 };
+
+// The menu's default row first, then its location prices
+const byMenuThenLocation = (a, b) =>
+  a.menu_Id - b.menu_Id || (a.location_Id ?? 0) - (b.location_Id ?? 0);
+
+const getAssignmentColumns = ({ locationName, onEdit, onDelete }) => [
+  {
+    field: "menu",
+    headerName: "Menu",
+    flex: 1,
+    minWidth: 120,
+    valueGetter: (value, row) => row.menu?.name || "Unknown Menu",
+  },
+  {
+    field: "location_Id",
+    headerName: "Location",
+    flex: 1,
+    minWidth: 130,
+    valueGetter: (value) => locationName(value),
+    renderCell: ({ row, value }) =>
+      row.location_Id == null ? <strong>{value}</strong> : value,
+  },
+  {
+    field: "price",
+    headerName: "Price",
+    width: 90,
+    valueFormatter: (value) => `$${Number(value).toFixed(2)}`,
+  },
+  {
+    field: "limits",
+    headerName: "Limits",
+    flex: 1.2,
+    minWidth: 140,
+    valueGetter: (value, row) => limitSummary(row),
+  },
+  { field: "status", headerName: "Status", width: 110 },
+  {
+    field: "is_Add_On",
+    headerName: "Add-on",
+    width: 90,
+    valueGetter: (value) => (value ? "Yes" : "No"),
+  },
+  actionsColumn(
+    (row) => [
+      { label: "Edit assignment", icon: Edit, onClick: () => onEdit(row) },
+      {
+        label: row.location_Id == null ? "Remove from menu" : "Reset to default price",
+        icon: Trash2,
+        color: "error",
+        onClick: () => onDelete(row),
+      },
+    ],
+    { width: 110 },
+  ),
+];
 
 const MenuAssignmentDialog = ({
   open,
@@ -299,294 +351,240 @@ const MenuAssignmentDialog = ({
   );
 
   return (
-    <AppDialog open={open} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
-        <Box sx={{ p: 3 }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={2}
-          >
-            <Stack spacing={0.5}>
-              <Typography variant="h6">Menu Assignments</Typography>
-              <Typography variant="subtitle2" color="text.secondary">
-                {selectedItem?.name}
-              </Typography>
-            </Stack>
-            <IconButton onClick={onClose} size="small">
-              <X size={20} />
-            </IconButton>
-          </Stack>
-
-          {error && (
-            <Alert
-              severity="error"
-              sx={{ mb: 3 }}
-              onClose={() => setError(null)}
-            >
-              {error}
-            </Alert>
-          )}
-
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
-            Current Assignments
+    // md: wide enough for every table column without scrolling sideways
+    <AppDialog open={open} onClose={onClose} maxWidth="md">
+      {/* Outside the scrolling content, so the title and close button stay in view */}
+      <DialogTitle
+        component="div"
+        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+      >
+        <Stack spacing={0.5}>
+          <Typography variant="h6" component="h2">Menu Assignments</Typography>
+          <Typography variant="subtitle2" color="text.secondary">
+            {selectedItem?.name}
           </Typography>
-
-          {assignments.length > 0 ? (
-            <TableContainer component={Paper} sx={{ mb: 3 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ color: "white" }}>Menu</TableCell>
-                    <TableCell sx={{ color: "white" }}>Location</TableCell>
-                    <TableCell sx={{ color: "white" }}>Price</TableCell>
-                    <TableCell sx={{ color: "white" }}>Limits</TableCell>
-                    <TableCell sx={{ color: "white" }}>Status</TableCell>
-                    <TableCell sx={{ color: "white" }}>Add-on</TableCell>
-                    <TableCell sx={{ color: "white" }} align="right">
-                      Actions
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {[...assignments]
-                    .sort(
-                      (a, b) =>
-                        a.menu_Id - b.menu_Id ||
-                        (a.location_Id ?? 0) - (b.location_Id ?? 0),
-                    )
-                    .map((assignment) => (
-                      <TableRow
-                        key={assignment.assignment_Id}
-                        selected={
-                          editingAssignment?.assignment_Id ===
-                          assignment.assignment_Id
-                        }
-                      >
-                        <TableCell>
-                          {assignment.menu?.name || "Unknown Menu"}
-                        </TableCell>
-                        <TableCell>
-                          {assignment.location_Id == null ? (
-                            <strong>All locations</strong>
-                          ) : (
-                            locationName(assignment.location_Id)
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          ${Number(assignment.price).toFixed(2)}
-                        </TableCell>
-                        <TableCell>{limitSummary(assignment)}</TableCell>
-                        <TableCell>{assignment.status}</TableCell>
-                        <TableCell>
-                          {assignment.is_Add_On ? "Yes" : "No"}
-                        </TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            size="small"
-                            onClick={() => setEditingAssignment(assignment)}
-                            sx={{ mr: 1 }}
-                          >
-                            <Edit size={16} />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            title={
-                              assignment.location_Id == null
-                                ? "Remove from menu"
-                                : "Reset to default price"
-                            }
-                            onClick={() => handleDeleteAssignment(assignment)}
-                          >
-                            <Trash2 size={16} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              No current assignments
-            </Alert>
-          )}
-
-          <Typography variant="subtitle1" gutterBottom>
-            {editingAssignment ? "Edit Assignment" : "Add New Assignment"}
-          </Typography>
-
-          <Stack spacing={2}>
-            <FormControl fullWidth>
-              <InputLabel>Location</InputLabel>
-              <Select
-                value={formData.location_id}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    location_id: e.target.value,
-                    menu_id: "", // menu choices depend on the location
-                  }))
-                }
-                label="Location"
-                disabled={Boolean(editingAssignment)}
+        </Stack>
+        <IconButton onClick={onClose} size="small" aria-label="Close">
+          <X size={20} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <form onSubmit={handleSubmit}>
+          <Box>
+            {error && (
+              <Alert
+                severity="error"
+                sx={{ mb: 3 }}
+                onClose={() => setError(null)}
               >
-                <MenuItem value={ALL_LOCATIONS}>
-                  All locations (default)
-                </MenuItem>
-                {locations.map((loc) => (
-                  <MenuItem key={loc.location_id} value={loc.location_id}>
-                    {loc.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth required>
-              <InputLabel>Menu</InputLabel>
-              <Select
-                value={formData.menu_id}
-                onChange={setField("menu_id")}
-                label="Menu"
-                disabled={Boolean(editingAssignment)}
-              >
-                {availableMenus.map((menu) => (
-                  <MenuItem key={menu.menu_id} value={menu.menu_id}>
-                    {menu.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                {error}
+              </Alert>
+            )}
 
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Price"
-                helperText={
-                  formData.is_add_on
-                    ? "Charged every time"
-                    : "Included: only charged past a per-person limit set to Charge (0 = never)"
-                }
-                type="number"
-                value={formData.price}
-                onChange={setField("price")}
-                required
-                slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
-                sx={{ flex: 1 }}
-              />
+            <Typography variant="subtitle1" gutterBottom>
+              Current Assignments
+            </Typography>
 
-              <FormControl sx={{ flex: 1 }}>
-                <InputLabel>Status</InputLabel>
+            {assignments.length > 0 ? (
+              <Box sx={{ mb: 3 }}>
+                <ManagementGrid
+                  rows={[...assignments].sort(byMenuThenLocation)}
+                  columns={getAssignmentColumns({
+                    locationName,
+                    onEdit: setEditingAssignment,
+                    onDelete: handleDeleteAssignment,
+                  })}
+                  getRowId={(row) => row.assignment_Id}
+                  // The row being edited stays highlighted
+                  rowSelectionModel={{
+                    type: "include",
+                    ids: new Set(editingAssignment ? [editingAssignment.assignment_Id] : []),
+                  }}
+                  showToolbar={false}
+                  hideFooter={assignments.length <= 10}
+                  disableColumnMenu
+                />
+              </Box>
+            ) : (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                No current assignments
+              </Alert>
+            )}
+
+            <Typography variant="subtitle1" gutterBottom>
+              {editingAssignment ? "Edit Assignment" : "Add New Assignment"}
+            </Typography>
+
+            <Stack spacing={2}>
+              <FormControl fullWidth>
+                <InputLabel>Location</InputLabel>
                 <Select
-                  value={formData.status}
-                  onChange={setField("status")}
-                  label="Status"
-                >
-                  <MenuItem value="available">Available</MenuItem>
-                  <MenuItem value="unavailable">Unavailable</MenuItem>
-                  <MenuItem value="seasonal">Seasonal</MenuItem>
-                </Select>
-              </FormControl>
-            </Stack>
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.is_add_on === true}
+                  value={formData.location_id}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      is_add_on: e.target.checked,
+                      location_id: e.target.value,
+                      menu_id: "", // menu choices depend on the location
                     }))
                   }
-                />
-              }
-              label="Is Add-on Item"
-            />
-
-            {/* Per person, per dining session. 0 = unlimited */}
-            <Typography variant="subtitle2" color="text.secondary">
-              Limits per person (whole dining session). 0 = unlimited.
-            </Typography>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "repeat(2, 1fr)",
-                  sm: "repeat(4, 1fr)",
-                },
-                gap: 2,
-              }}
-            >
-              {limitField("adult_limit", "Adult", " ")}
-              {limitField("senior_limit", "Senior", "Max: adult")}
-              {limitField("child_limit", "Child", "Max: adult")}
-              {limitField("tot_limit", "Toddler", "0 = same as child")}
-            </Box>
-
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "1fr 3fr" },
-                gap: 2,
-                alignItems: "start",
-              }}
-            >
-              {limitField(
-                "per_order_limit",
-                "Per order limit",
-                "Whole table · 0 = no cap · always blocks",
-              )}
-
-              <FormControl fullWidth>
-                <InputLabel id="assignment-over-limit-label">
-                  Past per-person limit
-                </InputLabel>
-                <Select
-                  labelId="assignment-over-limit-label"
-                  label="Past per-person limit"
-                  value={formData.over_limit_behavior}
-                  onChange={setField("over_limit_behavior")}
+                  label="Location"
+                  disabled={Boolean(editingAssignment)}
                 >
-                  <MenuItem value="Block">Block</MenuItem>
-                  <MenuItem value="Charge">Charge the item's price</MenuItem>
+                  <MenuItem value={ALL_LOCATIONS}>
+                    All locations (default)
+                  </MenuItem>
+                  {locations.map((loc) => (
+                    <MenuItem key={loc.location_id} value={loc.location_id}>
+                      {loc.name}
+                    </MenuItem>
+                  ))}
                 </Select>
-                <FormHelperText>
-                  Charge bills the price for each extra over the limits above
-                </FormHelperText>
               </FormControl>
-            </Box>
+              <FormControl fullWidth required>
+                <InputLabel>Menu</InputLabel>
+                <Select
+                  value={formData.menu_id}
+                  onChange={setField("menu_id")}
+                  label="Menu"
+                  disabled={Boolean(editingAssignment)}
+                >
+                  {availableMenus.map((menu) => (
+                    <MenuItem key={menu.menu_id} value={menu.menu_id}>
+                      {menu.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-            <Stack direction="row" spacing={2}>
-              {editingAssignment && (
+              <Stack direction="row" spacing={2}>
+                <TextField
+                  label="Price"
+                  helperText={
+                    formData.is_add_on
+                      ? "Charged every time"
+                      : "Included: only charged past a per-person limit set to Charge (0 = never)"
+                  }
+                  type="number"
+                  value={formData.price}
+                  onChange={setField("price")}
+                  required
+                  slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
+                  sx={{ flex: 1 }}
+                />
+
+                <FormControl sx={{ flex: 1 }}>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={formData.status}
+                    onChange={setField("status")}
+                    label="Status"
+                  >
+                    <MenuItem value="available">Available</MenuItem>
+                    <MenuItem value="unavailable">Unavailable</MenuItem>
+                    <MenuItem value="seasonal">Seasonal</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.is_add_on === true}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        is_add_on: e.target.checked,
+                      }))
+                    }
+                  />
+                }
+                label="Is Add-on Item"
+              />
+
+              {/* Per person, per dining session. 0 = unlimited */}
+              <Typography variant="subtitle2" color="text.secondary">
+                Limits per person (whole dining session). 0 = unlimited.
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "repeat(2, 1fr)",
+                    sm: "repeat(4, 1fr)",
+                  },
+                  gap: 2,
+                }}
+              >
+                {limitField("adult_limit", "Adult", " ")}
+                {limitField("senior_limit", "Senior", "Max: adult")}
+                {limitField("child_limit", "Child", "Max: adult")}
+                {limitField("tot_limit", "Toddler", "0 = same as child")}
+              </Box>
+
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 3fr" },
+                  gap: 2,
+                  alignItems: "start",
+                }}
+              >
+                {limitField(
+                  "per_order_limit",
+                  "Per order limit",
+                  "Whole table · 0 = no cap · always blocks",
+                )}
+
+                <FormControl fullWidth>
+                  <InputLabel id="assignment-over-limit-label">
+                    Past per-person limit
+                  </InputLabel>
+                  <Select
+                    labelId="assignment-over-limit-label"
+                    label="Past per-person limit"
+                    value={formData.over_limit_behavior}
+                    onChange={setField("over_limit_behavior")}
+                  >
+                    <MenuItem value="Block">Block</MenuItem>
+                    <MenuItem value="Charge">Charge the item's price</MenuItem>
+                  </Select>
+                  <FormHelperText>
+                    Charge bills the price for each extra over the limits above
+                  </FormHelperText>
+                </FormControl>
+              </Box>
+
+              <Stack direction="row" spacing={2}>
+                {editingAssignment && (
+                  <Button
+                    onClick={resetForm}
+                    disabled={submitting}
+                    sx={{ flex: 1 }}
+                  >
+                    Cancel Edit
+                  </Button>
+                )}
                 <Button
-                  onClick={resetForm}
+                  type="submit"
+                  variant="contained"
                   disabled={submitting}
                   sx={{ flex: 1 }}
                 >
-                  Cancel Edit
+                  {submitting ? (
+                    <CircularProgress size={24} />
+                  ) : editingAssignment ? (
+                    "Update Assignment"
+                  ) : selectedLocId != null ? (
+                    "Add Location Price"
+                  ) : (
+                    "Add Assignment"
+                  )}
                 </Button>
-              )}
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={submitting}
-                sx={{ flex: 1 }}
-              >
-                {submitting ? (
-                  <CircularProgress size={24} />
-                ) : editingAssignment ? (
-                  "Update Assignment"
-                ) : selectedLocId != null ? (
-                  "Add Location Price"
-                ) : (
-                  "Add Assignment"
-                )}
-              </Button>
+              </Stack>
             </Stack>
-          </Stack>
-        </Box>
-      </form>
+          </Box>
+        </form>
+      </DialogContent>
     </AppDialog>
   );
 };

@@ -8,6 +8,27 @@ import {
 import MenuAssignmentDialog from "../MenuAssignmentDialog";
 import api from "@/config/api";
 
+jest.mock("@mui/x-data-grid", () => {
+  if (typeof global.TextEncoder === "undefined") {
+    const { TextEncoder, TextDecoder } = jest.requireActual("util");
+    Object.assign(global, { TextEncoder, TextDecoder });
+  }
+  const actual = jest.requireActual("@mui/x-data-grid");
+  const React = jest.requireActual("react");
+  return {
+    ...actual,
+    DataGrid: (props) => React.createElement(actual.DataGrid, { ...props, disableVirtualization: true }),
+  };
+});
+
+if (typeof window.ResizeObserver === "undefined") {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 jest.mock("@/config/api", () => {
   const mockApi = jest.fn();
   mockApi.get = jest.fn();
@@ -63,7 +84,7 @@ const renderDialog = () =>
 const priceInput = () => screen.getByLabelText(/^Price/);
 
 const editRow = async (menuName) => {
-  const row = (await screen.findByText(menuName)).closest("tr");
+  const row = (await screen.findByText(menuName)).closest('[role="row"]');
   fireEvent.click(within(row).getAllByRole("button")[0]);
 };
 
@@ -86,7 +107,7 @@ describe("Menu assignment dialog", () => {
   it("summarises each assignment's limits, including the charge past the limit", async () => {
     renderDialog();
 
-    const row = (await screen.findByText("All Day Menu")).closest("tr");
+    const row = (await screen.findByText("All Day Menu")).closest('[role="row"]');
     expect(within(row).getByText("$5.00")).toBeInTheDocument();
     expect(within(row).getByText("1/adult, then $5.00")).toBeInTheDocument();
   });
