@@ -4,9 +4,8 @@ import {
   Box,
   Stack,
   Typography,
-  IconButton,
   Alert,
-  DialogTitle,
+  DialogActions,
   DialogContent,
   FormControl,
   InputLabel,
@@ -20,9 +19,10 @@ import {
   CircularProgress,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
+import DialogHeader from "@/components/common/DialogHeader";
 import ManagementGrid from "@/components/common/ManagementGrid";
 import { actionsColumn } from "@/components/common/RowActions";
-import { X, Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 
 const ALL_LOCATIONS = ""; // "" in the form = default row (location_id null)
 
@@ -354,20 +354,7 @@ const MenuAssignmentDialog = ({
     // md: wide enough for every table column without scrolling sideways
     <AppDialog open={open} onClose={onClose} maxWidth="md">
       {/* Outside the scrolling content, so the title and close button stay in view */}
-      <DialogTitle
-        component="div"
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <Stack spacing={0.5}>
-          <Typography variant="h6" component="h2">Menu Assignments</Typography>
-          <Typography variant="subtitle2" color="text.secondary">
-            {selectedItem?.name}
-          </Typography>
-        </Stack>
-        <IconButton onClick={onClose} size="small" aria-label="Close">
-          <X size={20} />
-        </IconButton>
-      </DialogTitle>
+      <DialogHeader title="Menu Assignments" subtitle={selectedItem?.name} onClose={onClose} />
       <DialogContent dividers>
         <form onSubmit={handleSubmit}>
           <Box>
@@ -585,6 +572,9 @@ const MenuAssignmentDialog = ({
           </Box>
         </form>
       </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
     </AppDialog>
   );
 };

@@ -1,20 +1,14 @@
 import { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Chip,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-} from "@mui/material";
+import { Box, Chip } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import serverMessage from "@/utils/serverMessage";
 import LocationForm from "@/components/location/LocationForm";
 import MenuAssignmentForm from "@/components/location/MenuAssignmentForm";
 import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
-import { Edit, AlertTriangle, Trash2, DollarSign } from "lucide-react";
+import { Edit, Trash2, DollarSign } from "lucide-react";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import LocationPricingDialog from "@/components/location/LocationPricingDialog";
 import { getLocationPricingList } from "@/services/pricingService";
@@ -33,6 +27,10 @@ const LocationManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState(null);
   const [pricingLocation, setPricingLocation] = useState(null);
+  // Shown inside the location form and the delete confirmation
+  const [formError, setFormError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   // location id -> names of its menus; null until loaded (or if they couldn't be)
   const [menuNames, setMenuNames] = useState(null);
   // location id -> "Default" or "Location"; null until loaded (or if it couldn't be)
@@ -78,27 +76,7 @@ const LocationManagement = () => {
       setLocations(normalized);
     } catch (err) {
       console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
+      setError(serverMessage(err, "Couldn't load the locations."));
     } finally {
       setLoading(false);
     }
@@ -144,90 +122,53 @@ const LocationManagement = () => {
   const handleCreate = () => {
     setSelectedLocation(null);
     setFormMode("create");
+    setFormError(null);
     setIsFormOpen(true);
   };
 
   const handleEdit = (location) => {
     setSelectedLocation(location);
     setFormMode("edit");
+    setFormError(null);
     setIsFormOpen(true);
   };
 
   const handleDeleteClick = (location) => {
     setLocationToDelete(location);
+    setDeleteError(null);
     setDeleteDialogOpen(true);
   };
 
+  // Returns false on failure, so the confirm dialog stays open and shows why
   const handleDeleteConfirm = async () => {
+    setDeleteError(null);
     try {
       await api.delete(`/Location/${locationToDelete.location_Id}`);
       await fetchLocations();
-      setDeleteDialogOpen(false);
       setLocationToDelete(null);
     } catch (err) {
-      console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
+      setDeleteError(serverMessage(err, "Couldn't delete the location."));
+      return false;
     }
   };
 
   const handleSubmit = async (formData) => {
+    setSaving(true);
+    setFormError(null);
     try {
       if (formMode === "create") {
         await api.post("/Location", formData);
       } else {
-        // TODO: Need endpoint to /Location/{id} on the backend
-        await api.put(`/Location/${selectedLocation.location_Id}`,
-          formData
-        );
+        await api.put(`/Location/${selectedLocation.location_Id}`, formData);
       }
       await fetchLocations();
       setIsFormOpen(false);
     } catch (err) {
-      console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
+      setFormError(serverMessage(err, "Couldn't save the location."));
+    } finally {
+      setSaving(false);
     }
   };
-
 
   const columns = [
     { field: "location_Id", headerName: "ID", width: 90 },
@@ -317,17 +258,18 @@ const LocationManagement = () => {
       }}
     >
 
-      <AppDialog
-        open={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-      >
+      {/* Mounted only while open, so the fields start from the chosen location each time */}
+      {isFormOpen && (
         <LocationForm
           initialData={selectedLocation}
           onSubmit={handleSubmit}
           onClose={() => setIsFormOpen(false)}
           mode={formMode}
+          busy={saving}
+          error={formError}
+          onErrorClose={() => setFormError(null)}
         />
-      </AppDialog>
+      )}
 
       <AppDialog
         open={isMenuFormOpen}
@@ -349,36 +291,15 @@ const LocationManagement = () => {
         }}
       />
 
-      <AppDialog
+      <ConfirmDialog
         open={deleteDialogOpen}
+        title="Delete location"
+        message={`Are you sure you want to delete the location "${locationToDelete?.name}"? This will remove all menu assignments for this location. This action cannot be undone.`}
+        confirmLabel="Delete Location"
+        error={deleteError}
+        onConfirm={handleDeleteConfirm}
         onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-      >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <AlertTriangle color="error" size={24} />
-          Confirm Delete Location
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete the location "
-            {locationToDelete?.name}"? This will remove all menu assignments for
-            this location. This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            variant="contained"
-            color="error"
-            autoFocus
-          >
-            Delete Location
-          </Button>
-        </DialogActions>
-      </AppDialog>
+      />
     </ManagementPage>
   );
 };

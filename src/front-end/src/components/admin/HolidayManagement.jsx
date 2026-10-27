@@ -6,9 +6,6 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   MenuItem,
   Stack,
@@ -18,7 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Download, Edit, Trash2 } from "lucide-react";
-import AppDialog from "@/components/common/AppDialog";
+import FormDialog from "@/components/common/FormDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import ManagementGrid from "@/components/common/ManagementGrid";
 import ManagementHeader from "@/components/common/ManagementHeader";
@@ -116,8 +113,7 @@ const HolidayDialog = ({ open, holiday, onSave, onClose }) => {
     setError(null);
   }, [open, holiday]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setSaving(true);
     setError(null);
     try {
@@ -131,42 +127,41 @@ const HolidayDialog = ({ open, holiday, onSave, onClose }) => {
   };
 
   return (
-    <AppDialog open={open} onClose={onClose} maxWidth="xs">
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>{holiday ? "Edit Holiday" : "Add Holiday"}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField
-              type="date"
-              label="Date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              slotProps={{ htmlInput: { maxLength: 100 } }}
-            />
-            {!holiday && (
-              <Typography variant="body2" color="text.secondary">
-                Holidays you add are approved straight away.
-              </Typography>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={saving || !date || !name.trim()}>
-            Save
-          </Button>
-        </DialogActions>
-      </form>
-    </AppDialog>
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      title={holiday ? "Edit Holiday" : "Add Holiday"}
+      subtitle={holiday?.name}
+      maxWidth="xs"
+      error={error}
+      onErrorClose={() => setError(null)}
+      onSubmit={handleSubmit}
+      submitLabel="Save"
+      busyLabel="Saving..."
+      busy={saving}
+      submitDisabled={!date || !name.trim()}
+    >
+      <TextField
+        type="date"
+        label="Date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        required
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+      <TextField
+        label="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        slotProps={{ htmlInput: { maxLength: 100 } }}
+      />
+      {!holiday && (
+        <Typography variant="body2" color="text.secondary">
+          Holidays you add are approved straight away.
+        </Typography>
+      )}
+    </FormDialog>
   );
 };
 

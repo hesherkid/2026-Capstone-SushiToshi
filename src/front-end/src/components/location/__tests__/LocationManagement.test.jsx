@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import LocationManagement from "../LocationManagement";
 import api from "@/config/api";
 import * as pricingService from "@/services/pricingService";
@@ -83,10 +83,12 @@ describe("LocationManagement menus column", () => {
 
     // Southgate is the second row
     fireEvent.click(screen.getAllByRole("button", { name: "Assign Menus" })[1]);
-    expect(await screen.findByText("Manage Menus - Southgate")).toBeInTheDocument();
+    const dialog = (await screen.findByRole("heading", { name: "Manage Menus" })).closest('[role="dialog"]');
+    expect(within(dialog).getByText("Southgate")).toBeInTheDocument();
 
     assignedMenus[2] = [11];   // Dinner was assigned in the dialog
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    // The bottom Close button (the ✕ in the title bar is labelled Close too)
+    fireEvent.click(within(dialog).getAllByRole("button", { name: "Close" }).at(-1));
 
     await waitFor(() => expect(screen.queryByText("No menus")).not.toBeInTheDocument());
     // Chips only: the dialog's own list of menus may still be fading out

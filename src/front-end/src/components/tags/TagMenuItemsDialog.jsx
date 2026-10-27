@@ -2,7 +2,6 @@ import React from "react";
 import {
   Box,
   Button,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Typography,
@@ -11,6 +10,7 @@ import {
 } from "@mui/material";
 import { Image as ImageIcon, X } from "lucide-react";
 import AppDialog from "@/components/common/AppDialog";
+import DialogHeader from "@/components/common/DialogHeader";
 import ManagementGrid from "@/components/common/ManagementGrid";
 import { actionsColumn } from "@/components/common/RowActions";
 import TagChip from "./TagChip";
@@ -85,12 +85,11 @@ const TagMenuItemsDialog = ({
   onRemoveItem,
 }) => (
   <AppDialog open={open} onClose={onClose} maxWidth="md">
-    <DialogTitle>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <Typography>Menu Items with Tag:</Typography>
-        {tag && <TagChip tag={tag} size="l" />}
-      </Box>
-    </DialogTitle>
+    <DialogHeader
+      title="Menu Items with Tag"
+      subtitle={tag && <TagChip tag={tag} size="l" />}
+      onClose={onClose}
+    />
     <DialogContent dividers>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={onErrorClose}>

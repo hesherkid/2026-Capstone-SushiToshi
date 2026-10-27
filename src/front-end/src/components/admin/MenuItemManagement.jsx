@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, IconButton, Typography, Stack } from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
+import { Box, Button, IconButton, Typography } from "@mui/material";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   Plus,
   Edit,
   Trash2,
   Menu as MenuIcon,
-  AlertTriangle,
   Image as ImageIcon,
 } from "lucide-react";
 import MenuAssignmentDialog from "@/components/admin/MenuAssignmentDialog";
@@ -391,32 +390,17 @@ const MenuItemManagement = () => {
         onSuccess={fetchData}
       />
 
-      <AppDialog
+      <ConfirmDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-      >
-        <Box sx={{ p: 3 }}>
-          <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-            <AlertTriangle color="error" />
-            <Typography variant="h6">Confirm Delete</Typography>
-          </Stack>
-          <Typography mb={3}>
-            Are you sure you want to delete "{itemToDelete?.name}"? This action
-            cannot be undone.
-          </Typography>
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleDeleteConfirm}
-            >
-              Delete
-            </Button>
-          </Stack>
-        </Box>
-      </AppDialog>
+        title="Delete menu item"
+        message={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirm}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setItemToDelete(null);
+        }}
+      />
 
       <CategoryManagementDialog
         open={categoryDialogOpen}

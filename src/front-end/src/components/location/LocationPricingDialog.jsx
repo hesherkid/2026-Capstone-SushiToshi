@@ -7,7 +7,6 @@ import {
   CircularProgress,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
   Link,
   Stack,
@@ -16,6 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
+import DialogHeader from "@/components/common/DialogHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import PricingProfileForm from "@/components/admin/pricing/PricingProfileForm";
 import {
@@ -112,7 +112,7 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
   return (
     <>
       <AppDialog open={open} onClose={onClose} maxWidth="md">
-        <DialogTitle>Pricing: {location?.name}</DialogTitle>
+        <DialogHeader title="Pricing" subtitle={location?.name} onClose={onClose} />
         <DialogContent sx={{ textAlign: "left" }}>
           {error && (
             <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
