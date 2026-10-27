@@ -1,16 +1,6 @@
 import React, { useState } from "react";
-import {
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Alert,
-  Box,
-  CircularProgress,
-} from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
-import { Key } from "lucide-react";
+import { TextField } from "@mui/material";
+import FormDialog from "@/components/common/FormDialog";
 
 const PasswordChangeDialog = ({
   open,
@@ -55,9 +45,7 @@ const PasswordChangeDialog = ({
     setValidationError(null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     if (passwords.new !== passwords.confirm) {
       setValidationError("New passwords don't match");
       return;
@@ -96,63 +84,43 @@ const PasswordChangeDialog = ({
   const displayError = getErrorMessage(error) || validationError;
 
   return (
-    <AppDialog open={open} onClose={handleClose}>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Key />
-          Reset Password{" "}
-          {staffMember &&
-            `for ${staffMember.first_name} ${staffMember.last_name}`}
-        </DialogTitle>
-
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-            {displayError && (
-              <Alert
-                severity="error"
-                onClose={() => setValidationError(null)}
-                sx={{ wordBreak: "break-word" }}
-              >
-                {displayError}
-              </Alert>
-            )}
-            <TextField
-              label="New Password"
-              name="new"
-              type="password"
-              value={passwords.new}
-              onChange={handleChange}
-              required
-              fullWidth
-              autoFocus
-              helperText="Minimum 8 characters"
-              error={Boolean(displayError)}
-            />
-            <TextField
-              label="Confirm New Password"
-              name="confirm"
-              type="password"
-              value={passwords.confirm}
-              onChange={handleChange}
-              required
-              fullWidth
-              error={Boolean(displayError)}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} /> : null}
-          >
-            Reset Password
-          </Button>
-        </DialogActions>
-      </form>
-    </AppDialog>
+    <FormDialog
+      open={open}
+      onClose={handleClose}
+      title="Reset Password"
+      subtitle={staffMember && `${staffMember.first_name} ${staffMember.last_name}`}
+      error={displayError}
+      onErrorClose={() => setValidationError(null)}
+      onSubmit={handleSubmit}
+      submitLabel="Reset Password"
+      busyLabel="Resetting..."
+      busy={isLoading}
+    >
+      <TextField
+        label="New Password"
+        name="new"
+        type="password"
+        value={passwords.new}
+        onChange={handleChange}
+        required
+        fullWidth
+        autoFocus
+        autoComplete="new-password"
+        helperText="Minimum 8 characters"
+        error={Boolean(displayError)}
+      />
+      <TextField
+        label="Confirm New Password"
+        name="confirm"
+        type="password"
+        value={passwords.confirm}
+        onChange={handleChange}
+        required
+        fullWidth
+        autoComplete="new-password"
+        error={Boolean(displayError)}
+      />
+    </FormDialog>
   );
 };
 

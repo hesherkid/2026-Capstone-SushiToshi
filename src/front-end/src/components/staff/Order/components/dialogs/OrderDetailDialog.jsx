@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
@@ -16,8 +15,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
+import DialogHeader from "@/components/common/DialogHeader";
 import {
-  X,
   Check,
   Trash2,
   Plus,
@@ -169,31 +168,21 @@ const OrderDetailDialog = () => {
       >
         {order && (
           <>
-            <DialogTitle>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
-              >
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="h6" component="span">
-                      Order #{order.orderId} · {tableLabel(order.tableNumbers)}
-                    </Typography>
-                    <StatusChip status={order.status} />
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Session #{order.sessionId} · {order.items.length} item
-                    {order.items.length === 1 ? "" : "s"}
-                  </Typography>
+            <DialogHeader
+              title={
+                <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  Order #{order.orderId} · {tableLabel(order.tableNumbers)}
+                  <StatusChip status={order.status} />
                 </Box>
-                <IconButton aria-label="Close" onClick={closeOrder} size="small">
-                  <X size={20} />
-                </IconButton>
-              </Box>
-            </DialogTitle>
+              }
+              subtitle={
+                <>
+                  Session #{order.sessionId} · {order.items.length} item
+                  {order.items.length === 1 ? "" : "s"}
+                </>
+              }
+              onClose={closeOrder}
+            />
 
             <DialogContent dividers sx={{ px: 0 }}>
               <List sx={{ py: 0 }}>

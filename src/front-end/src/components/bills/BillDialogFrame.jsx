@@ -1,14 +1,12 @@
 import {
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
   Alert,
   CircularProgress,
-  IconButton,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
-import { X } from "lucide-react";
+import DialogHeader from "@/components/common/DialogHeader";
 import BillBreakdown from "./BillBreakdown";
 
 /**
@@ -17,14 +15,9 @@ import BillBreakdown from "./BillBreakdown";
  */
 const BillDialogFrame = ({ open, onClose, summary, loading, error, onErrorClose, notices, actions }) => (
   <AppDialog open={open} onClose={onClose} maxWidth="md">
-    <DialogTitle>
-      Bill Summary
-      <IconButton aria-label="Close" onClick={onClose} sx={{ position: "absolute", right: 8, top: 8 }}>
-        <X />
-      </IconButton>
-    </DialogTitle>
+    <DialogHeader title="Bill Summary" onClose={onClose} />
 
-    <DialogContent>
+    <DialogContent dividers>
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
           <CircularProgress />

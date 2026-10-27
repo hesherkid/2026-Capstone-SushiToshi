@@ -1,22 +1,10 @@
 import { useState, useEffect } from "react";
-import {
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Box,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Typography,
-  Chip,
-} from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
+import { Alert, Box, Chip, MenuItem, TextField } from "@mui/material";
+import FormDialog from "@/components/common/FormDialog";
 import { useTable } from "../../context/TableContext";
 import { TABLE_STATUS } from "../../hooks/useTableData";
 import api from "@/config/api";
+import serverMessage from "@/utils/serverMessage";
 
 const AddTableToGroupDialog = ({ open, group }) => {
   const { closeDialog, refreshData, tables } = useTable();
@@ -29,9 +17,7 @@ const AddTableToGroupDialog = ({ open, group }) => {
     if (open && group) {
       // Ungrouped tables that are active and not in a session
       setAvailableTables(
-        tables.filter(
-          (t) => !t.tableGroup_Id && t.status === TABLE_STATUS.AVAILABLE
-        )
+        tables.filter((t) => !t.tableGroup_Id && t.status === TABLE_STATUS.AVAILABLE)
       );
     }
   }, [open, group, tables]);
@@ -42,98 +28,57 @@ const AddTableToGroupDialog = ({ open, group }) => {
     closeDialog();
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     setError(null);
-
     try {
-      await api.post(
-        `/TableGroup/${group.tableGroup_Id}/tables/${selectedTableId}`
-      );
+      await api.post(`/TableGroup/${group.tableGroup_Id}/tables/${selectedTableId}`);
       await refreshData();
       handleClose();
     } catch (err) {
-      setError(err.response.data || "Failed to add table to group");
+      setError(serverMessage(err, "Couldn't add the table to the group."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <AppDialog open={open} onClose={handleClose}>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>Add Table to {group?.group_Name}</DialogTitle>
-        <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <Box display="flex" flexDirection="column" gap={2} mt={1}>
-            {availableTables.length === 0 ? (
-              <Alert severity="info">
-                No available tables. All tables are either inactive or already
-                assigned to a group.
-              </Alert>
-            ) : (
-              <>
-                <Typography variant="body2" color="text.secondary">
-                  Select a table to add to this group
-                </Typography>
-                <FormControl fullWidth required>
-                  <InputLabel>Table</InputLabel>
-                  <Select
-                    value={selectedTableId}
-                    onChange={(e) => setSelectedTableId(e.target.value)}
-                    label="Table"
-                  >
-                    {availableTables.map((table) => (
-                      <MenuItem key={table.table_Id} value={table.table_Id}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                          }}
-                        >
-                          Table {table.table_number}
-                          <Chip
-                            label={`${table.seat_count} seats`}
-                            size="small"
-                            variant="outlined"
-                          />
-                          {table.tableGroup_Name && (
-                            <Chip
-                              label={table.tableGroup_Name}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={
-              isSubmitting || availableTables.length === 0 || !selectedTableId
-            }
-          >
-            Add Table
-          </Button>
-        </DialogActions>
-      </form>
-    </AppDialog>
+    <FormDialog
+      open={open}
+      onClose={handleClose}
+      title="Add Table to Group"
+      subtitle={group?.group_Name}
+      error={error}
+      onErrorClose={() => setError(null)}
+      onSubmit={handleSubmit}
+      submitLabel="Add Table"
+      busyLabel="Adding..."
+      busy={isSubmitting}
+      submitDisabled={!selectedTableId}
+    >
+      {availableTables.length === 0 ? (
+        <Alert severity="info">
+          No available tables. All tables are either inactive, in a session or already in a group.
+        </Alert>
+      ) : (
+        <TextField
+          select
+          label="Table"
+          required
+          value={selectedTableId}
+          onChange={(e) => setSelectedTableId(e.target.value)}
+        >
+          {availableTables.map((table) => (
+            <MenuItem key={table.table_Id} value={table.table_Id}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                Table {table.table_number}
+                <Chip label={`${table.seat_count} seats`} size="small" variant="outlined" />
+              </Box>
+            </MenuItem>
+          ))}
+        </TextField>
+      )}
+    </FormDialog>
   );
 };
 

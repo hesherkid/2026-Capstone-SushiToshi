@@ -1,20 +1,9 @@
 import { useState, useEffect } from "react";
+import { MenuItem, TextField } from "@mui/material";
+import FormDialog from "@/components/common/FormDialog";
 import api from "@/config/api";
 import storage from "@/utils/storage";
-import {
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  IconButton,
-  Typography,
-} from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
-import { X } from "lucide-react";
+import serverMessage from "@/utils/serverMessage";
 import { useSession } from "../../context/SessionContext";
 
 const AddTableDialog = ({ open, sessionId, onClose }) => {
@@ -22,112 +11,65 @@ const AddTableDialog = ({ open, sessionId, onClose }) => {
   const [selectedTable, setSelectedTable] = useState("");
   const [availableTables, setAvailableTables] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (open) {
-      fetchTables();
-    } else {
-      setSelectedTable("");
-      setError(null);
-    }
+    setSelectedTable("");
+    setError(null);
+    if (!open) return;
+    setIsLoading(true);
+    api
+      .get(`/Location/${storage.get("branch-location")}/tables`)
+      .then((response) => setAvailableTables(response.data.filter((table) => table.is_active)))
+      .catch((err) => setError(serverMessage(err, "Couldn't load the tables.")))
+      .finally(() => setIsLoading(false));
   }, [open]);
 
-  const fetchTables = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // First, get all tables for location
-      const tablesResponse = await api.get(
-        `/Location/${storage.get("branch-location")}/tables`
-      );
-      const locationTables = tablesResponse.data;
-
-      // Filter out tables that are active and not in use in any session
-      const availableTables = locationTables.filter((table) => table.is_active);
-
-      setAvailableTables(availableTables);
-    } catch (err) {
-      console.error("Error fetching tables:", err);
-      setError("Failed to load available tables");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // A failure is shown as a notification by the session actions; the dialog stays open to retry
   const handleSubmit = async () => {
-    if (!sessionId || !selectedTable) return;
-
+    setSubmitting(true);
     try {
-      const success = await addTable(sessionId, selectedTable);
-      if (success) {
-        // Remove the selected table from the available tables list
-        setAvailableTables((prevTables) =>
-          prevTables.filter((table) => table.table_id !== selectedTable)
-        );
-
-        // Reset the selected table
-        setSelectedTable("");
-        onClose();
-      }
-    } catch (err) {
-      setError("Failed to add table");
+      if (await addTable(sessionId, selectedTable)) onClose();
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <AppDialog open={open} onClose={onClose}>
-      <DialogTitle>
-        Add Table to Session
-        <IconButton
-          onClick={onClose}
-          sx={{ position: "absolute", right: 8, top: 8 }}
-        >
-          <X />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent>
-        {error && (
-          <Typography color="error" sx={{ mb: 2 }}>
-            {error}
-          </Typography>
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      title="Add Table to Session"
+      error={error}
+      onErrorClose={() => setError(null)}
+      onSubmit={handleSubmit}
+      submitLabel="Add Table"
+      busyLabel="Adding..."
+      busy={submitting}
+      submitDisabled={!sessionId || !selectedTable || isLoading}
+    >
+      <TextField
+        select
+        label="Table"
+        required
+        value={selectedTable}
+        onChange={(e) => setSelectedTable(e.target.value)}
+        disabled={isLoading}
+      >
+        {availableTables.length === 0 ? (
+          <MenuItem disabled value="">
+            {isLoading ? "Loading tables..." : "No available tables"}
+          </MenuItem>
+        ) : (
+          availableTables.map((table) => (
+            <MenuItem key={table.table_id} value={table.table_id}>
+              Table {table.table_number} ({table.seat_count} seats)
+            </MenuItem>
+          ))
         )}
-        <FormControl fullWidth sx={{ mt: 2 }}>
-          <InputLabel>Select Table</InputLabel>
-          <Select
-            value={selectedTable}
-            onChange={(e) => {
-              setSelectedTable(e.target.value);
-            }}
-            label="Select Table"
-            disabled={isLoading}
-          >
-            {availableTables.length === 0 ? (
-              <MenuItem disabled value="">
-                {isLoading ? "Loading tables..." : "No available tables"}
-              </MenuItem>
-            ) : (
-              availableTables.map((table) => (
-                <MenuItem key={table.table_id} value={table.table_id}>
-                  Table {table.table_number} ({table.seat_count} seats)
-                </MenuItem>
-              ))
-            )}
-          </Select>
-        </FormControl>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={!selectedTable || isLoading}
-        >
-          Add Table
-        </Button>
-      </DialogActions>
-    </AppDialog>
+      </TextField>
+    </FormDialog>
   );
 };
 
