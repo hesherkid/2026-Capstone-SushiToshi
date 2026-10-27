@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
+using back_end.domain.enums;
 
 namespace back_end.Tests.Controllers;
 
@@ -131,5 +132,25 @@ public class LocationControllerTests : IDisposable
     {
         _context.Database.EnsureDeleted();
         _context.Dispose();
+    }
+
+    // Locations 1 (Downtown) and 2 have no tables or sessions, so they can be deleted
+    [Fact]
+    public async Task DeleteLocation_MovesStaffWorkingThereToAnotherAssignedLocation()
+    {
+        _context.Users.AddRange(
+            new User { User_id = 10, Email = "two@example.com", Role = UserRoles.Staff, Location_id = 1 },
+            new User { User_id = 11, Email = "one@example.com", Role = UserRoles.Staff, Location_id = 1 });
+        _context.StaffLocations.AddRange(
+            new StaffLocation { User_Id = 10, Location_Id = 1 },
+            new StaffLocation { User_Id = 10, Location_Id = 2 },
+            new StaffLocation { User_Id = 11, Location_Id = 1 });
+        _context.SaveChanges();
+
+        var result = await _controller.Delete_Location(1);
+
+        result.Should().BeOfType<OkObjectResult>();
+        (await _context.Users.FindAsync(10))!.Location_id.Should().Be(2);
+        (await _context.Users.FindAsync(11))!.Location_id.Should().BeNull();
     }
 }

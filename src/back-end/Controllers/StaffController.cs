@@ -16,6 +16,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using back_end.Helpers;
+using back_end.Services;
 
 namespace back_end.Controllers
 {
@@ -25,11 +26,13 @@ namespace back_end.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<StaffController> _logger;
+        private readonly ILocationAccessService _locationAccess;
 
-        public StaffController(ApplicationDbContext context, ILogger<StaffController> logger)
+        public StaffController(ApplicationDbContext context, ILogger<StaffController> logger, ILocationAccessService locationAccess)
         {
             _context = context;
             _logger = logger;
+            _locationAccess = locationAccess;
         }
 
         // POST: /api/staff?role=Admin
@@ -64,6 +67,10 @@ namespace back_end.Controllers
             if (string.IsNullOrWhiteSpace(user_data.Password))
                 return BadRequest("Password is required");
 
+            if (user_data.Location_Id is int locationId
+                && !await _context.Locations.AnyAsync(l => l.Location_Id == locationId))
+                return BadRequest("Location not found");
+
             DateTime now = DateTime.UtcNow;
 
             User entity = new()
@@ -79,6 +86,16 @@ namespace back_end.Controllers
                 Last_Interaction_at = now,
                 Location_id = user_data.Location_Id
             };
+
+            // Staff can switch only between assigned locations, so assign the one they start at too
+            if (entity.Role == UserRoles.Staff)
+            {
+                var locationIds = user_data.Location_Ids ?? [];
+                if (user_data.Location_Id is int startingLocationId) locationIds = [.. locationIds, startingLocationId];
+
+                var error = await AssignLocationsAsync(entity, locationIds, user_data.Location_Id);
+                if (error != null) return BadRequest(error);
+            }
 
             _context.Users.Add(entity);
             await _context.SaveChangesAsync();
@@ -127,7 +144,10 @@ namespace back_end.Controllers
                     Role = u.Role,
                     Status = u.Status,
                     User_Id = u.User_id,
-                    Location = u.PrimaryLocation != null ? u.PrimaryLocation.Name : "Not Assigned"
+                    Location = u.PrimaryLocation != null ? u.PrimaryLocation.Name : "Not Assigned",
+                    Location_Id = u.Location_id,
+                    Location_Ids = u.AssignedLocations.OrderBy(a => a.Location_Id).Select(a => a.Location_Id).ToList(),
+                    Locations = u.AssignedLocations.OrderBy(a => a.Location_Id).Select(a => a.Location.Name).ToList()
                 })
                 .ToListAsync();
 
@@ -191,6 +211,13 @@ namespace back_end.Controllers
             user.Role = user_data.Role;
             user.Status = user_data.Status;
 
+            // Admins can work at every location, so only staff have assigned locations
+            if (user.Role == UserRoles.Staff && user_data.Location_Ids != null)
+            {
+                var error = await AssignLocationsAsync(user, user_data.Location_Ids);
+                if (error != null) return BadRequest(error);
+            }
+
             await _context.SaveChangesAsync();
             return Ok(ToResponse(user));
         }
@@ -217,9 +244,39 @@ namespace back_end.Controllers
         }
 
         private Task<User?> FindStaff(int user_id) =>
-            _context.Users.FirstOrDefaultAsync(u =>
-                u.User_id == user_id &&
-                (u.Role == UserRoles.Staff || u.Role == UserRoles.Admin));
+            _context.Users
+                .Include(u => u.AssignedLocations)
+                .FirstOrDefaultAsync(u =>
+                    u.User_id == user_id &&
+                    (u.Role == UserRoles.Staff || u.Role == UserRoles.Admin));
+
+        // Replaces a staff member's assigned locations (AssignedLocations must be loaded).
+        // They start at startAt if it's one of them; otherwise, if their current location is no
+        // longer assigned, they move to another assigned location, or to none if none are left.
+        // Returns an error message when a location doesn't exist
+        private async Task<string?> AssignLocationsAsync(User user, IEnumerable<int> locationIds, int? startAt = null)
+        {
+            var ids = locationIds.Distinct().ToList();
+            if (await _context.Locations.CountAsync(l => ids.Contains(l.Location_Id)) != ids.Count)
+                return "Location not found";
+
+            foreach (var removed in user.AssignedLocations.Where(a => !ids.Contains(a.Location_Id)).ToList())
+            {
+                user.AssignedLocations.Remove(removed);
+                _context.StaffLocations.Remove(removed);
+            }
+            foreach (var added in ids.Where(id => user.AssignedLocations.All(a => a.Location_Id != id)))
+            {
+                user.AssignedLocations.Add(new StaffLocation { Location_Id = added });
+            }
+
+            if (startAt is int start && ids.Contains(start))
+                user.Location_id = start;
+            else if (user.Location_id is not int current || !ids.Contains(current))
+                user.Location_id = ids.Count > 0 ? ids[0] : null;
+
+            return null;
+        }
 
         // POST: /api/staff/5/change-password
         // Change a staff user's password by Admin only.
@@ -284,6 +341,15 @@ namespace back_end.Controllers
                 {
                     return BadRequest("Issue in Processing a user request for location change");
                 }
+                if (!await _context.Locations.AnyAsync(l => l.Location_Id == location_id))
+                {
+                    return NotFound("Location not found");
+                }
+                // Staff can switch only between the locations an admin assigned them; admins anywhere
+                if (!await _locationAccess.CanSwitchToLocationAsync(User, location_id))
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, ILocationAccessService.NotAssignedMessage);
+                }
                 user.Location_id = location_id;
                 _context.Update(user);
                 await _context.SaveChangesAsync();
@@ -327,6 +393,42 @@ namespace back_end.Controllers
             }
 
 
+        }
+
+        // GET: /api/staff/my-locations
+        // The signed-in user's current location, and the locations they can switch between
+        [HttpGet("my-locations")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<ActionResult<MyLocationsDTO>> GetMyLocations()
+        {
+            if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
+                return BadRequest("Issue in processing a User location request.");
+
+            var user = await _context.Users.AsNoTracking()
+                .Include(u => u.PrimaryLocation)
+                .FirstOrDefaultAsync(u => u.User_id == userId);
+            if (user is null) return NotFound("User not found");
+
+            bool allLocations = !_locationAccess.IsLimitedToOneLocation(User);
+            var locations = allLocations
+                ? await _context.Locations
+                    .OrderBy(l => l.Location_Id)
+                    .Select(l => new LocationOptionDTO { Location_Id = l.Location_Id, Name = l.Name })
+                    .ToListAsync()
+                : await _context.StaffLocations
+                    .Where(sl => sl.User_Id == userId)
+                    .OrderBy(sl => sl.Location_Id)
+                    .Select(sl => new LocationOptionDTO { Location_Id = sl.Location_Id, Name = sl.Location.Name })
+                    .ToListAsync();
+
+            return Ok(new MyLocationsDTO
+            {
+                Current_Location = user.PrimaryLocation is null
+                    ? null
+                    : new LocationOptionDTO { Location_Id = user.PrimaryLocation.Location_Id, Name = user.PrimaryLocation.Name },
+                Locations = locations,
+                All_Locations = allLocations,
+            });
         }
 
         private static UserResponseDTO ToResponse(User u) => UserResponseDTO.From(u);

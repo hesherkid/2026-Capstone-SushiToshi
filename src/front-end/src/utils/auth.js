@@ -186,6 +186,8 @@ export const logoutUser = () => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("tokenExpiresAt");
   localStorage.removeItem("user");
+  // So the next person to sign in on the same browser doesn't start at this user's location
+  localStorage.removeItem("branch-location");
 
   //notifyAuthChange();
   window.location.href = "/auth/login";

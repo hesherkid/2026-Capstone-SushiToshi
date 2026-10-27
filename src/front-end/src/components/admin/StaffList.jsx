@@ -1,5 +1,5 @@
 import React from "react";
-import { Chip } from "@mui/material";
+import { Box, Chip } from "@mui/material";
 import { Edit, Key, UserX, UserCheck } from "lucide-react";
 import ManagementGrid from "@/components/common/ManagementGrid";
 import { actionsColumn } from "@/components/common/RowActions";
@@ -38,11 +38,27 @@ export const getStaffColumns = ({ onEdit, onChangePassword, onToggleStatus, isSe
     flex: 1,
   },
   {
-    field: "location",
-    headerName: "Location",
+    field: "locations",
+    headerName: "Locations",
     flex: 1,
-    renderCell: (params) =>
-      params.value ? <Chip label={params.value} size="small" /> : null,
+    // Staff: their assigned locations, with the one they're working at filled in
+    renderCell: ({ row }) => {
+      if (row.role === "Admin") return <Chip label="All locations" size="small" variant="outlined" />;
+      if (!row.locations?.length) return <Chip label="Not assigned" size="small" color="warning" variant="outlined" />;
+      // One per line; the row grows to fit (see getRowHeight below)
+      return (
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0.5, py: 1 }}>
+          {row.locations.map((name, i) => (
+            <Chip
+              key={row.location_ids[i]}
+              label={name}
+              size="small"
+              variant={row.location_ids[i] === row.location_id ? "filled" : "outlined"}
+            />
+          ))}
+        </Box>
+      );
+    },
   },
   {
     field: "role",
@@ -93,6 +109,9 @@ const StaffList = ({ staff = [], isLoading = false, onEdit, onChangePassword }) 
       columns={getStaffColumns({ onEdit, onChangePassword })}
       loading={isLoading}
       getRowId={(row) => row.user_id}
+      // Taller rows for staff with several locations
+      getRowHeight={() => "auto"}
+      sx={{ "& .MuiDataGrid-cell": { minHeight: 52 } }}
     />
   );
 };

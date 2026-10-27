@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using back_end.Controllers;
+using back_end.Services;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -43,13 +44,15 @@ public class TableOrdersTests : IDisposable
         _context.SessionOrders.AddRange(
             new SessionOrder { Order_Id = 900, session_id = 269, Bill_Id = 332, User_Id = Orderer, User_Name = "Guest K7P2", Status = OrderStatus.Pending, Created_At = DateTime.UtcNow },
             new SessionOrder { Order_Id = 901, session_id = 269, Bill_Id = 333, User_Id = Orderer, User_Name = "Guest K7P2", Status = OrderStatus.Delivered, Created_At = DateTime.UtcNow });
+        // Staff only see sessions at the location they're working at
+        _context.Users.Add(new User { User_id = 30, Email = "staff@example.com", Role = UserRoles.Staff, Location_id = 1 });
         _context.SaveChanges();
     }
 
     public void Dispose() => _context.Dispose();
 
     private OrderController ControllerFor(int userId, string role = "Customer") =>
-        new(_context, new Mock<ILogger<OrderController>>().Object)
+        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context))
         {
             ControllerContext = new ControllerContext
             {
@@ -94,7 +97,7 @@ public class TableOrdersTests : IDisposable
     }
 
     [Fact]
-    public async Task Staff_SeeAnyTable()
+    public async Task Staff_SeeAnyTableAtTheirLocation()
     {
         var orders = Orders(await ControllerFor(30, "Staff").GetOrderBySession(269));
 

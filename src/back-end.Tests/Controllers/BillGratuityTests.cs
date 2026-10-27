@@ -35,6 +35,8 @@ public class BillGratuityTests : IDisposable
         _context.Menus.Add(new Menu { Menu_id = 1, Name = "Dinner", Description = "Dinner", Is_active = true });
         _context.Tables.Add(new TableEntity { Table_Id = 6, table_number = 6, Location_Id = 1, is_active = true });
         _context.DiningSessions.Add(new DiningSession { Session_Id = SessionId, Menu_Id = 1, Location_Id = 1, Table_Id = 6, Started_At = DateTime.UtcNow });
+        // Staff only see sessions at the location they're working at
+        _context.Users.Add(new User { User_id = StaffUser, Email = "staff@example.com", Role = UserRoles.Staff, Location_id = 1 });
         _context.SaveChanges();
     }
 

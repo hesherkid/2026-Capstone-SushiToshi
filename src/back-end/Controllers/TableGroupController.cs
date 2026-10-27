@@ -5,6 +5,7 @@ using back_end.domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using back_end.DTO.TableGroupDTOs;
 using back_end.Helpers;
+using back_end.Services;
 
 namespace back_end.Controllers
 {
@@ -14,11 +15,13 @@ namespace back_end.Controllers
   {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<TableGroupController> _logger;
+    private readonly ILocationAccessService _locationAccess;
 
-    public TableGroupController(ApplicationDbContext context, ILogger<TableGroupController> logger)
+    public TableGroupController(ApplicationDbContext context, ILogger<TableGroupController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _logger = logger;
+      _locationAccess = locationAccess;
     }
 
     [Authorize(Policy = "staffOnly")]
@@ -34,6 +37,11 @@ namespace back_end.Controllers
         if (location == null)
         {
           return BadRequest("Location does not exist");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, groupData.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         // Check if group name already exists at this location
@@ -72,11 +80,16 @@ namespace back_end.Controllers
 
 
 
+    [Authorize(Policy = "staffOnly")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TableGroup>>> GetAllTableGroups([FromQuery] bool? activeOnly, [FromQuery] int? locationId)
     {
       try
       {
+        var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+        locationId = scope.LocationId;
+
         var query = _context.TableGroups
             .Include(tg => tg.Tables)
             .Include(tg => tg.Location)
@@ -124,11 +137,16 @@ namespace back_end.Controllers
       }
     }
 
+    [Authorize(Policy = "staffOnly")]
     [HttpGet("available")]
     public async Task<ActionResult<IEnumerable<TableGroup>>> GetAvailableTableGroups([FromQuery] int? locationId)
     {
       try
       {
+        var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+        locationId = scope.LocationId;
+
         var query = _context.TableGroups
             .Include(tg => tg.Tables)
             .Include(tg => tg.Location)
@@ -171,6 +189,7 @@ namespace back_end.Controllers
     }
 
 
+    [Authorize(Policy = "staffOnly")]
     [HttpGet("{table_group_id}")]
     public async Task<IActionResult> GetTableGroup(int table_group_id)
     {
@@ -184,6 +203,11 @@ namespace back_end.Controllers
         if (tableGroup == null)
         {
           return NotFound("Table group not found");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableGroup.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         var response = new
@@ -226,6 +250,11 @@ namespace back_end.Controllers
         if (tableGroup == null)
         {
           return NotFound("Table group not found");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableGroup.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         // Check if group name is being changed and if new name already exists
@@ -293,6 +322,11 @@ namespace back_end.Controllers
           return NotFound("Table group not found");
         }
 
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableGroup.Location_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
         // Check if group is in an active session
         var isInActiveSession = tableGroup.DiningSessions.Any(ds => ds.Ended_At == null);
 
@@ -340,6 +374,11 @@ namespace back_end.Controllers
         if (tableGroup == null)
         {
           return NotFound("Table group not found");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableGroup.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         var table = await _context.Tables
@@ -407,6 +446,11 @@ namespace back_end.Controllers
           return NotFound("Table not found");
         }
 
+        if (!await _locationAccess.CanAccessLocationAsync(User, table.Location_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
         if (table.TableGroup_Id != table_group_id)
         {
           return BadRequest("Table is not in this group");
@@ -452,6 +496,11 @@ namespace back_end.Controllers
           return NotFound("Table group not found");
         }
 
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableGroup.Location_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
         // If trying to deactivate, check if in active session
         if (tableGroup.Is_Active)
         {
@@ -493,6 +542,11 @@ namespace back_end.Controllers
         if (tableGroup == null)
         {
           return NotFound("Table group not found");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableGroup.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         var isInActiveSession = await _context.DiningSessions

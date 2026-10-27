@@ -12,6 +12,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
+using back_end.Services;
 using back_end.DTO.DiningSessionDTOs;
 
 namespace back_end.Tests.Controllers;
@@ -49,7 +50,7 @@ public class SessionMenuAccessTests : IDisposable
     public void Dispose() => _context.Dispose();
 
     private DiningSessionController ControllerAs(int userId, string role) =>
-        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object)
+        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
         {
             ControllerContext = new ControllerContext
             {

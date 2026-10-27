@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using back_end.Services;
 using Xunit;
 using Moq;
 using FluentAssertions;
@@ -36,7 +37,9 @@ public class DiningSessionJoinTests : IDisposable
         _context.Menus.Add(new Menu { Menu_id = 1, Name = "Dinner" });
         _context.Users.AddRange(
             new User { User_id = GuestUserId, Email = "guestemail@email.com", First_name = "Guest", Last_name = "User", Role = UserRoles.Customer },
-            new User { User_id = MiaUserId, Email = "mia@example.com", First_name = "Mia", Last_name = "Chen", Role = UserRoles.Customer }
+            new User { User_id = MiaUserId, Email = "mia@example.com", First_name = "Mia", Last_name = "Chen", Role = UserRoles.Customer },
+            // Staff only start sessions at the location they're working at
+            new User { User_id = 1, Email = "staff@example.com", First_name = "Sam", Last_name = "Staff", Role = UserRoles.Staff, Location_id = LocationId }
         );
         _context.TableGroups.Add(new TableGroup { TableGroup_Id = 50, Group_Name = "Patio", Location_Id = LocationId });
         _context.Tables.AddRange(
@@ -58,7 +61,7 @@ public class DiningSessionJoinTests : IDisposable
     public void Dispose() => _context.Dispose();
 
     private DiningSessionController ControllerAs(int? userId, string role = "Customer") =>
-        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object)
+        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
         {
             ControllerContext = new ControllerContext
             {
