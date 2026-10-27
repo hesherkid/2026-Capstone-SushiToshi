@@ -14,7 +14,12 @@ import {
   Typography,
 } from "@mui/material";
 import api from "@/config/api";
-import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import {
+  fetchMySessionId,
+  isSeatGone,
+  recheckSeat,
+  NOT_SEATED_MESSAGE,
+} from "@/services/tableSession";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { setPageLoading } from "@/utils/pageLoading";
@@ -25,14 +30,23 @@ const NOTE_MAX_LENGTH = 200;
 const BILL_PATH = "/dashboard/bills";
 
 // Tiles show the short label; staff see "Need water refill, napkins"
-const COMMON_REQUESTS = ["Water refill", "Napkins", "Utensils", "Soy sauce", "Wasabi", "Ginger"];
+const COMMON_REQUESTS = [
+  "Water refill",
+  "Napkins",
+  "Utensils",
+  "Soy sauce",
+  "Wasabi",
+  "Ginger",
+];
 
 // What staff read: the picked tiles, then anything the guest typed
 const buildNotes = (picked, note) => {
   const parts = [];
   if (picked.length) {
     const [first, ...rest] = picked;
-    parts.push(`Need ${[first.toLowerCase(), ...rest.map((p) => p.toLowerCase())].join(", ")}`);
+    parts.push(
+      `Need ${[first.toLowerCase(), ...rest.map((p) => p.toLowerCase())].join(", ")}`,
+    );
   }
   if (note.trim()) parts.push(note.trim());
   return parts.join(". ");
@@ -64,9 +78,14 @@ const RequestTile = ({ label, selected, onClick }) => (
       fontSize: "0.95rem",
       fontWeight: 600,
       color: selected ? "primary.main" : "text.primary",
-      transition: "border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease",
+      transition:
+        "border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease",
       "&:hover": { bgcolor: selected ? "rgba(192, 30, 46, 0.08)" : "grey.50" },
-      "&.Mui-focusVisible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 },
+      "&.Mui-focusVisible": {
+        outline: "2px solid",
+        outlineColor: "primary.main",
+        outlineOffset: 2,
+      },
     }}
   >
     {selected && <MaterialSymbol name="check_circle" filled size={20} />}
@@ -115,7 +134,9 @@ const ServiceRequestForm = () => {
         }
       } catch (err) {
         console.error("Error fetching session:", err);
-        setError(getErrorMessage(err, "Couldn't find your table. Please try again."));
+        setError(
+          getErrorMessage(err, "Couldn't find your table. Please try again."),
+        );
       } finally {
         setSessionChecked(true);
       }
@@ -131,13 +152,19 @@ const ServiceRequestForm = () => {
       const response = await api.get(`/ServiceRequest/by-session/${sid}`);
       setWaiting(Array.isArray(response?.data) ? response.data : []);
     } catch (err) {
+      if (isSeatGone(err)) {
+        const stillSeatedAt = await recheckSeat();
+        setWaiting([]);
+        setSessionId(stillSeatedAt);
+        if (!stillSeatedAt) setError(NOT_SEATED_MESSAGE);
+        return;
+      }
       console.error("Error loading service requests:", err);
     }
   };
 
   useEffect(() => {
     if (sessionId) fetchWaiting(sessionId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Requests drop off the list as staff pick them up
@@ -145,7 +172,9 @@ const ServiceRequestForm = () => {
 
   const togglePick = (request) =>
     setPicked((current) =>
-      current.includes(request) ? current.filter((r) => r !== request) : [...current, request]
+      current.includes(request)
+        ? current.filter((r) => r !== request)
+        : [...current, request],
     );
 
   const notes = buildNotes(picked, note);
@@ -168,7 +197,9 @@ const ServiceRequestForm = () => {
       fetchWaiting();
     } catch (err) {
       console.error("Service request error:", err);
-      setError(getErrorMessage(err, "Couldn't send your request. Please try again."));
+      setError(
+        getErrorMessage(err, "Couldn't send your request. Please try again."),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -189,7 +220,9 @@ const ServiceRequestForm = () => {
     return (
       <>
         {heading}
-        <Alert severity={error === NOT_SEATED_MESSAGE ? "info" : "error"}>{error}</Alert>
+        <Alert severity={error === NOT_SEATED_MESSAGE ? "info" : "error"}>
+          {error}
+        </Alert>
       </>
     );
   }
@@ -200,20 +233,53 @@ const ServiceRequestForm = () => {
 
       {/* ---- Already asked: so nobody sends the same thing twice ---- */}
       {waiting.length > 0 && (
-        <Paper variant="outlined" sx={{ mb: 3, borderRadius: 3, overflow: "hidden" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.5 }}>
-            <MaterialSymbol name="room_service" size={22} sx={{ color: "warning.main" }} />
+        <Paper
+          variant="outlined"
+          sx={{ mb: 3, borderRadius: 3, overflow: "hidden" }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 2,
+              py: 1.5,
+            }}
+          >
+            <MaterialSymbol
+              name="room_service"
+              size={22}
+              sx={{ color: "warning.main" }}
+            />
             <Typography component="h2" sx={{ fontWeight: 700 }}>
               Waiting for your server
             </Typography>
           </Box>
-          <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }} aria-label="Requests waiting for your server">
+          <Box
+            component="ul"
+            sx={{ listStyle: "none", p: 0, m: 0 }}
+            aria-label="Requests waiting for your server"
+          >
             {waiting.map((request) => (
               <Box component="li" key={request.request_id}>
                 <Divider />
-                <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, px: 2, py: 1.5 }}>
-                  <Typography sx={{ overflowWrap: "anywhere" }}>{request.notes}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    px: 2,
+                    py: 1.5,
+                  }}
+                >
+                  <Typography sx={{ overflowWrap: "anywhere" }}>
+                    {request.notes}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ flexShrink: 0 }}
+                  >
                     {formatTime(request.created_at)}
                   </Typography>
                 </Box>
@@ -224,15 +290,26 @@ const ServiceRequestForm = () => {
       )}
 
       {/* ---- What's needed ---- */}
-      <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3 }, mb: 2, borderRadius: 3 }}>
-        <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+      <Paper
+        variant="outlined"
+        sx={{ p: { xs: 2.5, sm: 3 }, mb: 2, borderRadius: 3 }}
+      >
+        <Typography
+          variant="subtitle1"
+          component="h2"
+          sx={{ fontWeight: 700, mb: 2 }}
+        >
           What do you need?
         </Typography>
 
         <Box
           role="group"
           aria-label="Quick requests"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)" }, gap: 1.25 }}
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)" },
+            gap: 1.25,
+          }}
         >
           {COMMON_REQUESTS.map((request) => (
             <RequestTile
@@ -252,7 +329,11 @@ const ServiceRequestForm = () => {
           fullWidth
           multiline
           minRows={2}
-          helperText={note.length > NOTE_MAX_LENGTH - 40 ? `${note.length}/${NOTE_MAX_LENGTH}` : " "}
+          helperText={
+            note.length > NOTE_MAX_LENGTH - 40
+              ? `${note.length}/${NOTE_MAX_LENGTH}`
+              : " "
+          }
           sx={{ mt: 2.5, "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
         />
 
@@ -280,7 +361,11 @@ const ServiceRequestForm = () => {
           size="large"
           disabled={isSubmitting || !notes || !sessionId}
           startIcon={
-            isSubmitting ? <CircularProgress size={20} color="inherit" /> : <MaterialSymbol name="send" size={20} />
+            isSubmitting ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              <MaterialSymbol name="send" size={20} />
+            )
           }
           sx={{ mt: 2, minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
         >
@@ -292,16 +377,32 @@ const ServiceRequestForm = () => {
       <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
         <ButtonBase
           onClick={() => router.push(BILL_PATH)}
-          sx={{ width: "100%", display: "flex", alignItems: "center", gap: 2, px: 2.5, py: 2, textAlign: "left" }}
+          sx={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            px: 2.5,
+            py: 2,
+            textAlign: "left",
+          }}
         >
-          <MaterialSymbol name="receipt_long" size={28} sx={{ color: "primary.main" }} />
+          <MaterialSymbol
+            name="receipt_long"
+            size={28}
+            sx={{ color: "primary.main" }}
+          />
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700 }}>Ready to pay?</Typography>
             <Typography variant="body2" color="text.secondary">
               Ask for your bill on the Bill page.
             </Typography>
           </Box>
-          <MaterialSymbol name="chevron_right" size={24} sx={{ color: "text.secondary" }} />
+          <MaterialSymbol
+            name="chevron_right"
+            size={24}
+            sx={{ color: "text.secondary" }}
+          />
         </ButtonBase>
       </Paper>
     </Box>
