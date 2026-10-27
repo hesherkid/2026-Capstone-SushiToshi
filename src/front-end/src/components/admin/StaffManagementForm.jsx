@@ -12,6 +12,7 @@ import {
   Paper,
   Typography,
   FormHelperText,
+  Chip,
 } from "@mui/material";
 import { UserPlus, Save } from "lucide-react";
 import api from "@/config/api";
@@ -34,7 +35,8 @@ const StaffManagementForm = ({
     // The API returns "Admin"/"Staff"; the dropdown options are lowercase
     role: initialData?.role?.toLowerCase() || "staff",
     status: initialData?.status || "active",
-    location_Id: initialData?.location_Id || initialData?.location_id || "",
+    // The locations a staff member may work at (admins can work at every location)
+    location_ids: initialData?.location_ids ?? [],
   });
 
   // Fetch locations when component mounts
@@ -64,8 +66,17 @@ const StaffManagementForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    await onSubmit(formData);
+    const { location_ids, ...account } = formData;
+    // New staff start at the first location chosen
+    await onSubmit(
+      account.role === "staff"
+        ? { ...account, location_ids, location_id: location_ids[0] ?? null }
+        : account
+    );
   };
+
+  const locationName = (id) =>
+    locations.find((location) => location.location_Id === id)?.name ?? id;
 
   const isValid = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -155,27 +166,44 @@ const StaffManagementForm = ({
             )}
           </FormControl>
 
-          <FormControl fullWidth>
-            <InputLabel>Location</InputLabel>
-            <Select
-              name="location_Id"
-              value={formData.location_Id}
-              onChange={handleChange}
-              label="Location"
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {locations.map((location) => (
-                <MenuItem
-                  key={location.location_Id}
-                  value={location.location_Id}
-                >
-                  {location.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {formData.role === "staff" ? (
+            <FormControl fullWidth>
+              <InputLabel id="staff-locations-label">Locations</InputLabel>
+              <Select
+                labelId="staff-locations-label"
+                name="location_ids"
+                multiple
+                value={formData.location_ids}
+                onChange={handleChange}
+                label="Locations"
+                renderValue={(selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {selected.map((id) => (
+                      <Chip key={id} label={locationName(id)} size="small" />
+                    ))}
+                  </Box>
+                )}
+              >
+                {locations.map((location) => (
+                  <MenuItem
+                    key={location.location_Id}
+                    value={location.location_Id}
+                  >
+                    {location.name}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>
+                {formData.location_ids.length === 0
+                  ? "They can't work anywhere until you choose a location"
+                  : "They can switch between these locations"}
+              </FormHelperText>
+            </FormControl>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Admins can work at every location.
+            </Typography>
+          )}
 
           <Button
             type="submit"

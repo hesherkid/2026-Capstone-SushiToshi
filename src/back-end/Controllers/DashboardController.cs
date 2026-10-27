@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.DashBoardDTOs;
+using back_end.Helpers;
+using back_end.Services;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace back_end.controllers
@@ -15,12 +18,14 @@ namespace back_end.controllers
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
     private readonly ILogger<DashBoardController> _logger;
+    private readonly ILocationAccessService _locationAccess;
 
-    public DashBoardController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger)
+    public DashBoardController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _config = config;
       _logger = logger;
+      _locationAccess = locationAccess;
     }
 
     // Helper method to get table numbers from session
@@ -82,6 +87,7 @@ namespace back_end.controllers
     /// 
     /// Sessions are ordered by start time (newest first).
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpGet("sessions")]
     [ProducesResponseType(typeof(List<DashBoardSessionsDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -90,6 +96,10 @@ namespace back_end.controllers
     {
       try
       {
+        var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+        locationId = scope.LocationId;
+
         var query = _context.DiningSessions
             .Include(ds => ds.Location)
             .Include(ds => ds.Table)
@@ -183,6 +193,7 @@ namespace back_end.controllers
     /// - Total number of active participants (who haven't left)
     /// - Location information (if filtered by location)
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpGet("summary")]
     [ProducesResponseType(typeof(DashBoardSummaryDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -190,6 +201,10 @@ namespace back_end.controllers
     {
       try
       {
+        var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+        locationId = scope.LocationId;
+
         var query = _context.DiningSessions
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)

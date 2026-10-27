@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using back_end.domain.enums;
+using back_end.Services;
 
 namespace back_end.Controllers
 {
@@ -19,11 +20,13 @@ namespace back_end.Controllers
   {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ServiceRequestController> _logger;
+    private readonly ILocationAccessService _locationAccess;
 
-    public ServiceRequestController(ApplicationDbContext context, ILogger<ServiceRequestController> logger)
+    public ServiceRequestController(ApplicationDbContext context, ILogger<ServiceRequestController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _logger = logger;
+      _locationAccess = locationAccess;
     }
 
     /// <summary>
@@ -181,12 +184,12 @@ namespace back_end.Controllers
 
         if (serviceRequest is null)
         {
-          return NotFound(new { mesage = "The service request was not found" });
+          return NotFound(new { message = "The service request was not found" });
         }
 
-        if (serviceRequest is null)
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, serviceRequest.Session_Id))
         {
-          return NotFound(new { message = "The service request was not found" });
+          return LocationResults.OtherLocation();
         }
 
         if (serviceRequest.Status == ServiceRequestStatus.Completed)
@@ -245,7 +248,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     POST /api/servicerequest/by-session/123
+    ///     GET /api/servicerequest/by-session/123
     ///
     /// Staff and admins can read any session. Customers can read only a session they're seated in,
     /// so the bill summary can tell them a "Ready for bill" request is already waiting.
@@ -310,15 +313,21 @@ namespace back_end.Controllers
     /// <response code="500">If an internal error occurs while retrieving service requests</response>
     //GET api/servicerequest
     //Get all current service requests
+    [Authorize(Policy = "staffOnly")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ServiceRequest>>> GetAllServiceRequest()
     {
       try
       {
+        // Staff see their location's requests; admins see every location's
+        var scope = await _locationAccess.ResolveLocationAsync(User, null);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+
         var request = await _context.ServiceRequests
             .Include(sr => sr.Table)
             .Include(sr => sr.RequestedByUser)
             .Include(sr => sr.ClaimedByUser)
+            .Where(sr => scope.LocationId == null || sr.DiningSession.Location_Id == scope.LocationId)
             .ToListAsync();
         return Ok(request);
       }
@@ -337,11 +346,16 @@ namespace back_end.Controllers
     {
       try
       {
+        // Staff see their location's requests; admins see every location's
+        var scope = await _locationAccess.ResolveLocationAsync(User, null);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+
         var pendingRequests = await _context.ServiceRequests
             .Include(sr => sr.Table)
             .Include(sr => sr.RequestedByUser)
             .Include(sr => sr.DiningSession)
             .Where(sr => sr.Status == ServiceRequestStatus.Pending)
+            .Where(sr => scope.LocationId == null || sr.DiningSession.Location_Id == scope.LocationId)
             .OrderBy(sr => sr.Created_At)
             .ToListAsync();
 

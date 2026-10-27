@@ -30,6 +30,7 @@ namespace back_end.domain.DbContexts
         public DbSet<Holiday> Holidays { get; set; } = null!;
         public DbSet<PricingProfile> PricingProfiles { get; set; } = null!;
         public DbSet<PricingRate> PricingRates { get; set; } = null!;
+        public DbSet<StaffLocation> StaffLocations { get; set; } = null!;
 
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -84,6 +85,22 @@ namespace back_end.domain.DbContexts
 
             modelBuilder.Entity<MenuLocations>()
                 .HasKey(ml => new { ml.Menu_Id, ml.Location_Id });
+
+            modelBuilder.Entity<StaffLocation>(entity =>
+            {
+                entity.HasKey(sl => new { sl.User_Id, sl.Location_Id });
+
+                entity.HasOne(sl => sl.User)
+                    .WithMany(u => u.AssignedLocations)
+                    .HasForeignKey(sl => sl.User_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Deleting a location takes it off everyone's assigned list
+                entity.HasOne(sl => sl.Location)
+                    .WithMany()
+                    .HasForeignKey(sl => sl.Location_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
 
             modelBuilder.Entity<MenuItemView>(entity =>
             {

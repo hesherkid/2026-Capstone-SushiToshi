@@ -38,6 +38,16 @@ namespace back_end.DTO.StaffDTOs
         [JsonPropertyName("location")]
         public string? Location { get; set; }
 
+        // The location they're working at now; null when they have none
+        [JsonPropertyName("location_id")]
+        public int? Location_Id { get; set; }
+
+        // The locations an admin has assigned them to
+        [JsonPropertyName("location_ids")]
+        public List<int> Location_Ids { get; set; } = new();
+
+        [JsonPropertyName("locations")]
+        public List<string> Locations { get; set; } = new();
     }
 
     public class StaffUserUpdateDTO
@@ -88,6 +98,10 @@ namespace back_end.DTO.StaffDTOs
 
         [JsonPropertyName("location_id")]
         public int? Location_Id { get; set; }
+
+        // Locations staff may work at; location_id, if given, is the one they start at
+        [JsonPropertyName("location_ids")]
+        public List<int>? Location_Ids { get; set; }
     }
 
     public class StaffMemberChangePasswordDTO
@@ -130,7 +144,34 @@ namespace back_end.DTO.StaffDTOs
 
         [JsonPropertyName("location")]
         public string? Location { get; set; }
+
+        // Locations staff may work at. Null leaves them unchanged
+        [JsonPropertyName("location_ids")]
+        public List<int>? Location_Ids { get; set; }
     }
 
-    
+    // The signed-in user's locations, for the app bar's location picker
+    public class MyLocationsDTO
+    {
+        // The location they're working at now; null when they have none
+        [JsonPropertyName("current_location")]
+        public LocationOptionDTO? Current_Location { get; set; }
+
+        // Staff: the locations an admin assigned them. Admins: every location
+        [JsonPropertyName("locations")]
+        public List<LocationOptionDTO> Locations { get; set; } = new();
+
+        // Admins can work at any location
+        [JsonPropertyName("all_locations")]
+        public bool All_Locations { get; set; }
+    }
+
+    public class LocationOptionDTO
+    {
+        [JsonPropertyName("location_id")]
+        public int Location_Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
+    }
 }

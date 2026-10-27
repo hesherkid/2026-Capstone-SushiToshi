@@ -235,6 +235,7 @@ builder.Services.AddHttpContextAccessor();
 // Services
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
+builder.Services.AddScoped<ILocationAccessService, LocationAccessService>();
 
 // Holiday loading (canada-holidays.ca); base URL and timeout from the HolidayApi settings
 builder.Services.AddHttpClient<IHolidayProvider, CanadaHolidaysClient>((sp, http) =>

@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using back_end.Services;
 using System.Security.Claims;
 using System.Text.Json;
 using Xunit;
@@ -115,7 +116,7 @@ public class GuestLoginTests : IDisposable
         foreach (var _ in Enumerable.Range(0, 2))
         {
             var (_, token) = await SignInAsGuest();
-            var sessions = new DiningSessionController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object)
+            var sessions = new DiningSessionController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
             {
                 ControllerContext = new ControllerContext
                 {
