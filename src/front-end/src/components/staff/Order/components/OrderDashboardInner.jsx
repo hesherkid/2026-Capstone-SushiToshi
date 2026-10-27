@@ -21,7 +21,7 @@ const TABS = [
 const sortFor = (status) => [
   {
     field: "createdAt",
-    sort: status === ORDER_STATUS.DELIVERED ? "asc" : "desc",
+    sort: status === ORDER_STATUS.DELIVERED ? "desc" : "asc",
   },
 ];
 
@@ -87,7 +87,7 @@ const OrderDashboardInner = () => {
           loading={isLoading}
         />
         <StatCard
-          label="Orders Delivered"
+          label="Delivered - Seated Tables"
           value={orderCounts[ORDER_STATUS.DELIVERED]}
           icon={CircleCheck}
           loading={isLoading}

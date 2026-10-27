@@ -41,7 +41,10 @@ const mapOrder = (order) => {
     tableNumbers: order.tableNumbers || [],
     items,
     itemCount: items.reduce((sum, item) => sum + (item.quantity || 0), 0),
-    orderTotal: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    orderTotal: items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    ),
   };
 };
 
@@ -56,9 +59,12 @@ export const useOrderData = ({ paused = false } = {}) => {
     if (!silent) setIsLoading(true);
     try {
       const locationId = storage.get("branch-location");
-      const params = locationId ? { locationId } : {};
+      const params = { deliveredOpenSessionsOnly: true };
+      if (locationId) params.locationId = locationId;
       const response = await api.get("/Order/all_orders", { params });
-      setOrders(Array.isArray(response.data) ? response.data.map(mapOrder) : []);
+      setOrders(
+        Array.isArray(response.data) ? response.data.map(mapOrder) : [],
+      );
       setError(null);
     } catch (err) {
       console.error("Error fetching orders:", err);
@@ -74,7 +80,7 @@ export const useOrderData = ({ paused = false } = {}) => {
     fetchOrders({ silent: true });
     const interval = setInterval(
       () => fetchOrders({ silent: true }),
-      POLL_INTERVAL_MS
+      POLL_INTERVAL_MS,
     );
     return () => clearInterval(interval);
   }, [paused, fetchOrders]);
