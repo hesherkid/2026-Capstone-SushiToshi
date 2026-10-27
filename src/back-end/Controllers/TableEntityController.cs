@@ -5,6 +5,7 @@ using back_end.domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using back_end.DTO.TableEntityDTOs;
 using back_end.Helpers;
+using back_end.Services;
 
 namespace back_end.Controllers
 {
@@ -14,11 +15,13 @@ namespace back_end.Controllers
   {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<TableEntityController> _logger;
+    private readonly ILocationAccessService _locationAccess;
 
-    public TableEntityController(ApplicationDbContext context, ILogger<TableEntityController> logger)
+    public TableEntityController(ApplicationDbContext context, ILogger<TableEntityController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _logger = logger;
+      _locationAccess = locationAccess;
     }
 
 
@@ -49,6 +52,11 @@ namespace back_end.Controllers
         if (location == null)
         {
           return BadRequest("Location does not exist");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, table_data.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         // Check if table number already exists at this location
@@ -96,6 +104,10 @@ namespace back_end.Controllers
     {
       try
       {
+        var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+        locationId = scope.LocationId;
+
         var query = _context.Tables
             .Include(t => t.TableGroup)
             .Include(t => t.Location)
@@ -134,6 +146,10 @@ namespace back_end.Controllers
     {
       try
       {
+        var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+        if (scope.IsForbidden) return LocationResults.NoLocation();
+        locationId = scope.LocationId;
+
         var query = _context.Tables
             .Include(t => t.TableGroup)
             .Include(t => t.Location)
@@ -182,6 +198,11 @@ namespace back_end.Controllers
           return NotFound("Table not found");
         }
 
+        if (!await _locationAccess.CanAccessLocationAsync(User, table.Location_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
         return Ok(table);
       }
       catch (Exception ex)
@@ -208,7 +229,7 @@ namespace back_end.Controllers
     /// <response code="404">No table exists with the specified <paramref name="table_id"/>.</response>
     /// <response code="409">A different table already uses the requested table number.</response>
     /// <response code="500">An unexpected error occurred while updating the table.</response>
-    [Authorize]
+    [Authorize(Policy = "staffOnly")]
     [HttpPut("{table_id}")]
     public async Task<IActionResult> UpdateTable(int table_id, TableEntityUpdateDTO table_data)
     {
@@ -220,6 +241,11 @@ namespace back_end.Controllers
         if (table is null)
         {
           return NotFound("Table not found");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, table.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         // Check if table number is being changed
@@ -359,6 +385,11 @@ namespace back_end.Controllers
           return NotFound("Could not find table");
         }
 
+        if (!await _locationAccess.CanAccessLocationAsync(User, table.Location_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
         // Check if table is in an active session (directly assigned)
         var activeSessionDirect = await _context.DiningSessions
             .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At == null);
@@ -420,6 +451,11 @@ namespace back_end.Controllers
           return NotFound("Table not found");
         }
 
+        if (!await _locationAccess.CanAccessLocationAsync(User, table.Location_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
         // Check if table is directly assigned to an active session
         var activeSessionDirect = await _context.DiningSessions
             .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At == null);
@@ -462,6 +498,11 @@ namespace back_end.Controllers
         if (table == null)
         {
           return NotFound("Table not found");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, table.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         var tableGroup = await _context.TableGroups
@@ -512,6 +553,11 @@ namespace back_end.Controllers
         if (table == null)
         {
           return NotFound("Table not found");
+        }
+
+        if (!await _locationAccess.CanAccessLocationAsync(User, table.Location_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         if (!table.TableGroup_Id.HasValue)

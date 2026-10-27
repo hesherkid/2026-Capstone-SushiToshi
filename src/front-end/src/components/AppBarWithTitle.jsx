@@ -41,10 +41,13 @@ const AppBarWithTitle = ({ title }) => {
   const [selectedLocation, setSelectedLocation] = useState(
     storage.get("branch-location")
   );
+  // The locations this user can switch between (see staff/my-locations)
   const [allLocations, setAllLocations] = useState([]);
+  const [canUseAllLocations, setCanUseAllLocations] = useState(false);
+  const [locationsLoaded, setLocationsLoaded] = useState(false);
   const [tableNumber, setTableNumber] = useState("");
   const { isAuthenticated, userRole, loading } = useAuth();
-  const { notifySuccess, notifyError, notifyInfo } = useNotification(); 
+  const { notifySuccess, notifyError, notifyInfo } = useNotification();
   const [isGuest, setIsGuest] = useState(false);
   // A page loading its data (see utils/pageLoading); shown with the same spinner as sign-in
   const [pageLoading, setPageLoadingState] = useState(false);
@@ -83,18 +86,32 @@ const AppBarWithTitle = ({ title }) => {
         if (!isAuthenticated || !userRole || (userRole !== "staff" && userRole !== "admin")) {
           return;
         }
-        const response = await api.get("location/");
-        setAllLocations(response.data);
+        // Staff get the locations an admin assigned them; admins get every location
+        const { data } = await api.get("staff/my-locations");
+        const locations = data?.locations ?? [];
+        const allLocationsAllowed = Boolean(data?.all_locations);
+        setAllLocations(locations);
+        setCanUseAllLocations(allLocationsAllowed);
+        setLocationsLoaded(true);
 
-        // Set initial location if not already set
+        // Admins without a saved location start at the first one. Staff without one
+        // can't work anywhere until an admin assigns them
+        const workingLocation =
+          data?.current_location ?? (allLocationsAllowed ? locations[0] : null);
+        if (!workingLocation) {
+          setSelectedLocation(null);
+          storage.remove("branch-location");
+          if (!allLocationsAllowed) {
+            notifyError("You don't have a location yet. Ask an admin to assign you one.");
+          }
+          return;
+        }
+
         const storedLocation = storage.get("branch-location");
-        if (!storedLocation && response.data.length > 0) {
-          const firstLocation = response.data[0].location_Id;
-          setSelectedLocation(firstLocation);
-          storage.set("branch-location", firstLocation);
-
-          const locationName = response.data[0].name;
-          notifyInfo(`Working location set to ${locationName}`);
+        if (Number(storedLocation) !== workingLocation.location_id) {
+          setSelectedLocation(workingLocation.location_id);
+          storage.set("branch-location", workingLocation.location_id);
+          notifyInfo(`Working location set to ${workingLocation.name}`);
         }
       } catch (err) {
         console.error("Error Fetching Locations", err);
@@ -104,28 +121,17 @@ const AppBarWithTitle = ({ title }) => {
     fetchAllLocations();
   }, [isAuthenticated, userRole, notifyError, notifyInfo]);
 
-  // useEffect(() => {
-  //   // Listen for auth changes
-  //   const handleAuthEvent = () => {
-  //     setDrawerOpen(false);
-  //   };
-  //   // Remove MSAL event, keep only Auth0 event
-  //   window.addEventListener("auth:changed", handleAuthEvent);
-  //   return () => {
-  //     window.removeEventListener("auth:changed", handleAuthEvent);
-  //   };
-  // }, []);
-  
-const handleLogout = () => {
-  if (typeof window !== "undefined") {
-    ["guest", "session_id", "tableNumber", "locationId", "currentBillId"].forEach(
-      (key) => localStorage.removeItem(key)
-    );
-  }
 
-  setDrawerOpen(false);
-  logoutUser();
-};
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      ["guest", "session_id", "tableNumber", "locationId", "currentBillId"].forEach(
+        (key) => localStorage.removeItem(key)
+      );
+    }
+
+    setDrawerOpen(false);
+    logoutUser();
+  };
 
   const handleLogin = () => {
     // Clear guest mode
@@ -134,7 +140,7 @@ const handleLogout = () => {
       localStorage.removeItem("session_id");
       localStorage.removeItem("tableNumber");
     }
-    
+
     setDrawerOpen(false);
     router.push("/login");
   };
@@ -145,28 +151,33 @@ const handleLogout = () => {
 
   const handleLocationChange = async (event) => {
     const locationId = event.target.value;
+
+    // Save on the server first, so a reload can't cancel the request
+    try {
+      await api.put(`staff/update-user-location/${locationId}`);
+    } catch (err) {
+      console.error("Error updating location:", err);
+      notifyError("Failed to change location");
+      return;
+    }
+
     setSelectedLocation(locationId);
     storage.set("branch-location", locationId);
     window.location.reload();
-
-    try {
-      const response = await api.put(
-      `staff/update-user-location/${locationId}`
-      );
-    } catch (err) {
-      console.error("Error updating location:", err);
-      // Optionally revert the selection on error
-      // setSelectedLocation(previousValue);
-    }
   };
   const effectiveRole = userRole || (isGuest ? "customer" : null);
 
   // Leave the dropdown empty until the stored location is one of the loaded options
   const locationValue =
     Array.isArray(allLocations) &&
-    allLocations.some((loc) => loc.location_Id === Number(selectedLocation))
+      allLocations.some((loc) => loc.location_id === Number(selectedLocation))
       ? Number(selectedLocation)
       : "";
+
+  // Staff with only one location have nothing to switch to, so they get a label instead
+  const canSwitchLocation = canUseAllLocations || allLocations.length > 1;
+  const currentLocationName =
+    allLocations.find((loc) => loc.location_id === Number(selectedLocation))?.name;
 
   return (
     <AppBar
@@ -186,7 +197,7 @@ const handleLogout = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-start",
-            gap: { xs: 2, sm: 3},
+            gap: { xs: 2, sm: 3 },
             flex: "0 0 auto",
             minWidth: 0,
           }}
@@ -282,16 +293,41 @@ const handleLogout = () => {
             </IconButton>
           )}
 
-          {/* Location Dropdown - Only visible for staff and admin */}
+          {/* Staff with one location (or none): their location as a label */}
+          {isAuthenticated && userRole === "staff" && locationsLoaded && !canSwitchLocation && (
+            <Box
+              aria-label="Working location"
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: { xs: 1, sm: 1.5 },
+                py: 0.5,
+                borderRadius: 2,
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                backgroundColor: "rgba(255, 255, 255, 0.12)",
+                color: "inherit",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <LocationOn sx={{ color: "white" }} />
+              <Typography component="span" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
+                {currentLocationName || "No location"}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Location Dropdown - staff with several locations, and admins */}
           {isAuthenticated &&
-            (userRole === "staff" || userRole === "admin") && (
+            (userRole === "staff" || userRole === "admin") && canSwitchLocation && (
               <FormControl size="small">
                 <Select
                   value={locationValue}
                   onChange={handleLocationChange}
                   renderValue={(value) => {
                     const location = allLocations?.find(
-                      (loc) => loc.location_Id === value
+                      (loc) => loc.location_id === value
                     );
                     return (
                       <Box
@@ -327,8 +363,8 @@ const handleLogout = () => {
                   {Array.isArray(allLocations) &&
                     allLocations.map((location) => (
                       <MenuItem
-                        key={location.location_Id}
-                        value={location.location_Id}
+                        key={location.location_id}
+                        value={location.location_id}
                       >
                         {location.name}
                       </MenuItem>
@@ -369,25 +405,25 @@ const handleLogout = () => {
           />
         )}
       </Toolbar>
-    {(loading || pageLoading) && (
-      <Box
-        role="status"
-        aria-label="Loading"
-        sx={{
+      {(loading || pageLoading) && (
+        <Box
+          role="status"
+          aria-label="Loading"
+          sx={{
             position: "absolute",
             top: "calc(100% + 8px)",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: theme.zIndex.drawer + 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
-        }}
-      >
-        <CircularProgress size={24} />
-      </Box>
-    )}
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: theme.zIndex.drawer + 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <CircularProgress size={24} />
+        </Box>
+      )}
     </AppBar>
   );
 };

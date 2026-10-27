@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using back_end.Controllers;
+using back_end.Services;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -29,7 +30,7 @@ public class OrderControllerTests : IDisposable
 
         _context = new ApplicationDbContext(options);
         _mockLogger = new Mock<ILogger<OrderController>>();
-        _controller = new OrderController(_context, _mockLogger.Object);
+        _controller = new OrderController(_context, _mockLogger.Object, new LocationAccessService(_context));
 
         SeedTestData();
     }
@@ -94,6 +95,8 @@ public class OrderControllerTests : IDisposable
             new SessionParticipant { Session_Id = 1, User_Id = 456, User_Name = "User Two" },
             // Left the table, so no longer counts as seated
             new SessionParticipant { Session_Id = 1, User_Id = 789, User_Name = "Gone", Left_At = DateTime.UtcNow });
+        // Staff only see sessions at the location they're working at
+        _context.Users.Add(new User { User_id = 42, Email = "staff@example.com", Role = UserRoles.Staff, Location_id = 1 });
         _context.SaveChanges();
     }
 
@@ -381,6 +384,7 @@ public class OrderControllerTests : IDisposable
     [Fact]
     public async Task CompleteOrderItem_DeliversOnlyThatItem_OrderStaysProcessing()
     {
+        SetupUserClaims("42", "Server", "Staff");
         // Arrange
         var order = SeedOrder(OrderStatus.Processing, OrderStatus.Processing, OrderStatus.Processing);
         var itemId = order.OrderItems.First().Order_Item_Id;
@@ -404,6 +408,7 @@ public class OrderControllerTests : IDisposable
     [Fact]
     public async Task CompleteOrderItem_LastOutstandingItem_CompletesOrder()
     {
+        SetupUserClaims("42", "Server", "Staff");
         // Arrange
         var order = SeedOrder(OrderStatus.Processing,
             OrderStatus.Delivered, OrderStatus.Processing, OrderStatus.Cancelled);
@@ -423,6 +428,7 @@ public class OrderControllerTests : IDisposable
     [Fact]
     public async Task CompleteOrderItem_PendingItem_ReturnsBadRequest()
     {
+        SetupUserClaims("42", "Server", "Staff");
         // Arrange
         var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
 
@@ -436,6 +442,7 @@ public class OrderControllerTests : IDisposable
     [Fact]
     public async Task CompleteOrderItem_ItemFromAnotherOrder_ReturnsNotFound()
     {
+        SetupUserClaims("42", "Server", "Staff");
         // Arrange
         var orderA = SeedOrder(OrderStatus.Processing, OrderStatus.Processing);
         var orderB = SeedOrder(OrderStatus.Processing, OrderStatus.Processing);
@@ -450,6 +457,7 @@ public class OrderControllerTests : IDisposable
     [Fact]
     public async Task CompleteOrder_PendingOrder_ReturnsBadRequest()
     {
+        SetupUserClaims("42", "Server", "Staff");
         // Arrange
         var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
 
@@ -482,7 +490,7 @@ public class OrderControllerTests : IDisposable
     public async Task ApproveOrder_SetsApprovedAtAndApprover()
     {
         // Arrange
-        SetupUserClaims("42");
+        SetupUserClaims("42", "Server", "Staff");
         var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
 
         // Act
@@ -678,6 +686,7 @@ public class OrderControllerTests : IDisposable
     {
         // Arrange
         SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
         var openDelivered = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
         var endedDelivered = SeedOrderAt(EndedSessionId, EndedSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
 
@@ -694,6 +703,7 @@ public class OrderControllerTests : IDisposable
     {
         // Arrange
         SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
         var openPending = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Pending, OrderStatus.Pending);
         var endedProcessing = SeedOrderAt(EndedSessionId, EndedSessionId, OrderStatus.Processing, OrderStatus.Processing);
 
@@ -710,6 +720,7 @@ public class OrderControllerTests : IDisposable
     {
         // Arrange
         SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
         var openDelivered = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
         var openPending = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Pending, OrderStatus.Pending);
         var endedDelivered = SeedOrderAt(EndedSessionId, EndedSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
@@ -732,6 +743,7 @@ public class OrderControllerTests : IDisposable
     {
         // Arrange
         SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
         SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
         var otherLocation = SeedOrderAt(OtherLocationSessionId, OtherLocationSessionId, OrderStatus.Delivered, OrderStatus.Delivered);
 

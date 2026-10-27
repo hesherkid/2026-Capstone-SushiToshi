@@ -1,5 +1,5 @@
 import api from "@/config/api";
-import { loginAsGuest, getReusableGuestToken } from "@/utils/auth";
+import { loginAsGuest, getReusableGuestToken, logoutUser } from "@/utils/auth";
 
 jest.mock("@/config/api", () => ({
   __esModule: true,
@@ -71,5 +71,21 @@ describe("getReusableGuestToken", () => {
 
   it("returns nothing when no one is signed in", () => {
     expect(getReusableGuestToken()).toBeNull();
+  });
+});
+
+describe("logoutUser", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("forgets the staff member's working location", () => {
+    localStorage.setItem("authToken", "staff-token");
+    localStorage.setItem("branch-location", "2");
+
+    logoutUser();
+
+    expect(localStorage.getItem("authToken")).toBeNull();
+    expect(localStorage.getItem("branch-location")).toBeNull();
   });
 });

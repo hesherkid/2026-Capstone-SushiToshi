@@ -78,6 +78,7 @@ namespace back_end.controllers
     /// 
     /// The bill is automatically created with 'Open' status.
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpPost("create_Bill/{_session_id}")]
     public async Task<IActionResult> Create_Bill(int _session_id, CreateBill bill_data)
     {
@@ -92,6 +93,11 @@ namespace back_end.controllers
         if (session == null)
         {
           return NotFound(new { message = "Bill or session was not found" });
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session.Session_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)
@@ -383,6 +389,7 @@ namespace back_end.controllers
     /// - Bill must not already be closed
     /// - All orders associated with the bill must be completed (no pending orders)
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpPut("close_bill/{_bill_id}")]
     public async Task<IActionResult> Close_Bill(int _session_id, int _bill_id)
     {
@@ -399,6 +406,11 @@ namespace back_end.controllers
         if (bill == null)
         {
           return NotFound(new { message = "Bill or session was not found" });
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, bill.Session_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         if (bill.Status == BillStatus.Closed)
@@ -475,6 +487,11 @@ namespace back_end.controllers
             return NotFound(new { message = "Session was not found" });
         }
 
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
         var openBills = await OpenBillsAsync(_session_id);
         var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
         return Ok(LeftoverFeeResult(_session_id, openBills, pricing.LeftoverFee));
@@ -511,6 +528,11 @@ namespace back_end.controllers
         if (!await _context.DiningSessions.AnyAsync(s => s.Session_Id == _session_id))
         {
           return NotFound(new { message = "Session was not found" });
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        {
+          return LocationResults.OtherLocation();
         }
         var locationId = await SessionLocationAsync(_session_id);
         if (locationId == null)
@@ -672,6 +694,7 @@ namespace back_end.controllers
     /// Only bills with 'Open' status can be cancelled.
     /// The bill's closed_at timestamp is set to the current UTC time.
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpPost("cancel_bill/{_bill_id}")]
     public async Task<IActionResult> Cancel_Bill(int _session_id, int _bill_id)
     {
@@ -688,6 +711,11 @@ namespace back_end.controllers
         if (bill == null)
         {
           return NotFound(new { message = "Bill or session was not found" });
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, bill.Session_Id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         if (bill.Status != BillStatus.Open)

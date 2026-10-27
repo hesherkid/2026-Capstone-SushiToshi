@@ -349,12 +349,7 @@ namespace back_end.Migrations
                     b.Property<DateTime>("Updated_At")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("User_id")
-                        .HasColumnType("int");
-
                     b.HasKey("Location_Id");
-
-                    b.HasIndex("User_id");
 
                     b.ToTable("locations");
                 });
@@ -837,6 +832,21 @@ namespace back_end.Migrations
                     b.ToTable("session_participant");
                 });
 
+            modelBuilder.Entity("back_end.domain.Entities.StaffLocation", b =>
+                {
+                    b.Property<int>("User_Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Location_Id")
+                        .HasColumnType("int");
+
+                    b.HasKey("User_Id", "Location_Id");
+
+                    b.HasIndex("Location_Id");
+
+                    b.ToTable("staff_location");
+                });
+
             modelBuilder.Entity("back_end.domain.Entities.TableEntity", b =>
                 {
                     b.Property<int>("Table_Id")
@@ -1049,13 +1059,6 @@ namespace back_end.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("ReviewedByUser");
-                });
-
-            modelBuilder.Entity("back_end.domain.Entities.Locations", b =>
-                {
-                    b.HasOne("back_end.domain.Entities.User", null)
-                        .WithMany("Locations")
-                        .HasForeignKey("User_id");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.MenuItemAssignment", b =>
@@ -1276,6 +1279,25 @@ namespace back_end.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("back_end.domain.Entities.StaffLocation", b =>
+                {
+                    b.HasOne("back_end.domain.Entities.Locations", "Location")
+                        .WithMany()
+                        .HasForeignKey("Location_Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("back_end.domain.Entities.User", "User")
+                        .WithMany("AssignedLocations")
+                        .HasForeignKey("User_Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Location");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("back_end.domain.Entities.TableEntity", b =>
                 {
                     b.HasOne("back_end.domain.Entities.Locations", "Location")
@@ -1401,9 +1423,9 @@ namespace back_end.Migrations
 
             modelBuilder.Entity("back_end.domain.Entities.User", b =>
                 {
-                    b.Navigation("ClaimedServices");
+                    b.Navigation("AssignedLocations");
 
-                    b.Navigation("Locations");
+                    b.Navigation("ClaimedServices");
 
                     b.Navigation("Orders");
 

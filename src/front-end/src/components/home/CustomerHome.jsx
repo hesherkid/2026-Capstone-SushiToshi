@@ -7,11 +7,15 @@ import { decodeToken, isTokenExpired } from "@/config/auth";
 import { getAuthToken, isGuestClaims, logoutCustomer } from "@/utils/auth";
 import { hasTableVisit } from "@/utils/tableVisit";
 import useAuth from "@/hooks/useAuth";
+import useAutoRefresh from "@/hooks/useAutoRefresh";
+import { fetchMySessionId } from "@/services/tableSession";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 
 const MENU_PATH = "/menu/full-menu";
 const LOGIN_PATH = "/auth/login";
+// Log out waits on the visit ending, so this page checks sooner than the 15 s watcher
+const SEATED_CHECK_MS = 5000;
 
 const STEPS = [
   { symbol: "qr_code_scanner", title: "Scan your table's QR code", text: "It's on the table, and joins you to your table's order." },
@@ -70,6 +74,23 @@ const CustomerHome = () => {
     setTableNumber(localStorage.getItem("tableNumber") || "");
     setReady(true);
   }, [authLoading, isAuthenticated, router]);
+
+  // fetchMySessionId ends the visit (and shows the thank-you screen, with Log out) once staff
+  // have closed the table. Checked on arrival too, in case it closed while they were away
+  // A failed check just waits for the next one
+  const checkSeated = async () => {
+    try {
+      await fetchMySessionId();
+    } catch (err) {
+      console.error("Error checking table visit:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (ready && seated) checkSeated();
+  }, [ready, seated]);
+
+  useAutoRefresh(checkSeated, { intervalMs: SEATED_CHECK_MS, enabled: ready && seated });
 
   if (!ready) return null;
 
