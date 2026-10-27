@@ -74,6 +74,8 @@ public class OrderLimitEnforcementTests : IDisposable
         });
         AddItem(Toro, "Toro Nigiri", categoryId: 4, a => { a.Is_Add_On = true; a.Price = 1.00m; });
 
+        // Staff only see sessions at the location they're working at
+        _context.Users.Add(new User { User_id = StaffUser, Email = "staff@example.com", Role = UserRoles.Staff, Location_id = 1 });
         _context.SaveChanges();
     }
 
@@ -116,7 +118,7 @@ public class OrderLimitEnforcementTests : IDisposable
     };
 
     private OrderController Orders() =>
-        new(_context, new Mock<ILogger<OrderController>>().Object) { ControllerContext = AsStaff() };
+        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context)) { ControllerContext = AsStaff() };
 
     private BillController Bills()
     {
@@ -323,7 +325,7 @@ public class OrderLimitEnforcementTests : IDisposable
     [Fact]
     public async Task Limits_AreOnlyForTheTableYoureAt()
     {
-        var controller = new OrderController(_context, new Mock<ILogger<OrderController>>().Object)
+        var controller = new OrderController(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context))
         {
             ControllerContext = new ControllerContext
             {

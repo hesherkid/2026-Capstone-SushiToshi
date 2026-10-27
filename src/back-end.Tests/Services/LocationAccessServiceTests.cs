@@ -9,12 +9,13 @@ using back_end.Services;
 
 namespace back_end.Tests.Services;
 
-// Staff only get their current location; admins get whichever location they ask for
+// Staff only get their current location; admins (and customers) get whichever location they ask for
 public class LocationAccessServiceTests
 {
     private const int StaffId = 1;
     private const int UnassignedStaffId = 2;
     private const int AdminId = 3;
+    private const int CustomerId = 4;
 
     private static ApplicationDbContext NewContext()
     {
@@ -28,7 +29,9 @@ public class LocationAccessServiceTests
         context.Users.AddRange(
             new User { User_id = StaffId, Email = "staff@sushitoshi.ca", Role = UserRoles.Staff, Location_id = 1 },
             new User { User_id = UnassignedStaffId, Email = "new@sushitoshi.ca", Role = UserRoles.Staff },
-            new User { User_id = AdminId, Email = "admin@sushitoshi.ca", Role = UserRoles.Admin });
+            new User { User_id = AdminId, Email = "admin@sushitoshi.ca", Role = UserRoles.Admin },
+            new User { User_id = CustomerId, Email = "emma@email.com", Role = UserRoles.Customer });
+        context.StaffLocations.Add(new StaffLocation { User_Id = StaffId, Location_Id = 1 });
         context.SaveChanges();
 
         return context;
@@ -47,9 +50,9 @@ public class LocationAccessServiceTests
         using var context = NewContext();
         var service = new LocationAccessService(context);
 
-        var location = await service.ResolveLocationAsync(SignedInAs(StaffId, UserRoles.Staff), requestedLocationId: 2);
+        var scope = await service.ResolveLocationAsync(SignedInAs(StaffId, UserRoles.Staff), requestedLocationId: 2);
 
-        location.Should().Be(1);
+        scope.Should().Be(LocationScope.For(1));
     }
 
     [Fact]
@@ -58,20 +61,32 @@ public class LocationAccessServiceTests
         using var context = NewContext();
         var service = new LocationAccessService(context);
 
-        var location = await service.ResolveLocationAsync(SignedInAs(StaffId, UserRoles.Staff), requestedLocationId: null);
+        var scope = await service.ResolveLocationAsync(SignedInAs(StaffId, UserRoles.Staff), requestedLocationId: null);
 
-        location.Should().Be(1);
+        scope.Should().Be(LocationScope.For(1));
     }
 
     [Fact]
-    public async Task ResolveLocation_GivesNothing_ToStaffWithNoLocation()
+    public async Task ResolveLocation_ForbidsStaffWithNoLocation()
     {
         using var context = NewContext();
         var service = new LocationAccessService(context);
 
-        var location = await service.ResolveLocationAsync(SignedInAs(UnassignedStaffId, UserRoles.Staff), requestedLocationId: 1);
+        var scope = await service.ResolveLocationAsync(SignedInAs(UnassignedStaffId, UserRoles.Staff), requestedLocationId: 1);
 
-        location.Should().BeNull();
+        scope.IsForbidden.Should().BeTrue();
+    }
+
+    // Not "all locations": staff with no location must not see every location's data
+    [Fact]
+    public async Task ResolveLocation_ForbidsStaffWithNoLocation_WhenTheyDontAsk()
+    {
+        using var context = NewContext();
+        var service = new LocationAccessService(context);
+
+        var scope = await service.ResolveLocationAsync(SignedInAs(UnassignedStaffId, UserRoles.Staff), requestedLocationId: null);
+
+        scope.IsForbidden.Should().BeTrue();
     }
 
     // Switching or an admin's change applies on the next request, without logging in again
@@ -82,12 +97,12 @@ public class LocationAccessServiceTests
         var service = new LocationAccessService(context);
         var staff = SignedInAs(StaffId, UserRoles.Staff);
 
-        (await service.ResolveLocationAsync(staff, null)).Should().Be(1);
+        (await service.ResolveLocationAsync(staff, null)).Should().Be(LocationScope.For(1));
 
         context.Users.Single(u => u.User_id == StaffId).Location_id = 2;
         context.SaveChanges();
 
-        (await service.ResolveLocationAsync(staff, null)).Should().Be(2);
+        (await service.ResolveLocationAsync(staff, null)).Should().Be(LocationScope.For(2));
     }
 
     [Theory]
@@ -98,31 +113,54 @@ public class LocationAccessServiceTests
         using var context = NewContext();
         var service = new LocationAccessService(context);
 
-        var location = await service.ResolveLocationAsync(SignedInAs(AdminId, UserRoles.Admin), requested);
+        var scope = await service.ResolveLocationAsync(SignedInAs(AdminId, UserRoles.Admin), requested);
 
-        location.Should().Be(requested);
+        scope.Should().Be(LocationScope.For(requested));
     }
 
     [Fact]
-    public async Task ResolveLocation_GivesNothing_ToAdminsWhoDontAsk()
+    public async Task ResolveLocation_GivesAdminsAllLocations_WhenTheyDontAsk()
     {
         using var context = NewContext();
         var service = new LocationAccessService(context);
 
-        var location = await service.ResolveLocationAsync(SignedInAs(AdminId, UserRoles.Admin), requestedLocationId: null);
+        var scope = await service.ResolveLocationAsync(SignedInAs(AdminId, UserRoles.Admin), requestedLocationId: null);
 
-        location.Should().BeNull();
+        scope.Should().Be(LocationScope.For(null));
     }
 
+    // Customer endpoints check the customer is in the session instead
     [Fact]
-    public async Task ResolveLocation_GivesNothing_WhenTheUserIsntInTheDatabase()
+    public async Task ResolveLocation_LeavesCustomersUnlimited()
     {
         using var context = NewContext();
         var service = new LocationAccessService(context);
 
-        var location = await service.ResolveLocationAsync(SignedInAs(99, UserRoles.Staff), requestedLocationId: 1);
+        var scope = await service.ResolveLocationAsync(SignedInAs(CustomerId, UserRoles.Customer), requestedLocationId: 2);
 
-        location.Should().BeNull();
+        scope.Should().Be(LocationScope.For(2));
+    }
+
+    [Fact]
+    public async Task ResolveLocation_ForbidsStaffWhoArentInTheDatabase()
+    {
+        using var context = NewContext();
+        var service = new LocationAccessService(context);
+
+        var scope = await service.ResolveLocationAsync(SignedInAs(99, UserRoles.Staff), requestedLocationId: 1);
+
+        scope.IsForbidden.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CanAccessLocation_LeavesCustomersUnlimited()
+    {
+        using var context = NewContext();
+        var service = new LocationAccessService(context);
+
+        var canAccess = await service.CanAccessLocationAsync(SignedInAs(CustomerId, UserRoles.Customer), 2);
+
+        canAccess.Should().BeTrue();
     }
 
     [Theory]
@@ -160,5 +198,42 @@ public class LocationAccessServiceTests
         var canAccess = await service.CanAccessLocationAsync(SignedInAs(AdminId, UserRoles.Admin), itemLocationId);
 
         canAccess.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(2, false)]
+    public async Task CanSwitchToLocation_LetsStaffSwitchOnlyToTheirAssignedLocations(int locationId, bool allowed)
+    {
+        using var context = NewContext();
+        var service = new LocationAccessService(context);
+
+        var canSwitch = await service.CanSwitchToLocationAsync(SignedInAs(StaffId, UserRoles.Staff), locationId);
+
+        canSwitch.Should().Be(allowed);
+    }
+
+    [Fact]
+    public async Task CanSwitchToLocation_LetsStaffWithNoAssignmentsSwitchNowhere()
+    {
+        using var context = NewContext();
+        var service = new LocationAccessService(context);
+
+        var canSwitch = await service.CanSwitchToLocationAsync(SignedInAs(UnassignedStaffId, UserRoles.Staff), 1);
+
+        canSwitch.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task CanSwitchToLocation_LetsAdminsSwitchAnywhere(int locationId)
+    {
+        using var context = NewContext();
+        var service = new LocationAccessService(context);
+
+        var canSwitch = await service.CanSwitchToLocationAsync(SignedInAs(AdminId, UserRoles.Admin), locationId);
+
+        canSwitch.Should().BeTrue();
     }
 }

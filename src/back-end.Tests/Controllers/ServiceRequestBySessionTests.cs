@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using back_end.Services;
 using Xunit;
 using Moq;
 using FluentAssertions;
@@ -41,13 +42,15 @@ public class ServiceRequestBySessionTests : IDisposable
             request_id = 1, Session_Id = 7, Table_Id = 101, Request_By = SeatedCustomer,
             Notes = "Ready for bill: Lee", Status = ServiceRequestStatus.Pending,
         });
+        // Staff only see sessions at the location they're working at
+        _context.Users.Add(new User { User_id = StaffMember, Email = "staff@example.com", Role = UserRoles.Staff, Location_id = 1 });
         _context.SaveChanges();
     }
 
     public void Dispose() => _context.Dispose();
 
     private ServiceRequestController ControllerAs(int userId, string role) =>
-        new(_context, new Mock<ILogger<ServiceRequestController>>().Object)
+        new(_context, new Mock<ILogger<ServiceRequestController>>().Object, new LocationAccessService(_context))
         {
             ControllerContext = new ControllerContext
             {
@@ -82,7 +85,7 @@ public class ServiceRequestBySessionTests : IDisposable
     [Theory]
     [InlineData("Staff")]
     [InlineData("Admin")]
-    public async Task StaffAndAdmins_CanSeeAnyTable(string role)
+    public async Task StaffAndAdmins_CanSeeAnyTableAtTheirLocation(string role)
     {
         var result = await ControllerAs(StaffMember, role).GetSessionServiceRequest(7);
 

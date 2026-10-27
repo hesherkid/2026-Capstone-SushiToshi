@@ -35,6 +35,8 @@ namespace back_end.Tests.Controllers
                 new Billing { Bill_Id = 1, Session_Id = SessionId, Bill_Name = "Lee", Adult_Count = 2, Total_Count = 2 },
                 new Billing { Bill_Id = 2, Session_Id = SessionId, Bill_Name = "Park", Adult_Count = 1, Total_Count = 1 },
                 new Billing { Bill_Id = 3, Session_Id = SessionId, Bill_Name = "Kim", Adult_Count = 1, Total_Count = 1 });
+            // Staff only see sessions at the location they're working at
+            _context.Users.Add(new User { User_id = 30, Email = "staff@example.com", Role = UserRoles.Staff, Location_id = 1 });
             _context.SaveChanges();
         }
 

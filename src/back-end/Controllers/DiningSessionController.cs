@@ -8,6 +8,7 @@ using back_end.DTO.TableGroupDTOs;
 using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
 using back_end.Helpers;
+using back_end.Services;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace back_end.controllers
@@ -19,12 +20,14 @@ namespace back_end.controllers
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
     private readonly ILogger<DashBoardController> _logger;
+    private readonly ILocationAccessService _locationAccess;
 
-    public DiningSessionController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger)
+    public DiningSessionController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _config = config;
       _logger = logger;
+      _locationAccess = locationAccess;
     }
 
     // Validation method for table assignment
@@ -95,6 +98,10 @@ namespace back_end.controllers
 
             var location = await _context.Locations.Where(l => l.Location_Id == sessionData.Location_Id).FirstOrDefaultAsync();
             if (location == null) return BadRequest("Location Does not Exist");
+            if (!await _locationAccess.CanAccessLocationAsync(User, sessionData.Location_Id))
+            {
+                return LocationResults.OtherLocation();
+            }
 
             string assignmentType = sessionData.AssignmentType?.ToLower() ?? "none";
             int? tableId = null;
@@ -213,6 +220,7 @@ namespace back_end.controllers
     /// Sessions are ordered by start time in descending order (newest first).
     /// Each session includes table numbers and participant count.
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpGet("get_list_dining_sessions")]
     [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -297,6 +305,7 @@ namespace back_end.controllers
     /// - Participant counts
     /// - Order and bill statistics
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpGet("get_location/{session_id}")]
     public async Task<IActionResult> get_dining_session(int session_id)
     {
@@ -313,6 +322,11 @@ namespace back_end.controllers
         if (session == null)
         {
           return BadRequest($"Session:{session_id} Does not Exist");
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         int active_participants = await _context.SessionParticipants
@@ -376,6 +390,7 @@ namespace back_end.controllers
     /// - Table must be active
     /// - Table must not be assigned to another active session
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpPost("{session_id}/tables")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -394,6 +409,11 @@ namespace back_end.controllers
         if (session == null)
         {
           return NotFound($"Session: {session_id} not found");
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)
@@ -453,6 +473,7 @@ namespace back_end.controllers
       }
     }
 
+    [Authorize(Policy = "staffOnly")]
     [HttpPost("{session_id}/table-groups")]
     public async Task<IActionResult> add_table_group_to_dining_session(int session_id, [FromBody] TableGroupAssignmentDTO tableGroupData)
     {
@@ -467,6 +488,11 @@ namespace back_end.controllers
         if (session == null)
         {
           return NotFound($"Session: {session_id} not found");
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)
@@ -563,6 +589,7 @@ namespace back_end.controllers
     /// Removes the association between a table and a dining session.
     /// Tables cannot be removed from sessions that have open bills.
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpDelete("{session_id}/Tables/{table_id}")]
     public async Task<IActionResult> remove_table_from_session(int session_id, int table_id)
     {
@@ -576,6 +603,11 @@ namespace back_end.controllers
         if (session == null)
         {
           return NotFound($"Session was not found for session: {session_id}");
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         // Only check the status of the Bill
@@ -611,6 +643,7 @@ namespace back_end.controllers
       }
     }
 
+    [Authorize(Policy = "staffOnly")]
     [HttpDelete("{session_id}/table-groups/{table_group_id}")]
     public async Task<IActionResult> remove_table_group_from_session(int session_id, int table_group_id)
     {
@@ -624,6 +657,11 @@ namespace back_end.controllers
         if (session == null)
         {
           return NotFound($"Session was not found for session: {session_id}");
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         // Only check the status of the Bill
@@ -836,6 +874,7 @@ namespace back_end.controllers
     /// - Session must not already be closed (Ended_At must be null)
     /// - Session must not have any open bills
     /// </remarks>
+    [Authorize(Policy = "staffOnly")]
     [HttpPut("{session_id}/close")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -856,6 +895,11 @@ namespace back_end.controllers
         if (session == null)
         {
           return NotFound($"Session: {session_id} not found");
+        }
+
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+          return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)

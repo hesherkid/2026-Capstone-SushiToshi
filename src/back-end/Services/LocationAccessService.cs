@@ -15,23 +15,34 @@ namespace back_end.Services
             _context = context;
         }
 
-        public async Task<int?> ResolveLocationAsync(
+        public bool IsLimitedToOneLocation(ClaimsPrincipal user) => user.IsInRole(nameof(UserRoles.Staff));
+
+        public async Task<LocationScope> ResolveLocationAsync(
             ClaimsPrincipal user, int? requestedLocationId, CancellationToken ct = default)
         {
-            if (IsAdmin(user)) return requestedLocationId;
+            if (!IsLimitedToOneLocation(user)) return LocationScope.For(requestedLocationId);
 
-            return await CurrentLocationAsync(user, ct);
+            var current = await CurrentLocationAsync(user, ct);
+            return current is null ? LocationScope.Forbidden : LocationScope.For(current);
         }
 
         public async Task<bool> CanAccessLocationAsync(
             ClaimsPrincipal user, int locationId, CancellationToken ct = default)
         {
-            if (IsAdmin(user)) return true;
+            if (!IsLimitedToOneLocation(user)) return true;
 
             return await CurrentLocationAsync(user, ct) == locationId;
         }
 
-        private static bool IsAdmin(ClaimsPrincipal user) => user.IsInRole(nameof(UserRoles.Admin));
+        public async Task<bool> CanSwitchToLocationAsync(
+            ClaimsPrincipal user, int locationId, CancellationToken ct = default)
+        {
+            if (!IsLimitedToOneLocation(user)) return true;
+            if (!int.TryParse(ClaimsHelpers.GetUserId(user), out var userId)) return false;
+
+            return await _context.StaffLocations
+                .AnyAsync(sl => sl.User_Id == userId && sl.Location_Id == locationId, ct);
+        }
 
         // Read from the database, not the token, so switching location (or an admin
         // changing it) applies on the next request without logging in again

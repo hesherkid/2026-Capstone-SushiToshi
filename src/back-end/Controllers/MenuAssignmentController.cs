@@ -6,6 +6,7 @@ using back_end.DTO.MenuItemAssignmentDTO;
 using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
 using back_end.domain.enums;
+using back_end.Services;
 
 namespace back_end.Controllers
 {
@@ -15,11 +16,29 @@ namespace back_end.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<MenuAssignmentController> _logger;
+        private readonly ILocationAccessService _locationAccess;
 
-        public MenuAssignmentController(ApplicationDbContext context, ILogger<MenuAssignmentController> logger)
+        public MenuAssignmentController(ApplicationDbContext context, ILogger<MenuAssignmentController> logger, ILocationAccessService locationAccess)
         {
             _context = context;
             _logger = logger;
+            _locationAccess = locationAccess;
+        }
+
+        // Staff may change only their own location's overrides. The default row (no location)
+        // applies at every location, so only admins may change it
+        private async Task<IActionResult?> DenyOtherLocationAsync(int? locationId)
+        {
+            if (locationId is null)
+            {
+                return _locationAccess.IsLimitedToOneLocation(User)
+                    ? StatusCode(StatusCodes.Status403Forbidden, "Only admins can change the menu for every location.")
+                    : null;
+            }
+
+            return await _locationAccess.CanAccessLocationAsync(User, locationId.Value)
+                ? null
+                : LocationResults.OtherLocation();
         }
 
 
@@ -188,6 +207,9 @@ namespace back_end.Controllers
         {
             try
             {
+                var denied = await DenyOtherLocationAsync(locationId);
+                if (denied != null) return denied;
+
                 var assignment = await _context.MenuItemAssignments
                     .Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == item_id && mia.Location_Id == locationId)
                     .FirstOrDefaultAsync();
@@ -270,6 +292,9 @@ namespace back_end.Controllers
         {
             try
             {
+                var denied = await DenyOtherLocationAsync(locationId);
+                if (denied != null) return denied;
+
                 var rows = await _context.MenuItemAssignments
                     .Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == Item_id && (locationId == null || mia.Location_Id == locationId))   // default → remove overrides too
                     .ToListAsync();
@@ -315,7 +340,7 @@ namespace back_end.Controllers
         /// Creates a new menu with the specified name and copies all item assignments
         /// (including prices, limits, full price, and over-limit behavior) from the source menu.
         /// </remarks>
-        [Authorize(Policy = "staffOnly")]
+        [Authorize(Policy = "adminOnly")]   // copies every location's overrides
         [HttpPost("copy_menu/{source_menu_id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]

@@ -7,6 +7,7 @@ using back_end.DTO.OrdersDTOs;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
+using back_end.Services;
 
 
 
@@ -19,6 +20,7 @@ namespace back_end.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<OrderController> _logger;
+        private readonly ILocationAccessService _locationAccess;
 
         private const string BillRequestedMessage =
             "You've asked for this bill, so no more orders can be added to it. Please ask your server if you'd like anything else.";
@@ -27,10 +29,11 @@ namespace back_end.Controllers
         private bool BillOrderingClosed(Billing? bill) =>
             bill?.Requested_At != null && !User.IsInRole("Admin") && !User.IsInRole("Staff");
 
-        public OrderController(ApplicationDbContext context, ILogger<OrderController> logger)
+        public OrderController(ApplicationDbContext context, ILogger<OrderController> logger, ILocationAccessService locationAccess)
         {
             _context = context;
             _logger = logger;
+            _locationAccess = locationAccess;
         }
 
         // Headcount for per-person limits; all non-cancelled bills in the session
@@ -276,6 +279,11 @@ namespace back_end.Controllers
                 {
                     return NotFound("Order not found");
                 }
+
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return LocationResults.OtherLocation();
+                }
                 // Use authenticated user info
                 var userIdString = ClaimsHelpers.GetUserId(User);
                 var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
@@ -389,6 +397,11 @@ namespace back_end.Controllers
                 {
                     return NotFound("Order Data was not found");
                 }
+
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return LocationResults.OtherLocation();
+                }
                 // Use authenticated user info
                 var userIdString = ClaimsHelpers.GetUserId(User);
                 var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
@@ -463,6 +476,11 @@ namespace back_end.Controllers
                     .FirstOrDefaultAsync(o => o.Order_Id == order_id);
                 if (order is null) return NotFound("Order not found");
 
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return LocationResults.OtherLocation();
+                }
+
                 var item = order.OrderItems.FirstOrDefault(oi => oi.Order_Item_Id == item_id);
                 if (item is null) return NotFound("Item not found in this order");
 
@@ -521,6 +539,11 @@ namespace back_end.Controllers
                 if (order is null)
                 {
                     return NotFound("Order not found");
+                }
+
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return LocationResults.OtherLocation();
                 }
 
                 if (order.Status != OrderStatus.Processing)
@@ -616,6 +639,11 @@ namespace back_end.Controllers
                 if (order is null)
                 {
                     return NotFound("Order was not found to cancel");
+                }
+
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return LocationResults.OtherLocation();
                 }
                 if (order.Status == OrderStatus.Delivered)
                 {
@@ -907,6 +935,11 @@ namespace back_end.Controllers
                     return NotFound("Order not found");
                 }
 
+                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return LocationResults.OtherLocation();
+                }
+
                 // Use authenticated user info
                 var userIdString = ClaimsHelpers.GetUserId(User);
                 var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
@@ -1068,7 +1101,12 @@ namespace back_end.Controllers
         {
             try
             {
-                var order = await _context.SessionOrders.ToListAsync();
+                var scope = await _locationAccess.ResolveLocationAsync(User, null);
+                if (scope.IsForbidden) return LocationResults.NoLocation();
+
+                var order = await _context.SessionOrders
+                    .Where(o => scope.LocationId == null || o.DiningSession.Location_Id == scope.LocationId)
+                    .ToListAsync();
 
                 return Ok(order);
             }
@@ -1088,6 +1126,10 @@ namespace back_end.Controllers
         {
             try
             {
+                var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+                if (scope.IsForbidden) return LocationResults.NoLocation();
+                locationId = scope.LocationId;
+
                 var query = _context.SessionOrders
                     .Include(o => o.DiningSession)
                         .ThenInclude(ds => ds.Menu)
