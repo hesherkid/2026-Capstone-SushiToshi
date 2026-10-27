@@ -1,4 +1,10 @@
-import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  within,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import OrderDashboard from "@/components/staff/Order";
 import api from "@/config/api";
 import { useOrder } from "@/contexts/OrderContext";
@@ -90,7 +96,7 @@ const rowFor = (text) => screen.getByText(text).closest('[role="row"]');
 
 const openOrder = async (orderId) => {
   fireEvent.click(
-    within(rowFor(`#${orderId}`)).getByRole("button", { name: "View order" })
+    within(rowFor(`#${orderId}`)).getByRole("button", { name: "View order" }),
   );
   return screen.findByRole("dialog");
 };
@@ -111,11 +117,17 @@ describe("Order dashboard", () => {
     expect(within(row).getByText("$15.00")).toBeInTheDocument();
     expect(screen.queryByText("#502")).not.toBeInTheDocument();
 
-    expect(screen.getByRole("tab", { name: "Pending (1)" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Processing (1)" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Delivered (1)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Pending (1)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Processing (1)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Delivered (1)" }),
+    ).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith("/Order/all_orders", {
-      params: { locationId: "1" },
+      params: { locationId: "1", deliveredOpenSessionsOnly: true },
     });
   });
 
@@ -127,7 +139,7 @@ describe("Order dashboard", () => {
     const row = await waitFor(() => rowFor("#502"));
     expect(within(row).getByText("Processing")).toBeInTheDocument();
     expect(
-      within(row).getByRole("button", { name: "Mark all delivered" })
+      within(row).getByRole("button", { name: "Mark all delivered" }),
     ).toBeInTheDocument();
   });
 
@@ -136,7 +148,9 @@ describe("Order dashboard", () => {
     const row = await waitFor(() => rowFor("#501"));
 
     fireEvent.click(within(row).getByRole("button", { name: "Approve order" }));
-    await waitFor(() => expect(orderActions.approveOrder).toHaveBeenCalledWith(501));
+    await waitFor(() =>
+      expect(orderActions.approveOrder).toHaveBeenCalledWith(501),
+    );
     await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
   });
 
@@ -147,13 +161,19 @@ describe("Order dashboard", () => {
     const dialog = await openOrder(501);
     fireEvent.click(within(dialog).getByRole("button", { name: "Edit Order" }));
     fireEvent.click(
-      within(dialog).getAllByRole("button", { name: "Increase quantity" })[0]
+      within(dialog).getAllByRole("button", { name: "Increase quantity" })[0],
     );
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save & Approve" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Save & Approve" }),
+    );
 
-    await waitFor(() => expect(orderActions.approveOrder).toHaveBeenCalledWith(501));
+    await waitFor(() =>
+      expect(orderActions.approveOrder).toHaveBeenCalledWith(501),
+    );
     expect(orderActions.updateOrderItem).toHaveBeenCalledTimes(1);
-    expect(orderActions.updateOrderItem).toHaveBeenCalledWith(501, 1, { quantity: 3 });
+    expect(orderActions.updateOrderItem).toHaveBeenCalledWith(501, 1, {
+      quantity: 3,
+    });
   });
 
   it("asks before removing an item from a pending order", async () => {
@@ -162,17 +182,21 @@ describe("Order dashboard", () => {
 
     const dialog = await openOrder(501);
     fireEvent.click(within(dialog).getByRole("button", { name: "Edit Order" }));
-    fireEvent.click(within(dialog).getAllByRole("button", { name: "Remove item" })[1]);
+    fireEvent.click(
+      within(dialog).getAllByRole("button", { name: "Remove item" })[1],
+    );
 
     const confirm = await screen.findByText(/Remove Miso Soup\?/);
     fireEvent.click(
-      within(confirm.closest('[role="dialog"]')).getByRole("button", { name: "Remove Item" })
+      within(confirm.closest('[role="dialog"]')).getByRole("button", {
+        name: "Remove Item",
+      }),
     );
 
     await waitFor(() =>
       expect(orderActions.updateOrderItem).toHaveBeenCalledWith(501, 2, {
         status: "Cancelled",
-      })
+      }),
     );
   });
 });
