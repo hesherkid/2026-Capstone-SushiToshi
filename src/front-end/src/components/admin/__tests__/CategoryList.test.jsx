@@ -142,4 +142,32 @@ describe("Category list", () => {
     );
     await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
   });
+
+  const openDelete = async () => {
+    fireEvent.click(
+      within(await rowFor("Hot Stone")).getByRole("button", { name: "Delete" }),
+    );
+    return screen
+      .getByText(/Are you sure you want to delete "Hot Stone"/)
+      .closest('[role="dialog"]');
+  };
+
+  it("keeps the confirmation open with the reason when deleting fails, and opens clean next time", async () => {
+    api.delete.mockRejectedValue({ response: { status: 500 } });
+    render(<CategoryList />);
+
+    const confirm = await openDelete();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+    expect(
+      await within(confirm).findByText("Failed to delete category"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    const again = await openDelete();
+    expect(within(again).queryByRole("alert")).not.toBeInTheDocument();
+  });
 });

@@ -372,6 +372,7 @@ const MenuItemManagement = () => {
         onSubmit={handleSubmit}
         submitting={submitting}
         error={error}
+        onErrorClose={() => setError(null)}
       />
 
       <TagsDialog

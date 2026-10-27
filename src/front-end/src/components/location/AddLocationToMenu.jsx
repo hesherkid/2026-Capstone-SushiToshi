@@ -49,7 +49,7 @@ const AddLocationsToMenu = ({ menu, onClose, availableLocations = [] }) => {
     );
     setSelectedLocation("");
     setError(null);
-  }, [menu?.menu_Id]);
+  }, [menu?.menu_id]);
 
   // Locations not yet assigned
   const unassignedLocations = useMemo(

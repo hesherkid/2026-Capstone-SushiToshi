@@ -326,6 +326,7 @@ const TagManagement = () => {
       });
     }
 
+    setError(null);   // the dialog shows the shared error
     setDialogMode(mode);
     setDialogOpen(true);
   };

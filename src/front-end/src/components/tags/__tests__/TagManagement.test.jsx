@@ -251,3 +251,36 @@ describe("Tag menu items dialog", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("Tag add/edit dialog", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGets();
+  });
+
+  it("doesn't show an earlier page error when a tag is opened for editing", async () => {
+    api.delete.mockRejectedValue({
+      response: { status: 404, data: { detail: "Tag not found" } },
+    });
+    render(<TagManagement />);
+
+    // A failed delete leaves an error behind
+    await rowAction("Delete");
+    const confirm = (
+      await screen.findByText("Are you sure you want to delete this tag?")
+    ).closest('[role="dialog"]');
+    fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+    await within(confirm).findByText("Tag not found");
+    fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+
+    await rowAction("Edit");
+    const dialog = (
+      await screen.findByRole("heading", { name: "Update Tag" })
+    ).closest('[role="dialog"]');
+    expect(within(dialog).queryByText("Tag not found")).not.toBeInTheDocument();
+  });
+});
+

@@ -70,6 +70,12 @@ const MenuManagement = () => {
   setLocationDialogOpen(true);
   };
 
+  // The dialog lists menu.menuLocations, so reload the menus to show what was saved
+  const closeLocationDialog = () => {
+    setLocationDialogOpen(false);
+    fetchMenus();
+  };
+
   const handleEdit = (menu) => {
     setSelectedMenu(menu);
     setFormMode("edit");
@@ -180,10 +186,10 @@ const MenuManagement = () => {
         onConfirm={handleDeleteConfirm}
         onClose={() => setDeleteDialogOpen(false)}
       />
-      <AppDialog open={locationDialogOpen} onClose={() => setLocationDialogOpen(false)}>
+      <AppDialog open={locationDialogOpen} onClose={closeLocationDialog}>
         <AddLocationsToMenu
           menu={selectedMenu}
-          onClose={() => setLocationDialogOpen(false)}
+          onClose={closeLocationDialog}
           availableLocations={locationsList}
         />
       </AppDialog>

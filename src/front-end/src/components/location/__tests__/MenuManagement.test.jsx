@@ -60,4 +60,38 @@ describe("MenuManagement", () => {
     expect(await within(dialog).findByText("Menu is in use")).toBeInTheDocument();
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "Delete Menu" })).toBeEnabled());
   });
+
+  it("shows a location added in Manage Locations when the dialog is opened again", async () => {
+    let lunchLocations = [];
+    api.get.mockImplementation(async (url) => {
+      if (url === "/Menu") return { data: [{ ...menus[0], menuLocations: lunchLocations }, menus[1]] };
+      if (url === "/location") return { data: [{ location_Id: 7, name: "Downtown" }] };
+      return { data: [] };
+    });
+    api.put.mockImplementation(async () => {
+      lunchLocations = [{ location_Id: 7 }];   // saved on the server
+      return { data: {} };
+    });
+    render(<MenuManagement />);
+    await screen.findByText("Lunch");
+
+    const openLocations = async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: "Assign Locations" })[0]);
+      return (await screen.findByRole("heading", { name: "Manage Locations" })).closest('[role="dialog"]');
+    };
+
+    let dialog = await openLocations();
+    fireEvent.mouseDown(within(dialog).getByRole("combobox"));
+    fireEvent.click(await screen.findByRole("option", { name: "Downtown" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith("MenuLocation/menu/1/location/7"));
+
+    fireEvent.click(within(dialog).getAllByRole("button", { name: "Close" }).at(-1));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Manage Locations" })).not.toBeInTheDocument());
+    await waitFor(() => expect(api.get.mock.calls.filter(([url]) => url === "/Menu")).toHaveLength(2));
+
+    dialog = await openLocations();
+    expect(within(dialog).getByText("Downtown")).toBeInTheDocument();
+    expect(within(dialog).queryByText("No locations assigned yet")).not.toBeInTheDocument();
+  });
 });

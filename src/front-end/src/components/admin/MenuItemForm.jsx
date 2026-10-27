@@ -24,6 +24,7 @@ const MenuItemForm = ({
   onSubmit,
   submitting,
   error,
+  onErrorClose,
 }) => {
   const [formData, setFormData] = useState({
     name: selectedItem?.name || "",
@@ -45,6 +46,7 @@ const MenuItemForm = ({
       title={selectedItem ? "Edit Menu Item" : "Create Menu Item"}
       subtitle={selectedItem?.name}
       error={error}
+      onErrorClose={onErrorClose}
       onSubmit={() => onSubmit(formData)}
       submitLabel="Save"
       busyLabel="Saving..."

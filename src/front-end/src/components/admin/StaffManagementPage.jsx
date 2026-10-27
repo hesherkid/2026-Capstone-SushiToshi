@@ -142,6 +142,7 @@ const StaffManagementPage = () => {
       onAdd={() => {
         setEditMode(false);
         setSelectedStaff(null);
+        setError(null);
         setFormOpen(true);
       }}
       error={formOpen || passwordDialogOpen ? null : error}
@@ -151,13 +152,16 @@ const StaffManagementPage = () => {
       gridProps={{
         rows: staff,
         columns: getStaffColumns({
+          // Each dialog shows the shared error, so clear it first
           onEdit: (staff) => {
             setSelectedStaff(staff);
             setEditMode(true);
+            setError(null);
             setFormOpen(true);
           },
           onChangePassword: (staff) => {
             setSelectedStaff(staff);
+            setError(null);
             setPasswordDialogOpen(true);
           },
           // Deactivating asks first; reactivating happens straight away

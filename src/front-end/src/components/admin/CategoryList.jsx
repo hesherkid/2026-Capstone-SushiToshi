@@ -39,6 +39,7 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
 
   const handleDeleteClick = (category) => {
     setCategoryToDelete(category);
+    setError(null);   // the confirmation shows the shared error
     setDeleteDialogOpen(true);
   };
 
