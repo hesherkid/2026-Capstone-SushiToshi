@@ -22,8 +22,9 @@ jest.mock("@/config/api", () => ({
   default: { get: jest.fn().mockResolvedValue({ data: [] }), put: jest.fn() },
 }));
 
+const mockNotifyError = jest.fn();
 jest.mock("@/contexts/NotificationContext", () => ({
-  useNotification: () => ({ notifySuccess: jest.fn(), notifyError: jest.fn(), notifyInfo: jest.fn() }),
+  useNotification: () => ({ notifySuccess: jest.fn(), notifyError: mockNotifyError, notifyInfo: jest.fn() }),
 }));
 
 jest.mock("@/components/AppNavigationDrawer", () => ({ __esModule: true, default: () => null }));
@@ -78,15 +79,13 @@ describe("App bar account icon", () => {
 });
 
 describe("App bar working location", () => {
-  const locations = [
-    { location_Id: 1, name: "Downtown" },
-    { location_Id: 2, name: "Southside" },
-  ];
+  const downtown = { location_id: 1, name: "Downtown" };
+  const southside = { location_id: 2, name: "Southside" };
 
-  // The location list, and the location saved on the signed-in user (null if none)
-  const serverReturns = (savedLocation) =>
+  // What staff/my-locations returns for the signed-in user
+  const serverReturns = (myLocations) =>
     api.get.mockImplementation((url) =>
-      Promise.resolve({ data: url === "location/" ? locations : savedLocation })
+      Promise.resolve({ data: url === "staff/my-locations" ? myLocations : [] })
     );
 
   beforeEach(() => {
@@ -99,7 +98,7 @@ describe("App bar working location", () => {
   });
 
   it("uses the location saved on the staff member", async () => {
-    serverReturns(locations[1]);
+    serverReturns({ current_location: southside, locations: [downtown, southside], all_locations: false });
     signedInAs("staff");
     render(<AppBarWithTitle />);
 
@@ -108,18 +107,57 @@ describe("App bar working location", () => {
 
   it("replaces a location left behind by a previous user", async () => {
     localStorage.setItem("branch-location", "1");
-    serverReturns(locations[1]);
+    serverReturns({ current_location: southside, locations: [southside], all_locations: false });
     signedInAs("staff");
     render(<AppBarWithTitle />);
 
     await waitFor(() => expect(localStorage.getItem("branch-location")).toBe("2"));
   });
 
-  it("falls back to the first location when none is saved", async () => {
-    serverReturns(null);
+  it("starts admins with no saved location at the first location", async () => {
+    serverReturns({ current_location: null, locations: [downtown, southside], all_locations: true });
     signedInAs("admin");
     render(<AppBarWithTitle />);
 
     await waitFor(() => expect(localStorage.getItem("branch-location")).toBe("1"));
+  });
+
+  it("shows staff with one location a label, not a dropdown", async () => {
+    serverReturns({ current_location: downtown, locations: [downtown], all_locations: false });
+    signedInAs("staff");
+    render(<AppBarWithTitle />);
+
+    expect(await screen.findByLabelText("Working location")).toHaveTextContent("Downtown");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("gives staff with several locations a dropdown", async () => {
+    serverReturns({ current_location: downtown, locations: [downtown, southside], all_locations: false });
+    signedInAs("staff");
+    render(<AppBarWithTitle />);
+
+    expect(await screen.findByRole("combobox")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Working location")).not.toBeInTheDocument();
+  });
+
+  it("gives admins a dropdown", async () => {
+    serverReturns({ current_location: downtown, locations: [downtown], all_locations: true });
+    signedInAs("admin");
+    render(<AppBarWithTitle />);
+
+    expect(await screen.findByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("tells staff with no location to ask an admin", async () => {
+    localStorage.setItem("branch-location", "1");
+    serverReturns({ current_location: null, locations: [], all_locations: false });
+    signedInAs("staff");
+    render(<AppBarWithTitle />);
+
+    await waitFor(() =>
+      expect(mockNotifyError).toHaveBeenCalledWith("You don't have a location yet. Ask an admin to assign you one.")
+    );
+    expect(screen.getByLabelText("Working location")).toHaveTextContent("No location");
+    expect(localStorage.getItem("branch-location")).toBeNull();
   });
 });

@@ -41,7 +41,10 @@ const AppBarWithTitle = ({ title }) => {
   const [selectedLocation, setSelectedLocation] = useState(
     storage.get("branch-location")
   );
+  // The locations this user can switch between (see staff/my-locations)
   const [allLocations, setAllLocations] = useState([]);
+  const [canUseAllLocations, setCanUseAllLocations] = useState(false);
+  const [locationsLoaded, setLocationsLoaded] = useState(false);
   const [tableNumber, setTableNumber] = useState("");
   const { isAuthenticated, userRole, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification();
@@ -83,19 +86,31 @@ const AppBarWithTitle = ({ title }) => {
         if (!isAuthenticated || !userRole || (userRole !== "staff" && userRole !== "admin")) {
           return;
         }
-        const [response, assigned] = await Promise.all([
-          api.get("location/"),
-          api.get("staff/get-initial-staff-location"),
-        ]);
-        setAllLocations(response.data);
+        // Staff get the locations an admin assigned them; admins get every location
+        const { data } = await api.get("staff/my-locations");
+        const locations = data?.locations ?? [];
+        const allLocationsAllowed = Boolean(data?.all_locations);
+        setAllLocations(locations);
+        setCanUseAllLocations(allLocationsAllowed);
+        setLocationsLoaded(true);
 
-        const workingLocation = assigned.data?.location_Id ? assigned.data : response.data[0];
-        if (!workingLocation) return;
+        // Admins without a saved location start at the first one. Staff without one
+        // can't work anywhere until an admin assigns them
+        const workingLocation =
+          data?.current_location ?? (allLocationsAllowed ? locations[0] : null);
+        if (!workingLocation) {
+          setSelectedLocation(null);
+          storage.remove("branch-location");
+          if (!allLocationsAllowed) {
+            notifyError("You don't have a location yet. Ask an admin to assign you one.");
+          }
+          return;
+        }
 
         const storedLocation = storage.get("branch-location");
-        if (Number(storedLocation) !== workingLocation.location_Id) {
-          setSelectedLocation(workingLocation.location_Id);
-          storage.set("branch-location", workingLocation.location_Id);
+        if (Number(storedLocation) !== workingLocation.location_id) {
+          setSelectedLocation(workingLocation.location_id);
+          storage.set("branch-location", workingLocation.location_id);
           notifyInfo(`Working location set to ${workingLocation.name}`);
         }
       } catch (err) {
@@ -106,17 +121,6 @@ const AppBarWithTitle = ({ title }) => {
     fetchAllLocations();
   }, [isAuthenticated, userRole, notifyError, notifyInfo]);
 
-  // useEffect(() => {
-  //   // Listen for auth changes
-  //   const handleAuthEvent = () => {
-  //     setDrawerOpen(false);
-  //   };
-  //   // Remove MSAL event, keep only Auth0 event
-  //   window.addEventListener("auth:changed", handleAuthEvent);
-  //   return () => {
-  //     window.removeEventListener("auth:changed", handleAuthEvent);
-  //   };
-  // }, []);
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {
@@ -166,9 +170,14 @@ const AppBarWithTitle = ({ title }) => {
   // Leave the dropdown empty until the stored location is one of the loaded options
   const locationValue =
     Array.isArray(allLocations) &&
-      allLocations.some((loc) => loc.location_Id === Number(selectedLocation))
+      allLocations.some((loc) => loc.location_id === Number(selectedLocation))
       ? Number(selectedLocation)
       : "";
+
+  // Staff with only one location have nothing to switch to, so they get a label instead
+  const canSwitchLocation = canUseAllLocations || allLocations.length > 1;
+  const currentLocationName =
+    allLocations.find((loc) => loc.location_id === Number(selectedLocation))?.name;
 
   return (
     <AppBar
@@ -284,16 +293,41 @@ const AppBarWithTitle = ({ title }) => {
             </IconButton>
           )}
 
-          {/* Location Dropdown - Only visible for staff and admin */}
+          {/* Staff with one location (or none): their location as a label */}
+          {isAuthenticated && userRole === "staff" && locationsLoaded && !canSwitchLocation && (
+            <Box
+              aria-label="Working location"
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: { xs: 1, sm: 1.5 },
+                py: 0.5,
+                borderRadius: 2,
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                backgroundColor: "rgba(255, 255, 255, 0.12)",
+                color: "inherit",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <LocationOn sx={{ color: "white" }} />
+              <Typography component="span" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
+                {currentLocationName || "No location"}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Location Dropdown - staff with several locations, and admins */}
           {isAuthenticated &&
-            (userRole === "staff" || userRole === "admin") && (
+            (userRole === "staff" || userRole === "admin") && canSwitchLocation && (
               <FormControl size="small">
                 <Select
                   value={locationValue}
                   onChange={handleLocationChange}
                   renderValue={(value) => {
                     const location = allLocations?.find(
-                      (loc) => loc.location_Id === value
+                      (loc) => loc.location_id === value
                     );
                     return (
                       <Box
@@ -329,8 +363,8 @@ const AppBarWithTitle = ({ title }) => {
                   {Array.isArray(allLocations) &&
                     allLocations.map((location) => (
                       <MenuItem
-                        key={location.location_Id}
-                        value={location.location_Id}
+                        key={location.location_id}
+                        value={location.location_id}
                       >
                         {location.name}
                       </MenuItem>
