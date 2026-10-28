@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using back_end.Controllers;
 using back_end.Services;
+using back_end.Helpers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -752,5 +753,181 @@ public class OrderControllerTests : IDisposable
 
         // Assert
         ids.Should().Equal(otherLocation.Order_Id);
+    }
+
+    private static readonly TimeZoneInfo RestaurantZone = AnalyticsDateRange.RestaurantTimeZone;
+
+    private static DateOnly LocalToday =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, RestaurantZone));
+
+    private static DateTime LocalToUtc(DateOnly day, int hour, int minute = 0) =>
+        TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(new TimeOnly(hour, minute)), RestaurantZone);
+
+    private static string Day(DateOnly day) => day.ToString("yyyy-MM-dd");
+
+    private SessionOrder SeedHistoryOrder(int sessionId, DateTime createdAtUtc,
+        OrderStatus status = OrderStatus.Delivered, string? userName = null)
+    {
+        var order = SeedOrderAt(sessionId, sessionId, status, status);
+        var saved = _context.SessionOrders.Single(o => o.Order_Id == order.Order_Id);
+        saved.Created_At = createdAtUtc;
+        saved.User_Name = userName;
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+        return saved;
+    }
+
+    private void SeedHistoryTables()
+    {
+        _context.TableGroups.Add(new TableGroup { TableGroup_Id = 1, Group_Name = "Booth", Location_Id = 1 });
+        _context.Tables.AddRange(
+            new TableEntity { Table_Id = 501, table_number = 14, Location_Id = 1 },
+            new TableEntity { Table_Id = 502, table_number = 1, Location_Id = 1, TableGroup_Id = 1 },
+            new TableEntity { Table_Id = 503, table_number = 2, Location_Id = 1, TableGroup_Id = 1 });
+        _context.DiningSessions.Find(EndedSessionId)!.Table_Id = 501;
+        _context.DiningSessions.Find(OpenSessionId)!.TableGroup_Id = 1;
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+    }
+
+    private static ValidationProblemDetails BadRequestDetails(ActionResult<IEnumerable<object>> result)
+    {
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        return (result.Result as BadRequestObjectResult)!.Value.Should().BeOfType<ValidationProblemDetails>().Subject;
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_ReturnsOnlyOrdersInsideTheRange()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        var yesterday = LocalToday.AddDays(-1);
+        var inRange = SeedHistoryOrder(EndedSessionId, LocalToUtc(yesterday, 12));
+        var tooOld = SeedHistoryOrder(EndedSessionId, LocalToUtc(yesterday.AddDays(-4), 12));
+
+        // Act
+        var ids = OrderIds(await _controller.GetOrderHistory(Day(yesterday), Day(yesterday), locationId: 1));
+
+        // Assert
+        ids.Should().Equal(inRange.Order_Id);
+        ids.Should().NotContain(tooOld.Order_Id);
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_ReturnsEveryStatus_FromOpenAndEndedSessions()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        var day = LocalToday.AddDays(-1);
+        var delivered = SeedHistoryOrder(EndedSessionId, LocalToUtc(day, 12), OrderStatus.Delivered);
+        var cancelled = SeedHistoryOrder(EndedSessionId, LocalToUtc(day, 13), OrderStatus.Cancelled);
+        var pending = SeedHistoryOrder(OpenSessionId, LocalToUtc(day, 14), OrderStatus.Pending);
+
+        // Act
+        var ids = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1));
+
+        // Assert
+        ids.Should().BeEquivalentTo(new[] { delivered.Order_Id, cancelled.Order_Id, pending.Order_Id });
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_TableNumber_MatchesSingleTablesAndTableGroups()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SeedHistoryTables();
+        SetupUserClaims("1", role: "Admin");
+        var day = LocalToday.AddDays(-1);
+        var table14 = SeedHistoryOrder(EndedSessionId, LocalToUtc(day, 12));
+        var tables1And2 = SeedHistoryOrder(OpenSessionId, LocalToUtc(day, 13));
+
+        // Act
+        var single = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, tableNumber: 14));
+        var grouped = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, tableNumber: 2));
+
+        // Assert
+        single.Should().Equal(table14.Order_Id);
+        grouped.Should().Equal(tables1And2.Order_Id);
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_Name_MatchesBillOrGuestName_CaseInsensitive()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        var day = LocalToday.AddDays(-1);
+        var byBill = SeedHistoryOrder(EndedSessionId, LocalToUtc(day, 12));
+        var byGuest = SeedHistoryOrder(OpenSessionId, LocalToUtc(day, 13), userName: "Lee Park");
+        var noMatch = SeedHistoryOrder(OpenSessionId, LocalToUtc(day, 14), userName: "Sam");
+
+        // Act
+        var billIds = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, name: "ENDE"));
+        var guestIds = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, name: " lee "));
+
+        // Assert
+        billIds.Should().Equal(byBill.Order_Id);
+        guestIds.Should().Equal(byGuest.Order_Id);
+        guestIds.Should().NotContain(noMatch.Order_Id);
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_ExactlyMaxRangeDays_IsAllowed()
+    {
+        // Arrange
+        SetupUserClaims("1", role: "Admin");
+        var from = LocalToday.AddDays(-(OrderController.MaxHistoryRangeDays - 1));
+
+        // Act
+        var result = await _controller.GetOrderHistory(Day(from), Day(LocalToday), locationId: 1);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_RangeOverMaxDays_ReturnsBadRequest()
+    {
+        // Arrange
+        SetupUserClaims("1", role: "Admin");
+        var from = LocalToday.AddDays(-OrderController.MaxHistoryRangeDays);
+
+        // Act
+        var result = await _controller.GetOrderHistory(Day(from), Day(LocalToday), locationId: 1);
+
+        // Assert
+        BadRequestDetails(result).Errors.Should().ContainKey("to");
+    }
+
+    [Theory]
+    [InlineData(null, "2026-01-01", "from")]
+    [InlineData("2026-01-01", null, "to")]
+    [InlineData("01/01/2026", "2026-01-02", "from")]
+    [InlineData("2026-01-05", "2026-01-01", "from")]
+    public async Task GetOrderHistory_InvalidDates_ReturnBadRequestKeyedByParameter(string? from, string? to, string expectedKey)
+    {
+        // Arrange
+        SetupUserClaims("1", role: "Admin");
+
+        // Act
+        var result = await _controller.GetOrderHistory(from, to, locationId: 1);
+
+        // Assert
+        BadRequestDetails(result).Errors.Should().ContainKey(expectedKey);
+    }
+
+    [Fact]
+    public async Task GetOrderHistory_FutureEndDate_ReturnsBadRequest()
+    {
+        // Arrange
+        SetupUserClaims("1", role: "Admin");
+
+        // Act
+        var result = await _controller.GetOrderHistory(Day(LocalToday), Day(LocalToday.AddDays(1)), locationId: 1);
+
+        // Assert
+        BadRequestDetails(result).Errors.Should().ContainKey("to");
     }
 }

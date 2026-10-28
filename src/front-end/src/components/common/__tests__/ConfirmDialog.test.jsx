@@ -27,4 +27,23 @@ describe("ConfirmDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it("stays open and shows the error when the action returns false", async () => {
+    const onConfirm = jest.fn().mockResolvedValue(false);
+    const onClose = jest.fn();
+    const { rerender } = render(
+      <ConfirmDialog open title="Delete tag" message="Delete Spicy?" confirmLabel="Delete" onConfirm={onConfirm} onClose={onClose} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    // The parent sets the error after the failed delete
+    rerender(
+      <ConfirmDialog open title="Delete tag" message="Delete Spicy?" confirmLabel="Delete" error="Tag not found" onConfirm={onConfirm} onClose={onClose} />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Tag not found");
+    expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

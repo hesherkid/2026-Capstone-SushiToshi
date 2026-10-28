@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
-  Stack,
-  IconButton,
+  Button,
+  DialogActions,
   DialogContent,
   Divider,
   Alert,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
-import { X } from "lucide-react";
+import DialogHeader from "@/components/common/DialogHeader";
 import TagChip from "@/components/tags/TagChip";
 import { serverMessage } from "@/utils/serverMessage";
 
@@ -52,45 +52,14 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
 
   return (
     <AppDialog open={open} onClose={onClose}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          px: 3,
-          py: 2,
-        }}
-      >
-        <Typography
-          component="div"
-          sx={{
-            fontSize: "1.25rem",
-            fontWeight: 500,
-          }}
-        >
-          Manage Tags - {selectedItem?.name}
-        </Typography>
-        <IconButton
-          onClick={onClose}
-          size="small"
-          sx={{
-            "&:hover": {
-              backgroundColor: "rgba(0, 0, 0, 0.04)",
-            },
-          }}
-        >
-          <X size={20} />
-        </IconButton>
-      </Box>
-      <DialogContent sx={{ pt: 2 }}>
+      <DialogHeader title="Manage Tags" subtitle={selectedItem?.name} onClose={onClose} />
+      <DialogContent dividers>
         {error && (
           <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-        <Typography variant="h6" sx={{ mb: 1 }}>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>
           Applied Tags
         </Typography>
         <Box
@@ -113,7 +82,7 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
           ))}
         </Box>
         <Divider sx={{ my: 2 }} />
-        <Typography variant="h6" sx={{ mb: 1 }}>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>
           Available Tags
         </Typography>
 
@@ -137,6 +106,9 @@ const TagsDialog = ({ open, onClose, selectedItem, tags, onTagAction }) => {
           ))}
         </Box>
       </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
     </AppDialog>
   );
 };

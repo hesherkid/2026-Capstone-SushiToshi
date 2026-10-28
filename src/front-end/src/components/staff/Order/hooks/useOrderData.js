@@ -17,7 +17,8 @@ export const normalizeStatus = (status) => {
   return upper === "APPROVED" ? ORDER_STATUS.PROCESSING : upper;
 };
 
-const mapOrder = (order) => {
+// Shared with useOrderHistory so live and past orders have the same shape
+export const mapOrder = (order) => {
   const items = Array.isArray(order.items)
     ? order.items.map((item) => ({
         orderItemId: item.orderItemId,
@@ -34,6 +35,7 @@ const mapOrder = (order) => {
     orderId: order.orderId,
     sessionId: order.sessionId,
     billId: order.billId,
+    billName: order.billName ?? null,
     userName: order.userName,
     status: normalizeStatus(order.status),
     createdAt: order.createdAt,

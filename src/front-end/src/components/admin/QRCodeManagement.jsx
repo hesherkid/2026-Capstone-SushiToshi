@@ -18,13 +18,13 @@ import {
   Alert,
   Snackbar,
   CircularProgress,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Chip,
   Divider,
 } from '@mui/material';
 import AppDialog from '@/components/common/AppDialog';
+import DialogHeader from '@/components/common/DialogHeader';
 import ManagementHeader from '@/components/common/ManagementHeader';
 import { Download, QrCode, Wifi, Menu } from 'lucide-react';
 import { api } from '@/config/api';
@@ -566,15 +566,19 @@ export default function QRCodeManagement() {
 
       {/* Preview Dialog */}
       <AppDialog open={previewDialog.open} onClose={handleClosePreview}>
-        <DialogTitle>
-          {previewDialog.title}
-          <Chip
-            label={previewDialog.type === 'wifi' ? 'WiFi' : 'Session'}
-            size="small"
-            color={previewDialog.type === 'wifi' ? 'primary' : 'success'}
-            sx={{ ml: 2 }}
-          />
-        </DialogTitle>
+        <DialogHeader
+          title={
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {previewDialog.title}
+              <Chip
+                label={previewDialog.type === 'wifi' ? 'WiFi' : 'Session'}
+                size="small"
+                color={previewDialog.type === 'wifi' ? 'primary' : 'success'}
+              />
+            </Box>
+          }
+          onClose={handleClosePreview}
+        />
         <DialogContent>
           {previewDialog.url && (
             <Box sx={{ textAlign: 'center', py: 2 }}>

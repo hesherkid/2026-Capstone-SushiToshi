@@ -26,16 +26,25 @@ const customJestConfig = {
     "!src/**/_*.{js,jsx,ts,tsx}",
     "!src/**/*.stories.{js,jsx,ts,tsx}",
   ],
-  // Coverage thresholds: baseline levels so the build fails if coverage drops.
-  // For what is and isn't tested, see docs/dev/testing.md
+  // Excluded thin route wrappers like app/analytics/ from coverage, they point to components/analytics, which are tested
+  coveragePathIgnorePatterns: [
+    "/node_modules/",
+    "/app/analytics/",
+    "/app/auth/",
+    "/app/dashboard/call-server/",
+    "/app/join/",
+  ],
+  // Coverage thresholds: increased to current baseline with a buffer (Oct 2026)
+  // Oct 2026: branches 57.58, funcs 61.39, lines 64.34, statements 63.98
+  // 58 suites, 592 tests passing
   // TODO: Gradually increase thresholds as more tests are added
   // Target: 70% for all metrics
   coverageThreshold: {
     global: {
-      branches: 3,
-      functions: 2,
-      lines: 3,
-      statements: 3,
+      branches: 55,
+      functions: 59,
+      lines: 60,
+      statements: 60,
     },
   },
 };

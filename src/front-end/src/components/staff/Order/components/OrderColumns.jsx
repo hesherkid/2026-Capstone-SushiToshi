@@ -1,7 +1,10 @@
 import { Chip } from "@mui/material";
 import { Eye, Check, Package } from "lucide-react";
 import { actionsColumn } from "@/components/common/RowActions";
-import { formatTime, parseUtcDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import {
+  formatTime,
+  parseUtcDate,
+} from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import { ORDER_STATUS, normalizeStatus } from "../hooks/useOrderData";
 
 export const STATUS_OPTIONS = {
@@ -16,7 +19,9 @@ export const StatusChip = ({ status, sx }) => {
     label: status || "Pending",
     color: "default",
   };
-  return <Chip label={option.label} color={option.color} size="small" sx={sx} />;
+  return (
+    <Chip label={option.label} color={option.color} size="small" sx={sx} />
+  );
 };
 
 export const tableLabel = (tableNumbers = []) => {
@@ -103,6 +108,6 @@ export const getOrderColumns = (actions) => [
         hidden: row.status !== ORDER_STATUS.PROCESSING,
       },
     ],
-    { width: 130 }
+    { width: 130 },
   ),
 ];

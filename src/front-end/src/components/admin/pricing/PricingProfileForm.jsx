@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -7,17 +7,14 @@ import {
   FormControlLabel,
   FormGroup,
   InputAdornment,
+  InputBase,
+  Paper,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
+import ManagementGrid from "@/components/common/ManagementGrid";
 
 export const DAY_TYPES = ["Weekday", "Weekend", "Holiday"];
 
@@ -63,6 +60,13 @@ const toRequest = (form) => ({
   })),
 });
 
+// What a save would send, with the weekend days in week order, so unticking and re-ticking
+// a day (or typing 40.950 for 40.95) doesn't count as a change
+const comparable = (form) => {
+  const request = toRequest(form);
+  return JSON.stringify({ ...request, weekend_days: WEEK.filter((d) => request.weekend_days.includes(d)) });
+};
+
 const isAmount = (text) => text !== "" && Number(text) >= 0;   // NaN >= 0 is false
 
 // The first problem found, or null
@@ -78,24 +82,108 @@ const validate = (form) => {
   return null;
 };
 
+// A price cell's input: an outlined box like a small TextField, so it's clear you can type in it
+const priceInput = {
+  width: "100%",
+  fontSize: "inherit",
+  minHeight: 40,
+  px: 1.25,
+  py: 1,
+  border: 1,
+  borderColor: "grey.400",
+  borderRadius: 1,
+  bgcolor: "background.paper",
+  transition: "border-color 150ms",
+  "&:hover": { borderColor: "text.primary" },
+  "&.Mui-focused": { borderColor: "primary.main", boxShadow: (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}` },
+  "& input": { p: 0 },
+  // Read-only pricing has no box: it can't be typed in
+  "&.Mui-disabled": { borderColor: "transparent", px: 0 },
+  // Hide the number spinners
+  "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": { WebkitAppearance: "none", m: 0 },
+  "& input[type=number]": { MozAppearance: "textfield" },
+  // Read-only pricing stays readable instead of greyed out
+  "&.Mui-disabled input": { WebkitTextFillColor: "inherit", color: "text.primary" },
+};
+
+// The price grid's columns: the day type, then one input per guest type.
+// onChange(dayType, key, value) is the only way a price changes
+const getPriceColumns = ({ onChange, readOnly }) => [
+  { field: "id", headerName: "Day", flex: 1, minWidth: 110 },
+  ...GUEST_PRICES.map(({ key, label }) => ({
+    field: key,
+    headerName: label,
+    flex: 1,
+    minWidth: 110,
+    renderCell: ({ row, value }) => (
+      <InputBase
+        type="number"
+        value={value}
+        onChange={(e) => onChange(row.id, key, e.target.value)}
+        // Keep the grid's keyboard navigation from taking arrow keys and space while typing
+        onKeyDown={(e) => e.stopPropagation()}
+        disabled={readOnly}
+        startAdornment={<InputAdornment position="start">$</InputAdornment>}
+        inputProps={{ min: 0, step: "0.01", "aria-label": `${row.id} ${label} price` }}
+        sx={priceInput}
+      />
+    ),
+  })),
+];
+
 const percentInput = { input: { endAdornment: <InputAdornment position="end">%</InputAdornment> } };
 const dollarInput = { input: { startAdornment: <InputAdornment position="start">$</InputAdornment> } };
+
+// One part of the form, framed like the price grid so every section matches
+const Section = ({ title, description, children }) => (
+  <Paper variant="outlined" sx={{ p: 2, bgcolor: "background.paper" }}>
+    <Typography variant="h6">{title}</Typography>
+    {description && (
+      <Typography variant="body2" color="text.secondary">
+        {description}
+      </Typography>
+    )}
+    <Box sx={{ mt: 1.5 }}>{children}</Box>
+  </Paper>
+);
 
 /**
  * Tax, gratuity, leftover fee, weekend days and the price grid for one pricing profile.
  * Used for the default pricing and for a location's own pricing.
  * readOnly shows the values without a save button (a location that uses the default).
- * onSubmit gets the API request body; the parent shows any server error.
+ * onSubmit gets the API request body. The parent passes back how the save went as
+ * saveResult ({ severity, message }), shown next to the save button.
+ * Save is enabled once something changes, or straight away with canSaveUnchanged (a location
+ * switching to its own pricing, where saving the default prices as they are is the change).
  */
-const PricingProfileForm = ({ profile, onSubmit, submitLabel = "Save pricing", readOnly = false }) => {
+const PricingProfileForm = ({
+  profile,
+  onSubmit,
+  submitLabel = "Save pricing",
+  readOnly = false,
+  saveResult = null,
+  onSaveResultClose,
+  canSaveUnchanged = false,
+}) => {
   const [form, setForm] = useState(() => toForm(profile));
+  // The parent remounts the form after a save, so this is always what's stored
+  const [saved] = useState(() => comparable(toForm(profile)));
+  const unsaved = canSaveUnchanged || comparable(form) !== saved;
   const [problem, setProblem] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
-  const setPrice = (dayType, key) => (e) =>
-    setForm((f) => ({ ...f, rates: { ...f.rates, [dayType]: { ...f.rates[dayType], [key]: e.target.value } } }));
+  // Stable columns, so a price input isn't remounted (and loses focus) on every keystroke
+  const priceColumns = useMemo(
+    () =>
+      getPriceColumns({
+        readOnly,
+        onChange: (dayType, key, value) =>
+          setForm((f) => ({ ...f, rates: { ...f.rates, [dayType]: { ...f.rates[dayType], [key]: value } } })),
+      }),
+    [readOnly],
+  );
 
   const toggleDay = (day) =>
     setForm((f) => ({
@@ -107,6 +195,7 @@ const PricingProfileForm = ({ profile, onSubmit, submitLabel = "Save pricing", r
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    onSaveResultClose?.();
     const found = validate(form);
     setProblem(found);
     if (found) return;
@@ -122,10 +211,49 @@ const PricingProfileForm = ({ profile, onSubmit, submitLabel = "Save pricing", r
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate sx={{ textAlign: "left" }}>
       <Stack spacing={3}>
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Tax and fees
-          </Typography>
+        <Section title="Prices per guest">
+          <ManagementGrid
+            rows={DAY_TYPES.map((dayType) => ({ id: dayType, ...form.rates[dayType] }))}
+            columns={priceColumns}
+            showToolbar={false}
+            hideFooter
+            disableColumnMenu
+            disableColumnSorting
+          />
+        </Section>
+
+        <Section
+          title="When each price applies"
+          description="Checked days get Weekend prices and approved holidays get Holiday prices. Every other day gets Weekday prices."
+        >
+          <FormGroup row>
+            {WEEK.map((day) => (
+              <FormControlLabel
+                key={day}
+                label={day.slice(0, 3)}
+                control={
+                  <Checkbox
+                    checked={form.weekendDays.includes(day)}
+                    onChange={() => toggleDay(day)}
+                    disabled={readOnly}
+                  />
+                }
+              />
+            ))}
+          </FormGroup>
+          <FormControlLabel
+            label="Use holiday prices on approved holidays"
+            control={
+              <Switch
+                checked={form.applyHoliday}
+                onChange={(e) => setForm((f) => ({ ...f, applyHoliday: e.target.checked }))}
+                disabled={readOnly}
+              />
+            }
+          />
+        </Section>
+
+        <Section title="Tax and fees">
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(4, 1fr)" } }}>
             <TextField
               label="GST"
@@ -161,91 +289,33 @@ const PricingProfileForm = ({ profile, onSubmit, submitLabel = "Save pricing", r
               slotProps={{ ...dollarInput, htmlInput: { min: 0, step: "0.01" } }}
             />
           </Box>
-        </Box>
-
-        <Box>
-          <Typography variant="h6">Weekend days</Typography>
-          <Typography variant="body2" color="text.secondary">
-            These days get weekend prices; the others get weekday prices.
-          </Typography>
-          <FormGroup row>
-            {WEEK.map((day) => (
-              <FormControlLabel
-                key={day}
-                label={day.slice(0, 3)}
-                control={
-                  <Checkbox
-                    checked={form.weekendDays.includes(day)}
-                    onChange={() => toggleDay(day)}
-                    disabled={readOnly}
-                  />
-                }
-              />
-            ))}
-          </FormGroup>
-          <FormControlLabel
-            label="Use holiday prices on approved holidays"
-            control={
-              <Switch
-                checked={form.applyHoliday}
-                onChange={(e) => setForm((f) => ({ ...f, applyHoliday: e.target.checked }))}
-                disabled={readOnly}
-              />
-            }
-          />
-        </Box>
-
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Prices per guest
-          </Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell />
-                  {GUEST_PRICES.map(({ label }) => (
-                    <TableCell key={label}>{label}</TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {DAY_TYPES.map((dayType) => (
-                  <TableRow key={dayType}>
-                    <TableCell component="th" scope="row">
-                      {dayType}
-                    </TableCell>
-                    {GUEST_PRICES.map(({ key, label }) => (
-                      <TableCell key={key}>
-                        <TextField
-                          size="small"
-                          type="number"
-                          value={form.rates[dayType][key]}
-                          onChange={setPrice(dayType, key)}
-                          disabled={readOnly}
-                          sx={{ minWidth: 110 }}
-                          slotProps={{
-                            ...dollarInput,
-                            htmlInput: { min: 0, step: "0.01", "aria-label": `${dayType} ${label} price` },
-                          }}
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-
-        {problem && <Alert severity="error">{problem}</Alert>}
+        </Section>
 
         {!readOnly && (
-          <Box>
-            <Button type="submit" variant="contained" disabled={saving}>
-              {saving ? "Saving…" : submitLabel}
-            </Button>
-          </Box>
+          // Pinned to the bottom while scrolling, so Save and its result are always in view
+          <Paper
+            variant="outlined"
+            sx={{ position: "sticky", bottom: 0, zIndex: 2, p: 2, bgcolor: "background.paper" }}
+          >
+            <Stack spacing={1.5}>
+              {problem && <Alert severity="error">{problem}</Alert>}
+              {saveResult && (
+                <Alert severity={saveResult.severity} onClose={onSaveResultClose}>
+                  {saveResult.message}
+                </Alert>
+              )}
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-end">
+                {unsaved && (
+                  <Typography variant="body2" color="warning.main" role="status">
+                    Unsaved changes
+                  </Typography>
+                )}
+                <Button type="submit" variant="contained" disabled={saving || !unsaved}>
+                  {saving ? "Saving…" : submitLabel}
+                </Button>
+              </Stack>
+            </Stack>
+          </Paper>
         )}
       </Stack>
     </Box>

@@ -8,6 +8,7 @@ import {
 import OrderDashboard from "@/components/staff/Order";
 import api from "@/config/api";
 import { useOrder } from "@/contexts/OrderContext";
+import { toDateInput } from "@/components/staff/Order/hooks/useOrderHistory";
 
 jest.mock("@/config/api", () => {
   const mockApi = { get: jest.fn() };
@@ -198,5 +199,157 @@ describe("Order dashboard", () => {
         status: "Cancelled",
       }),
     );
+  });
+});
+
+const pastOrder = (
+  orderId,
+  sessionId,
+  billId,
+  billName,
+  status,
+  createdAt,
+  quantity,
+) => ({
+  orderId,
+  sessionId,
+  billId,
+  billName,
+  status,
+  tableNumbers: sessionId === 42 ? [1, 2] : [5],
+  createdAt,
+  items: [item(orderId * 10, `Item ${orderId}`, quantity, status)],
+});
+
+// Session 42 (Tables 1, 2): Lee has two orders, Park has one. Session 43 (Table 5): Kim
+const pastOrders = [
+  pastOrder(601, 42, 10, "Lee", "Delivered", "2026-10-14T19:00:00Z", 2),
+  pastOrder(602, 42, 11, "Park", "Delivered", "2026-10-14T19:05:00Z", 1),
+  pastOrder(603, 42, 10, "Lee", "Cancelled", "2026-10-14T19:30:00Z", 1),
+  pastOrder(604, 43, 12, "Kim", "Delivered", "2026-10-14T20:00:00Z", 3),
+];
+
+const mockHistory = (history) =>
+  api.get.mockImplementation((url) =>
+    url === "/Order/history" ? history() : Promise.resolve({ data: orders }),
+  );
+
+const openPastOrders = async () => {
+  render(<OrderDashboard />);
+  await waitFor(() => rowFor("#501"));
+  fireEvent.click(screen.getByRole("tab", { name: "Past Orders" }));
+  return screen.getByRole("form", { name: "Search past orders" });
+};
+
+const searchPastOrders = (form) =>
+  fireEvent.click(within(form).getByRole("button", { name: "Search" }));
+
+describe("Past orders", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useOrder.mockReturnValue(orderActions);
+    mockHistory(() => Promise.resolve({ data: pastOrders }));
+  });
+
+  it("prefills dates to today by default and shows one row per dining session", async () => {
+    const form = await openPastOrders();
+    searchPastOrders(form);
+
+    const today = toDateInput(new Date());
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith("/Order/history", {
+        params: { from: today, to: today, locationId: "1" },
+      }),
+    );
+
+    const row = await waitFor(() => rowFor("#42"));
+    expect(within(row).getByText("Tables 1, 2")).toBeInTheDocument();
+    expect(within(row).getByText("Lee, Park")).toBeInTheDocument();
+    expect(within(row).getByText("3")).toBeInTheDocument(); // orders
+    expect(within(row).getByText("4")).toBeInTheDocument(); // 2 + 1 + 1 items
+    expect(within(row).getByText("$20.00")).toBeInTheDocument();
+    expect(rowFor("#43")).toBeInTheDocument();
+  });
+
+  it("opens a table's orders split by bill, read only", async () => {
+    const form = await openPastOrders();
+    searchPastOrders(form);
+    const row = await waitFor(() => rowFor("#42"));
+
+    fireEvent.click(
+      within(row).getByRole("button", { name: "View table orders" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+
+    const lee = within(dialog).getByRole("region", { name: "Bill Lee" });
+    expect(within(lee).getByText("Order #601")).toBeInTheDocument();
+    expect(within(lee).getByText("Order #603")).toBeInTheDocument();
+    expect(within(lee).getAllByText("Cancelled").length).toBeGreaterThan(0);
+
+    const park = within(dialog).getByRole("region", { name: "Bill Park" });
+    expect(within(park).getByText("Order #602")).toBeInTheDocument();
+    expect(within(park).queryByText("Order #601")).not.toBeInTheDocument();
+
+    expect(
+      within(dialog).queryByRole("button", {
+        name: /approve|deliver|edit|undo/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends the table number and name filters", async () => {
+    const form = await openPastOrders();
+    fireEvent.change(within(form).getByLabelText("Table #"), {
+      target: { value: "14" },
+    });
+    fireEvent.change(within(form).getByLabelText("Guest or bill name"), {
+      target: { value: "  lee " },
+    });
+    searchPastOrders(form);
+
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith(
+        "/Order/history",
+        expect.objectContaining({
+          params: expect.objectContaining({ tableNumber: "14", name: "lee" }),
+        }),
+      ),
+    );
+  });
+
+  it("shows the range error without calling the API", async () => {
+    const form = await openPastOrders();
+    fireEvent.change(within(form).getByLabelText("From"), {
+      target: { value: "2026-01-01" },
+    });
+    fireEvent.change(within(form).getByLabelText("To"), {
+      target: { value: "2026-03-01" },
+    });
+    searchPastOrders(form);
+
+    expect(
+      await within(form).findByText("Choose a range of 31 days or fewer."),
+    ).toBeInTheDocument();
+    expect(api.get).not.toHaveBeenCalledWith(
+      "/Order/history",
+      expect.anything(),
+    );
+  });
+
+  it("shows API validation errors under the matching field", async () => {
+    mockHistory(() =>
+      Promise.reject({
+        response: {
+          status: 400,
+          data: { errors: { to: ["The end date can't be in the future."] } },
+        },
+      }),
+    );
+    const form = await openPastOrders();
+    searchPastOrders(form);
+
+    expect(
+      await within(form).findByText("The end date can't be in the future."),
+    ).toBeInTheDocument();
   });
 });

@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import {  } from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
 import StaffManagementForm from "@/components/admin/StaffManagementForm";
 import { getStaffColumns, isActiveAccount } from "@/components/admin/StaffList";
 import PasswordChangeDialog from "@/components/admin/PasswordChangeDialog";
@@ -8,8 +6,6 @@ import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
-
-// TODO: Missing Staff api
 
 const StaffManagementPage = () => {
   const [staff, setStaff] = useState([]);
@@ -59,8 +55,7 @@ const StaffManagementPage = () => {
 
       await fetchStaff();
 
-      setSuccessMessage(`Staff member ${
-          newStatus === "Active" ? "reactivated" : "deactivated"
+      setSuccessMessage(`Staff member ${newStatus === "Active" ? "reactivated" : "deactivated"
         } successfully`);
     } catch (err) {
       console.error("Error updating staff status:", err);
@@ -79,11 +74,7 @@ const StaffManagementPage = () => {
     try {
       setSubmitting(true);
 
-      let role = formData.role;
       formData.status = "active";
-      // delete formData.role;
-
-      // await api.post(`/staff/?role=${role}`, formData);
       await api.post(`/staff/`, formData);
       await fetchStaff();
       setFormOpen(false);
@@ -151,6 +142,7 @@ const StaffManagementPage = () => {
       onAdd={() => {
         setEditMode(false);
         setSelectedStaff(null);
+        setError(null);
         setFormOpen(true);
       }}
       error={formOpen || passwordDialogOpen ? null : error}
@@ -160,21 +152,24 @@ const StaffManagementPage = () => {
       gridProps={{
         rows: staff,
         columns: getStaffColumns({
+          // Each dialog shows the shared error, so clear it first
           onEdit: (staff) => {
             setSelectedStaff(staff);
             setEditMode(true);
+            setError(null);
             setFormOpen(true);
           },
           onChangePassword: (staff) => {
             setSelectedStaff(staff);
+            setError(null);
             setPasswordDialogOpen(true);
           },
           // Deactivating asks first; reactivating happens straight away
           onToggleStatus: isAdmin
             ? (staff) =>
-                isActiveAccount(staff)
-                  ? setStaffToDeactivate(staff)
-                  : handleStatusChange(staff, "Active")
+              isActiveAccount(staff)
+                ? setStaffToDeactivate(staff)
+                : handleStatusChange(staff, "Active")
             : undefined,
           isSelf,
         }),
@@ -182,11 +177,11 @@ const StaffManagementPage = () => {
         getRowId: (row) => row.user_id,
       }}
     >
-      <AppDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-      >
+      {/* Mounted only while open, so the fields start from the chosen staff member each time */}
+      {formOpen && (
         <StaffManagementForm
+          onClose={() => setFormOpen(false)}
+          onErrorClose={() => setError(null)}
           initialData={editMode ? selectedStaff : null}
           onSubmit={editMode ? handleUpdateStaff : handleCreateStaff}
           isLoading={submitting}
@@ -194,7 +189,7 @@ const StaffManagementPage = () => {
           mode={editMode ? "edit" : "create"}
           lockRole={editMode && isSelf(selectedStaff)}
         />
-      </AppDialog>
+      )}
 
       <ConfirmDialog
         open={!!staffToDeactivate}

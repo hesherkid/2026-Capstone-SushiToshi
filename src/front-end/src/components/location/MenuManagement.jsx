@@ -1,13 +1,9 @@
 import { useState, useEffect } from "react";
-import {
-  Button,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-} from "@mui/material";
+import { Typography } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
-import { Edit, AlertTriangle, Trash2, LocateFixed } from "lucide-react";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import serverMessage from "@/utils/serverMessage";
+import { Edit, Trash2, LocateFixed } from "lucide-react";
 import MenuForm from "@/components/location/MenuForm";
 import AddLocationsToMenu from "@/components/location/AddLocationToMenu";
 import api from "@/config/api";
@@ -25,6 +21,10 @@ const MenuManagement = () => {
   const [menuToDelete, setMenuToDelete] = useState(null);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [locationsList, setLocationsList] = useState([]);
+  // Shown inside the menu form and the delete confirmation
+  const [formError, setFormError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
 
   const fetchMenus = async () => {
@@ -33,27 +33,7 @@ const MenuManagement = () => {
       setMenus(response.data);
     } catch (err) {
       console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
+      setError(serverMessage(err, "Couldn't load the menus."));
     } finally {
       setLoading(false);
       
@@ -63,33 +43,12 @@ const MenuManagement = () => {
 
 
   const fetchLocations = async () => {
-    try{
-      const response = await api.get("/location")
+    try {
+      const response = await api.get("/location");
       setLocationsList(response.data);
-    }
-    catch (error){
+    } catch (err) {
       console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
+      setError(serverMessage(err, "Couldn't load the locations."));
     }
   };
 
@@ -102,6 +61,7 @@ const MenuManagement = () => {
   const handleCreate = () => {
     setSelectedMenu(null);
     setFormMode("create");
+    setFormError(null);
     setIsFormOpen(true);
   };
 
@@ -110,86 +70,53 @@ const MenuManagement = () => {
   setLocationDialogOpen(true);
   };
 
+  // The dialog lists menu.menuLocations, so reload the menus to show what was saved
+  const closeLocationDialog = () => {
+    setLocationDialogOpen(false);
+    fetchMenus();
+  };
+
   const handleEdit = (menu) => {
     setSelectedMenu(menu);
     setFormMode("edit");
+    setFormError(null);
     setIsFormOpen(true);
   };
 
   const handleDeleteClick = (menu) => {
     setMenuToDelete(menu);
+    setDeleteError(null);
     setDeleteDialogOpen(true);
   };
 
+  // Returns false on failure, so the confirm dialog stays open and shows why
   const handleDeleteConfirm = async () => {
+    setDeleteError(null);
     try {
       await api.delete(`/Menu/${menuToDelete.menu_id}`);
       await fetchMenus();
-      setDeleteDialogOpen(false);
       setMenuToDelete(null);
     } catch (err) {
-      console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
-      console.error(err);
+      setDeleteError(serverMessage(err, "Couldn't delete the menu."));
+      return false;
     }
   };
 
   const handleSubmit = async (formData) => {
+    setSaving(true);
+    setFormError(null);
     try {
       if (formMode === "create") {
         await api.post("/Menu/createmenu", formData);
       } else {
-        await api.put(`/Menu/${selectedMenu.menu_id}`,
-          formData
-        );
+        await api.put(`/Menu/${selectedMenu.menu_id}`, formData);
       }
       await fetchMenus();
       setIsFormOpen(false);
     } catch (err) {
-      console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
-      console.error(err);
+      setFormError(serverMessage(err, "Couldn't save the menu."));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -237,52 +164,32 @@ const MenuManagement = () => {
         getRowId: (row) => row.menu_id,
       }}
     >
-      <AppDialog
-        open={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-      >
+      {/* Mounted only while open, so the fields start from the chosen menu each time */}
+      {isFormOpen && (
         <MenuForm
           initialData={selectedMenu}
           onSubmit={handleSubmit}
           onClose={() => setIsFormOpen(false)}
           mode={formMode}
+          busy={saving}
+          error={formError}
+          onErrorClose={() => setFormError(null)}
         />
-      </AppDialog>
+      )}
 
-      <AppDialog
+      <ConfirmDialog
         open={deleteDialogOpen}
+        title="Delete menu"
+        message={`Are you sure you want to delete the menu "${menuToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete Menu"
+        error={deleteError}
+        onConfirm={handleDeleteConfirm}
         onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-      >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <AlertTriangle color="error" size={24} />
-          Confirm Delete
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete the menu "{menuToDelete?.name}"?
-            This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            variant="contained"
-            color="error"
-            autoFocus
-          >
-            Delete Menu
-          </Button>
-        </DialogActions>
-      </AppDialog>
-      <AppDialog open={locationDialogOpen} onClose={() => setLocationDialogOpen(false)}>
+      />
+      <AppDialog open={locationDialogOpen} onClose={closeLocationDialog}>
         <AddLocationsToMenu
           menu={selectedMenu}
-          // onSubmit={handleLocationSubmit}
-          onClose={() => setLocationDialogOpen(false)}
+          onClose={closeLocationDialog}
           availableLocations={locationsList}
         />
       </AppDialog>

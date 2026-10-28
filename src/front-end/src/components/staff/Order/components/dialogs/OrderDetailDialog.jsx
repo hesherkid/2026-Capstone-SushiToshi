@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
@@ -16,8 +15,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
+import DialogHeader from "@/components/common/DialogHeader";
 import {
-  X,
   Check,
   Trash2,
   Plus,
@@ -163,37 +162,28 @@ const OrderDetailDialog = () => {
 
   return (
     <>
-      <AppDialog
-        open={!!order}
-        onClose={closeOrder}
-      >
+      <AppDialog open={!!order} onClose={closeOrder}>
         {order && (
           <>
-            <DialogTitle>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
-              >
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="h6" component="span">
-                      Order #{order.orderId} · {tableLabel(order.tableNumbers)}
-                    </Typography>
-                    <StatusChip status={order.status} />
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Session #{order.sessionId} · {order.items.length} item
-                    {order.items.length === 1 ? "" : "s"}
-                  </Typography>
+            <DialogHeader
+              title={
+                <Box
+                  component="span"
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
+                  Order #{order.orderId} · {tableLabel(order.tableNumbers)}
+                  <StatusChip status={order.status} />
                 </Box>
-                <IconButton aria-label="Close" onClick={closeOrder} size="small">
-                  <X size={20} />
-                </IconButton>
-              </Box>
-            </DialogTitle>
+              }
+              subtitle={
+                <>
+                  Session #{order.sessionId} · {order.items.length} item
+                  {order.items.length === 1 ? "" : "s"}
+                  {order.billName ? ` · Bill: ${order.billName}` : ""}
+                </>
+              }
+              onClose={closeOrder}
+            />
 
             <DialogContent dividers sx={{ px: 0 }}>
               <List sx={{ py: 0 }}>
@@ -214,7 +204,9 @@ const OrderDetailDialog = () => {
                         </Typography>
                         <StatusChip status={item.status} sx={{ mt: 0.5 }} />
                       </Box>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         {renderItemControls(item)}
                       </Box>
                     </ListItem>
@@ -235,7 +227,9 @@ const OrderDetailDialog = () => {
                     variant="outlined"
                     onClick={() => actions.saveChanges(order)}
                     disabled={busy}
-                    startIcon={busy ? <CircularProgress size={16} /> : <Save size={16} />}
+                    startIcon={
+                      busy ? <CircularProgress size={16} /> : <Save size={16} />
+                    }
                   >
                     Save Changes
                   </Button>
@@ -245,7 +239,11 @@ const OrderDetailDialog = () => {
                     onClick={() => actions.saveAndApprove(order)}
                     disabled={busy}
                     startIcon={
-                      busy ? <CircularProgress size={16} /> : <CheckCircle size={16} />
+                      busy ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <CheckCircle size={16} />
+                      )
                     }
                   >
                     Save & Approve
