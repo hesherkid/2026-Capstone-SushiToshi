@@ -10,12 +10,16 @@ import { useOrderDashboardActions } from "../hooks/useOrderDashboardActions";
 import { ORDER_STATUS } from "../hooks/useOrderData";
 import { getOrderColumns, STATUS_OPTIONS } from "./OrderColumns";
 import OrderDetailDialog from "./dialogs/OrderDetailDialog";
+import OrderHistoryPanel from "./OrderHistoryPanel";
 
 const TABS = [
   ORDER_STATUS.PENDING,
   ORDER_STATUS.PROCESSING,
   ORDER_STATUS.DELIVERED,
 ];
+
+// Past-order lookup; not a status, so it has no count
+const HISTORY_TAB = "HISTORY";
 
 // Open orders oldest first so the longest-waiting table is at the top; finished orders newest first
 const sortFor = (status) => [
@@ -106,26 +110,31 @@ const OrderDashboardInner = () => {
             label={`${STATUS_OPTIONS[status].label} (${orderCounts[status]})`}
           />
         ))}
+        <Tab value={HISTORY_TAB} label="Past Orders" />
       </Tabs>
 
-      <ManagementGrid
-        key={activeTab}
-        rows={rows}
-        columns={getOrderColumns({
-          view: (order) => openOrder(order.orderId),
-          approve: actions.approve,
-          markAllDelivered: actions.markAllDelivered,
-        })}
-        loading={isLoading}
-        getRowId={(row) => row.orderId}
-        initialState={{
-          sorting: { sortModel: sortFor(activeTab) },
-          pagination: { paginationModel: { pageSize: 25 } },
-        }}
-        localeText={{
-          noRowsLabel: `No ${STATUS_OPTIONS[activeTab].label.toLowerCase()} orders`,
-        }}
-      />
+      {activeTab === HISTORY_TAB ? (
+        <OrderHistoryPanel />
+      ) : (
+        <ManagementGrid
+          key={activeTab}
+          rows={rows}
+          columns={getOrderColumns({
+            view: (order) => openOrder(order.orderId),
+            approve: actions.approve,
+            markAllDelivered: actions.markAllDelivered,
+          })}
+          loading={isLoading}
+          getRowId={(row) => row.orderId}
+          initialState={{
+            sorting: { sortModel: sortFor(activeTab) },
+            pagination: { paginationModel: { pageSize: 25 } },
+          }}
+          localeText={{
+            noRowsLabel: `No ${STATUS_OPTIONS[activeTab].label.toLowerCase()} orders`,
+          }}
+        />
+      )}
 
       <OrderDetailDialog />
     </Box>

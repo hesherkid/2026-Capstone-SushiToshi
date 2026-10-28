@@ -2,7 +2,12 @@
 import { useState, useEffect } from "react";
 import { Alert, Box, Tab, Tabs, Typography } from "@mui/material";
 import api from "@/config/api";
-import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import {
+  fetchMySessionId,
+  isSeatGone,
+  recheckSeat,
+  NOT_SEATED_MESSAGE,
+} from "@/services/tableSession";
 import { setPageLoading } from "@/utils/pageLoading";
 import BillDetails from "@/components/customer/BillDetails";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
@@ -74,16 +79,30 @@ const BillsPage = () => {
       // Cancelled bills are nothing to pay; open ones first
       const list = sortBillsByStatus(
         (Array.isArray(res.data) ? res.data : []).filter(
-          (bill) => bill?.bill_id && String(bill.status ?? "").toUpperCase() !== "CANCELLED",
+          (bill) =>
+            bill?.bill_id &&
+            String(bill.status ?? "").toUpperCase() !== "CANCELLED",
         ),
       );
       setBills(list);
 
-      // Keep the bill being looked at; otherwise this phone's bill, otherwise the first
+      // Keep the bill being looked at; otherwise this phone's bill, otherwise the first.
+      // If the seat is gone show thank you screen
       setSelectedBillId((current) =>
-        list.some((bill) => bill.bill_id === current) ? current : myBillId(list) ?? list[0]?.bill_id ?? null,
+        list.some((bill) => bill.bill_id === current)
+          ? current
+          : (myBillId(list) ?? list[0]?.bill_id ?? null),
       );
     } catch (err) {
+      if (isSeatGone(err)) {
+        const stillSeatedAt = await recheckSeat();
+        setBills([]);
+        setSelectedBillId(null);
+        setSessionId(stillSeatedAt);
+        if (!stillSeatedAt) setNotSeated(true);
+        return;
+      }
+
       console.error("Error fetching bills:", err);
 
       // 404 means no bills exist - not an error
@@ -91,7 +110,11 @@ const BillsPage = () => {
         setBills([]);
         setSelectedBillId(null);
       } else if (!quiet) {
-        notifyError(err?.response?.data?.detail || err?.response?.data?.message || "Error loading bills");
+        notifyError(
+          err?.response?.data?.detail ||
+            err?.response?.data?.message ||
+            "Error loading bills",
+        );
       }
     } finally {
       if (!quiet) setLoading(false);
@@ -100,17 +123,22 @@ const BillsPage = () => {
 
   useEffect(() => {
     if (sessionId) fetchBills(sessionId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Shows a bill as soon as staff open it, and its status as it changes
-  useAutoRefresh(() => fetchBills(sessionId, { quiet: true }), { enabled: !!sessionId });
+  useAutoRefresh(() => fetchBills(sessionId, { quiet: true }), {
+    enabled: !!sessionId,
+  });
 
   const ordersGoOn = myBillId(bills);
 
   return (
     <CustomerPageContainer sx={{ maxWidth: 720 }}>
-      <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
+      <Typography
+        variant="h5"
+        component="h1"
+        sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}
+      >
         {bills.length > 1 ? "Your table's bills" : "Your bill"}
       </Typography>
 
@@ -130,7 +158,8 @@ const BillsPage = () => {
               No bills yet
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-              Your server will open a bill for your table, and it will show up here.
+              Your server will open a bill for your table, and it will show up
+              here.
             </Typography>
           </Box>
         )
@@ -149,8 +178,16 @@ const BillsPage = () => {
                 <Tab
                   key={bill.bill_id}
                   value={bill.bill_id}
-                  label={bill.bill_id === ordersGoOn ? `${billName(bill)} (yours)` : billName(bill)}
-                  sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.95rem" }}
+                  label={
+                    bill.bill_id === ordersGoOn
+                      ? `${billName(bill)} (yours)`
+                      : billName(bill)
+                  }
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                  }}
                 />
               ))}
             </Tabs>

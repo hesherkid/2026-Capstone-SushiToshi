@@ -162,15 +162,15 @@ const OrderDetailDialog = () => {
 
   return (
     <>
-      <AppDialog
-        open={!!order}
-        onClose={closeOrder}
-      >
+      <AppDialog open={!!order} onClose={closeOrder}>
         {order && (
           <>
             <DialogHeader
               title={
-                <Box component="span" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box
+                  component="span"
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
                   Order #{order.orderId} · {tableLabel(order.tableNumbers)}
                   <StatusChip status={order.status} />
                 </Box>
@@ -179,6 +179,7 @@ const OrderDetailDialog = () => {
                 <>
                   Session #{order.sessionId} · {order.items.length} item
                   {order.items.length === 1 ? "" : "s"}
+                  {order.billName ? ` · Bill: ${order.billName}` : ""}
                 </>
               }
               onClose={closeOrder}
@@ -203,7 +204,9 @@ const OrderDetailDialog = () => {
                         </Typography>
                         <StatusChip status={item.status} sx={{ mt: 0.5 }} />
                       </Box>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         {renderItemControls(item)}
                       </Box>
                     </ListItem>
@@ -224,7 +227,9 @@ const OrderDetailDialog = () => {
                     variant="outlined"
                     onClick={() => actions.saveChanges(order)}
                     disabled={busy}
-                    startIcon={busy ? <CircularProgress size={16} /> : <Save size={16} />}
+                    startIcon={
+                      busy ? <CircularProgress size={16} /> : <Save size={16} />
+                    }
                   >
                     Save Changes
                   </Button>
@@ -234,7 +239,11 @@ const OrderDetailDialog = () => {
                     onClick={() => actions.saveAndApprove(order)}
                     disabled={busy}
                     startIcon={
-                      busy ? <CircularProgress size={16} /> : <CheckCircle size={16} />
+                      busy ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <CheckCircle size={16} />
+                      )
                     }
                   >
                     Save & Approve
