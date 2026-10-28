@@ -1,9 +1,5 @@
 # Testing Documentation - 2026 C#Capstone - Sushi Toshi
 
-> **CI Update (2026-10-08):** GitHub Actions workflow rebuilt for this fork. CI now runs on `main` only (PRs + pushes) plus a manual "Run workflow" button. Frontend requires Node.js 20.9+ (CI uses Node 22). E2E tests run in CI on every PR (Chromium only) a required check. Codecov has been removed. QR code generation uses SkiaSharp (not System.Drawing). See [CI/CD Pipeline](#cicd-pipeline).
-
-> **Recent Update (2025-11-10):** All test compilation errors have been fixed. Backend tests updated to use `User_Oid`/`User_Name` instead of `User_Id` to match the current authentication model. BillController tests updated to include `IPricingService` dependency. All 101 backend tests and 87 frontend tests are now passing.
-
 ## Table of Contents
 
 - [Overview](#overview)
@@ -21,19 +17,19 @@
 
 ## Overview
 
-This document provides comprehensive documentation for the automated testing infrastructure implemented for the Sushi Toshi Restaurant Management System. The testing framework follows the **testing pyramid** strategy to ensure code quality and reliability.
+This document covers the automated tests for the Sushi Toshi Restaurant Management System: what exists, how to run it, how to add to it, and what CI checks on every pull request.
 
 ### Testing Pyramid
 
-- **Unit Tests (70%)**: Back-end services, controllers, and front-end components
-- **Integration Tests (20%)**: API endpoints with database interactions
-- **E2E Tests (10%)**: Critical user flows and workflows
+- **Unit Tests**: Back-end controllers, services, helpers, DTOs and seeders; front-end components, hooks and utilities
+- **Integration Tests**: API endpoints running in the real app pipeline
+- **E2E Tests**: Critical user flows in a real browser
 
 ### Testing Philosophy
 
 - Tests are isolated and independent
 - Tests follow AAA pattern (Arrange, Act, Assert)
-- Tests have descriptive names (Given_When_Then pattern)
+- Tests have descriptive names (`MethodName_Scenario_ExpectedResult`)
 - Tests cover happy path and edge cases
 - Tests verify error handling
 - Tests include accessibility checks (frontend)
@@ -52,6 +48,7 @@ This document provides comprehensive documentation for the automated testing inf
 - **Assertion Library**: FluentAssertions
 - **Mocking Framework**: Moq
 - **In-Memory Database**: Microsoft.EntityFrameworkCore.InMemory
+- **Integration Host**: `WebApplicationFactory<Program>` (Microsoft.AspNetCore.Mvc.Testing)
 - **Code Coverage**: Coverlet
 
 **Test Projects:**
@@ -59,11 +56,12 @@ This document provides comprehensive documentation for the automated testing inf
 ```
 src/
 ├── back-end.Tests/              # Unit tests
-│   ├── Controllers/             # Controller tests
+│   ├── Controllers/             # Controller tests (incl. analytics, auth, staff location lock)
 │   ├── Services/                # Service tests
-│   ├── Helpers/                 # Helper tests
-│   └── DTO/                     # DTO validation tests
-└── back-end.IntegrationTests/   # Integration tests
+│   ├── Helpers/                 # Helper tests (bill calculator, order limits, claims, date ranges)
+│   ├── DTO/                     # DTO validation tests
+│   └── Seeders/                 # Seed data rule tests
+└── back-end.IntegrationTests/   # Integration tests (QR codes, guest login rate limiting)
 ```
 
 ### Frontend Testing Stack
@@ -72,31 +70,44 @@ src/
 
 - **Unit Testing**: Jest + React Testing Library
 - **E2E Testing**: Playwright
+- **Component Stories**: Storybook, with story tests run by Vitest in a headless Chromium browser
 - **Assertion Library**: @testing-library/jest-dom
 - **User Interaction**: @testing-library/user-event
 - **Code Coverage**: Istanbul (built into Jest)
 
 **Configuration Files:**
 
-- `src/front-end/jest.config.js` - Jest configuration
-- `src/front-end/jest.setup.js` - Test environment setup
+- `src/front-end/jest.config.js` - Jest configuration (timeouts, path aliases, coverage thresholds)
+- `src/front-end/jest.setup.js` - Test environment setup (jest-dom, `matchMedia` and other jsdom polyfills)
 - `src/front-end/playwright.config.js` - E2E test configuration
+- `src/front-end/vitest.config.js` - Storybook story tests
+- `src/front-end/.storybook/` - Storybook configuration
 
 **Test Organization:**
+
+Tests live in `__tests__` folders next to the code they test:
 
 ```
 src/front-end/
 ├── src/
-│   └── components/
-│       ├── admin/
-│       │   └── __tests__/       # Admin component tests
-│       ├── auth/
-│       │   └── __tests__/       # Auth component tests
-│       ├── customer/
-│       │   └── __tests__/       # Customer component tests
-│       └── staff/
-│           └── __tests__/       # Staff component tests
-└── e2e/                         # E2E tests
+│   ├── components/
+│   │   ├── __tests__/           # Shared layout components (AppBarWithTitle)
+│   │   ├── admin/__tests__/     # Admin pages and dialogs (incl. pricing/__tests__)
+│   │   ├── analytics/__tests__/ # Analytics reports
+│   │   ├── auth/__tests__/      # Login, register, QR login redirect
+│   │   ├── bills/__tests__/
+│   │   ├── common/__tests__/    # Shared dialogs and management page
+│   │   ├── customer/__tests__/
+│   │   ├── home/__tests__/
+│   │   ├── location/__tests__/
+│   │   ├── menu/__tests__/
+│   │   ├── staff/               # Order, Session and Table dashboards (each has __tests__)
+│   │   └── tags/__tests__/
+│   ├── hooks/__tests__/
+│   ├── services/__tests__/
+│   ├── utils/__tests__/
+│   └── stories/                 # Storybook stories
+└── e2e/                         # Playwright E2E tests
     └── qr-code-generation.spec.js
 ```
 
@@ -104,150 +115,79 @@ src/front-end/
 
 ## Current Test Coverage
 
-### Backend Test Status
+Test counts change with almost every PR, so they aren't listed here. Run the suites (see [Running Tests](#running-tests)) to see current numbers.
 
-#### Implemented Tests ✅
+### Backend
 
-**Controllers (7/19 tested - ~37%)**
+**Controllers with tests:**
 
-1. **AuthControllerTests** (12+ test cases)
-   - Login with valid/invalid credentials
-   - Registration with validation
-   - Email case insensitivity
-   - Password hashing verification
-   - Last interaction timestamp updates
-
-2. **BillControllerTests** (Comprehensive)
-   - Bill creation, retrieval, closure
-   - Bill cancellation
-   - Authorization checks
-
-3. **AdminQrCodeControllerTests** (12+ test cases)
-   - WiFi QR generation
-   - Session QR generation
-   - Bulk generation
-   - Cache management
-   - Input validation
-
-4. **CategoryAndTagControllerTests**
-   - Category CRUD operations
-   - Tag management
-
-5. **LocationControllerTests**
-   - Location management
-   - Menu assignment
-
-6. **MenuControllerTests**
-   - Menu CRUD operations
-   - Menu item retrieval
-
-7. **OrderControllerTests**
-   - Order creation
-   - Status updates
-
-**Services (1/3 tested - ~33%)**
-
-1. **QrGeneratorServiceTests** (15+ test cases)
-   - WiFi credential retrieval
-   - QR code generation (WiFi & Session)
-   - Label rendering
-   - URL generation
-   - Error handling
-
-#### Tests Needed ⚠️
-
-**Controllers:**
-
-- AnalyticsController
-- DashboardController
-- DiningSessionController
-- MenuItemController
-- MenuAssignmentController
-- MenuLocationController
+- AdminQrCodeController
+- AuthController (email login, guest login)
+- BillController (access, gratuity, price snapshots, bill requests, leftover fees)
+- CategoryController and TagController
+- CustomerController
+- DashboardController and DiningSessionController (session join, active session lookup, menu access)
+- HolidayController
+- LocationController
+- MenuController
+- MenuItemViewController
+- OrderController (table orders, order limit enforcement)
+- PricingController
 - ServiceRequestController
-- SessionController
-- SessionParticipantController
 - StaffController
-- TableController
-- TableEntityController
-- TableGroupController
-- TagController
+- Analytics: BrowsingBehavior, ItemPerformance, OrderTiming and TableTurnover controllers
+- Staff location lock, which covers Dashboard, DiningSession, MenuAssignment, Order, ServiceRequest and TableEntity controllers
 
-**Services:**
+**Services with tests:** QrGeneratorService, LocationAccessService, PricingService (restaurant time), and the four analytics services through their controller tests.
 
-- SendGridEmailServices
-- PricingService
+**Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, analytics date ranges, DTO validation, and seeder rules.
 
-### Frontend Test Status
+**Integration tests:** QR code endpoints and guest login rate limiting.
 
-#### Implemented Tests ✅
+**Not yet tested:**
 
-**Components (3/99 tested - ~3%)**
+- Controllers: MenuItemController, MenuLocationController, SessionController, SessionParticipantController, TableController, TableGroupController. MenuAssignmentController and TableEntityController are only covered by the staff location lock tests.
+- Services: AuthTokenService, HolidayService, CanadaHolidaysClient, SendGridEmailService
 
-1. **LoginForm** (25+ test cases)
-   - Rendering tests
-   - Form interactions
-   - Form submission
-   - Error handling
-   - Navigation
-   - Accessibility
-   - Validation
+### Frontend
 
-2. **RegisterForm** (20+ test cases)
-   - Rendering tests
-   - Form interactions
-   - Password validation
-   - Success/error states
-   - HTTP error handling (400, 409, 422, 500)
-   - Accessibility
+**Covered areas:**
 
-3. **Header** (30+ test cases)
-   - Role-based rendering (Customer, Staff, Admin)
-   - Navigation tests
-   - Logout functionality
-   - Dropdown menus
-   - Click-outside-to-close
-   - Accessibility
+- Auth: LoginForm, RegisterForm, QrLoginRedirect
+- Admin: categories, customers, holidays, menu items, menu assignment, QR codes, staff, tags, pricing profiles
+- Analytics: nav and all four reports
+- Staff: Order, Session and Table dashboards, plus the bill summary, new bill and leftover fee dialogs
+- Customer: bill dialog, side and bottom nav, service request form
+- Menu: item card, cart line, quantity stepper, review order button, item view tracking
+- Common: AppDialog, ConfirmDialog, ManagementPage, AppBarWithTitle
+- Hooks: useAutoRefresh, useOrderActions
+- Utils and services: auth, serverMessage, tableVisit, tableSession
 
-**E2E Tests:**
+**Not yet tested (highest value first):**
 
-1. **QR Code Generation Flow** (Partially implemented)
-   - Login page navigation
-   - QR code page tests
-   - Customer ordering flow
-   - Mobile responsiveness
+- Auth: ForgotPasswordForm, ResetPasswordForm, VerifyEmailForm
+- Location management: LocationManagement, LocationForm, MenuManagement, MenuForm, MenuAssignmentForm, AddLocationToMenu
+- Staff dialogs: NewSessionDialog, SessionDetailDialog, AddTableDialog, OrderDetailDialog, and the TableDashboard dialogs
+- Admin: MenuItemForm, PasswordChangeDialog, DefaultPricing
+- Analytics: AnalyticsOverview, ReportExport
+- Hooks: useAuth, useItemViewTracker
 
-#### Components Needing Tests ⚠️
+### E2E
 
-**High Priority (96 components):**
+One spec, `e2e/qr-code-generation.spec.js`. It covers the login page, admin navigation to QR codes, the customer ordering flow and mobile layout.
 
-- SessionDashboard (staff)
-- TableDashboard (staff)
-- QRCodeManagement (admin)
-- StaffManagementPage (admin)
-- MenuItemManagement (admin)
-- OrderDashboard (customer)
-- BillManagement (customer)
-- Analytics components (5+ components)
-- Menu browsing components
-- Form components (ForgotPassword, ResetPassword)
+### Coverage thresholds
 
-### Coverage Statistics
+`jest.config.js` enforces a low baseline so the build fails if coverage drops:
 
-#### Backend
+| Metric     | Threshold |
+| ---------- | --------- |
+| Branches   | 3%        |
+| Functions  | 2%        |
+| Lines      | 3%        |
+| Statements | 3%        |
 
-- **Current Coverage**: ~35% (7 of 22 controllers tested)
-- **Target Coverage**: 80%+ overall, 90%+ for services
-
-#### Frontend
-
-- **Current Coverage**: ~3% (3 of 99 components tested)
-- **Target Coverage**: 0%+ overall, 90%+ for critical components
-- **Coverage Thresholds** (jest.config.js):
-  - Branches: 70%
-  - Functions: 70%
-  - Lines: 70%
-  - Statements: 70%
+Raise these as coverage grows. The long-term target is 70% for each metric (see [Coverage Goals](#coverage-goals)).
 
 ---
 
@@ -258,8 +198,8 @@ src/front-end/
 #### Prerequisites
 
 - .NET 9.0 SDK
-- Windows OS recommended (CI uses Windows). QR code generation uses SkiaSharp; `SkiaSharp.NativeAssets.Linux` is referenced in `back-end.csproj` so it also runs on Linux.
-- Integration tests start the real app, which validates `SendGrid:ApiKey` on startup. Locally this comes from user secrets; CI supplies a placeholder value
+- Runs on Windows, macOS and Linux. CI runs backend tests on Windows. QR code generation uses SkiaSharp, and `SkiaSharp.NativeAssets.Linux` is referenced in `back-end.csproj` for Linux.
+- Integration tests start the real app, which validates `SendGrid:ApiKey` on startup. Locally this comes from user secrets; CI supplies a placeholder value.
 
 #### Run All Backend Tests
 
@@ -272,22 +212,14 @@ dotnet test src/back-end.IntegrationTests/back-end.IntegrationTests.csproj
 #### Run Specific Test File
 
 ```bash
-dotnet test --filter "FullyQualifiedName~AuthControllerTests"
-dotnet test --filter "FullyQualifiedName~QrGeneratorServiceTests"
+dotnet test src/back-end.Tests --filter "FullyQualifiedName~EmailLoginTests"
+dotnet test src/back-end.Tests --filter "FullyQualifiedName~QrGeneratorServiceTests"
 ```
 
 #### Run with Detailed Output
 
 ```bash
-dotnet test --logger "console;verbosity=detailed"
-```
-
-#### Generate Coverage Report
-
-```bash
-cd src/back-end.Tests
-dotnet test --collect:"XPlat Code Coverage"
-# Coverage report: TestResults/*/coverage.cobertura.xml
+dotnet test src/back-end.Tests --logger "console;verbosity=detailed"
 ```
 
 ### Frontend Tests
@@ -325,16 +257,29 @@ npm test LoginForm.test.jsx
 npm test -- --testNamePattern="should render"
 ```
 
+#### Storybook
+
+```bash
+# Browse component stories at http://localhost:6006
+npm run storybook
+
+# Run the story tests (headless Chromium)
+npx vitest --project=storybook
+```
+
+Story tests are not run in CI.
+
 ### End-to-End Tests
 
-> **E2E tests run in CI** on every PR and are a required check. Run them locally before opening a PR.
+> **E2E tests run in CI** on every PR and are a required check. Run them locally before opening a PR that changes a tested flow.
 
 #### Prerequisites
 
-- Playwright installed
 - MariaDB running (via `docker-compose`)
 - Backend server running on `http://localhost:5264`
-- Frontend server running on `http://localhost:3000`
+- Playwright browsers installed (below)
+
+Playwright starts the frontend itself (`npm run dev` locally, `npm run start` in CI), or reuses one already running on `http://localhost:3000`.
 
 #### Install Playwright Browsers
 
@@ -355,31 +300,15 @@ npm run test:e2e:headed
 # UI mode (interactive debugging)
 npm run test:e2e:ui
 
-# Specific browser
+# Chromium only (what CI runs)
 npx playwright test --project=chromium
 ```
 
 ### Run All Tests (PowerShell Script)
 
-Create `run-all-tests.ps1`:
+`run-all-tests.ps1` in the project root runs the backend unit tests, backend integration tests and frontend unit tests in order, then prints a pass/fail summary. It does not run E2E tests.
 
 ```powershell
-Write-Host "Running Back-End Unit Tests..." -ForegroundColor Green
-dotnet test src/back-end.Tests/back-end.Tests.csproj
-
-Write-Host "Running Back-End Integration Tests..." -ForegroundColor Green
-dotnet test src/back-end.IntegrationTests/back-end.IntegrationTests.csproj
-
-Write-Host "Running Front-End Tests..." -ForegroundColor Green
-cd src/front-end
-npm test -- --watchAll=false
-
-Write-Host "All tests completed!" -ForegroundColor Green
-```
-
-Then run:
-
-```bash
 .\run-all-tests.ps1
 ```
 
@@ -442,6 +371,8 @@ public class YourControllerTests : IDisposable
 }
 ```
 
+Controllers that filter by the signed-in staff member's location take an `ILocationAccessService`. Most tests pass a real `new LocationAccessService(_context)` so the location rules are exercised too. See `StaffLocationLockTests.cs` for examples.
+
 #### Service Test Template
 
 ```csharp
@@ -472,37 +403,78 @@ public class YourServiceTests
 }
 ```
 
+#### Integration Test Template
+
+```csharp
+public class YourIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public YourIntegrationTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task Endpoint_Scenario_ExpectedResult()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/your-endpoint");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+}
+```
+
+See `QrCodeIntegrationTests.cs` and `GuestLoginRateLimitTests.cs` for complete examples.
+
 ### Frontend Testing Patterns
 
 #### Component Test Template
 
-```jsx
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import YourComponent from "../YourComponent";
+Components call the backend through the shared axios instance in `@/config/api`, so tests mock that module rather than `axios` itself.
 
-// Mock dependencies
-jest.mock("axios");
+```jsx
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import YourComponent from "@/components/area/YourComponent";
+import api from "@/config/api";
+import { useAuth } from "@/hooks/useAuth";
+
+jest.mock("@/config/api", () => {
+  const mockApi = { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() };
+  return { __esModule: true, default: mockApi, api: mockApi };
+});
+
+jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
+
 jest.mock("next/navigation", () => ({
-  useRouter: jest.fn(),
+  useRouter: jest.fn(() => ({ push: jest.fn() })),
 }));
 
 describe("YourComponent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useAuth.mockReturnValue({ userRole: "admin", userEmail: "admin@example.com" });
   });
 
-  it("should render component correctly", () => {
-    // Arrange & Act
+  it("should render component correctly", async () => {
+    // Arrange
+    api.get.mockResolvedValueOnce({ data: [] });
+
+    // Act
     render(<YourComponent />);
 
     // Assert
-    expect(screen.getByText("Expected Text")).toBeInTheDocument();
+    expect(await screen.findByText("Expected Text")).toBeInTheDocument();
   });
 
   it("should handle user interaction", async () => {
     // Arrange
     const user = userEvent.setup();
+    api.get.mockResolvedValue({ data: [] });
+    api.post.mockResolvedValueOnce({ data: {} });
     render(<YourComponent />);
 
     // Act
@@ -510,25 +482,26 @@ describe("YourComponent", () => {
 
     // Assert
     await waitFor(() => {
-      expect(screen.getByText("Success")).toBeInTheDocument();
+      expect(api.post).toHaveBeenCalled();
     });
   });
 
   it("should handle API errors", async () => {
     // Arrange
-    axios.get.mockRejectedValueOnce(new Error("API Error"));
-    render(<YourComponent />);
+    api.get.mockRejectedValueOnce(new Error("API Error"));
 
     // Act
-    await user.click(screen.getByRole("button", { name: /load/i }));
+    render(<YourComponent />);
 
     // Assert
-    await waitFor(() => {
-      expect(screen.getByText(/error/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText(/error/i)).toBeInTheDocument();
   });
 });
 ```
+
+Components that use the MUI `DataGrid` need a little extra setup in jsdom (virtualization off, a `ResizeObserver` stub). Copy it from `src/components/admin/__tests__/CustomerManagement.test.jsx`.
+
+See [Frontend Testing Guide](frontend-testing.md) for more templates and patterns.
 
 #### Form Component Test Checklist
 
@@ -553,6 +526,8 @@ describe("YourComponent", () => {
 
 **File**: `.github/workflows/automated-tests.yml`
 
+A new push to a branch or PR cancels its older, still-running workflow run.
+
 ### Pipeline Jobs
 
 #### 1. Backend - build, unit & integration tests (`windows-latest`) - required
@@ -571,39 +546,41 @@ describe("YourComponent", () => {
 - Next.js production build (npm run build)
 ```
 
-#### 3. E2E tests - Playwright, Chromium (`ubuntu-latest`) - NOT required
+#### 3. E2E tests - Playwright, Chromium (`ubuntu-latest`) - required
 
 ```yaml
-- Runs only after a PR merges into main, or from "Run workflow" - never on PRs
-- Starts MariaDB as a service container (Linux-only feature) on port 3307
+- Runs after the backend and frontend jobs pass
+- Starts MariaDB as a service container on port 3307
+- Installs libfontconfig1 (needed by SkiaSharp for QR codes)
 - Starts the API on port 5264 and waits until /db-test confirms the database
   (the API applies migrations and seeds the empty database on startup)
 - Builds the frontend; Playwright starts it with `npm run start`
 - Runs Playwright with Chromium only
-- Uploads the "playwright-report" artifact (screenshots of failures)
+- Uploads the "playwright-report" artifact (screenshots of failures), even when tests fail
 ```
 
-**Not in CI:** Codecov (removed). Results and coverage are shown in each job's log.
+**Not in CI:** Codecov (removed) and Storybook story tests. Results and coverage are shown in each job's log.
 
 ### Pipeline Triggers
 
-**Automatic Execution:**
+**Automatic Execution** (all three jobs):
 
-- Pull requests to `main` (backend + frontend jobs)
-- Pushes to `main`, i.e. after a PR is merged (backend + frontend + E2E jobs)
+- Pull requests to `main`
+- Pushes to `main`, i.e. after a PR is merged
 
 **Manual Execution:**
 
 - Navigate to Actions tab in GitHub
 - Select "Automated Tests" workflow
-- Click "Run workflow", choose the branch, and run (includes E2E)
+- Click "Run workflow", choose the branch, and run
 
 ### Required Checks (branch protection on `main`)
 
-PRs cannot be merged until both of these pass. If a check fails, the PR author fixes it and pushes again:
+PRs cannot be merged until all of these pass. If a check fails, the PR author fixes it and pushes again:
 
 - `Backend - build, unit & integration tests`
 - `Frontend - lint, unit tests & build`
+- `E2E tests - Playwright, Chromium`
 
 > If a job's `name:` is changed in the workflow file, the required check must be updated in Settings > Branches to match.
 
@@ -624,7 +601,7 @@ PRs cannot be merged until both of these pass. If a check fails, the PR author f
 
 ```bash
 cd src/back-end.Tests
-dotnet test --collect:"XPlat Code Coverage" /p:CoverletOutputFormat=cobertura
+dotnet test --collect:"XPlat Code Coverage"
 ```
 
 **View Report:**
@@ -658,16 +635,7 @@ npm run test:coverage
 - Open `coverage/lcov-report/index.html` in browser
 - View summary in terminal output
 
-**Coverage Thresholds** (from jest.config.js):
-
-```json
-{
-  "branches": 70,
-  "functions": 70,
-  "lines": 70,
-  "statements": 70
-}
-```
+Coverage is collected from `src/**`, excluding `*.stories.*` files. The thresholds that fail the run are listed under [Coverage thresholds](#coverage-thresholds).
 
 ### Coverage Goals
 
@@ -679,7 +647,8 @@ npm run test:coverage
 - **Critical Paths**: 100%
   - QR code generation
   - Authentication
-  - Authorization
+  - Authorization and staff location access
+  - Bill calculation
 
 #### Frontend
 
@@ -687,7 +656,7 @@ npm run test:coverage
 - **Critical Components**: 90%+
   - QRCodeManagement
   - MenuItemManagement
-  - BillManagement
+  - Staff dashboards (Order, Session, Table)
   - Authentication forms
 - **Hooks/Utilities**: 85%+
 
@@ -772,10 +741,10 @@ npm run test:coverage
    expect(input).toHaveAttribute("aria-required", "true");
    ```
 
-5. **Mock API Calls**
+5. **Mock API Calls** through `@/config/api`
    ```jsx
-   axios.get.mockResolvedValueOnce({ data: mockData });
-   axios.post.mockRejectedValueOnce(new Error("API Error"));
+   api.get.mockResolvedValueOnce({ data: mockData });
+   api.post.mockRejectedValueOnce(new Error("API Error"));
    ```
 
 ---
@@ -795,17 +764,15 @@ var options = new DbContextOptionsBuilder<ApplicationDbContext>()
     .Options;
 ```
 
-**Issue**: QR code tests fail on non-Windows
+**Issue**: QR code tests fail on Linux
 
 ```
-Solution: QrGeneratorService uses SkiaSharp. The base SkiaSharp package does not
-include the Linux native library.
-- Run tests on Windows (this is what CI does), or
-- Add the SkiaSharp.NativeAssets.Linux package to back-end.csproj
-  (it also requires libfontconfig1 installed on the machine)
+Solution: QrGeneratorService uses SkiaSharp. back-end.csproj already references
+SkiaSharp.NativeAssets.Linux, but it also needs the font library installed:
+sudo apt-get install -y libfontconfig1
 ```
 
-**Issue**: Integration tests fail in CI with `OptionsValidationException` (SendGrid)
+**Issue**: Integration tests fail with `OptionsValidationException` (SendGrid)
 
 ```
 Solution: Program.cs validates SendGridSettings on startup and ApiKey is [Required].
@@ -830,22 +797,20 @@ Solution: Clear Jest cache
 npm test -- --clearCache
 ```
 
-**Issue**: Tests timeout
+**Issue**: Tests time out
 
 ```
-Solution: Increase timeout in jest.config.js
-module.exports = {
-  testTimeout: 10000, // 10 seconds
-};
+Solution: jest.config.js already allows 30 seconds per test (testTimeout: 30000),
+because userEvent and MUI tests are slow under --coverage. If a test still times
+out, it is usually waiting on an API mock that was never set up
+(e.g. api.get returning undefined).
 ```
 
 **Issue**: "Not wrapped in act(...)" warnings
 
 ```
-Solution: Use waitFor for async operations
-await waitFor(() => {
-  expect(screen.getByText('Loaded')).toBeInTheDocument();
-});
+Solution: Use waitFor or findBy for async operations
+expect(await screen.findByText('Loaded')).toBeInTheDocument();
 ```
 
 **Issue**: Router mock not working
@@ -855,23 +820,23 @@ Solution: Mock Next.js router properly
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
-    pathname: '/',
   }),
+  usePathname: () => '/',
 }));
 ```
 
 #### E2E Tests
 
-**Issue**: E2E tests timeout
+**Issue**: E2E tests time out
 
 ```
 Solution:
 1. Ensure backend is running on http://localhost:5264
-2. Ensure frontend is running on http://localhost:3000
+2. Ensure MariaDB is running and the backend can reach it (http://localhost:5264/db-test)
 3. Increase timeout in playwright.config.js
 ```
 
-**Issue**: E2E job fails in CI at "Start backend" or "Verify database connection"
+**Issue**: E2E job fails in CI at "Start backend"
 
 ```
 Solution: Open the "Start backend" step log - the API log is printed there when it fails.
@@ -882,9 +847,9 @@ Solution: Open the "Start backend" step log - the API log is printed there when 
 **Issue**: Selectors not found
 
 ```
-Solution: Use more resilient selectors
-page.locator('[data-testid="submit-button"]') // Better
-page.locator('button:has-text("Submit")')     // More resilient
+Solution: Prefer role-based locators, which survive markup changes
+page.getByRole('button', { name: 'Sign In', exact: true })
+page.getByRole('heading', { name: /start your order/i })
 ```
 
 ---
@@ -903,6 +868,7 @@ page.locator('button:has-text("Submit")')     // More resilient
 - [Moq Documentation](https://github.com/moq/moq4)
 - [FluentAssertions Documentation](https://fluentassertions.com/)
 - [EF Core Testing](https://learn.microsoft.com/en-us/ef/core/testing/)
+- [ASP.NET Core Integration Tests](https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests)
 - [.NET Testing Best Practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
 #### Frontend
@@ -911,6 +877,7 @@ page.locator('button:has-text("Submit")')     // More resilient
 - [Jest Documentation](https://jestjs.io/)
 - [Testing Library Queries](https://testing-library.com/docs/queries/about)
 - [userEvent API](https://testing-library.com/docs/user-event/intro)
+- [Storybook Vitest Addon](https://storybook.js.org/docs/writing-tests/integrations/vitest-addon)
 - [Common Testing Mistakes](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
 
 #### E2E Testing
@@ -927,77 +894,17 @@ page.locator('button:has-text("Submit")')     // More resilient
 
 ---
 
-## Summary
+## Next Steps
 
-### Current Status (Updated: 2025-11-10)
-
-✅ **What's Working:**
-
-- Complete testing infrastructure setup
-- **ALL backend tests passing: 101/101 tests (100%)**
-  - 7 backend controllers tested (37% of controllers)
-  - 1 backend service tested (QrGeneratorService)
-  - All compilation errors fixed
-  - Authentication & authorization tests passing
-  - QR code generation fully tested
-- **ALL frontend tests passing: 87/87 tests (100%)**
-  - 4 critical frontend components tested (LoginForm, RegisterForm, Header, QRCodeManagement)
-  - Accessibility tests included
-  - Error handling tests included
-- CI/CD pipeline operational
-- Code coverage tracking enabled
-
-⚠️ **What's Needed:**
-
-- 15 more backend controllers to test
-- 96 more frontend components to test
-- Complete E2E test implementation
-- Integration tests for critical flows
-- Performance/load testing
-- Security testing
-
-### Estimated Effort
-
-- **Backend**: ~15-20 hours for remaining controllers
-- **Frontend**: ~30-40 hours for remaining components
-- **E2E/Integration**: ~10-15 hours
-- **CI/CD Enhancements**: ~5-10 hours
-- **Total**: ~60-85 hours
-
-### Next Steps
-
-1. **Run existing tests** to establish baseline
-
-   ```bash
-   .\run-all-tests.ps1
-   ```
-
-2. **Review coverage reports** to identify gaps
-
-   ```bash
-   npm run test:coverage  # Frontend
-   dotnet test --collect:"XPlat Code Coverage"  # Backend
-   ```
-
-3. **Prioritize high-value tests**
-   - Critical user flows (ordering, payment)
-   - Complex business logic (pricing, analytics)
-   - Security-critical paths (auth, authorization)
-
-4. **Implement tests incrementally**
-   - One component/controller at a time
-   - Run tests frequently
-   - Maintain high coverage as you add features
-
-5. **Monitor CI/CD pipeline**
-   - Ensure tests pass on every commit
-   - Review coverage trends
-   - Fix failing tests immediately
+1. **Fill the gaps** listed under [Not yet tested](#current-test-coverage), starting with the untested backend controllers and the auth forms.
+2. **Add E2E flows** for staff (open a session, take an order, close a bill) and for customers ordering from a QR code.
+3. **Raise the Jest coverage thresholds** in `jest.config.js` as coverage grows, so it can't slip back.
+4. **Keep this document current** when tests, CI jobs or required checks change.
 
 ---
 
-**Version**: 1.1
-**Last Updated**: 2026-10-08
+**Version**: 1.2
+**Last Updated**: 2026-10-27
 **Status**: Active Development
 
 For questions or issues with testing, please contact the development team or submit an issue on GitHub.

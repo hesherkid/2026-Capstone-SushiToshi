@@ -26,11 +26,10 @@ const customJestConfig = {
     "!src/**/_*.{js,jsx,ts,tsx}",
     "!src/**/*.stories.{js,jsx,ts,tsx}",
   ],
-  // Coverage thresholds: Currently set to baseline levels (3-4%)
-  // 4 of 99+ components are tested (LoginForm, RegisterForm, Header, QRCodeManagement)
-  // All 87 tests pass successfully
+  // Coverage thresholds: baseline levels so the build fails if coverage drops.
+  // For what is and isn't tested, see docs/dev/testing.md
   // TODO: Gradually increase thresholds as more tests are added
-  // Target: 70% for all metrics (see docs/dev/testing.md for roadmap)
+  // Target: 70% for all metrics
   coverageThreshold: {
     global: {
       branches: 3,

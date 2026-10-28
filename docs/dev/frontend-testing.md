@@ -31,7 +31,7 @@ npm run test:e2e
 
 ## File Structure
 
-Place test files in `__tests__` directories next to the components, under `src/front-end`:
+Place test files in `__tests__` directories next to the code they test, under `src/front-end`. Hooks, services and utils follow the same pattern (`src/hooks/__tests__/`, `src/utils/__tests__/`):
 
 ```
 src/components/
@@ -141,10 +141,12 @@ describe("ComponentName", () => {
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FormComponent from "../FormComponent";
+import api from "@/config/api";
 
-jest.mock("@/utils/api", () => ({
-  submitForm: jest.fn(),
-}));
+jest.mock("@/config/api", () => {
+  const mockApi = { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() };
+  return { __esModule: true, default: mockApi, api: mockApi };
+});
 
 describe("FormComponent", () => {
   const mockSubmit = jest.fn();
@@ -203,8 +205,7 @@ describe("FormComponent", () => {
   describe("Form Submission", () => {
     it("submits form with valid data", async () => {
       const user = userEvent.setup();
-      const { submitForm } = require("@/utils/api");
-      submitForm.mockResolvedValue({ success: true });
+      api.post.mockResolvedValue({ data: { success: true } });
 
       render(<FormComponent onSubmit={mockSubmit} />);
 
@@ -222,8 +223,7 @@ describe("FormComponent", () => {
 
     it("shows loading state during submission", async () => {
       const user = userEvent.setup();
-      const { submitForm } = require("@/utils/api");
-      submitForm.mockImplementation(
+      api.post.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 1000)),
       );
 
@@ -236,8 +236,7 @@ describe("FormComponent", () => {
 
     it("handles submission error", async () => {
       const user = userEvent.setup();
-      const { submitForm } = require("@/utils/api");
-      submitForm.mockRejectedValue(new Error("Submission failed"));
+      api.post.mockRejectedValue(new Error("Submission failed"));
 
       render(<FormComponent onSubmit={mockSubmit} />);
 
@@ -298,14 +297,12 @@ describe("ContextProvider", () => {
 
 ### Testing Async Operations
 
+Components fetch data through the shared axios instance in `@/config/api`. Mock that module (as in the form template above) and set the response per test:
+
 ```javascript
 it("handles async data fetching", async () => {
   const mockData = { id: 1, name: "Test" };
-  global.fetch = jest.fn(() =>
-    Promise.resolve({
-      json: () => Promise.resolve(mockData),
-    }),
-  );
+  api.get.mockResolvedValueOnce({ data: mockData });
 
   render(<Component />);
 
@@ -317,14 +314,22 @@ it("handles async data fetching", async () => {
 
 ### Testing Error Boundaries
 
+The staff dashboard pages wrap their content in `ErrorBoundary` from `react-error-boundary`, with a `FallbackComponent`:
+
 ```javascript
+import { ErrorBoundary } from "react-error-boundary";
+
 it("renders error fallback on error", () => {
+  // React logs caught errors to the console; keep the test output clean
+  jest.spyOn(console, "error").mockImplementation(() => {});
+
   const ThrowError = () => {
     throw new Error("Test error");
   };
+  const Fallback = ({ error }) => <p>Something went wrong: {error.message}</p>;
 
   render(
-    <ErrorBoundary>
+    <ErrorBoundary FallbackComponent={Fallback}>
       <ThrowError />
     </ErrorBoundary>,
   );
@@ -415,12 +420,9 @@ it("selects from dropdown", async () => {
 
 ## Coverage Goals
 
-Aim for the following coverage thresholds (configured in jest.config.js):
+Aim for 70% coverage on each metric (branches, functions, lines, statements).
 
-- **Branches**: 70%
-- **Functions**: 70%
-- **Lines**: 70%
-- **Statements**: 70%
+`jest.config.js` currently enforces a much lower baseline (2–3%) so the build fails only if coverage drops. Raise those thresholds as coverage grows. See [Coverage thresholds](testing.md#coverage-thresholds) for the current values.
 
 ## Component Test Checklist
 
@@ -486,9 +488,11 @@ screen.getByRole(""); // Will list all available roles
 
 See these test files for complete examples:
 
-- `src/components/auth/__tests__/LoginForm.test.jsx`
-- `src/components/auth/__tests__/RegisterForm.test.jsx`
-- `src/components/__tests__/Header.test.jsx`
+- `src/components/auth/__tests__/LoginForm.test.jsx` (form, validation, navigation)
+- `src/components/auth/__tests__/RegisterForm.test.jsx` (form, HTTP error handling)
+- `src/components/admin/__tests__/CustomerManagement.test.jsx` (mocked API, `useAuth`, MUI `DataGrid` setup)
+- `src/components/staff/SessionDashboard/__tests__/SessionDashboard.test.jsx` (context-driven dashboard)
+- `src/hooks/__tests__/useOrderActions.test.js` (custom hook)
 
 ## Resources
 
