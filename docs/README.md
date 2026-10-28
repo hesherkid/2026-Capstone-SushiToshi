@@ -19,6 +19,8 @@ None yet. Customer and staff guides will go in `docs/user/`.
 ## Developers — working on the code
 
 - [Getting started](../README.md#-getting-started): prerequisites and running the project locally
+- [Architecture overview](dev/architecture/overview.md): how the frontend, API and database fit together, sign-in and roles, staff location limits, and where code lives
+- [Database, migrations and seed data](dev/database.md): seeded test accounts, resetting the database, and adding migrations
 - [Google Sign-In setup](dev/google-signin-setup.md)
 - [Testing QR codes on your phone](dev/phone-testing-setup.md): ngrok and user secrets
 - [Testing](dev/testing.md): test suites, running tests and CI
