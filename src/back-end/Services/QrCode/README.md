@@ -43,7 +43,8 @@ GET /api/admin/qr/wifi?locationId={locationId}&table={tableNumber}[&refresh=true
 - `locationId` (int, required): Location ID
 - `table` (int, required): Table number
 - `refresh` (bool, optional, default `false`): regenerate from current settings instead of returning the saved image
-  **Response:** PNG image, filename `wifi_L{locationId}_T{table}.png`
+
+**Response:** PNG image, filename `wifi_L{locationId}_T{table}.png`
 
 **Example:**
 
@@ -99,7 +100,8 @@ POST /api/admin/qr/bulk?locationId={locationId}
 
 - `404`: location not found
 - `400`: location has no tables
-  **Example:**
+
+**Example:**
 
 ```bash
 curl -X POST -H "Authorization: Bearer {token}" \
@@ -141,8 +143,10 @@ Each location can have its own WiFi credentials (`QrGeneratorService.GetLocation
 1. **First:** `QRCodeSettings:Locations:{locationId}:WiFi` (both SSID and Password must be set)
 2. **Fallback:** `QRCodeSettings:WiFi`
 3. **If neither is set:** the WiFi endpoint returns `404`.
-   Values can come from `appsettings.json`, user secrets (development), or environment variables (production, e.g. `QRCodeSettings__Locations__1__WiFi__Password`).
-   **Configuration Example:**
+
+Values can come from `appsettings.json`, user secrets (development), or environment variables (production, e.g. `QRCodeSettings__Locations__1__WiFi__Password`).
+
+**Configuration Example:**
 
 ```json
 "QRCodeSettings": {
@@ -167,7 +171,7 @@ Each location can have its own WiFi credentials (`QrGeneratorService.GetLocation
 
 Generated QR codes are saved to disk and reused:
 
-- **Storage Location:** `storage/qrcodes/` under the folder the backend runs from (normally `src/back-end/storage/qrcodes/`). Created automatically on startup.
+- **Storage Location:** `storage/qrcodes/` under the folder the backend runs from (normally `src/back-end/storage/qrcodes/`). Created automatically the first time the service is used.
 - **Filenames:** `wifi_L{locationId}_T{table}.png`, `session_L{locationId}_T{table}.png`
 - **Cache Behavior:**
   - `GET /api/admin/qr/wifi` and `/session` return the saved file if one exists; add `&refresh=true` to regenerate from current settings
@@ -175,7 +179,8 @@ Generated QR codes are saved to disk and reused:
   - `DELETE /api/admin/qr/clear` removes a table's saved files
   - Responses send `Cache-Control: private, no-cache`, so browsers re-check instead of reusing old images
 - **After changing `SessionPageUrl` or WiFi settings:** restart the backend, then regenerate. Values are baked into the image.
-  **Note:** `storage/qrcodes/` is ignored by git. Generated files are not committed to version control.
+
+**Note:** `storage/qrcodes/` is ignored by git. Generated files are not committed to version control.
 
 ### Labeled QR Codes
 
@@ -200,21 +205,27 @@ Location Name — Table 5 — Menu
 
 ### appsettings.json
 
-Committed values are placeholders. Real values go in user secrets (dev) or environment variables (production); see `TEAM_SETUP.md`, step 6.
+Committed values are placeholders. Real values go in user secrets (dev) or environment variables (production); see step 6 of [phone-testing-setup.md](../../../../docs/dev/phone-testing-setup.md#6-point-qr-codes-at-your-ngrok-url-user-secrets-never-committed).
 
 ```json
 {
   "QRCodeSettings": {
     "WiFi": {
-      "SSID": "Location-Test",
-      "Password": "Location-Password"
+      "SSID": "DefaultWifi",
+      "Password": "DefaultPass"
     },
     "SessionPageUrl": "http://localhost:3000",
     "Locations": {
       "1": {
         "WiFi": {
           "SSID": "Location-Test",
-          "Password": "Location-Password"
+          "Password": "Location-password!"
+        }
+      },
+      "2": {
+        "WiFi": {
+          "SSID": "Location-Test",
+          "Password": "Location-password!"
         }
       }
     }
@@ -225,6 +236,7 @@ Committed values are placeholders. Real values go in user secrets (dev) or envir
 - `SessionPageUrl` is the frontend's base URL only (no path, no trailing slash). The service appends `/auth/login?locationId={id}&tableNumber={n}`.
   - If it's missing, the service falls back to `Restaurant:BaseUrl`, then `http://localhost:3000`.
 - A location's own `WiFi` entry overrides the default `WiFi`.
+- `StoragePath` (optional, not in `appsettings.json`) overrides where PNGs are saved. It defaults to `storage/qrcodes/` under the folder the backend runs from; the tests use it to get an isolated folder.
 
 ### Service Registration (Program.cs)
 
@@ -317,7 +329,8 @@ WIFI:T:WPA;S:{ssid};P:{password};;
 - `S`: SSID (network name)
 - `P`: password
 - The network is always marked as **not hidden**, and QRCoder escapes special characters (`; , : \ "`) automatically.
-  When scanned with a phone camera, this prompts the user to join the network (tap **Join** on iPhone, **Connect** on Android).
+
+When scanned with a phone camera, this prompts the user to join the network (tap **Join** on iPhone, **Connect** on Android).
 
 **Limitations:** routers set to WPA3-only, or with a hidden SSID, may not join from these codes.
 
@@ -328,8 +341,6 @@ Session QR codes link to:
 ```
 {SessionPageUrl}/auth/login?locationId={locationId}&tableNumber={tableNumber}
 ```
-
-> **Note:** the session QR flow is under review.
 
 **Example:**
 

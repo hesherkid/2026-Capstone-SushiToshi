@@ -26,8 +26,14 @@ None yet. Customer and staff guides will go in `docs/user/`.
 - [Team norms](dev/team-norms.md)
 - [Database ERD](dev/architecture/erd.drawio) (open with draw.io)
 
+### Docs that live next to the code
+
+- [QR code service](../src/back-end/Services/QrCode/README.md): QR generation endpoints, folder layout and configuration
+- [QR code management page](../src/front-end/src/components/admin/QR_CODE_INTEGRATION.md): the admin/staff QR code component, its API calls and UI
+
 ## Conventions
 
 - File and folder names are lowercase kebab-case with no spaces, e.g. `staff-guide.md`.
 - Images go in an `images/` folder beside the doc that uses them.
 - Docs describe how things work now. Change history belongs in git.
+- If you add a README next to the code, link it under "Docs that live next to the code" above.
