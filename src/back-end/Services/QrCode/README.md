@@ -5,6 +5,7 @@
 This service generates location-based QR codes for **WiFi access** and **table login** (session start). It uses QRCoder for QR encoding and SkiaSharp for rendering, so it runs on Windows, Linux and macOS.
 
 - All endpoints require the **`Admin`** role.
+- Setting up and printing table QR codes for production: see [Table QR codes](../../../../docs/setup/production-setup.md#5-table-qr-codes) in the production setup guide.
 - Developer setup for testing on a phone (ngrok, user secrets): see [`phone-testing-setup.md`](../../../../docs/dev/phone-testing-setup.md).
 
 ## Folder Structure

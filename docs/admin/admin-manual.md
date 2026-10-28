@@ -30,6 +30,8 @@ Tables are the seating arrangements within the restaurant. Each table has a uniq
 
 ![Table Management Page](images/table-management.png)
 
+**Note**: Table QR codes are generated and printed from the **QR Codes** page. Before printing codes for the first time, make sure the site has been set up for production, or the codes will not open on customers' phones. See [Table QR codes](../setup/production-setup.md#5-table-qr-codes).
+
 ---
 
 ## Table Group Management

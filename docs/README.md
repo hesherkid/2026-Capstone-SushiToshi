@@ -12,7 +12,7 @@ None yet. Customer and staff guides will go in `docs/user/`.
 
 ## System admins — deploying and configuring
 
-- [Entra (Azure AD) setup](setup/entra-setup.md): staff and admin groups
+- [Production setup](setup/production-setup.md): every setting to change before deploying, plus a pre-launch checklist
 - [Email (SendGrid) setup](setup/email-sendgrid-setup.md): verification and password reset emails
 - [WiFi configuration](setup/wifi-configuration.md): per-location WiFi credentials for QR codes
 
