@@ -5,14 +5,10 @@ import {
   Box,
   Button,
   TextField,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Typography,
-  Alert,
   InputAdornment,
 } from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
+import FormDialog from "@/components/common/FormDialog";
 import { Edit, Trash2, Eye } from "lucide-react";
 import api from "@/config/api";
 import TagChip from "./TagChip";
@@ -140,6 +136,7 @@ const TagManagement = () => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [availableColors, setAvailableColors] = useState([]);
   const [dialogMode, setDialogMode] = useState("add");
   const [itemsDialogOpen, setItemsDialogOpen] = useState(false);
@@ -219,6 +216,7 @@ const TagManagement = () => {
     setDeleteDialogOpen(true);
   };
 
+  // Returns false on failure, so the confirm dialog stays open and shows why
   const handleDeleteConfirm = async () => {
     try {
       const response = await api.delete(`/tag/${tagToDelete.tag_id}`);
@@ -226,11 +224,11 @@ const TagManagement = () => {
         throw new Error(response.data.detail || "Failed to delete tag");
       }
       setSuccessMessage("Tag deleted successfully");
-      setDeleteDialogOpen(false);
       setTagToDelete(null);
       fetchTags();
     } catch (err) {
       setError(err?.response?.data?.detail || "Failed to delete tag");
+      return false;
     }
   };
 
@@ -328,6 +326,7 @@ const TagManagement = () => {
       });
     }
 
+    setError(null);   // the dialog shows the shared error
     setDialogMode(mode);
     setDialogOpen(true);
   };
@@ -345,12 +344,12 @@ const TagManagement = () => {
   };
 
   const handleSubmit = async () => {
+    if (!currentTag.tag_name.trim()) {
+      setError("Tag name is required");
+      return;
+    }
+    setSaving(true);
     try {
-      if (!currentTag.tag_name.trim()) {
-        setError("Tag name is required");
-        return;
-      }
-
       if (dialogMode === "add") {
         const response = await api.post("/Tag", currentTag);
         if (response.status !== 201) {
@@ -369,6 +368,8 @@ const TagManagement = () => {
       fetchTags();
     } catch (err) {
       setError(err?.response?.data?.detail || `Failed to ${dialogMode} tag`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -388,149 +389,138 @@ const TagManagement = () => {
         getRowId: (row) => row.tag_id,
       }}
     >
-      <AppDialog open={dialogOpen} onClose={handleCloseDialog}>
-        <DialogTitle>
-          {dialogMode === "add" ? "Add New Tag" : "Update Tag"}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 3,
-              pt: 1,
-            }}
-          >
-            {error && currentTag.tag_name?.trim() && (
-              <Alert severity="error">{error}</Alert>
-            )}
-            <TextField
-              label="Tag Name"
-              value={currentTag.tag_name}
-              onChange={(e) =>
-                setCurrentTag((prev) => ({ ...prev, tag_name: e.target.value }))
-              }
-              fullWidth
-              error={Boolean(error && !currentTag.tag_name.trim())}
-              helperText={
-                error && !currentTag.tag_name.trim()
-                  ? "Tag name is required"
-                  : ""
-              }
-            />
-            <TextField
-              label="Color"
-              value={currentTag.tag_color}
-              onClick={() => setShowColorPicker(true)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Box
-                      sx={{
-                        width: 24,
-                        height: 24,
-                        backgroundColor: currentTag.tag_color,
-                        borderRadius: 1,
-                        border: "1px solid rgba(0, 0, 0, 0.23)",
-                        cursor: "pointer",
-                      }}
-                    />
-                  </InputAdornment>
-                ),
-                readOnly: true,
-                sx: { cursor: "pointer" },
-              }}
-              fullWidth
-            />
-
-            {showColorPicker && (
-              <Box sx={{ width: "100%" }}>
+      <FormDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        title={dialogMode === "add" ? "Add New Tag" : "Update Tag"}
+        // A missing name shows under the field instead
+        error={error && currentTag.tag_name?.trim() ? error : null}
+        onErrorClose={() => setError(null)}
+        onSubmit={handleSubmit}
+        submitLabel={dialogMode === "add" ? "Save" : "Update"}
+        busyLabel="Saving..."
+        busy={saving}
+      >
+        <TextField
+          autoFocus
+          label="Tag Name"
+          value={currentTag.tag_name}
+          onChange={(e) =>
+            setCurrentTag((prev) => ({ ...prev, tag_name: e.target.value }))
+          }
+          fullWidth
+          error={Boolean(error && !currentTag.tag_name.trim())}
+          helperText={
+            error && !currentTag.tag_name.trim()
+              ? "Tag name is required"
+              : ""
+          }
+        />
+        <TextField
+          label="Color"
+          value={currentTag.tag_color}
+          onClick={() => setShowColorPicker(true)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
                 <Box
                   sx={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    mb: 2,
+                    width: 24,
+                    height: 24,
+                    backgroundColor: currentTag.tag_color,
+                    borderRadius: 1,
+                    border: "1px solid rgba(0, 0, 0, 0.23)",
+                    cursor: "pointer",
+                  }}
+                />
+              </InputAdornment>
+            ),
+            readOnly: true,
+            sx: { cursor: "pointer" },
+          }}
+          fullWidth
+        />
+
+        {showColorPicker && (
+          <Box sx={{ width: "100%" }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "flex-end",
+                mb: 2,
+              }}
+            >
+              <Button
+                size="small"
+                startIcon={<RefreshIcon />}
+                onClick={() => {
+                  const existingColors = tags.map((tag) => tag.tag_color);
+                  const newColors = generateColorSet(15, existingColors);
+                  setAvailableColors(newColors);
+                  if (newColors.length > 0) {
+                    setCurrentTag((prev) => ({
+                      ...prev,
+                      tag_color: newColors[0],
+                    }));
+                  }
+                }}
+              >
+                Refresh Colors
+              </Button>
+            </Box>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "repeat(3, 1fr)",
+                  sm: "repeat(5, 1fr)",
+                },
+                gap: 1,
+              }}
+            >
+              {availableColors.map((color) => (
+                <Box
+                  key={color}
+                  onClick={() => handleColorClick(color)}
+                  sx={{
+                    position: "relative",
+                    width: "100%",
+                    paddingBottom: "100%",
                   }}
                 >
-                  <Button
-                    size="small"
-                    startIcon={<RefreshIcon />}
-                    onClick={() => {
-                      const existingColors = tags.map((tag) => tag.tag_color);
-                      const newColors = generateColorSet(15, existingColors);
-                      setAvailableColors(newColors);
-                      if (newColors.length > 0) {
-                        setCurrentTag((prev) => ({
-                          ...prev,
-                          tag_color: newColors[0],
-                        }));
-                      }
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: color,
+                      borderRadius: 1,
+                      cursor: "pointer",
+                      border:
+                        currentTag.tag_color === color
+                          ? "2px solid black"
+                          : "1px solid rgba(0, 0, 0, 0.23)",
+                      "&:hover": {
+                        opacity: 0.9,
+                      },
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: { xs: "0.75rem", sm: "0.9rem" },
+                      overflow: "hidden",
+                      padding: "2px",
                     }}
                   >
-                    Refresh Colors
-                  </Button>
+                    {color}
+                  </Box>
                 </Box>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "repeat(3, 1fr)",
-                      sm: "repeat(5, 1fr)",
-                    },
-                    gap: 1,
-                  }}
-                >
-                  {availableColors.map((color) => (
-                    <Box
-                      key={color}
-                      onClick={() => handleColorClick(color)}
-                      sx={{
-                        position: "relative",
-                        width: "100%",
-                        paddingBottom: "100%",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: color,
-                          borderRadius: 1,
-                          cursor: "pointer",
-                          border:
-                            currentTag.tag_color === color
-                              ? "2px solid black"
-                              : "1px solid rgba(0, 0, 0, 0.23)",
-                          "&:hover": {
-                            opacity: 0.9,
-                          },
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: { xs: "0.75rem", sm: "0.9rem" },
-                          overflow: "hidden",
-                          padding: "2px",
-                        }}
-                      >
-                        {color}
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            )}
+              ))}
+            </Box>
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {dialogMode === "add" ? "Save" : "Update"}
-          </Button>
-        </DialogActions>
-      </AppDialog>
+        )}
+      </FormDialog>
 
       <DeleteTagDialog
         open={deleteDialogOpen}

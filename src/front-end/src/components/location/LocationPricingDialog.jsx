@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import NextLink from "next/link";
 import {
   Alert,
   Box,
@@ -7,14 +7,15 @@ import {
   CircularProgress,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControlLabel,
+  Link,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
+import DialogHeader from "@/components/common/DialogHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import PricingProfileForm from "@/components/admin/pricing/PricingProfileForm";
 import {
@@ -46,6 +47,7 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [saveResult, setSaveResult] = useState(null);
   const [previewDate, setPreviewDate] = useState(today);
   const [preview, setPreview] = useState(null);
 
@@ -54,6 +56,7 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
     setProfile(null);
     setError(null);
     setSuccess(null);
+    setSaveResult(null);
     setPreview(null);
     getLocationPricing(locationId)
       .then((data) => {
@@ -67,6 +70,7 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
 
   const handleToggle = (e) => {
     setSuccess(null);
+    setSaveResult(null);
     if (e.target.checked) {
       setUseOwn(true);   // the form starts from the default prices shown
     } else if (hasOwnPricing) {
@@ -77,13 +81,12 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
   };
 
   const handleSave = async (request) => {
-    setError(null);
     setSuccess(null);
     try {
       setProfile(await updateLocationPricing(locationId, request));
-      setSuccess("Saved. This location now uses its own pricing.");
+      setSaveResult({ severity: "success", message: "Saved. This location now uses its own pricing." });
     } catch (err) {
-      setError(serverMessage(err, "Couldn't save pricing."));
+      setSaveResult({ severity: "error", message: serverMessage(err, "Couldn't save pricing.") });
     }
   };
 
@@ -109,7 +112,7 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
   return (
     <>
       <AppDialog open={open} onClose={onClose} maxWidth="md">
-        <DialogTitle>Pricing: {location?.name}</DialogTitle>
+        <DialogHeader title="Pricing" subtitle={location?.name} onClose={onClose} />
         <DialogContent sx={{ textAlign: "left" }}>
           {error && (
             <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
@@ -136,7 +139,9 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
                     "These prices apply only to this location."
                   ) : (
                     <>
-                      Uses the <Link href="/admin/pricing">default pricing</Link>, shown below.
+                      Uses the <Link component={NextLink} href="/admin/pricing" underline="hover" sx={{ fontWeight: 600 }}>
+                        default pricing
+                      </Link>, shown below.
                     </>
                   )}
                 </Typography>
@@ -147,7 +152,10 @@ const LocationPricingDialog = ({ open, location, onClose }) => {
                 profile={profile}
                 onSubmit={handleSave}
                 readOnly={!useOwn}
+                canSaveUnchanged={useOwn && !hasOwnPricing}
                 submitLabel="Save location pricing"
+                saveResult={saveResult}
+                onSaveResultClose={() => setSaveResult(null)}
               />
 
               <Box>

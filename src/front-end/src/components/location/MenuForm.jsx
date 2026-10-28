@@ -1,18 +1,18 @@
 import { useState } from "react";
-import {
-  Box,
-  TextField,
-  Button,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Stack,
-  FormControl,
-  FormControlLabel,
-  Switch
-} from "@mui/material";
+import { TextField, FormControlLabel, Switch } from "@mui/material";
+import FormDialog from "@/components/common/FormDialog";
 
-const MenuForm = ({ initialData, onSubmit, onClose, mode }) => {
+// Add / Edit Menu. The page mounts it while open, so the fields start fresh each time
+const MenuForm = ({
+  open = true,
+  initialData,
+  onSubmit,
+  onClose,
+  mode,
+  busy = false,
+  error = null,
+  onErrorClose,
+}) => {
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     description: initialData?.description || "",
@@ -29,78 +29,71 @@ const MenuForm = ({ initialData, onSubmit, onClose, mode }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
   return (
-    <form onSubmit={handleSubmit}>
-      <DialogTitle>
-        {mode === "create" ? "Add New Menu" : "Edit Menu"}
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 2 }}>
-          <TextField
-            name="name"
-            label="Menu Name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            fullWidth
-          />
-          <TextField
-            name="description"
-            label="Description"
-            value={formData.description}
-            onChange={handleChange}
-            fullWidth
-            multiline
-            rows={3}
-          />
-          <TextField
-            name="start_time"
-            label="Start Time"
-            type="time"
-            value={formData.start_time}
-            onChange={handleChange}
-            required
-            InputLabelProps={{ shrink: true }}
-            fullWidth
-          />
-          <TextField
-            name="end_time"
-            label="End Time"
-            type="time"
-            value={formData.end_time}
-            onChange={handleChange}
-            required
-            InputLabelProps={{ shrink: true }}
-            fullWidth
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.is_active === true}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    is_active: e.target.checked,
-                  }))
-                }
-              />
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      title={mode === "create" ? "Add New Menu" : "Edit Menu"}
+      subtitle={mode === "edit" && initialData?.name}
+      error={error}
+      onErrorClose={onErrorClose}
+      onSubmit={() => onSubmit(formData)}
+      submitLabel={mode === "create" ? "Create" : "Save"}
+      busyLabel={mode === "create" ? "Creating..." : "Saving..."}
+      busy={busy}
+    >
+      <TextField
+        name="name"
+        label="Menu Name"
+        value={formData.name}
+        onChange={handleChange}
+        required
+        fullWidth
+      />
+      <TextField
+        name="description"
+        label="Description"
+        value={formData.description}
+        onChange={handleChange}
+        fullWidth
+        multiline
+        rows={3}
+      />
+      <TextField
+        name="start_time"
+        label="Start Time"
+        type="time"
+        value={formData.start_time}
+        onChange={handleChange}
+        required
+        slotProps={{ inputLabel: { shrink: true } }}
+        fullWidth
+      />
+      <TextField
+        name="end_time"
+        label="End Time"
+        type="time"
+        value={formData.end_time}
+        onChange={handleChange}
+        required
+        slotProps={{ inputLabel: { shrink: true } }}
+        fullWidth
+      />
+      <FormControlLabel
+        control={
+          <Switch
+            checked={formData.is_active === true}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                is_active: e.target.checked,
+              }))
             }
-            label="Is Active Menu"
           />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button type="submit" variant="contained">
-          {mode === "create" ? "Create" : "Save"}
-        </Button>
-      </DialogActions>
-    </form>
+        }
+        label="Is Active Menu"
+      />
+    </FormDialog>
   );
 };
 

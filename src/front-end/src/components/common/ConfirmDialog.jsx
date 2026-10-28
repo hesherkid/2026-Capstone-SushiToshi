@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { Button, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
+import { Alert, Button, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
 import { AlertTriangle } from "lucide-react";
 import AppDialog from "@/components/common/AppDialog";
 
-// Confirmation for destructive actions. onConfirm may be async; the dialog closes when it settles.
+// Confirmation for destructive actions. onConfirm may be async; the dialog closes when it settles,
+// unless onConfirm returns false: then it stays open to show `error` and let the user retry.
+// message can be a node (e.g. text with a chip); children go under it.
 export const ConfirmDialog = ({
   open,
   title,
@@ -11,16 +13,19 @@ export const ConfirmDialog = ({
   confirmLabel = "Confirm",
   onConfirm,
   onClose,
+  error = null,
+  children,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleConfirm = async () => {
     setIsProcessing(true);
+    let keepOpen = false;
     try {
-      await onConfirm();
+      keepOpen = (await onConfirm()) === false;
     } finally {
       setIsProcessing(false);
-      onClose();
+      if (!keepOpen) onClose();
     }
   };
 
@@ -48,7 +53,13 @@ export const ConfirmDialog = ({
             {title}
           </DialogTitle>
         </Stack>
-        <Typography>{message}</Typography>
+        <Typography component="div">{message}</Typography>
+        {children}
+        {error && (
+          <Alert severity="error" sx={{ alignSelf: "stretch", textAlign: "left" }}>
+            {error}
+          </Alert>
+        )}
       </DialogContent>
 
       {/* Phones: full-width buttons stacked at the bottom, main action on top */}

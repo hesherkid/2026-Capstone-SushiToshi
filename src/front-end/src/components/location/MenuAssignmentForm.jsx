@@ -1,20 +1,21 @@
 import { useState, useEffect } from "react";
 import {
   Box,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   IconButton,
   CircularProgress,
   Alert,
 } from "@mui/material";
 import { Trash, Plus } from "lucide-react";
+import DialogHeader from "@/components/common/DialogHeader";
+import serverMessage from "@/utils/serverMessage";
 
+// Assign menus to a location or remove them. Shown inside the page's AppDialog
 const MenuAssignmentForm = ({ location, onClose, api }) => {
   const [menus, setMenus] = useState([]);
   const [assignedMenus, setAssignedMenus] = useState([]);
@@ -22,158 +23,87 @@ const MenuAssignmentForm = ({ location, onClose, api }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [allMenusRes, assignedMenusRes] = await Promise.all([
-          api.get("/Menu"),
-          // TODO: Endpoint to get menus assigned to a location (old project api: /locations/{locationId}/menus)
-          api.get(`/Location/${location.location_Id}/menus`),
-        ]);
-
+    if (!location) return;
+    setLoading(true);
+    setError(null);
+    Promise.all([api.get("/Menu"), api.get(`/Location/${location.location_Id}/menus`)])
+      .then(([allMenusRes, assignedMenusRes]) => {
         setMenus(allMenusRes.data);
         setAssignedMenus(assignedMenusRes.data);
-      } catch (err) {
-      console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+      })
+      .catch((err) => setError(serverMessage(err, "Couldn't load the menus.")))
+      .finally(() => setLoading(false));
   }, [location]);
 
   const handleAssign = async (menuId) => {
+    setError(null);
     try {
-      // old project api: /locations/{locationId}/menus
-      await api.post(`/Location/${location.location_Id}/menus`, {
-        menu_id: menuId,
-      });
-      setAssignedMenus([...assignedMenus, menuId]);
+      await api.post(`/Location/${location.location_Id}/menus`, { menu_id: menuId });
+      setAssignedMenus((prev) => [...prev, menuId]);
     } catch (err) {
-      console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
+      setError(serverMessage(err, "Couldn't assign the menu."));
     }
   };
 
   const handleUnassign = async (menuId) => {
+    setError(null);
     try {
-      // old project api: /locations/{locationId}/menus/{menuId}
-      await api.delete(
-        `/Location/${location.location_Id}/menus/${menuId}`
-      );
-      setAssignedMenus(assignedMenus.filter((id) => id !== menuId));
+      await api.delete(`/Location/${location.location_Id}/menus/${menuId}`);
+      setAssignedMenus((prev) => prev.filter((id) => id !== menuId));
     } catch (err) {
-      console.error("Error fetching data:", err);
-      if (err.response) {
-        const { status, data } = err.response;
-        
-        switch (status) {
-          case 401:
-            setError("Unauthorized. Please log in again.");
-            router.push("/auth/login");
-            break;
-          case 409:
-            setError(err.response.data || "Conflict error occurred");
-            break;
-          case 404:
-            setError(err.response.data || "Resource not found");
-            break;
-          case 500:
-            setError(err.response.data || "Server error occurred");
-            break;
-          default:
-            setError(err.response.data || "An error occurred");
-        }
-      }
+      setError(serverMessage(err, "Couldn't remove the menu."));
     }
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // TODO: Fix deprecated ListItemSecondaryAction warning
   return (
     <>
-      <DialogTitle>Manage Menus - {location.name}</DialogTitle>
-      <DialogContent>
+      <DialogHeader title="Manage Menus" subtitle={location?.name} onClose={onClose} />
+      <DialogContent dividers>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        <List>
-          {menus.map((menu) => (
-            <ListItem key={menu.menu_id}>
-              <ListItemText primary={menu.name} />
-              <ListItemSecondaryAction>
-                {assignedMenus.includes(menu.menu_id) ? (
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleUnassign(menu.menu_id)}
-                    color="error"
-                  >
-                    <Trash size={20} />
-                  </IconButton>
-                ) : (
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleAssign(menu.menu_id)}
-                    color="primary"
-                  >
-                    <Plus size={20} />
-                  </IconButton>
-                )}
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
+        {loading ? (
+          <Box display="flex" justifyContent="center" p={3}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <List>
+            {menus.map((menu) => {
+              const assigned = assignedMenus.includes(menu.menu_id);
+              return (
+                <ListItem
+                  key={menu.menu_id}
+                  secondaryAction={
+                    assigned ? (
+                      <IconButton
+                        edge="end"
+                        aria-label={`Remove ${menu.name}`}
+                        onClick={() => handleUnassign(menu.menu_id)}
+                        color="error"
+                      >
+                        <Trash size={20} />
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        edge="end"
+                        aria-label={`Assign ${menu.name}`}
+                        onClick={() => handleAssign(menu.menu_id)}
+                        color="primary"
+                      >
+                        <Plus size={20} />
+                      </IconButton>
+                    )
+                  }
+                >
+                  <ListItemText primary={menu.name} />
+                </ListItem>
+              );
+            })}
+          </List>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

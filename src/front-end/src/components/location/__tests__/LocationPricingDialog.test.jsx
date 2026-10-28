@@ -2,6 +2,28 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import LocationPricingDialog from "../LocationPricingDialog";
 import * as pricingService from "@/services/pricingService";
 
+jest.mock("@mui/x-data-grid", () => {
+  if (typeof global.TextEncoder === "undefined") {
+    const { TextEncoder, TextDecoder } = jest.requireActual("util");
+    Object.assign(global, { TextEncoder, TextDecoder });
+  }
+  const actual = jest.requireActual("@mui/x-data-grid");
+  const React = jest.requireActual("react");
+  return {
+    ...actual,
+    DataGrid: (props) => React.createElement(actual.DataGrid, { ...props, disableVirtualization: true }),
+  };
+});
+
+if (typeof window.ResizeObserver === "undefined") {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+
 jest.mock("@/services/pricingService");
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -38,6 +60,8 @@ describe("LocationPricingDialog", () => {
     await screen.findByLabelText("Weekday Adult price");
 
     fireEvent.click(screen.getByLabelText("Custom pricing for this location"));
+    // Saving the default prices unchanged is allowed: switching on is the change
+    expect(screen.getByRole("button", { name: "Save location pricing" })).toBeEnabled();
     fireEvent.change(screen.getByLabelText("Weekday Adult price"), { target: { value: "45" } });
     fireEvent.click(screen.getByRole("button", { name: "Save location pricing" }));
 

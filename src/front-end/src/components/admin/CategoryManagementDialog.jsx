@@ -1,15 +1,9 @@
 import api from "@/config/api";
 import React, { useState, useEffect } from "react";
 import {
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   Button,
-  Box,
   Stack,
-  Alert,
-  CircularProgress,
   Typography,
   FormControl,
   InputLabel,
@@ -17,8 +11,8 @@ import {
   MenuItem,
   FormHelperText,
 } from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
-import { AlertTriangle } from "lucide-react";
+import FormDialog from "@/components/common/FormDialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const emptyForm = {
   name: "",
@@ -103,8 +97,7 @@ const CategoryManagementDialog = ({
       [field]: parseInt(e.target.value, 10) || 0,
     }));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError(null);
 
     const problem = limitProblem(formData);
@@ -167,210 +160,153 @@ const CategoryManagementDialog = ({
       setError(errorText(err.response?.data, err.message));
     } finally {
       setSubmitting(false);
-      setDeleteDialogOpen(false);
     }
   };
 
   return (
     <>
-      <AppDialog open={open} onClose={onClose}>
-        <DialogTitle>
-          {selectedCategory ? "Edit Category" : "New Category"}
-        </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleSubmit} sx={{ pt: 2 }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            <Stack spacing={3}>
-              <TextField
-                label="Name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-                required
-                fullWidth
-              />
-
-              <TextField
-                label="Description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                multiline
-                rows={3}
-                fullWidth
-              />
-
-              {/* Per person, per dining session. 0 = unlimited */}
-              <Typography variant="subtitle2" color="text.secondary">
-                Limits per person (whole dining session). 0 = unlimited.
-              </Typography>
-
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  label="Adult"
-                  type="number"
-                  value={formData.adult_limit}
-                  onChange={setNumber("adult_limit")}
-                  slotProps={{ htmlInput: { min: 0, max: 99 } }}
-                  required
-                  fullWidth
-                />
-                <TextField
-                  label="Senior"
-                  type="number"
-                  value={formData.senior_limit}
-                  onChange={setNumber("senior_limit")}
-                  slotProps={{ htmlInput: { min: 0, max: 99 } }}
-                  helperText="Can't exceed adult"
-                  required
-                  fullWidth
-                />
-              </Stack>
-
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  label="Child"
-                  type="number"
-                  value={formData.child_limit}
-                  onChange={setNumber("child_limit")}
-                  slotProps={{ htmlInput: { min: 0, max: 99 } }}
-                  helperText="Can't exceed adult"
-                  required
-                  fullWidth
-                />
-                <TextField
-                  label="Toddler"
-                  type="number"
-                  value={formData.toddler_limit}
-                  onChange={setNumber("toddler_limit")}
-                  slotProps={{ htmlInput: { min: 0, max: 99 } }}
-                  helperText="0 = same as child"
-                  fullWidth
-                />
-              </Stack>
-
-              <Stack direction="row" spacing={2} alignItems="flex-start">
-                <TextField
-                  label="Per Order Limit"
-                  type="number"
-                  value={formData.per_order_limit}
-                  onChange={setNumber("per_order_limit")}
-                  slotProps={{ htmlInput: { min: 0, max: 99 } }}
-                  helperText="Whole table, all items in this category combined. 0 = no cap"
-                  fullWidth
-                />
-                {/* <FormControl fullWidth>
-                  <InputLabel id="over-limit-label">Over Limit</InputLabel>
-                  <Select
-                    labelId="over-limit-label"
-                    label="Over Limit"
-                    value={formData.over_limit_behavior}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        over_limit_behavior: e.target.value,
-                      }))
-                    }
-                  >
-                    <MenuItem value="Block">Block</MenuItem>
-                    <MenuItem value="Charge">Charge the item's price</MenuItem>
-                  </Select>
-                  <FormHelperText>
-                    Per-person limits only. Charge bills each item's price.
-                  </FormHelperText>
-                </FormControl> */}
-                <FormControl fullWidth>
-                  <InputLabel id="over-limit-label">
-                    Past per-person limit
-                  </InputLabel>
-                  <Select
-                    labelId="over-limit-label"
-                    label="Past per-person limit"
-                    value={formData.over_limit_behavior}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        over_limit_behavior: e.target.value,
-                      }))
-                    }
-                  >
-                    <MenuItem value="Block">Block</MenuItem>
-                    <MenuItem value="Charge">Charge the item's price</MenuItem>
-                  </Select>
-                  <FormHelperText>
-                    Charge bills each item's price for every extra over the
-                    limits above. Items need a price set in their menu
-                    assignment.
-                  </FormHelperText>
-                </FormControl>
-              </Stack>
-            </Stack>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          {selectedCategory && (
+      <FormDialog
+        open={open}
+        onClose={onClose}
+        title={selectedCategory ? "Edit Category" : "New Category"}
+        subtitle={selectedCategory && (selectedCategory.name ?? selectedCategory.category_name)}
+        error={error}
+        onErrorClose={() => setError(null)}
+        onSubmit={handleSubmit}
+        submitLabel={selectedCategory ? "Save Changes" : "Create Category"}
+        busyLabel={selectedCategory ? "Saving..." : "Creating..."}
+        busy={submitting}
+        extraActions={
+          selectedCategory && (
             <Button
               color="error"
               onClick={() => setDeleteDialogOpen(true)}
+              disabled={submitting}
               sx={{ mr: "auto" }}
             >
               Delete
             </Button>
-          )}
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={submitting}
-          >
-            {submitting ? (
-              <CircularProgress size={24} />
-            ) : selectedCategory ? (
-              "Save Changes"
-            ) : (
-              "Create Category"
-            )}
-          </Button>
-        </DialogActions>
-      </AppDialog>
-
-      <AppDialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
+          )
+        }
       >
-        <Box sx={{ p: 3 }}>
-          <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-            <AlertTriangle color="error" />
-            <Typography variant="h6">Confirm Delete</Typography>
-          </Stack>
-          <Typography mb={3}>
-            Are you sure you want to delete "{formData.name}"? This action
-            cannot be undone.
-          </Typography>
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleDelete}
-              disabled={submitting}
+        <TextField
+          label="Name"
+          value={formData.name}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, name: e.target.value }))
+          }
+          required
+          fullWidth
+        />
+
+        <TextField
+          label="Description"
+          value={formData.description}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              description: e.target.value,
+            }))
+          }
+          multiline
+          rows={3}
+          fullWidth
+        />
+
+        {/* Per person, per dining session. 0 = unlimited */}
+        <Typography variant="subtitle2" color="text.secondary">
+          Limits per person (whole dining session). 0 = unlimited.
+        </Typography>
+
+        <Stack direction="row" spacing={2}>
+          <TextField
+            label="Adult"
+            type="number"
+            value={formData.adult_limit}
+            onChange={setNumber("adult_limit")}
+            slotProps={{ htmlInput: { min: 0, max: 99 } }}
+            required
+            fullWidth
+          />
+          <TextField
+            label="Senior"
+            type="number"
+            value={formData.senior_limit}
+            onChange={setNumber("senior_limit")}
+            slotProps={{ htmlInput: { min: 0, max: 99 } }}
+            helperText="Can't exceed adult"
+            required
+            fullWidth
+          />
+        </Stack>
+
+        <Stack direction="row" spacing={2}>
+          <TextField
+            label="Child"
+            type="number"
+            value={formData.child_limit}
+            onChange={setNumber("child_limit")}
+            slotProps={{ htmlInput: { min: 0, max: 99 } }}
+            helperText="Can't exceed adult"
+            required
+            fullWidth
+          />
+          <TextField
+            label="Toddler"
+            type="number"
+            value={formData.toddler_limit}
+            onChange={setNumber("toddler_limit")}
+            slotProps={{ htmlInput: { min: 0, max: 99 } }}
+            helperText="0 = same as child"
+            fullWidth
+          />
+        </Stack>
+
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          <TextField
+            label="Per Order Limit"
+            type="number"
+            value={formData.per_order_limit}
+            onChange={setNumber("per_order_limit")}
+            slotProps={{ htmlInput: { min: 0, max: 99 } }}
+            helperText="Whole table, all items in this category combined. 0 = no cap"
+            fullWidth
+          />
+          <FormControl fullWidth>
+            <InputLabel id="over-limit-label">
+              Past per-person limit
+            </InputLabel>
+            <Select
+              labelId="over-limit-label"
+              label="Past per-person limit"
+              value={formData.over_limit_behavior}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  over_limit_behavior: e.target.value,
+                }))
+              }
             >
-              {submitting ? <CircularProgress size={24} /> : "Delete"}
-            </Button>
-          </Stack>
-        </Box>
-      </AppDialog>
+              <MenuItem value="Block">Block</MenuItem>
+              <MenuItem value="Charge">Charge the item's price</MenuItem>
+            </Select>
+            <FormHelperText>
+              Charge bills each item's price for every extra over the
+              limits above. Items need a price set in their menu
+              assignment.
+            </FormHelperText>
+          </FormControl>
+        </Stack>
+      </FormDialog>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete category"
+        message={`Are you sure you want to delete "${formData.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onClose={() => setDeleteDialogOpen(false)}
+      />
     </>
   );
 };

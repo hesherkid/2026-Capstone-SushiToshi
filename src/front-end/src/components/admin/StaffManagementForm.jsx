@@ -2,22 +2,22 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   TextField,
-  Button,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Alert,
-  CircularProgress,
-  Paper,
   Typography,
   FormHelperText,
   Chip,
 } from "@mui/material";
-import { UserPlus, Save } from "lucide-react";
+import FormDialog from "@/components/common/FormDialog";
 import api from "@/config/api";
 
+// The Add / Edit Staff dialog. The page mounts it while open, so each opening starts fresh
 const StaffManagementForm = ({
+  open = true,
+  onClose,
+  onErrorClose,
   initialData = {},
   onSubmit,
   isLoading = false,
@@ -63,9 +63,7 @@ const StaffManagementForm = ({
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     const { location_ids, ...account } = formData;
     // New staff start at the first location chosen
     await onSubmit(
@@ -90,134 +88,116 @@ const StaffManagementForm = ({
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3, maxWidth: "sm", mx: "auto", mt: 4 }}>
-      <Typography
-        variant="h5"
-        gutterBottom
-        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-      >
-        <UserPlus />
-        {mode === "create" ? "Create New Staff Account" : "Edit Staff Account"}
-      </Typography>
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      title={mode === "create" ? "Create New Staff Account" : "Edit Staff Account"}
+      subtitle={mode === "edit" && `${initialData?.first_name ?? ""} ${initialData?.last_name ?? ""}`.trim()}
+      error={error}
+      onErrorClose={onErrorClose}
+      onSubmit={handleSubmit}
+      submitLabel={mode === "create" ? "Create Account" : "Save Changes"}
+      busyLabel={mode === "create" ? "Creating..." : "Saving..."}
+      busy={isLoading}
+      submitDisabled={!isValid()}
+    >
+      <TextField
+        label="Email Address"
+        name="email"
+        type="email"
+        value={formData.email}
+        onChange={handleChange}
+        required
+        disabled={mode === "edit"}
+        fullWidth
+      />
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
+      {mode === "create" && (
+        <TextField
+          label="Password"
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          required
+          fullWidth
+          helperText="Minimum 8 characters"
+        />
       )}
 
-      <form onSubmit={handleSubmit}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField
-            label="Email Address"
-            name="email"
-            type="email"
-            value={formData.email}
+      <TextField
+        label="First Name"
+        name="first_name"
+        value={formData.first_name}
+        onChange={handleChange}
+        required
+        fullWidth
+      />
+
+      <TextField
+        label="Last Name"
+        name="last_name"
+        value={formData.last_name}
+        onChange={handleChange}
+        required
+        fullWidth
+      />
+
+      <FormControl fullWidth required disabled={lockRole}>
+        <InputLabel>Role</InputLabel>
+        <Select
+          name="role"
+          value={formData.role}
+          onChange={handleChange}
+          label="Role"
+        >
+          <MenuItem value="staff">Staff</MenuItem>
+          <MenuItem value="admin">Admin</MenuItem>
+        </Select>
+        {lockRole && (
+          <FormHelperText>You can't change your own role</FormHelperText>
+        )}
+      </FormControl>
+
+      {formData.role === "staff" ? (
+        <FormControl fullWidth>
+          <InputLabel id="staff-locations-label">Locations</InputLabel>
+          <Select
+            labelId="staff-locations-label"
+            name="location_ids"
+            multiple
+            value={formData.location_ids}
             onChange={handleChange}
-            required
-            disabled={mode === "edit"}
-            fullWidth
-          />
-
-          {mode === "create" && (
-            <TextField
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              fullWidth
-              helperText="Minimum 8 characters"
-            />
-          )}
-
-          <TextField
-            label="First Name"
-            name="first_name"
-            value={formData.first_name}
-            onChange={handleChange}
-            required
-            fullWidth
-          />
-
-          <TextField
-            label="Last Name"
-            name="last_name"
-            value={formData.last_name}
-            onChange={handleChange}
-            required
-            fullWidth
-          />
-
-          <FormControl fullWidth required disabled={lockRole}>
-            <InputLabel>Role</InputLabel>
-            <Select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              label="Role"
-            >
-              <MenuItem value="staff">Staff</MenuItem>
-              <MenuItem value="admin">Admin</MenuItem>
-            </Select>
-            {lockRole && (
-              <FormHelperText>You can't change your own role</FormHelperText>
-            )}
-          </FormControl>
-
-          {formData.role === "staff" ? (
-            <FormControl fullWidth>
-              <InputLabel id="staff-locations-label">Locations</InputLabel>
-              <Select
-                labelId="staff-locations-label"
-                name="location_ids"
-                multiple
-                value={formData.location_ids}
-                onChange={handleChange}
-                label="Locations"
-                renderValue={(selected) => (
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                    {selected.map((id) => (
-                      <Chip key={id} label={locationName(id)} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {locations.map((location) => (
-                  <MenuItem
-                    key={location.location_Id}
-                    value={location.location_Id}
-                  >
-                    {location.name}
-                  </MenuItem>
+            label="Locations"
+            renderValue={(selected) => (
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                {selected.map((id) => (
+                  <Chip key={id} label={locationName(id)} size="small" />
                 ))}
-              </Select>
-              <FormHelperText>
-                {formData.location_ids.length === 0
-                  ? "They can't work anywhere until you choose a location"
-                  : "They can switch between these locations"}
-              </FormHelperText>
-            </FormControl>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Admins can work at every location.
-            </Typography>
-          )}
-
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={!isValid() || isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} /> : <Save />}
-            fullWidth
-            sx={{ mt: 2 }}
+              </Box>
+            )}
           >
-            {mode === "create" ? "Create Account" : "Save Changes"}
-          </Button>
-        </Box>
-      </form>
-    </Paper>
+            {locations.map((location) => (
+              <MenuItem
+                key={location.location_Id}
+                value={location.location_Id}
+              >
+                {location.name}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>
+            {formData.location_ids.length === 0
+              ? "They can't work anywhere until you choose a location"
+              : "They can switch between these locations"}
+          </FormHelperText>
+        </FormControl>
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          Admins can work at every location.
+        </Typography>
+      )}
+    </FormDialog>
   );
 };
 

@@ -1,8 +1,31 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import HolidayManagement from "../HolidayManagement";
 import * as holidayService from "@/services/holidayService";
 
 jest.mock("@/services/holidayService");
+
+jest.mock("@mui/x-data-grid", () => {
+  if (typeof global.TextEncoder === "undefined") {
+    const { TextEncoder, TextDecoder } = jest.requireActual("util");
+    Object.assign(global, { TextEncoder, TextDecoder });
+  }
+  const actual = jest.requireActual("@mui/x-data-grid");
+  const React = jest.requireActual("react");
+  return {
+    ...actual,
+    DataGrid: (props) => React.createElement(actual.DataGrid, { ...props, disableVirtualization: true }),
+  };
+});
+
+if (typeof window.ResizeObserver === "undefined") {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+const rowOf = (text) => screen.getByText(text).closest('[role="row"]');
 
 const christmas = {
   holiday_id: 1, province_code: "AB", date: "2026-12-25", observed_date: "2026-12-25",
@@ -62,11 +85,20 @@ describe("HolidayManagement", () => {
     render(<HolidayManagement />);
     await screen.findByText("Christmas Day");
 
-    fireEvent.click(screen.getByLabelText("Select Christmas Day"));
+    fireEvent.click(within(rowOf("Christmas Day")).getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Approve selected (1)" }));
 
     await waitFor(() => expect(holidayService.approveHolidays).toHaveBeenCalledWith([1]));
     expect(await screen.findByText("Approved 1 holiday.")).toBeInTheDocument();
+  });
+
+  it("opens edit and delete from the row's actions", async () => {
+    render(<HolidayManagement />);
+    await screen.findByText("Christmas Day");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Christmas Day" }));
+    expect(await screen.findByText("Edit Holiday")).toBeInTheDocument();
+    expect(within(screen.getByRole("dialog")).getByLabelText(/Name/)).toHaveValue("Christmas Day");
   });
 
   it("filters by status", async () => {
