@@ -1,137 +1,86 @@
 import { useState, useEffect } from "react";
-import {
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Box,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  IconButton,
-} from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
-import { X } from "lucide-react";
+import { TextField, MenuItem } from "@mui/material";
+import FormDialog from "@/components/common/FormDialog";
 import { useTable } from "../../context/TableContext";
 import api from "@/config/api";
 import storage from "@/utils/storage";
+import serverMessage from "@/utils/serverMessage";
+
+const emptyForm = () => ({
+  group_Name: "",
+  location_Id: storage.get("branch-location") || "",
+});
 
 const NewTableGroupDialog = ({ open }) => {
   const { closeDialog, refreshData } = useTable();
-  const [formData, setFormData] = useState({
-    group_Name: "",
-    is_Active: true,
-    location_Id: storage.get("branch-location") || "",
-  });
+  const [formData, setFormData] = useState(emptyForm);
   const [availableLocations, setAvailableLocations] = useState([]);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      fetchLocations();
-    }
+    if (!open) return;
+    api
+      .get("/Location")
+      .then((response) => setAvailableLocations(response.data))
+      .catch((err) => setError(serverMessage(err, "Couldn't load locations.")));
   }, [open]);
 
-  const fetchLocations = async () => {
-    try {
-      const response = await api.get("/Location");
-      if (response.status !== 200) throw new Error("Failed to fetch locations");
-      setAvailableLocations(response.data);
-    } catch (err) {
-      console.error("Error fetching locations:", err);
-    }
-  };
+  const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleClose = () => {
-    setFormData({
-      group_Name: "",
-      is_Active: true,
-      location_Id: storage.get("branch-location") || "",
-    });
+    setFormData(emptyForm());
     setError(null);
     closeDialog();
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     setError(null);
     try {
       await api.post("/TableGroup", {
-        Group_Name: formData.group_Name,
-        Is_Active: formData.is_Active,
+        Group_Name: formData.group_Name.trim(),
+        Is_Active: true,
         Location_Id: formData.location_Id,
       });
       await refreshData();
       handleClose();
     } catch (err) {
-      setError(err.response.data || "Failed to create table group");
+      setError(serverMessage(err, "Couldn't create the table group."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <AppDialog open={open} onClose={handleClose}>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>
-          Create New Table Group
-          <IconButton
-            onClick={handleClose}
-            sx={{ position: "absolute", right: 8, top: 8 }}
-          >
-            <X />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <Box display="flex" flexDirection="column" gap={2} mt={1}>
-            <FormControl fullWidth required>
-              <InputLabel>Select Location</InputLabel>
-              <Select
-                value={formData.location_Id}
-                onChange={(e) =>
-                  setFormData({ ...formData, location_Id: e.target.value })
-                }
-                label="Select Location"
-              >
-                {availableLocations.map((location) => (
-                  <MenuItem
-                    key={location.location_Id}
-                    value={location.location_Id}
-                  >
-                    {location.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Group Name"
-              required
-              value={formData.group_Name}
-              onChange={(e) =>
-                setFormData({ ...formData, group_Name: e.target.value })
-              }
-              placeholder="e.g., Large Party Area"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            Create Group
-          </Button>
-        </DialogActions>
-      </form>
-    </AppDialog>
+    <FormDialog
+      open={open}
+      onClose={handleClose}
+      title="Create New Table Group"
+      error={error}
+      onErrorClose={() => setError(null)}
+      onSubmit={handleSubmit}
+      submitLabel="Create Group"
+      busyLabel="Creating..."
+      busy={isSubmitting}
+      submitDisabled={!formData.group_Name.trim()}
+    >
+      <TextField select label="Location" required value={formData.location_Id} onChange={set("location_Id")}>
+        {availableLocations.map((location) => (
+          <MenuItem key={location.location_Id} value={location.location_Id}>
+            {location.name}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        label="Group Name"
+        required
+        autoFocus
+        value={formData.group_Name}
+        onChange={set("group_Name")}
+        placeholder="e.g., Large Party Area"
+      />
+    </FormDialog>
   );
 };
 

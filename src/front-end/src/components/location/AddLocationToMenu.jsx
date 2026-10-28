@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Box, Button, DialogTitle, DialogContent, DialogActions,
+  Alert, Box, Button, DialogContent, DialogActions,
   Stack, FormControl, InputLabel, Select, MenuItem, Chip,
   Typography, Divider
 } from "@mui/material";
 import { X } from "lucide-react";
 import api from "@/config/api";
+import DialogHeader from "@/components/common/DialogHeader";
+import serverMessage from "@/utils/serverMessage";
 
-const AddLocationsToMenu = ({ menu, onSubmit, onClose, availableLocations = [] }) => {
+// Each add or remove saves straight away, so the dialog only needs Close.
+// Shown inside the page's AppDialog
+const AddLocationsToMenu = ({ menu, onClose, availableLocations = [] }) => {
   // Normalize locations to stable { id, name }
   const safeLocations = useMemo(() => {
     const arr = Array.isArray(availableLocations) ? availableLocations : [];
@@ -34,6 +38,7 @@ const AddLocationsToMenu = ({ menu, onSubmit, onClose, availableLocations = [] }
   );
 
   const [selectedLocation, setSelectedLocation] = useState(""); // always a string
+  const [error, setError] = useState(null);
 
   // Keep state in sync when the menu changes
   useEffect(() => {
@@ -43,7 +48,8 @@ const AddLocationsToMenu = ({ menu, onSubmit, onClose, availableLocations = [] }
         .filter(Boolean)
     );
     setSelectedLocation("");
-  }, [menu?.menu_Id]);
+    setError(null);
+  }, [menu?.menu_id]);
 
   // Locations not yet assigned
   const unassignedLocations = useMemo(
@@ -66,11 +72,12 @@ const AddLocationsToMenu = ({ menu, onSubmit, onClose, availableLocations = [] }
     // optimistic add (revert on error)
     const revertNeeded = !assignedLocations.includes(locId);
     if (revertNeeded) setAssignedLocations((prev) => [...prev, locId]);
+    setError(null);
     try {
-      const url = `MenuLocation/menu/${menu.menu_id}/location/${locId}`;
-      const res = await api.put(url);
+      await api.put(`MenuLocation/menu/${menu.menu_id}/location/${locId}`);
     } catch (err) {
       console.error("PUT failed:", err);
+      setError(serverMessage(err, `Couldn't add ${getLocationName(locId)}.`));
       if (revertNeeded) {
         setAssignedLocations((prev) => prev.filter((x) => x !== locId));
       }
@@ -85,30 +92,28 @@ const AddLocationsToMenu = ({ menu, onSubmit, onClose, availableLocations = [] }
     const prev = assignedLocations;
     setAssignedLocations((curr) => curr.filter((x) => x !== id));
     if (selectedLocation === id) setSelectedLocation("");
+    setError(null);
 
     try {
-      // If you implemented DELETE on the server, keep this.
-      // Otherwise, you can omit this call and just rely on Save.
-      const url = `MenuLocation/menu/${menu.menu_id}/location/${id}`;
-      await api.delete?.(url);
+      await api.delete(`MenuLocation/menu/${menu.menu_id}/location/${id}`);
     } catch (err) {
       console.error("DELETE failed:", err);
+      setError(serverMessage(err, `Couldn't remove ${getLocationName(id)}.`));
       setAssignedLocations(prev); // revert
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // If you also support a batch save, keep this callback:
-     onClose?.();
-  };
-
   return (
-    <form onSubmit={handleSubmit}>
-      <DialogTitle>Manage Locations for "{menu?.name}"</DialogTitle>
+    <>
+      <DialogHeader title="Manage Locations" subtitle={menu?.name} onClose={onClose} />
 
-      <DialogContent>
-        <Stack spacing={3} sx={{ mt: 2, minWidth: 400 }}>
+      <DialogContent dividers>
+        {error && (
+          <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        <Stack spacing={3}>
           {/* Assigned */}
           <Box>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
@@ -185,10 +190,9 @@ const AddLocationsToMenu = ({ menu, onSubmit, onClose, availableLocations = [] }
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button type="submit" variant="contained">Save Locations</Button>
+        <Button onClick={onClose}>Close</Button>
       </DialogActions>
-    </form>
+    </>
   );
 };
 

@@ -1,6 +1,28 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import PricingProfileForm from "../PricingProfileForm";
 
+jest.mock("@mui/x-data-grid", () => {
+  if (typeof global.TextEncoder === "undefined") {
+    const { TextEncoder, TextDecoder } = jest.requireActual("util");
+    Object.assign(global, { TextEncoder, TextDecoder });
+  }
+  const actual = jest.requireActual("@mui/x-data-grid");
+  const React = jest.requireActual("react");
+  return {
+    ...actual,
+    DataGrid: (props) => React.createElement(actual.DataGrid, { ...props, disableVirtualization: true }),
+  };
+});
+
+if (typeof window.ResizeObserver === "undefined") {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+
 const profile = {
   tax_rate: 0.05,
   gratuity_rate: 0.18,
@@ -67,10 +89,57 @@ describe("PricingProfileForm", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("enables Save and says so once something changes, and not for a change that's undone", () => {
+    render(<PricingProfileForm profile={profile} onSubmit={jest.fn()} />);
+    const save = screen.getByRole("button", { name: "Save pricing" });
+
+    expect(save).toBeDisabled();
+    expect(screen.queryByText("Unsaved changes")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Fri"));
+    expect(save).toBeEnabled();
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+
+    // Ticked again: back to the saved days, in a different order
+    fireEvent.click(screen.getByLabelText("Fri"));
+    expect(save).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Weekday Adult price"), { target: { value: "40.950" } });
+    expect(save).toBeDisabled();
+  });
+
+  it("canSaveUnchanged allows saving the values as they are", () => {
+    render(<PricingProfileForm profile={profile} onSubmit={jest.fn()} canSaveUnchanged />);
+
+    expect(screen.getByRole("button", { name: "Save pricing" })).toBeEnabled();
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+  });
+
   it("read-only shows the values without a save button", () => {
     render(<PricingProfileForm profile={profile} onSubmit={jest.fn()} readOnly />);
 
     expect(screen.getByLabelText("Weekday Adult price")).toBeDisabled();
     expect(screen.queryByRole("button", { name: /save/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the last save's result next to the save button and clears it on the next save", async () => {
+    const onSaveResultClose = jest.fn();
+    render(
+      <PricingProfileForm
+        profile={profile}
+        onSubmit={jest.fn().mockResolvedValue()}
+        saveResult={{ severity: "error", message: "Couldn't save pricing." }}
+        onSaveResultClose={onSaveResultClose}
+      />,
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Couldn't save pricing.");
+    // Directly before the button's row
+    expect(alert.nextElementSibling).toContainElement(screen.getByRole("button", { name: "Save pricing" }));
+
+    fireEvent.change(screen.getByLabelText("GST"), { target: { value: "6" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save pricing" }));
+    expect(onSaveResultClose).toHaveBeenCalled();
   });
 });

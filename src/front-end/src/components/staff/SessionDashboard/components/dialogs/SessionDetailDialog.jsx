@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
@@ -15,7 +14,8 @@ import {
   Tooltip,
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
-import { X, Check, Receipt, ReceiptText, LogOut, Bell } from "lucide-react";
+import DialogHeader from "@/components/common/DialogHeader";
+import { Check, Receipt, ReceiptText, LogOut, Bell } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
 import {
@@ -55,31 +55,18 @@ const SessionDetailDialog = () => {
       <AppDialog open={!!session} onClose={closeSession}>
         {session && (
           <>
-            <DialogTitle>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
-              >
-                <Box>
-                  <Typography variant="h6" component="span">
-                    Dining Session #{session.session_Id} ·{" "}
-                    {tableLabel(session.table_Numbers)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Started {formatTime(session.started_At)} ·{" "}
-                    <SeatedFor startedAt={session.started_At} /> ·{" "}
-                    {session.active_Participants ?? 0} guest
-                    {session.active_Participants === 1 ? "" : "s"}
-                  </Typography>
-                </Box>
-                <IconButton aria-label="Close" onClick={closeSession} size="small">
-                  <X size={20} />
-                </IconButton>
-              </Box>
-            </DialogTitle>
+            <DialogHeader
+              title={`Dining Session #${session.session_Id} · ${tableLabel(session.table_Numbers)}`}
+              subtitle={
+                <>
+                  Started {formatTime(session.started_At)} ·{" "}
+                  <SeatedFor startedAt={session.started_At} /> ·{" "}
+                  {session.active_Participants ?? 0} guest
+                  {session.active_Participants === 1 ? "" : "s"}
+                </>
+              }
+              onClose={closeSession}
+            />
 
             <DialogContent dividers sx={{ px: 0, py: 0 }}>
               {requests.length > 0 && (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import NextLink from "next/link";
+import { Alert, Box, Chip, CircularProgress, Link, Stack, Typography } from "@mui/material";
 import ManagementHeader from "@/components/common/ManagementHeader";
 import PricingProfileForm from "@/components/admin/pricing/PricingProfileForm";
 import {
@@ -15,7 +15,7 @@ const DefaultPricing = () => {
   const [profile, setProfile] = useState(null);
   const [locations, setLocations] = useState([]);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [saveResult, setSaveResult] = useState(null);
 
   useEffect(() => {
     Promise.all([getDefaultPricing(), getLocationPricingList()])
@@ -27,13 +27,14 @@ const DefaultPricing = () => {
   }, []);
 
   const handleSave = async (request) => {
-    setError(null);
-    setSuccess(null);
     try {
       setProfile(await updateDefaultPricing(request));
-      setSuccess("Default pricing saved. Open bills use the new prices; closed bills keep theirs.");
+      setSaveResult({
+        severity: "success",
+        message: "Default pricing saved. Open bills use the new prices; closed bills keep theirs.",
+      });
     } catch (err) {
-      setError(serverMessage(err, "Couldn't save pricing."));
+      setSaveResult({ severity: "error", message: serverMessage(err, "Couldn't save pricing.") });
     }
   };
 
@@ -42,21 +43,28 @@ const DefaultPricing = () => {
   return (
     <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, textAlign: "left" }}>
       <ManagementHeader title="Default Pricing" />
-      <Typography color="text.secondary" sx={{ mb: 2 }}>
-        Used by every location without its own pricing.
-        {ownPricing.length > 0 &&
-          ` Locations with their own pricing: ${ownPricing.map((l) => l.location_name).join(", ")}.`}{" "}
-        Set a location's own pricing from <Link href="/location/menu-location">Locations</Link>.
+      <Typography color="text.secondary" sx={{ mb: ownPricing.length > 0 ? 1 : 2 }}>
+        These prices apply to every location that doesn't have its own pricing. To give a location
+        its own pricing, open it on the{" "}
+        <Link component={NextLink} href="/location/menu-location" underline="hover" sx={{ fontWeight: 600 }}>
+          Locations
+        </Link>{" "}
+        page.
       </Typography>
+      {ownPricing.length > 0 && (
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Locations with their own pricing:
+          </Typography>
+          {ownPricing.map((l) => (
+            <Chip key={l.location_id} label={l.location_name} size="small" variant="outlined" />
+          ))}
+        </Stack>
+      )}
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2 }}>
-          {success}
         </Alert>
       )}
 
@@ -67,6 +75,8 @@ const DefaultPricing = () => {
           profile={profile}
           onSubmit={handleSave}
           submitLabel="Save default pricing"
+          saveResult={saveResult}
+          onSaveResultClose={() => setSaveResult(null)}
         />
       ) : (
         !error && <CircularProgress />

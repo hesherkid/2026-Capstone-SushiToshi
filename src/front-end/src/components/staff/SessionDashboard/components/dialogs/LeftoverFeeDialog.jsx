@@ -4,14 +4,11 @@ import {
   Box,
   Button,
   CircularProgress,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   InputAdornment,
   TextField,
   Typography,
 } from "@mui/material";
-import AppDialog from "@/components/common/AppDialog";
+import FormDialog from "@/components/common/FormDialog";
 import api from "@/config/api";
 import { formatCurrency } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 
@@ -84,107 +81,81 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
   };
 
   return (
-    <AppDialog open={open} onClose={onClose} maxWidth="xs">
-      <DialogTitle>Leftover fee</DialogTitle>
-      <DialogContent>
-        {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              For tables that leave too much food. One fee for the whole table,
-              split evenly across its open bills and taxed with the bill. Apply
-              it before closing the bills; closed bills aren't changed.
-            </Typography>
-
-            <TextField
-              label="Fee for the table"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              fullWidth
-              helperText={`Default ${formatCurrency(info?.default_fee ?? 0)}`}
-              error={amount !== "" && !valid}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">$</InputAdornment>
-                  ),
-                },
-                htmlInput: { min: 0, step: "0.01" },
-              }}
-            />
-
-            {bills.length === 0 ? (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                This table has no open bills.
-              </Alert>
-            ) : (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Split evenly across {bills.length} open{" "}
-                  {bills.length === 1 ? "bill" : "bills"}
-                </Typography>
-                {bills.map((bill, i) => (
-                  <Box
-                    key={bill.bill_id}
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      py: 0.25,
-                    }}
-                  >
-                    <Typography variant="body2">
-                      {bill.bill_name || `Bill #${bill.bill_id}`}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontVariantNumeric: "tabular-nums" }}
-                    >
-                      {formatCurrency(shares[i] ?? 0)}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            )}
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        {current > 0 && (
-          <Button
-            color="error"
-            onClick={() => save(0)}
-            disabled={saving}
-            sx={{ mr: "auto" }}
-          >
+    <FormDialog
+      open={open}
+      onClose={onClose}
+      title="Leftover fee"
+      maxWidth="xs"
+      error={error}
+      onErrorClose={() => setError(null)}
+      onSubmit={() => save(parsed)}
+      submitLabel="Apply fee"
+      busyLabel="Applying..."
+      busy={saving}
+      submitDisabled={loading || !valid || bills.length === 0}
+      extraActions={
+        current > 0 && (
+          <Button color="error" onClick={() => save(0)} disabled={saving} sx={{ mr: "auto" }}>
             Remove fee
           </Button>
-        )}
-        <Button onClick={onClose} disabled={saving}>
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => save(parsed)}
-          disabled={saving || loading || !valid || bills.length === 0}
-        >
-          {saving ? (
-            <CircularProgress size={22} color="inherit" />
+        )
+      }
+    >
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <Typography variant="body2" color="text.secondary">
+            For tables that leave too much food. One fee for the whole table,
+            split evenly across its open bills and taxed with the bill. Apply
+            it before closing the bills; closed bills aren't changed.
+          </Typography>
+
+          <TextField
+            label="Fee for the table"
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            fullWidth
+            autoFocus
+            helperText={`Default ${formatCurrency(info?.default_fee ?? 0)}`}
+            error={amount !== "" && !valid}
+            slotProps={{
+              input: {
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              },
+              htmlInput: { min: 0, step: "0.01" },
+            }}
+          />
+
+          {bills.length === 0 ? (
+            <Alert severity="info">This table has no open bills.</Alert>
           ) : (
-            "Apply fee"
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Split evenly across {bills.length} open{" "}
+                {bills.length === 1 ? "bill" : "bills"}
+              </Typography>
+              {bills.map((bill, i) => (
+                <Box
+                  key={bill.bill_id}
+                  sx={{ display: "flex", justifyContent: "space-between", py: 0.25 }}
+                >
+                  <Typography variant="body2">
+                    {bill.bill_name || `Bill #${bill.bill_id}`}
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                    {formatCurrency(shares[i] ?? 0)}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           )}
-        </Button>
-      </DialogActions>
-    </AppDialog>
+        </>
+      )}
+    </FormDialog>
   );
 };
 

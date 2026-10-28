@@ -10,14 +10,25 @@ jest.mock("@/config/api", () => {
 
 jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
 
-// The form and password dialog aren't under test here
+// Stand-ins for the form and password dialog: just the error they're given and their buttons
 jest.mock("@/components/admin/StaffManagementForm", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ error, onSubmit, onClose }) => (
+    <div data-testid="staff-form">
+      {error && <p data-testid="staff-form-error">{error}</p>}
+      <button onClick={() => onSubmit({ email: "new@example.com", role: "staff" }).catch(() => {})}>Submit form</button>
+      <button onClick={onClose}>Cancel form</button>
+    </div>
+  ),
 }));
 jest.mock("@/components/admin/PasswordChangeDialog", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ open, error }) =>
+    open ? (
+      <div data-testid="password-dialog">
+        {error && <p data-testid="password-dialog-error">{error}</p>}
+      </div>
+    ) : null,
 }));
 
 jest.mock("@mui/x-data-grid", () => {
@@ -110,5 +121,34 @@ describe("Staff management account status", () => {
 
     expect(screen.queryByRole("button", { name: "Deactivate Account" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reactivate Account" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Staff management dialogs", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useAuth.mockReturnValue({ userRole: "admin", userEmail: "admin@example.com" });
+    api.get.mockResolvedValue({ status: 200, data: staff });
+  });
+
+  it("doesn't carry a failed save's error into the next dialog", async () => {
+    api.post.mockRejectedValue({ response: { status: 400, data: { detail: "Email already exists" } } });
+    render(<StaffManagementPage />);
+    await screen.findByText("sue@example.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "Create New Staff Account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit form" }));
+    expect(await screen.findByTestId("staff-form-error")).toHaveTextContent("Email already exists");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel form" }));
+
+    // Another dialog opens clean
+    fireEvent.click(within(rowFor("sue@example.com")).getByRole("button", { name: "Reset Password" }));
+    expect(screen.getByTestId("password-dialog")).toBeInTheDocument();
+    expect(screen.queryByTestId("password-dialog-error")).not.toBeInTheDocument();
+
+    // And so does the form when it's opened again
+    fireEvent.click(within(rowFor("sue@example.com")).getByRole("button", { name: "Edit User" }));
+    expect(screen.getByTestId("staff-form")).toBeInTheDocument();
+    expect(screen.queryByTestId("staff-form-error")).not.toBeInTheDocument();
   });
 });
