@@ -13,7 +13,7 @@ Sessions are displayed for each group currently dining in the restaurant. Each s
 - **Close Bill**: Admin can close individual bills within a session. This is useful when guests want to pay separately or when splitting the bill among multiple parties.
 - **Create New Bill**: Admin can create additional bills within an existing session. This allows for flexibility in billing, accommodating requests for separate payments or itemized billing.
 
-![Session Management Page](pictures/Sessions%20--%20Active%20Sessions.png)
+![Session Management Page](images/sessions-active.png)
 
 ---
 
@@ -28,7 +28,7 @@ Tables are the seating arrangements within the restaurant. Each table has a uniq
 - **Deactivate or Activate Table**: Admin can deactivate or activate an existing table. This action is typically taken when a table is temporarily unavailable for customer use. Only tables that are not linked to a session can be deactivated.
 - **Delete Table**: Admin can remove a table from the system. This action is typically taken when a table is permanently removed from the restaurant's seating arrangement. Only tables that are not linked to a session can be deleted.
 
-![Table Management Page](pictures/Table%20Management.png)
+![Table Management Page](images/table-management.png)
 
 ---
 
@@ -47,7 +47,7 @@ Table Groups allow Admin to manage larger parties by grouping multiple tables to
 - **Remove Table from Group**: Admin can remove individual tables from a table group when they are no longer needed. This allows the tables to be used independently for smaller groups. Only tables that are in a table group that is not linked to a session can be removed from the table group.
 - **Delete Table Group**: Admin can delete an existing table group when it is no longer needed. This action will ungroup the tables, making them available for individual seating. Only table groups that are not linked to a session can be deleted.
 
-![Table Group Management](pictures/Table%20Group%20Management.png)
+![Table Group Management](images/table-group-management.png)
 
 ---
 
@@ -67,8 +67,8 @@ This section allows the Admin to create and manage different restaurant location
   - Contact Information: Phone number and email address for the location
 - **Delete Location** (Trash Can Symbol): Admin can delete an existing location. This action will remove the location from the system along with any associated menus and sessions.
 
-![Location Management](pictures/Location%20Management.png)
-![Location Management - Create](pictures/Location%20Management%20--%20Create.png)
+![Location Management](images/location-management.png)
+![Location Management - Create](images/location-management-create.png)
 
 ### Menu Management
 
@@ -85,9 +85,9 @@ This section allows the Admin to create and manage menus for each location/compa
 - **Delete Menu** (Trash Can Symbol): Admin can delete an existing menu. This action will remove the menu from the system and it will no longer be available to customers.
 - **Tag Locations to Menus** (GPS Locate Symbol): Admin can assign specific locations to a menu. This allows for location-specific menus, accommodating regional preferences or special offerings.
 
-![Menu Management](pictures/Menu%20Management.png)
-![Menu Management - Edit Menu](pictures/Menu%20Management%20--%20Edit%20Menu.png%20.png)
-![Menu Management - Assign Location](pictures/Menu%20Management%20--%20Assign%20Location.png)
+![Menu Management](images/menu-management.png)
+![Menu Management - Edit Menu](images/menu-management-edit.png)
+![Menu Management - Assign Location](images/menu-management-assign-location.png)
 
 ---
 
@@ -105,11 +105,11 @@ This allows Admin to take the list of items the restaurant offers and create the
 - **Tag Menu Items**: Menu items can be tagged with different attributes such as "Spicy", "Vegetarian", "Gluten-Free", etc., to help customers make informed choices.
 - **Add-On Option**: Menu items can be tagged as an Add-On, allowing customers to customize their orders with additional options.
 
-![Menu Item Overview](pictures/Menu%20Item%20Overview.png)
-![Menu Item Overview - Add/Remove Tag](pictures/Menu%20Item%20Overview%20--%20Add%20Remove%20Tag.jpg)
-![Menu Item - Menu Assignment](pictures/Menu%20Item%20--%20Menu%20Assignment.png)
-![Menu Item - Menu Assignment with Add-On Enabled](pictures/Menu%20Item%20--%20Menu%20Assignment%20AddOnEnabled.png)
-![Menu Item - Edit Menu Item](pictures/Menu%20Item%20--%20Edit%20Menu%20Item.png)
+![Menu Item Overview](images/menu-item-overview.png)
+![Menu Item Overview - Add/Remove Tag](images/menu-item-overview-tags.jpg)
+![Menu Item - Menu Assignment](images/menu-item-menu-assignment.png)
+![Menu Item - Menu Assignment with Add-On Enabled](images/menu-item-menu-assignment-addon.png)
+![Menu Item - Edit Menu Item](images/menu-item-edit.png)
 
 ---
 
@@ -126,10 +126,10 @@ This section allows the Admin to manage staff members and users who have access 
 - **Delete Staff** (Trash Can Symbol): Admin can delete an existing staff member. This action will remove the staff member's access to the system.
 - **Activate/Deactivate Staff/Admin** (Toggle Switch): This will disable the staff/admin from logging into the system without deleting their account.
 
-![Staff Management](pictures/Staff%20Management%20.png)
-![Staff Management - Update Staff Member](pictures/Staff%20Management%20-%20Update%20Staff%20Member.png)
-![Staff Management - Update Password](pictures/Staff%20Management%20-%20Update%20Password.png)
-![Staff Management - Activate and Deactivate](pictures/Staff%20Management%20-%20ActivateAndDeactivate.jpg)
+![Staff Management](images/staff-management.png)
+![Staff Management - Update Staff Member](images/staff-management-update.png)
+![Staff Management - Update Password](images/staff-management-password.png)
+![Staff Management - Activate and Deactivate](images/staff-management-activate.jpg)
 
 ---
 
@@ -145,8 +145,8 @@ This allows the Admin to create and manage tags that can be assigned to menu ite
 - **Delete Tag** (Trash Can Symbol): Admin can delete an existing tag. This action will remove the tag from the system and it will no longer be available for assignment to menu items.
 - **View Assigned Items**: Admin can view a list of menu items that are currently assigned to a specific tag. This helps in managing and organizing menu items effectively.
 
-![Tag Management](pictures/Tag%20Managemnet%20.png)
-![Tag Management - Assigned Items](pictures/Tag%20Management%20-%20Assigned%20Items.png)
+![Tag Management](images/tag-management.png)
+![Tag Management - Assigned Items](images/tag-management-assigned-items.png)
 
 ---
 
@@ -160,14 +160,14 @@ The Analytics Dashboard provides Admin with insights and data related to restaur
 - **Bottom Performing Items**: A list of menu items with the lowest sales, helping identify items that may need to be re-evaluated or promoted
 - **Total Units Sold for Each Item**: A breakdown of the total number of units sold for each menu item over a specified period
 
-![Item Performance](pictures/Item%20Preformance.png)
+![Item Performance](images/analytics-item-performance.png)
 
 ### Browsing Behavior
 
 - **How Long Items Have Been Viewed**: Data on the average time customers spend viewing each menu item
 - **Total Views per Item**: A count of how many times each menu item has been viewed by customers
 
-![Browsing Behavior](pictures/Browsing%20Behavior.png)
+![Browsing Behavior](images/analytics-browsing-behavior.png)
 
 ### Order Timing Analytics
 
@@ -180,7 +180,7 @@ Statistics on the time to first order for sessions. This includes three main met
 - **Daily Average Time for the Last 30 Days**
 - **Last 25 Sessions Time to First Order**
 
-![Order Timing Analytics](pictures/Browsing%20Behavior.png)
-![Time to First Order - Last 25 Sessions](pictures/Time%20To%20First%20Order%20-%20Last%2025%20Sessions.png)
-![Time to First Order - Daily Average](pictures/Time%20To%20First%20Order%20-%20Daily%20Average.png)
-![Time to First Order - Chart View](pictures/Time%20To%20First%20Order%20-%20Chart%20View.png)
+![Order Timing Analytics](images/analytics-browsing-behavior.png)
+![Time to First Order - Last 25 Sessions](images/analytics-first-order-last-25.png)
+![Time to First Order - Daily Average](images/analytics-first-order-daily.png)
+![Time to First Order - Chart View](images/analytics-first-order-chart.png)

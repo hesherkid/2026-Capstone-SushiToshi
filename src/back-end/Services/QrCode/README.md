@@ -5,7 +5,7 @@
 This service generates location-based QR codes for **WiFi access** and **table login** (session start). It uses QRCoder for QR encoding and SkiaSharp for rendering, so it runs on Windows, Linux and macOS.
 
 - All endpoints require the **`Admin`** role.
-- Developer setup for testing on a phone (ngrok, user secrets): see [`TEAM_SETUP.md`](../../../../TEAM_SETUP.md).
+- Developer setup for testing on a phone (ngrok, user secrets): see [`phone-testing-setup.md`](../../../../docs/dev/phone-testing-setup.md).
 
 ## Folder Structure
 
@@ -161,7 +161,7 @@ Each location can have its own WiFi credentials (`QrGeneratorService.GetLocation
 }
 ```
 
-> **📖 For detailed WiFi configuration instructions, see:** [`WIFI_CONFIGURATION_GUIDE.md`](../../../../WIFI_CONFIGURATION_GUIDE.md)
+> **📖 For detailed WiFi configuration instructions, see:** [`wifi-configuration.md`](../../../../docs/setup/wifi-configuration.md)
 
 ### File Caching
 

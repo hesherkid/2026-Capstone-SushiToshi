@@ -13,6 +13,8 @@ This guide provides instructions and templates for creating unit tests for all R
 
 ## Running Tests
 
+Run these from `src/front-end`.
+
 ```bash
 # Run all tests
 npm test
@@ -29,7 +31,7 @@ npm run test:e2e
 
 ## File Structure
 
-Place test files in `__tests__` directories next to the components:
+Place test files in `__tests__` directories next to the components, under `src/front-end`:
 
 ```
 src/components/

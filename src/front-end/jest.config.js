@@ -30,7 +30,7 @@ const customJestConfig = {
   // 4 of 99+ components are tested (LoginForm, RegisterForm, Header, QRCodeManagement)
   // All 87 tests pass successfully
   // TODO: Gradually increase thresholds as more tests are added
-  // Target: 70% for all metrics (see TESTING.md for roadmap)
+  // Target: 70% for all metrics (see docs/dev/testing.md for roadmap)
   coverageThreshold: {
     global: {
       branches: 3,

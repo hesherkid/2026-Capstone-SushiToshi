@@ -1,6 +1,6 @@
 # WiFi Configuration Guide - Quick Reference
 
-> **Note:** For complete API documentation, technical details, and usage examples, see [`src/back-end/Services/QrCode/README.md`](src/back-end/Services/QrCode/README.md)
+> **Note:** For complete API documentation, technical details, and usage examples, see [`src/back-end/Services/QrCode/README.md`](../../src/back-end/Services/QrCode/README.md)
 
 ## Overview
 
@@ -11,8 +11,6 @@ This guide focuses on **configuring WiFi credentials** for your restaurant locat
 ## Configuration File
 
 **Location:** `src/back-end/appsettings.json`
-
-**Full Path:** `C:\Users\70004\OneDrive\Desktop\CDAJT_C-Capstone\src\back-end\appsettings.json`
 
 ---
 
