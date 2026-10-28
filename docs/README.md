@@ -8,7 +8,7 @@ None yet. Customer and staff guides will go in `docs/user/`.
 
 ## Restaurant admins — managing the restaurant
 
-- [Admin Manual](admin/admin-manual.md): sessions, tables, locations, menus, staff, tags and analytics. A styled [HTML version](admin/admin-manual.html) is also available.
+- [Admin Manual](admin/admin-manual.md): sessions, tables, orders, QR codes, locations, menus, pricing, holidays, staff, customers and analytics.
 
 ## System admins — deploying and configuring
 
