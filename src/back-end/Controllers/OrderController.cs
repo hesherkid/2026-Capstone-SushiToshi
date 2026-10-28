@@ -9,8 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
 using back_end.Services;
 
-
-
 namespace back_end.Controllers
 {
     [ApiController]
@@ -1144,19 +1142,7 @@ namespace back_end.Controllers
                 if (scope.IsForbidden) return LocationResults.NoLocation();
                 locationId = scope.LocationId;
 
-                var query = _context.SessionOrders
-                    .Include(o => o.DiningSession)
-                        .ThenInclude(ds => ds.Menu)
-                    .Include(o => o.DiningSession)
-                        .ThenInclude(ds => ds.Table)
-                    .Include(o => o.DiningSession)
-                        .ThenInclude(ds => ds.TableGroup)
-                            .ThenInclude(tg => tg!.Tables)
-                    .Include(o => o.Bill)
-                    .Include(o => o.OrderItems)
-                        .ThenInclude(oi => oi.MenuItem)
-                            .ThenInclude(mi => mi.MenuAssignments)
-                    .AsQueryable();
+                var query = StaffOrdersQuery();
 
                 // Filter by location if provided
                 if (locationId.HasValue)
@@ -1173,40 +1159,7 @@ namespace back_end.Controllers
                     .OrderByDescending(o => o.Created_At)
                     .ToListAsync();
 
-                var result = orders.Select(o => new
-                {
-                    orderId = o.Order_Id,
-                    sessionId = o.session_id,
-                    billId = o.Bill_Id,
-                    locationId = o.DiningSession.Location_Id,
-                    tableNumbers = o.DiningSession.Table_Id.HasValue
-                        ? new[] { o.DiningSession.Table!.table_number }
-                        : o.DiningSession.TableGroup?.Tables?.Select(t => t.table_number).ToArray() ?? Array.Empty<int>(),
-                    userName = o.User_Name,
-                    status = o.Status.ToString(),
-                    createdAt = o.Created_At,
-                    completedAt = o.Completed_At,
-                    items = o.OrderItems.Select(oi =>
-                    {
-                        var assignment = oi
-                            .MenuItem
-                            .MenuAssignments
-                            .EffectiveFor(oi.Menu_Id, oi.Item_Id, o.DiningSession.Location_Id);
-                        bool isAddOn = assignment?.Is_Add_On ?? false;
-
-                        return new
-                        {
-                            orderItemId = oi.Order_Item_Id,
-                            itemId = oi.Item_Id,
-                            name = oi.MenuItem.Name,
-                            quantity = oi.Quantity,
-                            priceAtTime = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0,
-                            isAddOn = isAddOn,
-                            chargeReason = oi.Charge_Reason.ToString(),
-                            status = oi.Order_Item_Status.ToString()
-                        };
-                    }).ToList()
-                }).ToList();
+                var result = orders.Select(ToStaffOrder).ToList();
 
                 return Ok(result);
             }
@@ -1216,6 +1169,151 @@ namespace back_end.Controllers
                 return StatusCode(500, "Internal Server Error");
             }
         }
+
+        // Longest range staff can search in Order History
+        public const int MaxHistoryRangeDays = 31;
+
+        /// <summary>
+        /// Looks up past orders by date range.
+        /// </summary>
+        /// <param name="from">First restaurant-local day to include (yyyy-MM-dd)</param>
+        /// <param name="to">Last restaurant-local day to include (yyyy-MM-dd), not in the future</param>
+        /// <param name="locationId">Optional location filter. Staff always get their current location</param>
+        /// <param name="tableNumber">Optional table number. Matches single tables and tables in a group</param>
+        /// <param name="name">Optional guest or bill name. Partial, case-insensitive match</param>
+        /// <returns>Orders placed in the range, newest first, in the same shape as all_orders</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/order/history?from=2026-10-20&amp;to=2026-10-26&amp;tableNumber=14&amp;name=lee
+        ///
+        /// </remarks>
+        [HttpGet("history")]
+        [Authorize(Policy = "staffOnly")]
+        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<object>>> GetOrderHistory(
+            [FromQuery] string? from,
+            [FromQuery] string? to,
+            [FromQuery] int? locationId = null,
+            [FromQuery] int? tableNumber = null,
+            [FromQuery] string? name = null)
+        {
+            try
+            {
+                var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+                if (scope.IsForbidden) return LocationResults.NoLocation();
+                locationId = scope.LocationId;
+
+                if (!AnalyticsDateRange.TryResolve("custom", from, to, DateTime.UtcNow,
+                        AnalyticsDateRange.RestaurantTimeZone, out var range, out var errorKey, out var errorMessage)
+                    || range == null)
+                {
+                    return HistoryBadRequest(errorKey, errorMessage);
+                }
+
+                if (range.ToLocal.DayNumber - range.FromLocal.DayNumber + 1 > MaxHistoryRangeDays)
+                {
+                    return HistoryBadRequest("to", $"Choose a range of {MaxHistoryRangeDays} days or fewer.");
+                }
+
+                var query = StaffOrdersQuery()
+                    .Where(o => o.Created_At >= range.StartUtc && o.Created_At < range.EndUtc);
+
+                if (locationId.HasValue)
+                {
+                    query = query.Where(o => o.DiningSession.Location_Id == locationId.Value);
+                }
+
+                if (tableNumber.HasValue)
+                {
+                    var number = tableNumber.Value;
+                    query = query.Where(o =>
+                        (o.DiningSession.Table != null && o.DiningSession.Table.table_number == number) ||
+                        (o.DiningSession.TableGroup != null && o.DiningSession.TableGroup.Tables.Any(t => t.table_number == number)));
+                }
+
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    var term = name.Trim().ToLower();
+                    query = query.Where(o =>
+                        o.Bill.Bill_Name.ToLower().Contains(term) ||
+                        (o.User_Name != null && o.User_Name.ToLower().Contains(term)));
+                }
+
+                var orders = await query
+                    .OrderByDescending(o => o.Created_At)
+                    .ToListAsync();
+
+                return Ok(orders.Select(ToStaffOrder).ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving order history");
+                return StatusCode(500, "Internal Server Error");
+            }
+        }
+
+        private BadRequestObjectResult HistoryBadRequest(string key, string message)
+        {
+            ModelState.AddModelError(key, message);
+            return BadRequest(new ValidationProblemDetails(ModelState));
+        }
+
+        // Orders with everything the staff order views need. Shared by all_orders and history
+        private IQueryable<SessionOrder> StaffOrdersQuery() =>
+            _context.SessionOrders
+                .Include(o => o.DiningSession)
+                    .ThenInclude(ds => ds.Menu)
+                .Include(o => o.DiningSession)
+                    .ThenInclude(ds => ds.Table)
+                .Include(o => o.DiningSession)
+                    .ThenInclude(ds => ds.TableGroup)
+                        .ThenInclude(tg => tg!.Tables)
+                .Include(o => o.Bill)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.MenuItem)
+                        .ThenInclude(mi => mi.MenuAssignments)
+                .AsQueryable();
+
+        // The staff order shape, shared by all_orders and history so the two can't drift apart
+        private static object ToStaffOrder(SessionOrder o) => new
+        {
+            orderId = o.Order_Id,
+            sessionId = o.session_id,
+            billId = o.Bill_Id,
+            billName = o.Bill.Bill_Name,
+            locationId = o.DiningSession.Location_Id,
+            tableNumbers = o.DiningSession.Table_Id.HasValue
+                ? new[] { o.DiningSession.Table!.table_number }
+                : o.DiningSession.TableGroup?.Tables?.Select(t => t.table_number).ToArray() ?? Array.Empty<int>(),
+            userName = o.User_Name,
+            status = o.Status.ToString(),
+            createdAt = o.Created_At,
+            completedAt = o.Completed_At,
+            items = o.OrderItems.Select(oi =>
+            {
+                var assignment = oi
+                    .MenuItem
+                    .MenuAssignments
+                    .EffectiveFor(oi.Menu_Id, oi.Item_Id, o.DiningSession.Location_Id);
+                bool isAddOn = assignment?.Is_Add_On ?? false;
+
+                return new
+                {
+                    orderItemId = oi.Order_Item_Id,
+                    itemId = oi.Item_Id,
+                    name = oi.MenuItem.Name,
+                    quantity = oi.Quantity,
+                    priceAtTime = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0,
+                    isAddOn = isAddOn,
+                    chargeReason = oi.Charge_Reason.ToString(),
+                    status = oi.Order_Item_Status.ToString()
+                };
+            }).ToList()
+        };
 
         /// <summary>
         /// Retrieves detailed information about a specific order including all items and customer details.
