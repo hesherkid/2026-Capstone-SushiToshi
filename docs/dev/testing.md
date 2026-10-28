@@ -178,14 +178,16 @@ One spec, `e2e/qr-code-generation.spec.js`. It covers the login page, admin navi
 
 ### Coverage thresholds
 
-`jest.config.js` enforces a low baseline so the build fails if coverage drops:
+`jest.config.js` sets each threshold a few points below current coverage, so the build fails if coverage drops:
 
 | Metric     | Threshold |
 | ---------- | --------- |
-| Branches   | 3%        |
-| Functions  | 2%        |
-| Lines      | 3%        |
-| Statements | 3%        |
+| Branches   | 55%       |
+| Functions  | 59%       |
+| Lines      | 60%       |
+| Statements | 60%       |
+
+Thin route wrappers that only render a tested component are left out of coverage: `app/analytics/`, `app/auth/`, `app/dashboard/call-server/` and `app/join/` (see `coveragePathIgnorePatterns`).
 
 Raise these as coverage grows. The long-term target is 70% for each metric (see [Coverage Goals](#coverage-goals)).
 

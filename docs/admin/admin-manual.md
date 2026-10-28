@@ -57,7 +57,7 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
 
 ### What you can do
 
-- **New Session**: seat a new party. Choose the location and menu, then either pick a table, pick a table group, or choose **Assign Later**. Only tables and groups that are free are listed.
+- **New Session**: seat a new party. Choose the location and menu, then pick a table (**Assign Individual Table**) or a table group (**Assign Table Group**). Only tables and groups that are active and free are listed.
 - **View session** (eye icon): opens the session's details: its service requests and its bills.
   - **Mark done** (tick icon) clears a service request once it's handled.
   - **View Bill Summary** shows a bill's breakdown: guests by age, add-ons, over-limit charges, leftover fee, tax and total.
@@ -94,7 +94,7 @@ Table groups seat a large party across several tables. The party is seated at th
 
 - **New Table Group**: choose the location and enter a group name.
 - **Edit group**: rename the group.
-- **Add table**: add a table to the group. Only active tables that aren't already in a group are offered.
+- **Add table**: add a table to the group. Only active tables that aren't in a session or already in a group are offered.
 - **Deactivate / Activate**: take the group out of use for a while. Not available while the group is in session.
 - **Delete group**: delete the group. Its tables go back to being individual tables. Not available while the group is in session.
 
@@ -102,7 +102,7 @@ Table groups seat a large party across several tables. The party is seated at th
 
 ## Orders
 
-The Orders page shows the orders placed at your working location. Counts at the top show **Orders Pending**, **Orders Processing** and **Delivered - Seated Tables** (delivered orders for parties still seated). Tabs split the list by status, with the number of orders in each.
+The Orders page shows the orders placed at your working location. Counts at the top show **Orders Pending**, **Orders Processing** and **Delivered - Seated Tables** (delivered orders for parties still seated). Tabs split the list by status, with the number of orders in each. The **Past Orders** tab looks up orders from earlier visits.
 
 An order moves through these statuses:
 
@@ -119,6 +119,16 @@ Items can also be **Cancelled**.
 - **Edit Order** (pending orders): change item quantities or remove items, then **Save Changes** or **Save & Approve**. A removed item is cancelled and won't be delivered.
 - **Mark Delivered** (processing orders): mark one item as delivered from the order details.
 - **Mark all delivered**: mark every item in a processing order as delivered.
+
+### Past Orders
+
+Use **Past Orders** to look up what a table ordered on an earlier visit at your working location, for example to answer a question about a bill.
+
+1. Choose a **From** and **To** date. The range can be up to 31 days.
+2. Optionally, enter a **Table #** or a **Guest or bill name** to narrow the search.
+3. Select **Search**.
+
+Each result is one visit, showing the table, session number, bills, when the first order was placed, and the number of orders, items and total. Select **View table orders** (eye icon) to see every order in the visit, grouped by bill, with each item, its quantity and who ordered it.
 
 ---
 
@@ -154,13 +164,15 @@ Generated codes are saved on the server and reused until they are regenerated.
 
 ### Location Management
 
+The list shows each location's address, the **Menus** it offers (**No menus** means guests have nothing to order from yet) and whether it uses **Default** or **Custom** pricing. Select the pricing chip to open that location's pricing.
+
 - **Add New Location** / **Edit**: enter the location's details:
   - Name
   - Address Line 1 and Address Line 2
   - City, Province and **Province code** (for example, AB). Holiday pricing uses the holidays of this province.
   - Postal Code
   - Phone Number
-- **Assign Menus**: choose which menu types this location offers.
+- **Assign Menus**: opens **Manage Menus** for the location. Add or remove each menu type it offers. Changes save straight away.
 - **Pricing**: open this location's pricing. See [Location pricing](#location-pricing).
 - **Delete**: delete the location. This also removes all of its menu assignments and can't be undone.
 
@@ -171,7 +183,7 @@ Generated codes are saved on the server and reused until they are regenerated.
   - Description
   - Start Time and End Time: when the menu is available
   - **Is Active Menu**: turn the menu on or off
-- **Assign Locations**: choose which locations offer this menu.
+- **Assign Locations**: opens **Manage Locations** for the menu. It lists the **Assigned Locations**; use **Add Location** to add another, or remove one from the list. Changes save straight away.
 - **Delete**: delete the menu type. It will no longer be available to guests.
 
 ---
@@ -184,16 +196,16 @@ The **Pricing** page sets the **default pricing**, which every location uses unl
 
 A pricing profile has:
 
+- **Prices per guest**: a price for each guest type (Adult, Senior, Child, Toddler) on weekdays, weekends and holidays.
+- **When each price applies**: tick the days that get weekend prices. All other days get weekday prices.
+  - **Use holiday prices on approved holidays**: when on, approved holidays get holiday prices. See [Holidays](#holidays).
 - **Tax and fees**
   - **GST**: the tax rate, as a percentage.
   - **Gratuity**: an automatic tip, as a percentage.
   - **Gratuity from party of**: the party size at which gratuity starts. Enter 0 for no automatic gratuity.
   - **Leftover fee**: the default fee staff can add for leaving too much food (see [Dining Sessions](#dining-sessions)).
-- **Weekend days**: tick the days that get weekend prices. All other days get weekday prices.
-- **Use holiday prices on approved holidays**: when on, approved holidays get holiday prices. See [Holidays](#holidays).
-- **Prices per guest**: a price for each guest type (Adult, Senior, Child, Toddler) on weekdays, weekends and holidays.
 
-Select **Save default pricing** to save. Open bills switch to the new prices; closed bills keep the prices they were charged.
+Select **Save default pricing** to save. The button is only available once you've changed something, and **Unsaved changes** shows until you save. Open bills switch to the new prices; closed bills keep the prices they were charged.
 
 ### Location pricing
 
@@ -241,7 +253,13 @@ The Menu Items page lists every dish with its image, name, category, description
 
 - **Add New Menu Item** / **Edit**: enter the item's name, description and category, and upload an image (**Change Image**).
 - **Manage Tags** (tag icon in the Description & Tags column): add or remove tags on the item, such as Spicy or Vegetarian. See [Tags](#tags).
-- **Assign to Menus**: choose which menus offer the item and how. The dialog lists the item's **Current Assignments**. For each new assignment, set:
+- **Assign to Menus**: choose which menus offer the item and how. The **Menu Assignments** dialog lists the item's current assignments.
+  - An assignment for **All locations (default)** puts the item on that menu everywhere.
+  - Choosing a single location adds a **location price** instead: the same menu with its own price, status and limits at that location. Add the default assignment first; the form starts from its values. Select **Add Location Price** to save it.
+  - **Edit assignment** (pencil icon) changes an existing assignment. Select **Update Assignment** to save, or **Cancel Edit**.
+  - **Remove from menu** (on a default assignment) takes the item off that menu, along with all its location prices. **Reset to default price** (on a location price) removes that location's own values so it uses the default again.
+
+  For each assignment, set:
   - **Location**: one location, or **All locations (default)**.
   - **Menu**: the menu type, such as Lunch or Dinner.
   - **Price**: for an add-on, the price charged every time. For an included item, the price charged only when a guest goes past a per-person limit set to **Charge**. Enter 0 to never charge.
