@@ -619,11 +619,14 @@ namespace back_end.Controllers
         /// This endpoint requires authentication.
         /// Only orders with 'Pending' status can be cancelled.
         /// Orders that are approved or delivered cannot be cancelled.
+        /// Staff can cancel any order at their location. Customers (guests included) can cancel
+        /// orders they placed, while they're seated at that table.
         /// </remarks>
         [HttpPatch("{order_id}/cancel")]
-        [Authorize(Policy = "staffOnly")]
+        [Authorize]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -639,9 +642,19 @@ namespace back_end.Controllers
                     return NotFound("Order was not found to cancel");
                 }
 
-                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                var isStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+                if (isStaff)
                 {
-                    return LocationResults.OtherLocation();
+                    if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                    {
+                        return LocationResults.OtherLocation();
+                    }
+                }
+                // Customers only their own orders, and only while seated at that table
+                else if (order.User_Id?.ToString() != ClaimsHelpers.GetUserId(User)
+                         || !await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, "You can only cancel your own orders");
                 }
                 if (order.Status == OrderStatus.Delivered)
                 {

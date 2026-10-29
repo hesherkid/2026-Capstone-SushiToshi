@@ -587,10 +587,7 @@ namespace back_end.controllers
             .FirstOrDefaultAsync();
 
     // Everyone at the table, so a big group splitting into small bills still gets the gratuity on each one
-    private Task<int> PartySizeAsync(int sessionId) =>
-        _context.Bills
-            .Where(b => b.Session_Id == sessionId && b.Status != BillStatus.Cancelled)
-            .SumAsync(b => b.Adult_Count + b.Senior_Count + b.Child_Count + b.Tot_Count);
+    private Task<int> PartySizeAsync(int sessionId) => BillTotalQuery.PartySizeAsync(_context, sessionId);
 
     private static LeftoverFeeResponse LeftoverFeeResult(int sessionId, List<Billing> openBills, decimal defaultFee) => new()
     {
@@ -895,13 +892,8 @@ namespace back_end.controllers
 
         // Charged lines for this bill (cancelled orders and cancelled items are excluded).
         // Prices are snapshots on each order line, so later price changes don't alter old bills.
-        var chargedLines = await _context.OrderItems
+        var chargedLines = await BillTotalQuery.ChargedLines(_context, _bill_id)
           .Include(oi => oi.MenuItem)
-          .Where(oi =>
-              oi.SessionOrder.Bill_Id == _bill_id &&
-              oi.SessionOrder.Status != OrderStatus.Cancelled &&
-              oi.Order_Item_Status != OrderStatus.Cancelled &&
-              oi.Price_At_Time > 0)
           .ToListAsync();
 
         // Add-ons and drinks (charged every time); also any line staff priced manually

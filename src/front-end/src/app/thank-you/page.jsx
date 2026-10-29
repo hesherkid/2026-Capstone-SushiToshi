@@ -82,6 +82,10 @@ const ThankYouPage = () => {
               <Typography color="text.secondary" sx={{ mt: 1 }}>
                 To order again, scan the QR code on your table.
               </Typography>
+              {/* What an account would add */}
+              <Typography color="text.secondary" sx={{ mt: 1 }}>
+                Make an account to save favourites and view past orders.
+              </Typography>
               {/* Guests have no home page; sign-in is where they can sign in or make an account.
                   The guest account is kept, so the next scan reuses it */}
               <Box sx={{ display: "flex", flexDirection: "column", mt: 4 }}>
