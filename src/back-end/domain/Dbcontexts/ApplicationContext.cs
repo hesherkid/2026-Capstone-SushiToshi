@@ -11,6 +11,7 @@ namespace back_end.domain.DbContexts
         public DbSet<AuthActionToken> AuthActionTokens => Set<AuthActionToken>();
         public DbSet<Billing> Bills { get; set; } = null!;
         public DbSet<Category> Categories { get; set; } = null!;
+        public DbSet<FavouriteItem> FavouriteItems { get; set; } = null!;
         public DbSet<DiningSession> DiningSessions { get; set; } = null!;
         public DbSet<Locations> Locations { get; set; } = null!;
         public DbSet<MenuItemAssignment> MenuItemAssignments { get; set; } = null!;
@@ -99,6 +100,22 @@ namespace back_end.domain.DbContexts
                 entity.HasOne(sl => sl.Location)
                     .WithMany()
                     .HasForeignKey(sl => sl.Location_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Deleting a customer or a menu item takes it off favourites
+            modelBuilder.Entity<FavouriteItem>(entity =>
+            {
+                entity.HasKey(f => new { f.User_Id, f.Item_Id });
+
+                entity.HasOne(f => f.User)
+                    .WithMany()
+                    .HasForeignKey(f => f.User_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(f => f.MenuItem)
+                    .WithMany()
+                    .HasForeignKey(f => f.Item_Id)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

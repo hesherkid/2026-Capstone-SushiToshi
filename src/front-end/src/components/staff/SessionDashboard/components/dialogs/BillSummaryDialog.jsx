@@ -46,7 +46,7 @@ const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
           summary?.requested_at && (
             <Alert severity="info" icon={<Bell size={20} />} sx={{ mb: 2 }}>
               The guests asked for this bill at{" "}
-              {formatTime(summary.requested_at)}. They can't add more orders to
+              {formatTime(summary.requested_at)}. They can&apos;t add more orders to
               it, but you still can.
             </Alert>
           )

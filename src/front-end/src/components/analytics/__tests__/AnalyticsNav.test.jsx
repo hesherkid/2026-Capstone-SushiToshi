@@ -8,11 +8,13 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next/link", () => {
-  return ({ children, href, ...props }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  );
+  return function Link({ children, href, ...props }) {
+    return (
+      <a href={href} {...props}>
+        {children}
+      </a>
+    );
+  };
 });
 
 const renderAt = (pathname) => {

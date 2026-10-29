@@ -533,7 +533,7 @@ const MenuAssignmentDialog = ({
                     onChange={setField("over_limit_behavior")}
                   >
                     <MenuItem value="Block">Block</MenuItem>
-                    <MenuItem value="Charge">Charge the item's price</MenuItem>
+                    <MenuItem value="Charge">Charge the item&apos;s price</MenuItem>
                   </Select>
                   <FormHelperText>
                     Charge bills the price for each extra over the limits above

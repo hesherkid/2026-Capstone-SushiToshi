@@ -56,7 +56,7 @@ const ReviewOrderPage = () => {
     clearCart,
     cartLines,
     cartCount,
-    reviewOpenedFromMenu,
+    reviewOpenedFromMenuRef,
   } = useTableOrder();
 
   const [orderError, setOrderError] = useState(null);
@@ -71,8 +71,8 @@ const ReviewOrderPage = () => {
 
   const backToMenu = () => {
     // Real Back puts the guest exactly where they were on the menu
-    if (reviewOpenedFromMenu.current) {
-      reviewOpenedFromMenu.current = false;
+    if (reviewOpenedFromMenuRef.current) {
+      reviewOpenedFromMenuRef.current = false;
       router.back();
     } else {
       router.push(MENU_PATH);

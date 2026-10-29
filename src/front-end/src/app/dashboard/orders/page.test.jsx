@@ -5,11 +5,16 @@ import { PAGE_LOADING_EVENT } from "@/utils/pageLoading";
 import { TABLE_VISIT_ENDED_EVENT } from "@/utils/tableVisit";
 
 jest.mock("@/config/api", () => {
-  const mockApi = { get: jest.fn() };
+  const mockApi = { get: jest.fn(), patch: jest.fn() };
   return { __esModule: true, default: mockApi, api: mockApi };
 });
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
+
+const mockNotifySuccess = jest.fn();
+jest.mock("@/contexts/NotificationContext", () => ({
+  useNotification: () => ({ notifySuccess: mockNotifySuccess, notifyError: jest.fn() }),
+}));
 
 // Signed in as account 22, a friend who didn't place the orders
 jest.mock("@/config/auth", () => ({
@@ -225,5 +230,73 @@ describe("Customer orders page", () => {
     render(<OrdersPage />);
 
     expect(await screen.findByText(/You're not seated at a table yet/)).toBeInTheDocument();
+  });
+
+  describe("cancelling an order", () => {
+    // This person's own order the kitchen hasn't started
+    const myPendingOrder = { orderId: 902, userId: 22, billName: "Lee", status: "Pending", items: [item(3, "Edamame")] };
+
+    beforeEach(() => {
+      api.get.mockImplementation((url) => {
+        if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+        if (url === "/Order/session/269") return Promise.resolve({ data: [...tableOrders, myPendingOrder] });
+        if (url === "/Order/active-session/orders") return Promise.resolve({ data: [tableOrders[1], myPendingOrder] });
+        return Promise.resolve({ data: [] });
+      });
+    });
+
+    const cancelButtonIn = (orderId) =>
+      within(screen.getByRole("region", { name: `Order #${orderId}` })).queryByRole("button", { name: "Cancel order" });
+
+    it("lets this person cancel their own order after confirming", async () => {
+      api.patch.mockResolvedValue({ data: {} });
+      render(<OrdersPage />);
+      await screen.findByText("Order #902");
+
+      fireEvent.click(cancelButtonIn(902));
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByText("Cancel this order?")).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole("button", { name: "Cancel order" }));
+
+      await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/Order/902/cancel"));
+      expect(mockNotifySuccess).toHaveBeenCalledWith("Order #902 cancelled");
+    });
+
+    it("leaves the order alone when they choose to keep it", async () => {
+      render(<OrdersPage />);
+      await screen.findByText("Order #902");
+
+      fireEvent.click(cancelButtonIn(902));
+      fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Keep order" }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(api.patch).not.toHaveBeenCalled();
+    });
+
+    it("only offers it on pending orders this person placed", async () => {
+      render(<OrdersPage />);
+      await screen.findByText("Order #902");
+      // Served
+      expect(cancelButtonIn(901)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("tab", { name: "Whole table" }));
+      await screen.findByText("Order #900");
+      // Someone else's
+      expect(cancelButtonIn(900)).not.toBeInTheDocument();
+      expect(cancelButtonIn(902)).toBeInTheDocument();
+    });
+
+    it("explains when the kitchen started the order first", async () => {
+      api.patch.mockRejectedValue({ response: { status: 409, data: "Can only cancel pending orders" } });
+      render(<OrdersPage />);
+      await screen.findByText("Order #902");
+
+      fireEvent.click(cancelButtonIn(902));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.click(within(dialog).getByRole("button", { name: "Cancel order" }));
+
+      expect(await within(dialog).findByText(/kitchen has already started this order/)).toBeInTheDocument();
+      expect(mockNotifySuccess).not.toHaveBeenCalled();
+    });
   });
 });

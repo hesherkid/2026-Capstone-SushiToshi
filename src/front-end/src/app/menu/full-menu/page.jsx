@@ -12,6 +12,8 @@ import {
 } from "@mui/material";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import CategoryChips from "@/components/menu/CategoryChips";
+import TagFilter, { menuTags, hasAllTags } from "@/components/menu/TagFilter";
+import useMyItems from "@/components/menu/useMyItems";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import ReviewOrderButton from "@/components/menu/ReviewOrderButton";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
@@ -25,6 +27,10 @@ import {
   BILL_REQUESTED_MESSAGE,
   REVIEW_ORDER_PATH,
 } from "@/contexts/TableOrderContext";
+
+// Filter pills for customers with an account, shown before the menu's tags
+const FAVOURITES_FILTER = "my:favourites";
+const ORDER_AGAIN_FILTER = "my:order-again";
 
 // Browsing only: the cart and ordering live on the Review order page (/menu/review).
 // Session, menu, bills and cart come from TableOrderContext, so they survive going there and back
@@ -46,8 +52,8 @@ const FullMenu = () => {
     changeQuantity,
     limitStatus,
     cartCount,
-    menuScrollY,
-    reviewOpenedFromMenu,
+    menuScrollYRef,
+    reviewOpenedFromMenuRef,
   } = useTableOrder();
 
   // Re-check the table and bills each visit; the menu already loaded shows meanwhile
@@ -60,7 +66,10 @@ const FullMenu = () => {
 
   // Put the guest back where they were on the menu after Review order.
   // Read once on arrival, before scrolling to the top of this page can overwrite it
-  const returnToY = useRef(menuScrollY.current);
+  const returnToY = useRef(0);
+  useEffect(() => {
+    returnToY.current = menuScrollYRef.current;
+  }, []);
   const scrollRestored = useRef(false);
   useEffect(() => {
     if (scrollRestored.current || !itemsLoaded) return;
@@ -72,15 +81,15 @@ const FullMenu = () => {
 
   useEffect(() => {
     const remember = () => {
-      menuScrollY.current = window.scrollY;
+      menuScrollYRef.current = window.scrollY;
     };
     window.addEventListener("scroll", remember, { passive: true });
     return () => window.removeEventListener("scroll", remember);
-  }, [menuScrollY]);
+  }, [menuScrollYRef]);
 
   // The app bar's bag also opens Review order
   const reviewOrder = () => {
-    reviewOpenedFromMenu.current = true;
+    reviewOpenedFromMenuRef.current = true;
     router.push(REVIEW_ORDER_PATH);
   };
 
@@ -88,16 +97,43 @@ const FullMenu = () => {
     setSearchTerm(event.target.value);
   };
 
+  const allItems = Object.values(menuItems).flat().filter(Boolean);
+
   const {
     searchTerm,
     setSearchTerm,
-  } = useMenuSearch(Object.values(menuItems).flat().filter(Boolean));
+  } = useMenuSearch(allItems);
+
+  // Favourites and past orders, for customers with an account
+  const { canSave, favourites, orderedBefore, toggleFavourite } = useMyItems({
+    onError: setError,
+  });
+
+  // Pills picked in the filter row; an item has to match all of them
+  const [selectedFilters, setSelectedFilters] = useState([]);
+  const onThisMenu = (itemIds) => allItems.some((item) => itemIds.has(item.item_id));
+  const filterPills = [
+    canSave && onThisMenu(favourites) && { key: FAVOURITES_FILTER, name: "Favourites", symbol: "favorite" },
+    canSave && onThisMenu(orderedBefore) && { key: ORDER_AGAIN_FILTER, name: "Order again", symbol: "history" },
+    ...menuTags(allItems),
+  ].filter(Boolean);
+  // A pill that's gone since it was picked (e.g. the last favourite un-hearted) no longer filters
+  const activeFilters = selectedFilters.filter((key) => filterPills.some((pill) => pill.key === key));
+
+  const matchesFilters = (item) =>
+    activeFilters.every((key) => {
+      if (key === FAVOURITES_FILTER) return favourites.has(item.item_id);
+      if (key === ORDER_AGAIN_FILTER) return orderedBefore.has(item.item_id);
+      return hasAllTags(item, [key]);
+    });
 
   const filterMenuItems = (items, categoryId) => {
     if (!items) return [];
 
     return items.filter((item) => {
       if (quantities[categoryId]?.[item.item_id] > 0) return true;
+
+      if (!matchesFilters(item)) return false;
 
       if (!searchTerm.trim()) return true;
 
@@ -138,7 +174,9 @@ const FullMenu = () => {
   // ---- Category bar: pinned under the app bar, jumps to sections, follows the scroll ----
   const visibleIds = filteredMenuGroups.map(({ category }) => category.category_id);
   const visibleIdsRef = useRef(visibleIds);
-  visibleIdsRef.current = visibleIds;
+  useEffect(() => {
+    visibleIdsRef.current = visibleIds;
+  });
   const sectionRefs = useRef({});
   const chipBarRef = useRef(null);
   const [appBarHeight, setAppBarHeight] = useState(56);
@@ -177,7 +215,6 @@ const FullMenu = () => {
     followScroll();
     window.addEventListener("scroll", followScroll, { passive: true });
     return () => window.removeEventListener("scroll", followScroll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleKey, appBarHeight]);
 
   useEffect(() => () => clearTimeout(jumping.current), []);
@@ -276,6 +313,9 @@ const FullMenu = () => {
               }}
             />
 
+            {itemsLoaded && (
+              <TagFilter tags={filterPills} selected={activeFilters} onChange={setSelectedFilters} />
+            )}
           </>
         ) : (
           // Only once the check is done; before that sessionId is just not known yet
@@ -336,7 +376,11 @@ const FullMenu = () => {
           )}
 
           {filteredMenuGroups.length === 0 ? (
-            <Alert severity="info">No items match your search.</Alert>
+            <Alert severity="info">
+              {activeFilters.length > 0
+                ? "No items match your search and filters."
+                : "No items match your search."}
+            </Alert>
           ) : (
             filteredMenuGroups.map(({ category, items }) => (
               <Box
@@ -398,6 +442,8 @@ const FullMenu = () => {
                         }
                         // The bill's been asked for, so nothing more can be ordered onto it
                         showQuantityControls={!billRequested}
+                        favourite={favourites.has(item.item_id)}
+                        onToggleFavourite={canSave ? toggleFavourite : undefined}
                       />
                     </TrackedItem>
                   ))}

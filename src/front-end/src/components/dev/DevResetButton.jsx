@@ -13,6 +13,8 @@ export const resetBrowserSession = () => {
   } catch {
     // Storage blocked: the reload still starts over
   }
+  // A full reload, so nothing from the last session is left in memory
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.href = DEV_RESET_PATH;
 };
 

@@ -63,18 +63,6 @@ export default function QRCodeManagement() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [previewDialog, setPreviewDialog] = useState({ open: false, url: '', title: '', type: '' });
 
-  // Fetch locations on mount
-  useEffect(() => {
-    fetchLocations();
-  }, []);
-
-  // Fetch tables when location changes
-  useEffect(() => {
-    if (selectedLocation) {
-      fetchTables();
-    }
-  }, [selectedLocation]);
-
   const fetchLocations = async () => {
     try {
       const response = await api.get('/location');
@@ -111,6 +99,18 @@ export default function QRCodeManagement() {
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
+
+  // Fetch locations on mount
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  // Fetch tables when location changes
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchTables();
+    }
+  }, [selectedLocation]);
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -515,7 +515,7 @@ export default function QRCodeManagement() {
               Download Generated QR Codes
             </Typography>
             <Alert severity="info" sx={{ mb: 2 }}>
-              PDF format fits 16 QR codes per page (4 across × 4 down) at 1.75" × 1.75" each, optimized for 8.5" × 11" printing.
+              PDF format fits 16 QR codes per page (4 across × 4 down) at 1.75&quot; × 1.75&quot; each, optimized for 8.5&quot; × 11&quot; printing.
             </Alert>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -582,6 +582,8 @@ export default function QRCodeManagement() {
         <DialogContent>
           {previewDialog.url && (
             <Box sx={{ textAlign: 'center', py: 2 }}>
+              {/* A blob: URL, which next/image can't optimize */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewDialog.url}
                 alt={previewDialog.title}

@@ -296,7 +296,6 @@ const LoginFormContent = () => {
 
     setJoiningTable(true);
     handleRetryJoin().finally(() => setJoiningTable(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId, tableNumber]);
 
   // --------------------------------------------------
