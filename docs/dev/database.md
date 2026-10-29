@@ -70,7 +70,6 @@ All seeded accounts are active and have a confirmed email. They're created by `U
 | Staff    | `michael.chen@sushitoshi.ca`  | `StaffPass123!`  | Assigned to location 2                                                        |
 | Customer | `emma.wilson@email.com`       | `Customer123!`   | One of 10 customers with order history (see `UserSeeder.cs` for the rest)     |
 | Customer | `noah.clarke@email.com`       | `Customer123!`   | No sessions, orders or bills. Use it to try the new-customer flow from scratch |
-| Customer | `guestemail@email.com`        | `GuestUser!`     | Old shared guest account                                                      |
 
 "Continue as Guest" doesn't use any of these. It creates a new throwaway account each time, with an email ending in `@guest.sushitoshi.invalid` and no password (see `Helpers/GuestAccounts.cs`).
 

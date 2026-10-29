@@ -36,7 +36,7 @@ public class DiningSessionJoinTests : IDisposable
         _context.Locations.Add(new Locations { Location_Id = LocationId, Name = "Downtown" });
         _context.Menus.Add(new Menu { Menu_id = 1, Name = "Dinner" });
         _context.Users.AddRange(
-            new User { User_id = GuestUserId, Email = "guestemail@email.com", First_name = "Guest", Last_name = "User", Role = UserRoles.Customer },
+            new User { User_id = GuestUserId, Email = "guest-test@guest.sushitoshi.invalid", First_name = "Guest", Last_name = "K7P2", Role = UserRoles.Customer },
             new User { User_id = MiaUserId, Email = "mia@example.com", First_name = "Mia", Last_name = "Chen", Role = UserRoles.Customer },
             // Staff only start sessions at the location they're working at
             new User { User_id = 1, Email = "staff@example.com", First_name = "Sam", Last_name = "Staff", Role = UserRoles.Staff, Location_id = LocationId }
