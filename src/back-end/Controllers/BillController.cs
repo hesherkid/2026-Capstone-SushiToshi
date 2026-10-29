@@ -481,42 +481,42 @@ namespace back_end.controllers
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLeftoverFee(int _session_id)
     {
-        var locationId = await SessionLocationAsync(_session_id);
-        if (locationId == null)
-        {
-            return NotFound(new { message = "Session was not found" });
-        }
+      var locationId = await SessionLocationAsync(_session_id);
+      if (locationId == null)
+      {
+        return NotFound(new { message = "Session was not found" });
+      }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
-        {
-          return LocationResults.OtherLocation();
-        }
+      if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+      {
+        return LocationResults.OtherLocation();
+      }
 
-        var openBills = await OpenBillsAsync(_session_id);
-        var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
-        return Ok(LeftoverFeeResult(_session_id, openBills, pricing.LeftoverFee));
+      var openBills = await OpenBillsAsync(_session_id);
+      var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
+      return Ok(LeftoverFeeResult(_session_id, openBills, pricing.LeftoverFee));
     }
 
-        /// <summary>
-        /// Applies a leftover fee to the table, split evenly across its open bills.
-        /// </summary>
-        /// <param name="_session_id">The dining session (table)</param>
-        /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
-        /// <response code="200">The fee was applied; returns each open bill's share</response>
-        /// <response code="400">If the amount is negative or the table has no open bills</response>
-        /// <response code="404">If the session doesn't exist</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     PUT /api/bill/leftover_fee/456
-        ///     { "amount": 15.00 }
-        ///
-        /// Staff decide when a table has left too much food. The fee is for the whole table and is
-        /// split evenly across its open bills ($15.00 over 2 bills = $7.50 each), replacing any fee
-        /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
-        /// The fee is taxed with the rest of the bill.
-        /// </remarks>
-        [HttpPut("leftover_fee/{_session_id}")]
+    /// <summary>
+    /// Applies a leftover fee to the table, split evenly across its open bills.
+    /// </summary>
+    /// <param name="_session_id">The dining session (table)</param>
+    /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
+    /// <response code="200">The fee was applied; returns each open bill's share</response>
+    /// <response code="400">If the amount is negative or the table has no open bills</response>
+    /// <response code="404">If the session doesn't exist</response>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/leftover_fee/456
+    ///     { "amount": 15.00 }
+    ///
+    /// Staff decide when a table has left too much food. The fee is for the whole table and is
+    /// split evenly across its open bills ($15.00 over 2 bills = $7.50 each), replacing any fee
+    /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
+    /// The fee is taxed with the rest of the bill.
+    /// </remarks>
+    [HttpPut("leftover_fee/{_session_id}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -537,7 +537,7 @@ namespace back_end.controllers
         var locationId = await SessionLocationAsync(_session_id);
         if (locationId == null)
         {
-            return NotFound(new { message = "Session was not found" });
+          return NotFound(new { message = "Session was not found" });
         }
         // The location's default fee unless staff entered an amount
         var defaultFee = (await _pricingService.GetCurrentPricingAsync(locationId.Value)).LeftoverFee;
@@ -578,7 +578,7 @@ namespace back_end.controllers
             .Where(b => b.Session_Id == sessionId && b.Status == BillStatus.Open)
             .OrderBy(b => b.Bill_Id)
             .ToListAsync();
-    
+
     // The session's location, or null if the session doesn't exist
     private Task<int?> SessionLocationAsync(int sessionId) =>
         _context.DiningSessions
@@ -594,15 +594,15 @@ namespace back_end.controllers
 
     private static LeftoverFeeResponse LeftoverFeeResult(int sessionId, List<Billing> openBills, decimal defaultFee) => new()
     {
-        Session_Id = sessionId,
-        Default_Fee = defaultFee,
-        Amount = openBills.Sum(b => b.Leftover_Charge),
-        Bills = openBills.Select(b => new LeftoverFeeBillShare
-          {
-            Bill_Id = b.Bill_Id,
-            Bill_Name = b.Bill_Name ?? string.Empty,
-            Leftover_Charge = b.Leftover_Charge,
-          }).ToList(),
+      Session_Id = sessionId,
+      Default_Fee = defaultFee,
+      Amount = openBills.Sum(b => b.Leftover_Charge),
+      Bills = openBills.Select(b => new LeftoverFeeBillShare
+      {
+        Bill_Id = b.Bill_Id,
+        Bill_Name = b.Bill_Name ?? string.Empty,
+        Leftover_Charge = b.Leftover_Charge,
+      }).ToList(),
     };
 
     /// <summary>
@@ -885,7 +885,7 @@ namespace back_end.controllers
           return NotFound(new { message = "Bill or session was not found" });
         }
 
-                // Closed bills use the prices frozen when they closed; open bills use the current prices
+        // Closed bills use the prices frozen when they closed; open bills use the current prices
         // for the bill's location on the day the bill was created
         var frozen = BillPriceSnapshot.Read(bill);
         var pricing = frozen
