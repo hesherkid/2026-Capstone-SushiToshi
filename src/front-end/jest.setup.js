@@ -56,14 +56,14 @@ global.console = {
 jest.mock('next/image', () => ({
   __esModule: true,
   default: (props) => {
-    // eslint-disable-next-line jsx-a11y/alt-text
+    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
     return <img {...props} />
   },
 }))
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href, onClick }) => {
+  return function Link({ children, href, onClick }) {
     return <a href={href} onClick={onClick}>{children}</a>
   }
 })

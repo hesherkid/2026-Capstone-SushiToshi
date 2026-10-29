@@ -52,8 +52,8 @@ const FullMenu = () => {
     changeQuantity,
     limitStatus,
     cartCount,
-    menuScrollY,
-    reviewOpenedFromMenu,
+    menuScrollYRef,
+    reviewOpenedFromMenuRef,
   } = useTableOrder();
 
   // Re-check the table and bills each visit; the menu already loaded shows meanwhile
@@ -66,7 +66,10 @@ const FullMenu = () => {
 
   // Put the guest back where they were on the menu after Review order.
   // Read once on arrival, before scrolling to the top of this page can overwrite it
-  const returnToY = useRef(menuScrollY.current);
+  const returnToY = useRef(0);
+  useEffect(() => {
+    returnToY.current = menuScrollYRef.current;
+  }, []);
   const scrollRestored = useRef(false);
   useEffect(() => {
     if (scrollRestored.current || !itemsLoaded) return;
@@ -78,15 +81,15 @@ const FullMenu = () => {
 
   useEffect(() => {
     const remember = () => {
-      menuScrollY.current = window.scrollY;
+      menuScrollYRef.current = window.scrollY;
     };
     window.addEventListener("scroll", remember, { passive: true });
     return () => window.removeEventListener("scroll", remember);
-  }, [menuScrollY]);
+  }, [menuScrollYRef]);
 
   // The app bar's bag also opens Review order
   const reviewOrder = () => {
-    reviewOpenedFromMenu.current = true;
+    reviewOpenedFromMenuRef.current = true;
     router.push(REVIEW_ORDER_PATH);
   };
 
@@ -171,7 +174,9 @@ const FullMenu = () => {
   // ---- Category bar: pinned under the app bar, jumps to sections, follows the scroll ----
   const visibleIds = filteredMenuGroups.map(({ category }) => category.category_id);
   const visibleIdsRef = useRef(visibleIds);
-  visibleIdsRef.current = visibleIds;
+  useEffect(() => {
+    visibleIdsRef.current = visibleIds;
+  });
   const sectionRefs = useRef({});
   const chipBarRef = useRef(null);
   const [appBarHeight, setAppBarHeight] = useState(56);
@@ -210,7 +215,6 @@ const FullMenu = () => {
     followScroll();
     window.addEventListener("scroll", followScroll, { passive: true });
     return () => window.removeEventListener("scroll", followScroll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleKey, appBarHeight]);
 
   useEffect(() => () => clearTimeout(jumping.current), []);

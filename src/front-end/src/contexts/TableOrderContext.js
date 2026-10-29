@@ -68,9 +68,9 @@ export const TableOrderProvider = ({ children }) => {
   // null until loaded (or if it failed); the server still checks every order either way
   const [limits, setLimits] = useState(null);
   // Where the guest was on the menu, so coming back from Review order puts them there again
-  const menuScrollY = useRef(0);
+  const menuScrollYRef = useRef(0);
   // True when Review order was opened from the menu, so its back arrow can just go back
-  const reviewOpenedFromMenu = useRef(false);
+  const reviewOpenedFromMenuRef = useRef(false);
 
   const currentSession = useRef(null);
   const categoriesLoaded = useRef(false);
@@ -224,7 +224,7 @@ export const TableOrderProvider = ({ children }) => {
       setOpenBills([]);
       setSelectedBillId("");
       setLimits(null);
-      menuScrollY.current = 0;
+      menuScrollYRef.current = 0;
     }
 
     setSessionId(mySessionId);
@@ -419,8 +419,8 @@ export const TableOrderProvider = ({ children }) => {
     clearCart,
     cartLines,
     cartCount,
-    menuScrollY,
-    reviewOpenedFromMenu,
+    menuScrollYRef,
+    reviewOpenedFromMenuRef,
   };
 
   return (

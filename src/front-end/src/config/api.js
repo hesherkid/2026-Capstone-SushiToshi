@@ -46,6 +46,8 @@ api.interceptors.response.use(
       // Clear token and redirect to login
       if (typeof window !== "undefined") {
         localStorage.removeItem("authToken");
+        // A full reload, so no signed-in state is left in memory
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.href = "/auth/login";
       }
     }

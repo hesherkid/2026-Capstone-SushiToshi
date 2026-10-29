@@ -44,7 +44,7 @@ const DefaultPricing = () => {
     <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, textAlign: "left" }}>
       <ManagementHeader title="Default Pricing" />
       <Typography color="text.secondary" sx={{ mb: ownPricing.length > 0 ? 1 : 2 }}>
-        These prices apply to every location that doesn't have its own pricing. To give a location
+        These prices apply to every location that doesn&apos;t have its own pricing. To give a location
         its own pricing, open it on the{" "}
         <Link component={NextLink} href="/location/menu-location" underline="hover" sx={{ fontWeight: 600 }}>
           Locations
