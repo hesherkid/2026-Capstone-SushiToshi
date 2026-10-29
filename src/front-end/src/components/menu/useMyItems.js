@@ -8,13 +8,13 @@ import {
   removeFavourite,
 } from "@/services/myItems";
 
-// Who's browsing the menu: favourites and "Order again" are for customers with an account
-const whoIsBrowsing = () => {
+// Favourites and "Order again" are for customers with an account, not guests
+const isAccountCustomer = () => {
   const token = getAuthToken();
-  if (!token || isTokenExpired(token)) return { isCustomer: false, isGuest: false };
+  if (!token || isTokenExpired(token)) return false;
   const claims = decodeToken(token);
   const isGuest = localStorage.getItem("guest") === "true" || isGuestClaims(claims);
-  return { isCustomer: !isGuest && extractRoles(claims).includes("Customer"), isGuest };
+  return !isGuest && extractRoles(claims).includes("Customer");
 };
 
 /**
@@ -24,15 +24,13 @@ const whoIsBrowsing = () => {
  */
 const useMyItems = ({ onError } = {}) => {
   const [canSave, setCanSave] = useState(false);
-  const [isGuest, setIsGuest] = useState(false);
   const [favourites, setFavourites] = useState(() => new Set());
   const [orderedBefore, setOrderedBefore] = useState(() => new Set());
 
   useEffect(() => {
-    const who = whoIsBrowsing();
-    setIsGuest(who.isGuest);
-    setCanSave(who.isCustomer);
-    if (!who.isCustomer) return;
+    const isCustomer = isAccountCustomer();
+    setCanSave(isCustomer);
+    if (!isCustomer) return;
 
     let cancelled = false;
     // Either list failing just leaves it empty; the menu still works without them
@@ -69,7 +67,7 @@ const useMyItems = ({ onError } = {}) => {
     [favourites, onError],
   );
 
-  return { canSave, isGuest, favourites, orderedBefore, toggleFavourite };
+  return { canSave, favourites, orderedBefore, toggleFavourite };
 };
 
 export default useMyItems;

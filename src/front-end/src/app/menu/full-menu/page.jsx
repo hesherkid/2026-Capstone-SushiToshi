@@ -102,7 +102,7 @@ const FullMenu = () => {
   } = useMenuSearch(allItems);
 
   // Favourites and past orders, for customers with an account
-  const { canSave, isGuest, favourites, orderedBefore, toggleFavourite } = useMyItems({
+  const { canSave, favourites, orderedBefore, toggleFavourite } = useMyItems({
     onError: setError,
   });
 
@@ -311,13 +311,6 @@ const FullMenu = () => {
 
             {itemsLoaded && (
               <TagFilter tags={filterPills} selected={activeFilters} onChange={setSelectedFilters} />
-            )}
-
-            {/* What an account would add; guests make one from the thank-you screen */}
-            {itemsLoaded && isGuest && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                Make an account to save favourites and order again on your next visit.
-              </Typography>
             )}
           </>
         ) : (

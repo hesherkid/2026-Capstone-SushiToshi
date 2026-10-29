@@ -562,13 +562,13 @@ describe("FullMenu guest flow", () => {
       expect(screen.queryByRole("button", { name: "Order again" })).not.toBeInTheDocument();
     });
 
-    it("gives guests no hearts, just a note on what an account adds", async () => {
+    it("gives guests no hearts", async () => {
       localStorage.setItem("authToken", tokenFor({ [ROLE]: "Customer", guest: "true" }));
       render(<FullMenu />);
       await screen.findByText("Miso Soup");
 
       expect(screen.queryByRole("button", { name: /^Favourite/ })).not.toBeInTheDocument();
-      expect(screen.getByText(/Make an account to save favourites/)).toBeInTheDocument();
+      expect(screen.queryByText(/Make an account to save favourites/)).not.toBeInTheDocument();
       expect(api.get).not.toHaveBeenCalledWith("/me/favourites");
     });
   });
