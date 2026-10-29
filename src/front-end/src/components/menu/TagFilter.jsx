@@ -20,7 +20,8 @@ export const menuTags = (items) => {
 export const hasAllTags = (item, selectedKeys) =>
   selectedKeys.every((key) => (item.tags ?? []).some((tag) => tagKey(tag) === key));
 
-// Sideways-scrolling row of tag pills under the search box; tap to filter by a tag
+// Sideways-scrolling row of pills under the search box; tap to filter by a tag.
+// A pill with a `symbol` (Favourites, Order again) shows that icon, filled once picked
 const TagFilter = ({ tags, selected, onChange }) => {
   if (!tags.length) return null;
 
@@ -42,7 +43,7 @@ const TagFilter = ({ tags, selected, onChange }) => {
   return (
     <Box
       role="group"
-      aria-label="Filter by tag"
+      aria-label="Filter the menu"
       sx={{
         display: "flex",
         alignItems: "center",
@@ -53,7 +54,7 @@ const TagFilter = ({ tags, selected, onChange }) => {
       }}
     >
       <MaterialSymbol name="filter_list" size={20} sx={{ color: "text.secondary", flexShrink: 0 }} />
-      {tags.map(({ key, name }) => {
+      {tags.map(({ key, name, symbol }) => {
         const isSelected = selected.includes(key);
         return (
           <ButtonBase
@@ -68,14 +69,18 @@ const TagFilter = ({ tags, selected, onChange }) => {
               "&:hover": { bgcolor: isSelected ? "primary.dark" : "grey.200" },
             }}
           >
-            {isSelected && <MaterialSymbol name="check" size={16} />}
+            {symbol ? (
+              <MaterialSymbol name={symbol} filled={isSelected} size={16} />
+            ) : (
+              isSelected && <MaterialSymbol name="check" size={16} />
+            )}
             {name}
           </ButtonBase>
         );
       })}
       {selected.length > 0 && (
         <ButtonBase
-          aria-label="Clear tag filters"
+          aria-label="Clear filters"
           onClick={() => onChange([])}
           sx={{ ...pill, fontWeight: 500, color: "primary.main", "&:hover": { bgcolor: "grey.100" } }}
         >

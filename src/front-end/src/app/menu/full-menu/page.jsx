@@ -13,6 +13,7 @@ import {
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import CategoryChips from "@/components/menu/CategoryChips";
 import TagFilter, { menuTags, hasAllTags } from "@/components/menu/TagFilter";
+import useMyItems from "@/components/menu/useMyItems";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import ReviewOrderButton from "@/components/menu/ReviewOrderButton";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
@@ -26,6 +27,10 @@ import {
   BILL_REQUESTED_MESSAGE,
   REVIEW_ORDER_PATH,
 } from "@/contexts/TableOrderContext";
+
+// Filter pills for customers with an account, shown before the menu's tags
+const FAVOURITES_FILTER = "my:favourites";
+const ORDER_AGAIN_FILTER = "my:order-again";
 
 // Browsing only: the cart and ordering live on the Review order page (/menu/review).
 // Session, menu, bills and cart come from TableOrderContext, so they survive going there and back
@@ -89,16 +94,35 @@ const FullMenu = () => {
     setSearchTerm(event.target.value);
   };
 
+  const allItems = Object.values(menuItems).flat().filter(Boolean);
+
   const {
     searchTerm,
     setSearchTerm,
-  } = useMenuSearch(Object.values(menuItems).flat().filter(Boolean));
+  } = useMenuSearch(allItems);
 
-  // Tags picked in the filter row; an item has to have all of them
-  const [selectedTags, setSelectedTags] = useState([]);
-  const availableTags = menuTags(Object.values(menuItems).flat().filter(Boolean));
-  // A tag that's gone from the menu since it was picked no longer filters
-  const activeTags = selectedTags.filter((key) => availableTags.some((tag) => tag.key === key));
+  // Favourites and past orders, for customers with an account
+  const { canSave, isGuest, favourites, orderedBefore, toggleFavourite } = useMyItems({
+    onError: setError,
+  });
+
+  // Pills picked in the filter row; an item has to match all of them
+  const [selectedFilters, setSelectedFilters] = useState([]);
+  const onThisMenu = (itemIds) => allItems.some((item) => itemIds.has(item.item_id));
+  const filterPills = [
+    canSave && onThisMenu(favourites) && { key: FAVOURITES_FILTER, name: "Favourites", symbol: "favorite" },
+    canSave && onThisMenu(orderedBefore) && { key: ORDER_AGAIN_FILTER, name: "Order again", symbol: "history" },
+    ...menuTags(allItems),
+  ].filter(Boolean);
+  // A pill that's gone since it was picked (e.g. the last favourite un-hearted) no longer filters
+  const activeFilters = selectedFilters.filter((key) => filterPills.some((pill) => pill.key === key));
+
+  const matchesFilters = (item) =>
+    activeFilters.every((key) => {
+      if (key === FAVOURITES_FILTER) return favourites.has(item.item_id);
+      if (key === ORDER_AGAIN_FILTER) return orderedBefore.has(item.item_id);
+      return hasAllTags(item, [key]);
+    });
 
   const filterMenuItems = (items, categoryId) => {
     if (!items) return [];
@@ -106,7 +130,7 @@ const FullMenu = () => {
     return items.filter((item) => {
       if (quantities[categoryId]?.[item.item_id] > 0) return true;
 
-      if (!hasAllTags(item, activeTags)) return false;
+      if (!matchesFilters(item)) return false;
 
       if (!searchTerm.trim()) return true;
 
@@ -286,7 +310,14 @@ const FullMenu = () => {
             />
 
             {itemsLoaded && (
-              <TagFilter tags={availableTags} selected={activeTags} onChange={setSelectedTags} />
+              <TagFilter tags={filterPills} selected={activeFilters} onChange={setSelectedFilters} />
+            )}
+
+            {/* What an account would add; guests make one from the thank-you screen */}
+            {itemsLoaded && isGuest && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                Make an account to save favourites and order again on your next visit.
+              </Typography>
             )}
           </>
         ) : (
@@ -349,8 +380,8 @@ const FullMenu = () => {
 
           {filteredMenuGroups.length === 0 ? (
             <Alert severity="info">
-              {activeTags.length > 0
-                ? "No items match your search and tag filters."
+              {activeFilters.length > 0
+                ? "No items match your search and filters."
                 : "No items match your search."}
             </Alert>
           ) : (
@@ -414,6 +445,8 @@ const FullMenu = () => {
                         }
                         // The bill's been asked for, so nothing more can be ordered onto it
                         showQuantityControls={!billRequested}
+                        favourite={favourites.has(item.item_id)}
+                        onToggleFavourite={canSave ? toggleFavourite : undefined}
                       />
                     </TrackedItem>
                   ))}

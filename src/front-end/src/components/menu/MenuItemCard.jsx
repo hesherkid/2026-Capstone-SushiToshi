@@ -1,4 +1,4 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, IconButton, Paper, Typography } from "@mui/material";
 import Tags from "@/components/Tags";
 import QuantityStepper from "@/components/menu/QuantityStepper";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
@@ -43,6 +43,9 @@ const MenuItemCard = ({
   showQuantityControls = true,
   // The cart holds as many as the item's limit allows: no more adding, and the note turns red
   atLimit = false,
+  // Heart button; left out for guests
+  favourite = false,
+  onToggleFavourite,
 }) => {
   const limits = limitText(item);
 
@@ -103,21 +106,37 @@ const MenuItemCard = ({
             flexDirection: "column",
           }}
         >
-          <Typography
-            component="h3"
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: "1rem", sm: "1.05rem" },
-              lineHeight: 1.3,
-              overflowWrap: "anywhere",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {item.name}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.5 }}>
+            <Typography
+              component="h3"
+              sx={{
+                flex: 1,
+                fontWeight: 700,
+                fontSize: { xs: "1rem", sm: "1.05rem" },
+                lineHeight: 1.3,
+                overflowWrap: "anywhere",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {item.name}
+            </Typography>
+
+            {/* Customers with an account only */}
+            {onToggleFavourite && (
+              <IconButton
+                size="small"
+                aria-label={`Favourite ${item.name}`}
+                aria-pressed={favourite}
+                onClick={() => onToggleFavourite(item.item_id)}
+                sx={{ mt: -0.75, mr: -0.75, color: favourite ? "primary.main" : "text.secondary" }}
+              >
+                <MaterialSymbol name="favorite" filled={favourite} size={22} />
+              </IconButton>
+            )}
+          </Box>
 
           {item.description && (
             <Typography

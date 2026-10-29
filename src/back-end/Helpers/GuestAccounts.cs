@@ -1,4 +1,5 @@
 using System;
+using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace back_end.Helpers
@@ -32,5 +33,9 @@ namespace back_end.Helpers
 
         public static bool IsGuest(string? email) =>
             email != null && email.EndsWith("@" + EmailDomain, StringComparison.OrdinalIgnoreCase);
+
+        // Tokens from before the guest claim was added are recognised by their email
+        public static bool IsGuest(ClaimsPrincipal user) =>
+            user.HasClaim(TokenClaim, "true") || IsGuest(user.FindFirst(ClaimTypes.Email)?.Value);
     }
 }

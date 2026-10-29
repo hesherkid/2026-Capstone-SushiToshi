@@ -24,6 +24,8 @@ jest.mock("@/config/api", () => ({
   __esModule: true,
   default: {
     get: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -421,7 +423,7 @@ describe("FullMenu guest flow", () => {
       api.get.mockImplementation(tableApi({ items: [MISO_SOUP, SALMON_ROLL, SPICY_TUNA] }));
     });
 
-    const filterRow = () => screen.getByRole("group", { name: "Filter by tag" });
+    const filterRow = () => screen.getByRole("group", { name: "Filter the menu" });
     const tagButton = (name) => within(filterRow()).getByRole("button", { name });
 
     it("offers each tag on the menu once, A to Z", async () => {
@@ -448,10 +450,10 @@ describe("FullMenu guest flow", () => {
       expect(screen.queryByText("Miso Soup")).not.toBeInTheDocument();
       expect(screen.getByText("Spicy Tuna Roll")).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("button", { name: "Clear tag filters" }));
+      fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
       expect(screen.getByText("Miso Soup")).toBeInTheDocument();
       expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Clear tag filters" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
     });
 
     it("keeps items already in the cart on screen", async () => {
@@ -472,8 +474,102 @@ describe("FullMenu guest flow", () => {
 
       fireEvent.click(tagButton("Spicy"));
       expect(
-        screen.getByText("No items match your search and tag filters."),
+        screen.getByText("No items match your search and filters."),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("favourites and order again", () => {
+    const ROLE = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+    // Only the claims are read, so the header and signature can be anything
+    const tokenFor = (claims) =>
+      `x.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 3600, ...claims }))}.x`;
+
+    // A customer with an account, with these favourites and past orders saved
+    const signInCustomer = ({ favourites = [], orderedBefore = [] } = {}) => {
+      localStorage.removeItem("guest");
+      localStorage.setItem("authToken", tokenFor({ [ROLE]: "Customer" }));
+      const menu = tableApi();
+      api.get.mockImplementation((url, config) => {
+        if (url === "/me/favourites") return Promise.resolve({ data: favourites });
+        if (url === "/me/ordered-before") return Promise.resolve({ data: orderedBefore });
+        return menu(url, config);
+      });
+    };
+
+    const pill = (name) =>
+      within(screen.getByRole("group", { name: "Filter the menu" })).getByRole("button", { name });
+
+    it("hearts an item and saves it to the account", async () => {
+      signInCustomer();
+      api.put.mockResolvedValue({ status: 204 });
+      render(<FullMenu />);
+      await screen.findByText("Miso Soup");
+
+      const heart = screen.getByRole("button", { name: "Favourite Miso Soup" });
+      expect(heart).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(heart);
+
+      expect(heart).toHaveAttribute("aria-pressed", "true");
+      expect(api.put).toHaveBeenCalledWith("/me/favourites/11");
+      // Its first favourite brings in the Favourites filter
+      expect(pill("Favourites")).toBeInTheDocument();
+    });
+
+    it("un-hearts a favourite, and puts it back if saving fails", async () => {
+      signInCustomer({ favourites: [MISO_SOUP.item_id] });
+      api.delete.mockRejectedValue(new Error("offline"));
+      render(<FullMenu />);
+
+      const heart = await screen.findByRole("button", { name: "Favourite Miso Soup", pressed: true });
+      fireEvent.click(heart);
+
+      expect(api.delete).toHaveBeenCalledWith("/me/favourites/11");
+      expect(await screen.findByText("Couldn't update your favourites. Please try again.")).toBeInTheDocument();
+      expect(heart).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("filters to favourites", async () => {
+      signInCustomer({ favourites: [SALMON_ROLL.item_id] });
+      render(<FullMenu />);
+      await screen.findByText("Miso Soup");
+
+      fireEvent.click(await screen.findByRole("button", { name: "Favourites" }));
+
+      expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
+      expect(screen.queryByText("Miso Soup")).not.toBeInTheDocument();
+    });
+
+    it("Order again shows only what the customer has ordered before", async () => {
+      // 99 was ordered on a visit but isn't on this menu, so it's left out
+      signInCustomer({ orderedBefore: [99, MISO_SOUP.item_id] });
+      render(<FullMenu />);
+      await screen.findByText("Salmon Roll");
+
+      fireEvent.click(await screen.findByRole("button", { name: "Order again" }));
+
+      expect(screen.getByText("Miso Soup")).toBeInTheDocument();
+      expect(screen.queryByText("Salmon Roll")).not.toBeInTheDocument();
+    });
+
+    it("leaves out Favourites and Order again when there's nothing in them", async () => {
+      signInCustomer();
+      render(<FullMenu />);
+      await screen.findByText("Miso Soup");
+
+      expect(screen.queryByRole("button", { name: "Favourites" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Order again" })).not.toBeInTheDocument();
+    });
+
+    it("gives guests no hearts, just a note on what an account adds", async () => {
+      localStorage.setItem("authToken", tokenFor({ [ROLE]: "Customer", guest: "true" }));
+      render(<FullMenu />);
+      await screen.findByText("Miso Soup");
+
+      expect(screen.queryByRole("button", { name: /^Favourite/ })).not.toBeInTheDocument();
+      expect(screen.getByText(/Make an account to save favourites/)).toBeInTheDocument();
+      expect(api.get).not.toHaveBeenCalledWith("/me/favourites");
     });
   });
 
