@@ -10,3 +10,6 @@ export const removeFavourite = (itemId) => api.delete(`/me/favourites/${itemId}`
 
 // Most recently ordered first, from every visit
 export const fetchOrderedBefore = async () => (await api.get("/me/ordered-before")).data;
+
+// Ended visits, newest first: where and when, what this customer ordered, and the bill totals
+export const fetchPastVisits = async () => (await api.get("/me/visits")).data;
