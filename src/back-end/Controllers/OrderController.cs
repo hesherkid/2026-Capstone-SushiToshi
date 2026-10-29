@@ -415,7 +415,6 @@ namespace back_end.Controllers
 
                 if (order.Status != OrderStatus.Pending)
                 {
-                    // TODO: Please verify new functionality
                     if (!(userRole.Contains("Staff") || userRole.Contains("Admin")) && userId != order.User_Id)
                     {
                         return Conflict("Can not Modify a Approved Order");
