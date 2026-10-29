@@ -39,11 +39,6 @@ const StaffManagementForm = ({
     location_ids: initialData?.location_ids ?? [],
   });
 
-  // Fetch locations when component mounts
-  useEffect(() => {
-    fetchLocations();
-  }, []);
-
   const fetchLocations = async () => {
     try {
       const response = await api.get("/location");
@@ -53,6 +48,11 @@ const StaffManagementForm = ({
       console.error("Error fetching locations:", error);
     }
   };
+
+  // Fetch locations when component mounts
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -155,7 +155,7 @@ const StaffManagementForm = ({
           <MenuItem value="admin">Admin</MenuItem>
         </Select>
         {lockRole && (
-          <FormHelperText>You can't change your own role</FormHelperText>
+          <FormHelperText>You can&apos;t change your own role</FormHelperText>
         )}
       </FormControl>
 

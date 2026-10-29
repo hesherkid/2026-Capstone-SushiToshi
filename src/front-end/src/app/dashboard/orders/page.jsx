@@ -181,7 +181,6 @@ const OrdersPage = () => {
     setGroupedOrders({});
     setRefreshFailed(false);
     fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, sessionId]);
 
   // Order status changes as the kitchen works through it
