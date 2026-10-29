@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import CategoryChips from "@/components/menu/CategoryChips";
+import TagFilter, { menuTags, hasAllTags } from "@/components/menu/TagFilter";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import ReviewOrderButton from "@/components/menu/ReviewOrderButton";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
@@ -93,11 +94,19 @@ const FullMenu = () => {
     setSearchTerm,
   } = useMenuSearch(Object.values(menuItems).flat().filter(Boolean));
 
+  // Tags picked in the filter row; an item has to have all of them
+  const [selectedTags, setSelectedTags] = useState([]);
+  const availableTags = menuTags(Object.values(menuItems).flat().filter(Boolean));
+  // A tag that's gone from the menu since it was picked no longer filters
+  const activeTags = selectedTags.filter((key) => availableTags.some((tag) => tag.key === key));
+
   const filterMenuItems = (items, categoryId) => {
     if (!items) return [];
 
     return items.filter((item) => {
       if (quantities[categoryId]?.[item.item_id] > 0) return true;
+
+      if (!hasAllTags(item, activeTags)) return false;
 
       if (!searchTerm.trim()) return true;
 
@@ -276,6 +285,9 @@ const FullMenu = () => {
               }}
             />
 
+            {itemsLoaded && (
+              <TagFilter tags={availableTags} selected={activeTags} onChange={setSelectedTags} />
+            )}
           </>
         ) : (
           // Only once the check is done; before that sessionId is just not known yet
@@ -336,7 +348,11 @@ const FullMenu = () => {
           )}
 
           {filteredMenuGroups.length === 0 ? (
-            <Alert severity="info">No items match your search.</Alert>
+            <Alert severity="info">
+              {activeTags.length > 0
+                ? "No items match your search and tag filters."
+                : "No items match your search."}
+            </Alert>
           ) : (
             filteredMenuGroups.map(({ category, items }) => (
               <Box

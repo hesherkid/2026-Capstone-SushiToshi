@@ -5,11 +5,13 @@ import { Box } from "@mui/material";
 export const MATERIAL_SYMBOL_NAMES = [
   "add",
   "arrow_back",
+  "check",
   "check_circle",
   "chevron_right",
   "close",
   "delete",
   "expand_more",
+  "filter_list",
   "help",
   "logout",
   "menu_book_2",

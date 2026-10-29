@@ -1,5 +1,5 @@
 import React from "react";
-import { render as rtlRender, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import FullMenu from "./page";
 import { TableOrderProvider } from "@/contexts/TableOrderContext";
 import { tableApi, MISO_SOUP, SALMON_ROLL } from "../_testing/tableApiMock";
@@ -404,6 +404,77 @@ describe("FullMenu guest flow", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Miso Soup")).not.toBeInTheDocument();
     expect(screen.queryByText("Salmon Roll")).not.toBeInTheDocument();
+  });
+
+  describe("tag filter", () => {
+    const SPICY_TUNA = {
+      ...SALMON_ROLL,
+      item_id: 13,
+      name: "Spicy Tuna Roll",
+      tags: [
+        { tag_id: 3, name: "Popular", color_code: "#C01E2E" },
+        { tag_id: 5, name: "Spicy", color_code: "#FF5733" },
+      ],
+    };
+
+    beforeEach(() => {
+      api.get.mockImplementation(tableApi({ items: [MISO_SOUP, SALMON_ROLL, SPICY_TUNA] }));
+    });
+
+    const filterRow = () => screen.getByRole("group", { name: "Filter by tag" });
+    const tagButton = (name) => within(filterRow()).getByRole("button", { name });
+
+    it("offers each tag on the menu once, A to Z", async () => {
+      render(<FullMenu />);
+      await screen.findByText("Miso Soup");
+
+      const labels = within(filterRow())
+        .getAllByRole("button")
+        .map((button) => button.textContent);
+      expect(labels).toEqual(["Popular", "Spicy"]);
+    });
+
+    it("shows only items with every picked tag, and Clear brings them all back", async () => {
+      render(<FullMenu />);
+      await screen.findByText("Miso Soup");
+
+      fireEvent.click(tagButton("Popular"));
+      expect(tagButton("Popular")).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText("Miso Soup")).toBeInTheDocument();
+      expect(screen.getByText("Spicy Tuna Roll")).toBeInTheDocument();
+      expect(screen.queryByText("Salmon Roll")).not.toBeInTheDocument();
+
+      fireEvent.click(tagButton("Spicy"));
+      expect(screen.queryByText("Miso Soup")).not.toBeInTheDocument();
+      expect(screen.getByText("Spicy Tuna Roll")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Clear tag filters" }));
+      expect(screen.getByText("Miso Soup")).toBeInTheDocument();
+      expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Clear tag filters" })).not.toBeInTheDocument();
+    });
+
+    it("keeps items already in the cart on screen", async () => {
+      render(<FullMenu />);
+      await screen.findByText("Salmon Roll");
+
+      fireEvent.click(screen.getByRole("button", { name: "Add one Salmon Roll" }));
+      fireEvent.click(tagButton("Spicy"));
+
+      expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
+      expect(screen.queryByText("Miso Soup")).not.toBeInTheDocument();
+    });
+
+    it("works with the search box", async () => {
+      mockSearchTerm = "miso";
+      render(<FullMenu />);
+      await screen.findByText("Miso Soup");
+
+      fireEvent.click(tagButton("Spicy"));
+      expect(
+        screen.getByText("No items match your search and tag filters."),
+      ).toBeInTheDocument();
+    });
   });
 
   it("shows placeholder cards, not 'no items', while the menu loads", async () => {
