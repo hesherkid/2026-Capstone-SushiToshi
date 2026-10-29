@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Button, Paper, Typography } from "@mui/material";
+import { Box, Button, ButtonBase, Paper, Typography } from "@mui/material";
 import { decodeToken, isTokenExpired } from "@/config/auth";
 import { getAuthToken, isGuestClaims, logoutCustomer } from "@/utils/auth";
 import { hasTableVisit } from "@/utils/tableVisit";
@@ -14,6 +14,7 @@ import MaterialSymbol from "@/components/common/MaterialSymbol";
 
 const MENU_PATH = "/menu/full-menu";
 const LOGIN_PATH = "/auth/login";
+const VISITS_PATH = "/visits";
 // Log out waits on the visit ending, so this page checks sooner than the 15 s watcher
 const SEATED_CHECK_MS = 5000;
 
@@ -136,6 +137,23 @@ const CustomerHome = () => {
             </Box>
           ))}
         </Box>
+      </Paper>
+
+      {/* ---- Past visits ---- */}
+      <Paper variant="outlined" sx={{ mt: 2, borderRadius: 3, overflow: "hidden" }}>
+        <ButtonBase
+          onClick={() => router.push(VISITS_PATH)}
+          sx={{ width: "100%", display: "flex", alignItems: "center", gap: 2, px: 2.5, py: 2, textAlign: "left" }}
+        >
+          <MaterialSymbol name="history" size={26} sx={{ color: "primary.main", flexShrink: 0 }} />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 600, lineHeight: 1.3 }}>Past visits</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              What you ordered and what you paid
+            </Typography>
+          </Box>
+          <MaterialSymbol name="chevron_right" size={24} sx={{ color: "text.secondary" }} />
+        </ButtonBase>
       </Paper>
 
       {/* ---- Account: log out only between visits ---- */}

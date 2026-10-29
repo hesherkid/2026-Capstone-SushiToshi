@@ -7,6 +7,9 @@ import { fetchMySessionId, getMyUserId, NOT_SEATED_MESSAGE } from "@/services/ta
 import { setPageLoading } from "@/utils/pageLoading";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { useNotification } from "@/contexts/NotificationContext";
+import orderService from "@/services/orderService";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { formatCurrency, formatTime } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 
@@ -41,6 +44,16 @@ const itemPrice = (item) => {
     : formatCurrency(price);
 };
 
+// Why a cancel was refused
+const cancelErrorMessage = (err) => {
+  const status = err?.response?.status;
+  if (status === 400 || status === 409) {
+    return "The kitchen has already started this order, so it can't be cancelled.";
+  }
+  if (typeof err?.response?.data === "string") return err.response.data;
+  return "Couldn't cancel this order. Please try again.";
+};
+
 const OrdersSkeleton = () => (
   <Box aria-label="Loading orders" role="status">
     <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3, mb: 1.5 }} />
@@ -52,6 +65,7 @@ const OrdersSkeleton = () => (
 // Grouped by where each order is at; "Whole table" also shows orders others placed
 const OrdersPage = () => {
   const router = useRouter();
+  const { notifySuccess } = useNotification();
   const [groupedOrders, setGroupedOrders] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -63,6 +77,9 @@ const OrdersPage = () => {
   const latestRequest = useRef(0);
   // Set once the page has picked its opening tab (see fetchOrders)
   const openingTabChosen = useRef(false);
+  // The order waiting on "Cancel this order?", and why the last try failed
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelError, setCancelError] = useState(null);
   const myUserId = getMyUserId();
 
   useEffect(() => {
@@ -195,6 +212,29 @@ const OrdersPage = () => {
     return parts.join(" · ");
   };
 
+  // Pending orders can be cancelled by whoever placed them ("My orders" only has theirs)
+  const canCancel = (order) =>
+    statusKey(order.status) === "PENDING" && (view === VIEWS.MINE || (myUserId && order.userId === myUserId));
+
+  const closeCancelDialog = () => {
+    setOrderToCancel(null);
+    setCancelError(null);
+  };
+
+  // Returns false to keep the dialog open with the error (see ConfirmDialog)
+  const handleCancelOrder = async () => {
+    try {
+      await orderService.cancelOrder(orderToCancel.orderId);
+    } catch (err) {
+      setCancelError(cancelErrorMessage(err));
+      // The kitchen may have picked it up; show where it's at now
+      fetchOrders({ quiet: true });
+      return false;
+    }
+    notifySuccess(`Order #${orderToCancel.orderId} cancelled`);
+    fetchOrders({ quiet: true });
+  };
+
   // One card per order, laid out open so each item's status shows without tapping into anything
   const renderOrderCard = (order) => {
     const items = order.items || [];
@@ -294,6 +334,22 @@ const OrdersPage = () => {
             <Typography color="text.secondary" sx={{ px: 2, py: 1.5 }}>
               No items found for this order.
             </Typography>
+          </>
+        )}
+
+        {canCancel(order) && (
+          <>
+            <Divider />
+            <Box sx={{ px: 1, py: 0.5 }}>
+              <Button
+                color="error"
+                onClick={() => setOrderToCancel(order)}
+                startIcon={<MaterialSymbol name="close" size={20} />}
+                sx={{ textTransform: "none", fontWeight: 600 }}
+              >
+                Cancel order
+              </Button>
+            </Box>
           </>
         )}
       </Paper>
@@ -429,6 +485,17 @@ const OrdersPage = () => {
           )}
         </>
       )}
+
+      <ConfirmDialog
+        open={!!orderToCancel}
+        title="Cancel this order?"
+        message={`Order #${orderToCancel?.orderId} hasn't been started yet. Cancelling it removes it from the kitchen.`}
+        confirmLabel="Cancel order"
+        cancelLabel="Keep order"
+        onConfirm={handleCancelOrder}
+        onClose={closeCancelDialog}
+        error={cancelError}
+      />
     </CustomerPageContainer>
   );
 };

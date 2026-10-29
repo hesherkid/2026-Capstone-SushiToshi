@@ -245,6 +245,24 @@ namespace back_end.Migrations
                         });
                 });
 
+            modelBuilder.Entity("back_end.domain.Entities.FavouriteItem", b =>
+                {
+                    b.Property<int>("User_Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Item_Id")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Created_At")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("User_Id", "Item_Id");
+
+                    b.HasIndex("Item_Id");
+
+                    b.ToTable("favourite_item");
+                });
+
             modelBuilder.Entity("back_end.domain.Entities.Holiday", b =>
                 {
                     b.Property<int>("Holiday_Id")
@@ -1049,6 +1067,25 @@ namespace back_end.Migrations
                     b.Navigation("Table");
 
                     b.Navigation("TableGroup");
+                });
+
+            modelBuilder.Entity("back_end.domain.Entities.FavouriteItem", b =>
+                {
+                    b.HasOne("back_end.domain.Entities.Menu_Item", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("Item_Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("back_end.domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("User_Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MenuItem");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("back_end.domain.Entities.Holiday", b =>

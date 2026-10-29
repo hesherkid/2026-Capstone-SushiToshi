@@ -11,6 +11,7 @@ export const ConfirmDialog = ({
   title,
   message,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   onConfirm,
   onClose,
   error = null,
@@ -71,7 +72,7 @@ export const ConfirmDialog = ({
         }}
       >
         <Button onClick={onClose} disabled={isProcessing}>
-          Cancel
+          {cancelLabel}
         </Button>
         <Button
           variant="contained"
