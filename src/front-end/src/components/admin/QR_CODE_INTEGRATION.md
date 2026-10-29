@@ -1,274 +1,93 @@
-# QR Code Management - Front-End Integration Guide
+# QR Code Management - Front-End Guide
 
 ## Overview
 
-The QR Code Management feature has been successfully integrated into the admin/staff menu. Both admin and staff users can now generate and download QR codes for WiFi and authentication directly from the web interface.
+The QR Code Management page lets admins generate, preview and download two kinds of QR code for each table:
 
-## File Structure
+- **WiFi QR code:** customers scan it to join the location's WiFi network.
+- **Session QR code:** opens sign-in for that table, then joins the customer to the dining session staff started for it.
+
+For how the QR images are generated, stored and configured on the backend, see the [QR code service README](../../../../back-end/Services/QrCode/README.md).
+
+## Files
 
 ```
 src/front-end/src/
 ├── app/admin/qr-codes/
-│   └── page.jsx                          # QR Code page route
+│   └── page.jsx                  # Route; checks the user is an admin
 ├── components/admin/
-│   ├── QRCodeManagement.jsx              # Main QR code component
-│   └── QR_CODE_INTEGRATION.md            # This file
+│   ├── QRCodeManagement.jsx      # The page's UI and API calls
+│   └── QR_CODE_INTEGRATION.md    # This file
 └── components/
-    └── AppBarWithTitle.jsx                # Updated navigation menu
+    └── AppNavigationDrawer.jsx   # "QR Codes" menu entry (admin menu only)
 ```
+
+## Access
+
+- **Route:** `/admin/qr-codes`
+- **Menu:** **QR Codes**, in the admin navigation drawer
+- **Admins only.** Staff don't see the menu entry. `page.jsx` sends non-admins to `/unauthorized`, and the API (`AdminQrCodeController`) also requires the `Admin` role.
 
 ## Features
 
-### 1. **Individual QR Code Generation**
-- Generate WiFi QR codes for table-specific network access
-- Generate Authentication QR codes for customer login
-- Preview QR codes before downloading
-- Instant download as PNG files
+### Single table
 
-### 2. **Bulk Generation**
-- Generate QR codes for multiple tables at once
-- Files saved on server in `storage/qrcodes/` directory
-- Useful for printing table tents or signage
+1. Pick a **Location** (defaults to the location chosen in the app bar) and enter a **Table Number**.
+2. On the WiFi or Session card, click:
+   - **Preview** to see the code in a dialog, or
+   - **Download** to save it as `wifi_L{locationId}_T{table}.png` or `session_L{locationId}_T{table}.png`.
 
-### 3. **Cache Management**
-- Clear cached QR codes for specific tables
-- Regenerate QR codes after WiFi credential changes
+### Bulk generation
 
-## Navigation
+1. Pick a location. The page shows how many tables it has.
+2. Click **Generate QR Codes for All N Tables**. This creates a WiFi and a Session code for every table at that location and saves them on the server.
+3. Download the results:
+   - **Download as ZIP**: one PNG per code
+   - **Download as PDF**: 16 codes per page (4 × 4, 1.75" each), sized for 8.5" × 11" paper
 
-The QR Code Management page is accessible from the main navigation menu:
+The download buttons only appear for the location you most recently generated codes for.
 
-### For Admin Users:
-```
-Menu → QR Codes
-```
+### Clearing saved codes
 
-### For Staff Users:
-```
-Menu → QR Codes
-```
-
-**Route:** `/admin/qr-codes`
-
-## Component Usage
-
-### QRCodeManagement Component
-
-The main component handles all QR code operations:
-
-```jsx
-import QRCodeManagement from '@/components/admin/QRCodeManagement';
-
-// Used in /admin/qr-codes/page.jsx
-<QRCodeManagement />
-```
-
-### Key Functions:
-
-1. **Download WiFi QR Code**
-   - User selects location and table number
-   - Clicks "Download" on WiFi card
-   - QR code downloads as `wifi_L{locationId}_T{table}.png`
-
-2. **Download Auth QR Code**
-   - User selects location and table number
-   - Clicks "Download" on Auth card
-   - QR code downloads as `auth_L{locationId}_T{table}.png`
-
-3. **Preview QR Code**
-   - Click "Preview" to see QR code before downloading
-   - Modal dialog shows the QR code image
-
-4. **Bulk Generate**
-   - Enter number of tables (1-1000)
-   - Click "Generate Bulk QR Codes"
-   - Files saved on server (not downloaded)
-
-5. **Clear Cache**
-   - Select location and table
-   - Click "Clear Cache for Table X"
-   - Forces regeneration on next request
+The backend saves each generated PNG and reuses it on later requests. After changing a location's WiFi credentials or the session URL, select the table and click **Clear Cache for Table N** so the next request makes a fresh code.
 
 ## API Endpoints Used
 
-The component communicates with these backend endpoints:
+All are under `/api/admin/qr` and require the `Admin` role.
 
-```javascript
-// Get WiFi QR code
-GET /api/admin/qr/wifi?locationId={id}&table={number}
+| Action | Request |
+| --- | --- |
+| WiFi QR code | `GET /wifi?locationId={id}&table={number}` |
+| Session QR code | `GET /session?locationId={id}&table={number}` |
+| Bulk generate | `POST /bulk?locationId={id}` |
+| Download bulk as ZIP | `GET /bulk/download-zip?locationId={id}` |
+| Download bulk as PDF | `GET /bulk/download-pdf?locationId={id}` |
+| Clear a table's saved codes | `DELETE /clear?locationId={id}&table={number}` |
 
-// Get Auth QR code
-GET /api/admin/qr/auth?locationId={id}&table={number}
+The page also calls `GET /api/location` for the location list and `GET /api/TableEntity?locationId={id}` for the table count.
 
-// Bulk generate QR codes
-POST /api/admin/qr/bulk?locationId={id}&tableCount={count}
+## Error Messages
 
-// Clear cache
-DELETE /api/admin/qr/clear?locationId={id}&table={number}
-```
+Messages appear in a snackbar at the bottom right. When the API returns an error message (for example, "Location 3 not found or WiFi credentials not configured"), the page shows that message. Otherwise it falls back to a generic one.
 
-All endpoints require authentication with Admin or Staff role.
+| Message | Cause |
+| --- | --- |
+| "Please select a location and enter a table number" | Location or table number is empty |
+| "No tables found for this location. Please create tables first." | Bulk generation on a location with no tables |
+| "Failed to fetch locations" / "Failed to fetch tables" | The backend isn't running, or the request was rejected |
+| "Location N not found or WiFi credentials not configured" | The location doesn't exist, or has no WiFi settings in the backend config |
+| "Failed to clear QR code cache" | The clear request failed |
 
-## User Interface
+## Testing It Manually
 
-### Layout Sections:
+1. Sign in as an admin.
+2. Open the menu and select **QR Codes**.
+3. Pick a location, enter a table number (e.g. `5`), and click **Preview**, then **Download**. Check your downloads for `wifi_L1_T5.png` or `session_L1_T5.png`.
+4. Click **Generate QR Codes for All N Tables**, then try both **Download as ZIP** and **Download as PDF**.
+5. To test scanning with a real phone, follow [Testing QR codes on your phone](../../../../../docs/dev/phone-testing-setup.md).
 
-1. **Location and Table Selection**
-   - Dropdown to select restaurant location
-   - Input field for table number
+## Ideas for Later
 
-2. **WiFi QR Code Card**
-   - Icon and description
-   - Preview and Download buttons
-   - Shows selected location and table
-
-3. **Authentication QR Code Card**
-   - Icon and description
-   - Preview and Download buttons
-   - Shows selected location and table
-
-4. **Bulk Generation Section**
-   - Input for number of tables
-   - Generate button with loading state
-
-5. **Cache Management Section**
-   - Clear cache button for selected table
-
-### UI Components Used:
-
-- Material-UI Paper, Card, Grid
-- Material-UI TextField, Select, Button
-- Material-UI Dialog for previews
-- Material-UI Snackbar for notifications
-- Lucide React icons (QrCode, Wifi, Lock, Download)
-
-## Error Handling
-
-The component includes comprehensive error handling:
-
-- **Missing location/table**: Warning message via Snackbar
-- **API errors**: Error message with details
-- **Invalid input**: Validation on number of tables (1-1000)
-- **Network issues**: Catch and display error messages
-
-## Notifications
-
-Users receive feedback through Snackbar notifications:
-
-- ✅ Success: "WiFi QR code downloaded successfully!"
-- ⚠️ Warning: "Please select a location and enter a table number"
-- ❌ Error: "Failed to download QR code"
-
-## Responsive Design
-
-The component is fully responsive:
-
-- **Desktop**: Two-column layout for WiFi/Auth cards
-- **Tablet**: Stacked cards with full width
-- **Mobile**: Single column with optimized spacing
-
-## Configuration
-
-### Backend Configuration (appsettings.json):
-
-```json
-{
-  "QRCodeSettings": {
-    "WiFi": {
-      "SSID": "Redsox-5G",
-      "Password": "bpjh38vw83"
-    },
-    "AuthPageUrl": "http://192.168.1.78:3000/login",
-    "Locations": {
-      "1": {
-        "WiFi": {
-          "SSID": "Location1-WiFi",
-          "Password": "custom_password"
-        }
-      }
-    }
-  }
-}
-```
-
-### Frontend Configuration (api.js):
-
-The API base URL is configured in `/config/api.js`:
-
-```javascript
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5264";
-```
-
-## Testing
-
-### To test the integration:
-
-1. **Login as Admin or Staff**
-   ```
-   Navigate to /login
-   Enter admin/staff credentials
-   ```
-
-2. **Access QR Codes Page**
-   ```
-   Click menu icon → Select "QR Codes"
-   ```
-
-3. **Generate QR Code**
-   ```
-   Select a location
-   Enter table number (e.g., 5)
-   Click Preview or Download
-   ```
-
-4. **Verify Download**
-   ```
-   Check Downloads folder for:
-   - wifi_L1_T5.png
-   - auth_L1_T5.png
-   ```
-
-5. **Test Bulk Generation**
-   ```
-   Select location
-   Enter "10" for number of tables
-   Click "Generate Bulk QR Codes"
-   Check server storage/qrcodes/ directory
-   ```
-
-## Common Issues & Solutions
-
-### Issue: "Failed to fetch locations"
-**Solution:** Ensure backend is running and `/api/location` endpoint is accessible
-
-### Issue: "401 Unauthorized"
-**Solution:** Check that user is logged in and token is valid
-
-### Issue: "QR code not downloading"
-**Solution:** Check browser's download permissions and popup blockers
-
-### Issue: "Invalid table number"
-**Solution:** Enter a positive integer (1 or greater)
-
-### Issue: "Bulk generation fails"
-**Solution:** Ensure table count is between 1-1000 and location is selected
-
-## Future Enhancements
-
-Potential improvements to consider:
-
-- [ ] Download multiple QR codes as ZIP file
-- [ ] Custom QR code colors/branding
-- [ ] QR code templates for different table sizes
-- [ ] Print preview with multiple QR codes per page
-- [ ] QR code analytics (scan tracking)
-- [ ] Schedule automatic regeneration
-- [ ] Email QR codes to staff
-- [ ] Integration with table management system
-
-## Support
-
-For issues or questions:
-- Backend documentation: `src/back-end/Services/QrCode/README.md`
-- API documentation: Swagger UI at `/swagger`
-- Component source: `src/front-end/src/components/admin/QRCodeManagement.jsx`
+- Custom QR code colors or branding
+- Scan tracking in analytics
+- Emailing QR codes to staff

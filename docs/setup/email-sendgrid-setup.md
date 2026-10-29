@@ -84,18 +84,18 @@ The email service handles sending. The token service handles generating, storing
 
 ### Interface
 
-`Services/Email/IEmailService.cs`:
+`src/back-end/Services/IEmailService.cs` (namespace `back_end.Services.Email`):
 
 ```csharp
 public interface IEmailService
 {
     Task SendEmailVerificationAsync(
-        string email,
+        string toEmail,
         string verificationUrl,
         CancellationToken ct = default);
 
     Task SendPasswordResetAsync(
-        string email,
+        string toEmail,
         string resetUrl,
         CancellationToken ct = default);
 }
@@ -151,7 +151,7 @@ Content-Type: application/json
 {"token":"RESET_TOKEN","newPassword":"ExampleNewPassword123!"}
 ```
 
-Match JSON property names to the actual `[JsonPropertyName]` attributes on your project's DTOs. Token consumption and user updates should occur within one database transaction.
+The request bodies bind to `VerifyEmailDTO` and `ResetPasswordDTO` in `src/back-end/DTO/`. Token consumption and user updates should occur within one database transaction.
 
 ## 8. API endpoints and frontend pages
 
@@ -160,7 +160,7 @@ Match JSON property names to the actual `[JsonPropertyName]` attributes on your 
 | POST | `/api/auth/register` | `/auth/register` |
 | POST | `/api/auth/login` | `/auth/login` |
 | POST | `/api/auth/verify-email` | `/auth/verify-email?token=...` |
-| POST | `/api/auth/resend-verification` | `/auth/resend-verification` |
+| POST | `/api/auth/resend-verification` | **Resend Verification Email** button on `/auth/register`, shown after signing up |
 | POST | `/api/auth/forgot-password` | `/auth/forgot-password` |
 | POST | `/api/auth/reset-password` | `/auth/reset-password?token=...` |
 
@@ -171,7 +171,7 @@ Browser: http://localhost:3000/api/*
    → ASP.NET Core: http://127.0.0.1:5264/api/*
 ```
 
-The frontend auth helpers live in `src/utils/auth.js` and should centralize registration, verification, reset requests, and login.
+The frontend auth helpers live in `src/front-end/src/utils/auth.js` and should centralize registration, verification, reset requests, and login.
 
 ## 9. Test email delivery
 
@@ -210,7 +210,7 @@ A response such as `202 Accepted` from SendGrid means the message was **accepted
 | Link gives 404 | Use `/auth/verify-email` or `/auth/reset-password` |
 | Token rejected | Expiry, incorrect purpose, already consumed |
 | Verified user cannot log in | `Status` / admin approval as well as `Is_email_confirmed` |
-| API returns 400 / null DTO fields | Check frontend JSON names against `[JsonPropertyName]` |
+| API returns 400 / null DTO fields | Check the frontend's JSON property names against the DTOs in `src/back-end/DTO/` |
 
 ## 11. Production security checklist
 

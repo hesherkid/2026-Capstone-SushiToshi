@@ -38,7 +38,7 @@ const customJestConfig = {
   // Oct 2026: branches 57.58, funcs 61.39, lines 64.34, statements 63.98
   // 58 suites, 592 tests passing
   // TODO: Gradually increase thresholds as more tests are added
-  // Target: 70% for all metrics (see TESTING.md for roadmap)
+  // Target: 70% for all metrics
   coverageThreshold: {
     global: {
       branches: 55,

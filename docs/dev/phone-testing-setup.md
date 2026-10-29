@@ -130,6 +130,7 @@ ngrok version
   - A location's own entry (`Locations:{id}:WiFi`) overrides the default (`WiFi`).
   - **Forget** the network on your phone first, or scanning appears to do nothing.
   - Production credentials are set as server environment variables (e.g. `QRCodeSettings__WiFi__Password`), never committed.
+- **For production**, user secrets don't apply. See [Table QR codes](../setup/production-setup.md#5-table-qr-codes) for setting the real site URL and printing codes.
 
 ---
 
