@@ -146,10 +146,7 @@ const MenuItemCard = ({
                 mt: 0.5,
                 fontSize: "0.8rem",
                 lineHeight: 1.45,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
+                overflowWrap: "anywhere",
               }}
             >
               {item.description}
