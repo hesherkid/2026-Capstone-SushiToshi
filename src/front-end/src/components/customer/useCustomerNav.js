@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { TABLE_VISIT_EVENT, THANK_YOU_PATH, hasTableVisit } from "@/utils/tableVisit";
 import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
 import { REVIEW_ORDER_PATH } from "@/contexts/TableOrderContext";
+import storage from "@/utils/storage";
 
 /**
  * When the customer pages' navigation shows (bottom tabs on phones, side rail on desktop),
@@ -19,7 +20,7 @@ const useCustomerNav = () => {
   // when the table is joined. Read again on each page, since joining happens on the way in
   useEffect(() => {
     const readVisit = () => {
-      setIsGuest(localStorage.getItem("guest") === "true");
+      setIsGuest(storage.get("guest") === "true");
       setAtTable(hasTableVisit());
     };
     readVisit();

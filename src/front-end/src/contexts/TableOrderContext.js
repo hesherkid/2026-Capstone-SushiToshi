@@ -10,6 +10,7 @@ import {
 } from "react";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import storage from "@/utils/storage";
 
 // localStorage key for the items picked but not yet ordered
 const CART_STORAGE_KEY = "menuCart";
@@ -78,7 +79,7 @@ export const TableOrderProvider = ({ children }) => {
 
   const chooseBill = useCallback((billId) => {
     setSelectedBillId(billId);
-    localStorage.setItem("currentBillId", String(billId));
+    storage.set("currentBillId", String(billId));
   }, []);
 
   const loadBills = useCallback(
@@ -101,7 +102,7 @@ export const TableOrderProvider = ({ children }) => {
 
         // Keep the bill this phone ordered on last, so a guest doesn't drift onto another
         // party's bill; otherwise the newest bill that can still take orders
-        const lastUsed = Number(localStorage.getItem("currentBillId"));
+        const lastUsed = Number(storage.get("currentBillId"));
         const current =
           open.find((bill) => bill.bill_id === lastUsed) ??
           open.find((bill) => !bill.requested_at) ??
@@ -277,7 +278,7 @@ export const TableOrderProvider = ({ children }) => {
     cartRestoredFor.current = sessionId;
     try {
       const saved = JSON.parse(
-        localStorage.getItem(CART_STORAGE_KEY) || "null",
+        storage.get(CART_STORAGE_KEY) || "null",
       );
       setQuantities(
         saved?.sessionId === sessionId && saved.quantities
@@ -285,7 +286,7 @@ export const TableOrderProvider = ({ children }) => {
           : {},
       );
     } catch {
-      localStorage.removeItem(CART_STORAGE_KEY);
+      storage.remove(CART_STORAGE_KEY);
       setQuantities({});
     }
   }, [sessionId]);
@@ -293,7 +294,7 @@ export const TableOrderProvider = ({ children }) => {
   useEffect(() => {
     // Wait until the saved cart has been read, or the empty starting cart would replace it
     if (!sessionId || cartRestoredFor.current !== sessionId) return;
-    localStorage.setItem(
+    storage.set(
       CART_STORAGE_KEY,
       JSON.stringify({ sessionId, quantities }),
     );

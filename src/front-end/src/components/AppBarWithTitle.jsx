@@ -71,8 +71,8 @@ const AppBarWithTitle = ({ title }) => {
   // and when a table QR code is opened on the current page
   useEffect(() => {
     const readTableVisit = () => {
-      setTableNumber(localStorage.getItem("tableNumber") || "");
-      setIsGuest(localStorage.getItem("guest") === "true");
+      setTableNumber(storage.get("tableNumber") || "");
+      setIsGuest(storage.get("guest") === "true");
     };
 
     readTableVisit();
@@ -125,7 +125,7 @@ const AppBarWithTitle = ({ title }) => {
   const handleLogout = () => {
     if (typeof window !== "undefined") {
       ["guest", "session_id", "tableNumber", "locationId", "currentBillId"].forEach(
-        (key) => localStorage.removeItem(key)
+        (key) => storage.remove(key)
       );
     }
 
@@ -136,9 +136,9 @@ const AppBarWithTitle = ({ title }) => {
   const handleLogin = () => {
     // Clear guest mode
     if (typeof window !== "undefined") {
-      localStorage.removeItem("guest");
-      localStorage.removeItem("session_id");
-      localStorage.removeItem("tableNumber");
+      storage.remove("guest");
+      storage.remove("session_id");
+      storage.remove("tableNumber");
     }
 
     setDrawerOpen(false);

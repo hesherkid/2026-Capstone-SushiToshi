@@ -11,6 +11,7 @@ import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { fetchMySessionId } from "@/services/tableSession";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
+import storage from "@/utils/storage";
 
 const MENU_PATH = "/menu/full-menu";
 const LOGIN_PATH = "/auth/login";
@@ -26,7 +27,7 @@ const STEPS = [
 
 const isGuestAccount = () => {
   if (typeof window === "undefined") return false;
-  if (localStorage.getItem("guest") === "true") return true;
+  if (storage.get("guest") === "true") return true;
 
   const token = getAuthToken();
   if (!token || isTokenExpired(token)) return false;
@@ -36,7 +37,7 @@ const isGuestAccount = () => {
 // Saved from the sign-in response; the token itself carries no name
 const savedFirstName = () => {
   try {
-    return JSON.parse(localStorage.getItem("user") || "null")?.first_name || "";
+    return JSON.parse(storage.get("user") || "null")?.first_name || "";
   } catch {
     return "";
   }
@@ -72,7 +73,7 @@ const CustomerHome = () => {
     }
     setFirstName(savedFirstName());
     setSeated(hasTableVisit());
-    setTableNumber(localStorage.getItem("tableNumber") || "");
+    setTableNumber(storage.get("tableNumber") || "");
     setReady(true);
   }, [authLoading, isAuthenticated, router]);
 

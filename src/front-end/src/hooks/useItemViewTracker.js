@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { API_BASE_URL } from "@/config/api";
+import storage from "@/utils/storage";
 
 // How much of the card needs to be on screen to count as "looking at it"
 const VISIBLE_RATIO = 0.6;
@@ -16,7 +17,7 @@ const MIN_SEND_SECONDS = 1;
  */
 
 export const sendItemView = ({ sessionId, itemId, seconds }) => {
-  const token = localStorage.getItem("authToken");
+  const token = storage.get("authToken");
   if (!token) return;
 
   fetch(`${API_BASE_URL}/api/menu-item-views`, {

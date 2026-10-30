@@ -1,6 +1,7 @@
 import api from "@/config/api";
 import { decodeToken } from "@/config/auth";
 import { endTableVisit } from "@/utils/tableVisit";
+import storage from "@/utils/storage";
 
 const NAME_IDENTIFIER =
   "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
@@ -8,7 +9,7 @@ const NAME_IDENTIFIER =
 // The signed-in user's account ID from their token (guests included), or null
 export const getMyUserId = () => {
   if (typeof window === "undefined") return null;
-  const token = localStorage.getItem("authToken");
+  const token = storage.get("authToken");
   const claims = token ? decodeToken(token) : null;
   const id = Number(claims?.[NAME_IDENTIFIER] ?? claims?.nameid);
   return id > 0 ? id : null;
@@ -27,7 +28,7 @@ export const getMyUserId = () => {
  * session: the visit is cleared and the thank-you screen is shown (see endTableVisit).
  */
 export const fetchMySessionId = async () => {
-  const wasSeated = !!localStorage.getItem("session_id");
+  const wasSeated = !!storage.get("session_id");
 
   try {
     const { data } = await api.get(
@@ -35,7 +36,7 @@ export const fetchMySessionId = async () => {
     );
     const sessionId = Number(data?.session_id);
     if (sessionId > 0) {
-      localStorage.setItem("session_id", String(sessionId));
+      storage.set("session_id", String(sessionId));
       return sessionId;
     }
   } catch (err) {
@@ -43,7 +44,7 @@ export const fetchMySessionId = async () => {
     if (err.response?.status !== 404) throw err;
   }
 
-  localStorage.removeItem("session_id");
+  storage.remove("session_id");
   if (wasSeated) endTableVisit();
   return null;
 };

@@ -1,6 +1,7 @@
 
 import api from "@/config/api";
 import { decodeToken, getUserRoles } from "@/config/auth";
+import storage from "@/utils/storage";
 
 let dispatchAuthChange;
 
@@ -20,11 +21,7 @@ const notifyAuthChange = () => {
 // TOKEN MANAGEMENT
 // --------------------------------------------------
 
-export const getAuthToken = () => {
-  if (typeof window === "undefined") return null;
-
-  return localStorage.getItem("authToken");
-};
+export const getAuthToken = () => storage.get("authToken");
 
 // --------------------------------------------------
 // LOGIN
@@ -34,20 +31,20 @@ export const getAuthToken = () => {
 const storeSession = (data) => {
   if (!data.access_token || typeof window === "undefined") return;
 
-  localStorage.setItem("authToken", data.access_token);
-  localStorage.setItem("access_token", data.access_token);
+  storage.set("authToken", data.access_token);
+  storage.set("access_token", data.access_token);
 
   if (data.expires_in) {
     const expiresAt = Date.now() + data.expires_in * 1000;
 
-    localStorage.setItem(
+    storage.set(
       "tokenExpiresAt",
       expiresAt.toString()
     );
   }
 
   if (data.user) {
-    localStorage.setItem("user", JSON.stringify(data.user));
+    storage.set("user", JSON.stringify(data.user));
   }
 
   notifyAuthChange();
@@ -83,7 +80,7 @@ export const isGuestClaims = (claims) => {
 export const getReusableGuestToken = () => {
   if (typeof window === "undefined") return null;
 
-  const token = localStorage.getItem("authToken");
+  const token = storage.get("authToken");
   const claims = token ? decodeToken(token) : null;
   if (!claims) return null;
 
@@ -182,12 +179,12 @@ export const resetPassword = async (token, newPassword) => {
 export const logoutUser = () => {
   if (typeof window === "undefined") return;
 
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("tokenExpiresAt");
-  localStorage.removeItem("user");
+  storage.remove("authToken");
+  storage.remove("access_token");
+  storage.remove("tokenExpiresAt");
+  storage.remove("user");
   // So the next person to sign in on the same browser doesn't start at this user's location
-  localStorage.removeItem("branch-location");
+  storage.remove("branch-location");
 
   //notifyAuthChange();
   // A full reload, so no signed-in state is left in memory
@@ -210,7 +207,7 @@ const CUSTOMER_VISIT_KEYS = [
 // Only offered when the customer isn't seated (see CustomerHome and the thank-you page)
 export const logoutCustomer = () => {
   if (typeof window === "undefined") return;
-  CUSTOMER_VISIT_KEYS.forEach((key) => localStorage.removeItem(key));
+  CUSTOMER_VISIT_KEYS.forEach((key) => storage.remove(key));
   logoutUser();
 };
 

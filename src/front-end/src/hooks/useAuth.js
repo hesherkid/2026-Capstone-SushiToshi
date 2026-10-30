@@ -5,6 +5,7 @@ import {
   isTokenExpired,
 } from "@/config/auth";
 import { getAuthToken } from "@/utils/auth";
+import storage from "@/utils/storage";
 
 // Custom event for auth changes
 export const AUTH_EVENT = "auth-change";
@@ -20,10 +21,10 @@ export const dispatchAuthChange = () => {
 export const clearAuthTokens = () => {
   if (typeof window === 'undefined') return;
   
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("tokenExpiresAt");
-  localStorage.removeItem("user");
-  localStorage.removeItem("guest");
+  storage.remove("authToken");
+  storage.remove("tokenExpiresAt");
+  storage.remove("user");
+  storage.remove("guest");
   
   dispatchAuthChange();
 };

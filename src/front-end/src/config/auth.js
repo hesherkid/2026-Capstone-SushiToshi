@@ -1,4 +1,6 @@
 // config/auth.js
+import storage from '@/utils/storage';
+
 /**
  * Custom claims namespace for roles (keep for backend compatibility)
  */
@@ -114,9 +116,7 @@ export function mapToAppRole(roles) {
  * @returns {object|null} - Decoded user claims or null
  */
 export function getCurrentUserFromToken() {
-    if (typeof window === 'undefined') return null;
-    
-    const token = localStorage.getItem('authToken');
+    const token = storage.get('authToken');
     if (!token) return null;
     
     return decodeToken(token);
