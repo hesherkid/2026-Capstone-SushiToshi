@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;700&display=swap");
 
 body {
   font-family: "Open Sans", sans-serif;
@@ -37,111 +37,6 @@ footer {
   width: 100%;
 }
 
-.accent {
-  font-family: "Dancing Script", cursive;
-}
-
-/* Navbar Styles */
-.headerText {
-  font-size: 1.8em;
-  color: #000000;
-  text-align: center;
-}
-
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px;
-}
-
-.navbarLinksContainer {
-  flex: 1;
-  text-align: center;
-}
-
-.navbarLinks {
-  display: inline-flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.navbarLinksTitles {
-  cursor: pointer;
-  position: relative;
-  color: #000000;
-}
-
-.navbarLinksTitles :hover {
-  color: #000000;
-}
-
-.navbarLinks a {
-  color: #ffffff;
-  text-decoration: none;
-}
-
-.navbarLinks a:hover {
-  color: #000000;
-  text-decoration: underline;
-}
-
-.navbarLogo {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.navbarLogo img {
-  margin-right: 10px;
-  width: 40px;
-  height: auto;
-}
-
-/* Dropdown Menu Styles */
-.menuDropdownContainer {
-  position: relative;
-  display: inline-block;
-}
-
-.dropdownMenu {
-  visibility: hidden;
-  opacity: 0;
-  transition: visibility 0s, opacity 0.2s linear;
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 0;
-  background-color: white;
-  border: 1px solid #ddd;
-  padding: 10px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-  flex-direction: column;
-  z-index: 10;
-}
-
-.dropdownMenuVisible {
-  visibility: visible;
-  opacity: 1;
-}
-
-.dropdownMenu a {
-  padding: 8px 12px;
-  color: rgb(0, 0, 0);
-  text-decoration: none;
-  display: block;
-}
-
-.dropdownMenu a:hover {
-  background-color: #f0f0f0;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
@@ -161,22 +56,4 @@ th {
 
 tr:hover {
   background-color: #f1f1f1; /* Row hover effect */
-}
-
-/* Mobile Styles */
-@media (max-width: 768px) {
-  header {
-    background-color: #c01e2e;
-    padding: 10px;
-    padding-left: 10px;
-    width: 100%;
-  }
-
-  footer {
-    background-color: #14171a;
-    color: #657786;
-    padding: 10px;
-    text-align: center;
-    width: 100%;
-  }
 }

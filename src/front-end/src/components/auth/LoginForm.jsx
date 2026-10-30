@@ -448,7 +448,7 @@ const LoginFormContent = () => {
               fullWidth
               onClick={handleRetryJoin}
               disabled={loading}
-              sx={{ mt: 2, textTransform: "none", fontWeight: 600, }}
+              sx={{ mt: 2, fontWeight: 600, }}
             >
               Try again
             </Button>
@@ -462,7 +462,6 @@ const LoginFormContent = () => {
                 sx={{
                   mt: 1,
                   color: "#92400e",
-                  textTransform: "none",
                   fontWeight: 600,
                 }}
               >

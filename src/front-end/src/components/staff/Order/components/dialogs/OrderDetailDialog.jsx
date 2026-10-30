@@ -151,7 +151,7 @@ const OrderDetailDialog = () => {
             size="small"
             startIcon={<Check size={16} />}
             onClick={() => actions.markItemDelivered(order, item)}
-            sx={{ minWidth: "120px", textTransform: "none" }}
+            sx={{ minWidth: "120px" }}
           >
             Mark Delivered
           </Button>

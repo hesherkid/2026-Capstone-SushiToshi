@@ -3,7 +3,6 @@ import "@/app/globals.css";
 
 import Providers from "@/app/providers";
 import { MATERIAL_SYMBOLS_URL } from "@/components/common/MaterialSymbol";
-import "@/styles/global.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

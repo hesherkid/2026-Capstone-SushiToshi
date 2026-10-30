@@ -344,7 +344,6 @@ const OrdersPage = () => {
                 color="error"
                 onClick={() => setOrderToCancel(order)}
                 startIcon={<MaterialSymbol name="close" size={20} />}
-                sx={{ textTransform: "none", fontWeight: 600 }}
               >
                 Cancel order
               </Button>
@@ -437,7 +436,7 @@ const OrdersPage = () => {
                     </Button>
                     {/* Someone else at the table may have ordered for them */}
                     {view === VIEWS.MINE && (
-                      <Button onClick={() => setView(VIEWS.TABLE)} sx={{ textTransform: "none", fontWeight: 600 }}>
+                      <Button onClick={() => setView(VIEWS.TABLE)}>
                         See the whole table&apos;s orders
                       </Button>
                     )}

@@ -144,13 +144,8 @@ const ResetPasswordFormContent = () => {
           sx={{
             paddingY: 2,
             marginBottom: 3,
-            backgroundColor: "red.600",
-            "&:hover": {
-              backgroundColor: "red.700",
-            },
             fontSize: "1rem",
             height: 56,
-            textTransform: "none",
           }}
         >
           {loading ? (
@@ -164,11 +159,8 @@ const ResetPasswordFormContent = () => {
           <Link href="/auth/login" passHref>
             <Button
               sx={{
-                textTransform: "none",
                 fontSize: "0.875rem",
                 padding: "0.5rem 1rem",
-                color: "blue.600",
-                "&:hover": { color: "blue.800" },
               }}
             >
               Back to Login

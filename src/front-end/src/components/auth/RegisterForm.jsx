@@ -231,7 +231,6 @@ const RegisterFormContent = () => {
                 backgroundColor: "#b91c1c",
               },
               py: 1.5,
-              textTransform: "none",
             }}
           >
             Go to Login
