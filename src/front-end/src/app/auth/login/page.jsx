@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 
 export const metadata = {
-  title: "Login | Sushi Toshi",
+  title: "Login",
   description: "Sign in to your Sushi Toshi account",
 };
 

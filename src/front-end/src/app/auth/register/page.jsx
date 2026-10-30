@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import RegisterForm from "@/components/auth/RegisterForm";
 
 export const metadata = {
-  title: "Register | Sushi Toshi",
+  title: "Register",
   description: "Create a new account at Sushi Toshi",
 };
 
