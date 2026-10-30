@@ -27,6 +27,11 @@ import { startTableVisit } from "@/utils/tableVisit";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
+const OFFLINE_MESSAGE =
+  "We can't connect to Sushi Toshi. Check your Wi-Fi or mobile data, then try again.";
+const SERVER_ERROR_MESSAGE =
+  "Sign-in isn't working right now. Please try again in a few minutes. If you're at the restaurant, staff can help.";
+
 // Sign-in worked but the table couldn't be joined; its message is shown on the form as-is
 class TableJoinError extends Error {
   constructor(message, status) {
@@ -146,9 +151,17 @@ const LoginFormContent = () => {
       return;
     }
 
+    // The request was sent but nothing came back: the phone is offline or the server is down
+    if (err.request && !err.response) {
+      setNeedsVerification(false);
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
+
+    // A problem on our side (including a sign-in that returned no token); the user can only wait or ask staff
     if (status === 404 || status >= 500 || !err.response) {
       setNeedsVerification(false);
-      setError("Something went wrong. Please try again.");
+      setError(SERVER_ERROR_MESSAGE);
       return;
     }
 
@@ -251,7 +264,7 @@ const LoginFormContent = () => {
     } catch (err) {
       if (err.response?.status === 401) {
         setJoinFailed(false);
-        setError("Something went wrong. Please try again.");
+        setError("We couldn't start your guest visit. Please scan the QR code on your table again.");
       } else {
         handleAuthError(err);
       }

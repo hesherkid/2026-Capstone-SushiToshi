@@ -189,7 +189,7 @@ describe("LoginForm", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Something went wrong\. Please try again\./i),
+          screen.getByText(/Sign-in isn't working right now/i),
         ).toBeInTheDocument();
       });
       expect(mockReplace).not.toHaveBeenCalled();
@@ -296,6 +296,20 @@ describe("LoginForm", () => {
 
       expect(
         await screen.findByText(/Please wait a moment and try again/)
+      ).toBeInTheDocument();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("asks guests to rescan the QR code when guest sign-in is rejected", async () => {
+      const user = userEvent.setup({ delay: null });
+      loginAsGuest.mockRejectedValue({ response: { status: 401, data: {} } });
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+
+      expect(
+        await screen.findByText(/Please scan the QR code on your table again/)
       ).toBeInTheDocument();
       expect(mockReplace).not.toHaveBeenCalled();
     });
@@ -568,7 +582,23 @@ describe("LoginForm", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Something went wrong\. Please try again\./i),
+          screen.getByText(/Sign-in isn't working right now/i),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("tells the user to check their connection when the server can't be reached", async () => {
+      const user = userEvent.setup({ delay: null });
+      // What axios rejects with when the request gets no reply
+      loginUser.mockRejectedValue({ request: {}, message: "Network Error" });
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Check your Wi-Fi or mobile data/i),
         ).toBeInTheDocument();
       });
     });
