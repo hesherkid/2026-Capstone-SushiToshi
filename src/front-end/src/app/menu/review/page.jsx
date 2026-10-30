@@ -435,7 +435,8 @@ const ReviewOrderPage = () => {
           {/* ---- Summary ---- */}
           <Paper variant="outlined" sx={{ mt: 4, p: 2.5, borderRadius: 3 }}>
             <Typography color="text.secondary">
-              {plural(itemCount, "item")} · {plural(unitCount, "unit")}
+              {/* Counted the same way as the Place order button */}
+              {plural(unitCount, "item")} in your order
             </Typography>
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -451,6 +452,16 @@ const ReviewOrderPage = () => {
             >
               All-you-can-eat items are included. Your total and taxes are on
               your bill summary.
+            </Typography>
+            {/* The bill page says this too, but by then the food has been ordered */}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mt: 1, lineHeight: 1.5 }}
+            >
+              Please order only what you can finish.
+              <br />
+              Additional leftover fees may apply.
             </Typography>
           </Paper>
 
