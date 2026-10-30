@@ -34,7 +34,7 @@ const fillLoginForm = async (
   password = "password123",
 ) => {
   const emailInput = screen.getByLabelText(/Email Address/i);
-  const passwordInput = screen.getByLabelText(/Password/i);
+  const passwordInput = screen.getByLabelText(/^Password/i);
   await user.clear(emailInput);
   await user.type(emailInput, email);
   await user.clear(passwordInput);
@@ -67,7 +67,7 @@ describe("LoginForm", () => {
         screen.getByRole("heading", { name: /Start your order/i }),
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: /^Sign In$/i }),
       ).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe("LoginForm", () => {
       render(<LoginForm />);
 
       expect(screen.getByLabelText(/Email Address/i)).toHaveValue("");
-      expect(screen.getByLabelText(/Password/i)).toHaveValue("");
+      expect(screen.getByLabelText(/^Password/i)).toHaveValue("");
     });
 
     it("pre-fills fields from NEXT_PUBLIC_DEFAULT_* when set", () => {
@@ -99,7 +99,7 @@ describe("LoginForm", () => {
         expect(screen.getByLabelText(/Email Address/i)).toHaveValue(
           "admin.user@sushitoshi.ca",
         );
-        expect(screen.getByLabelText(/Password/i)).toHaveValue("AdminPass123!");
+        expect(screen.getByLabelText(/^Password/i)).toHaveValue("AdminPass123!");
       } finally {
         delete process.env.NEXT_PUBLIC_DEFAULT_EMAIL;
         delete process.env.NEXT_PUBLIC_DEFAULT_PASSWORD;
@@ -127,7 +127,7 @@ describe("LoginForm", () => {
       expect(screen.getByLabelText(/Email Address/i)).toHaveValue(
         "user@test.com",
       );
-      expect(screen.getByLabelText(/Password/i)).toHaveValue("newpassword123");
+      expect(screen.getByLabelText(/^Password/i)).toHaveValue("newpassword123");
     });
   });
 
@@ -683,9 +683,24 @@ describe("LoginForm", () => {
     it("password input has type password and is required", () => {
       render(<LoginForm />);
 
-      const passwordInput = screen.getByLabelText(/Password/i);
+      const passwordInput = screen.getByLabelText(/^Password/i);
       expect(passwordInput).toHaveAttribute("type", "password");
       expect(passwordInput).toBeRequired();
+    });
+
+    it("shows and hides the password with the toggle", async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const passwordInput = screen.getByLabelText(/^Password/i);
+      await user.type(passwordInput, "secret123");
+
+      await user.click(screen.getByRole("button", { name: /Show password/i }));
+      expect(passwordInput).toHaveAttribute("type", "text");
+      expect(passwordInput).toHaveValue("secret123");
+
+      await user.click(screen.getByRole("button", { name: /Hide password/i }));
+      expect(passwordInput).toHaveAttribute("type", "password");
     });
 
     it("sign in button is a submit button", () => {
