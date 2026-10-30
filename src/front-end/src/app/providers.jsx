@@ -1,6 +1,7 @@
 "use client";
 
 import { ThemeProvider, CssBaseline } from "@mui/material";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { createTheme } from "@mui/material/styles";
 import { MenuProvider } from "@/contexts/MenuContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -113,19 +114,22 @@ const theme = createTheme({
 // Client-side providers for every page. Kept out of app/layout.jsx so the layout stays a server component.
 export default function Providers({ children }) {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <NotificationProvider>
-        <MenuProvider>
-          <OrderProvider>
-            <TableOrderProvider>
-              <Layout>{children}</Layout>
-              <VisitEndedWatcher />
-            </TableOrderProvider>
-          </OrderProvider>
-        </MenuProvider>
-        <NotificationSystem />
-      </NotificationProvider>
-    </ThemeProvider>
+    // Sends MUI styles in <head> during SSR, so no <style> tags end up in <body> to break hydration
+    <AppRouterCacheProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <NotificationProvider>
+          <MenuProvider>
+            <OrderProvider>
+              <TableOrderProvider>
+                <Layout>{children}</Layout>
+                <VisitEndedWatcher />
+              </TableOrderProvider>
+            </OrderProvider>
+          </MenuProvider>
+          <NotificationSystem />
+        </NotificationProvider>
+      </ThemeProvider>
+    </AppRouterCacheProvider>
   );
 }
