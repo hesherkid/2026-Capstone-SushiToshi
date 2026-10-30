@@ -411,7 +411,7 @@ const FullMenu = () => {
                       ml: 0.5,
                     }}
                   >
-                    {items.length} items
+                    {`${items.length} ${items.length === 1 ? "item" : "items"}`}
                   </Typography>
                 </Typography>
 
