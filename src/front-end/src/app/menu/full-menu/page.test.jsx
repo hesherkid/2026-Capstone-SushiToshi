@@ -78,8 +78,8 @@ describe("FullMenu guest flow", () => {
     );
     expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("heading", { name: "Appetizers 1 items" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sushi Rolls 1 items" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Appetizers 1 item" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sushi Rolls 1 item" })).toBeInTheDocument();
     expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
 
     // The cart is its own page now
