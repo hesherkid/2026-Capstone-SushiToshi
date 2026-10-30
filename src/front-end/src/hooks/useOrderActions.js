@@ -181,13 +181,6 @@ export const useOrderActions = (onSuccess) => {
 
   // ORDER RETRIEVAL
 
-  // TODO: Might need to comment this out later in front and backend as there is no filterization which will cause performance issues as it calls ALL orders without filter.
-  const getAllOrders = useCallback(async () => {
-    return apiWrapper("getAllOrders", async () => orderService.getAllOrders(), {
-      defaultReturn: [],
-    });
-  }, [apiWrapper]);
-
   const getAllOrdersByLocation = useCallback(
     async (locationId = null) => {
       return apiWrapper(
@@ -250,7 +243,7 @@ export const useOrderActions = (onSuccess) => {
     removeOrderItem,
 
     // Order Retrieval
-    getAllOrders,
+    // getAllOrders,
     getAllOrdersByLocation,
     getOrderById,
     getOrdersBySession,

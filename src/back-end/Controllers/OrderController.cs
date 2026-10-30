@@ -1085,49 +1085,6 @@ namespace back_end.Controllers
         }
 
         /// <summary>
-        /// Retrieves all orders from the database.
-        /// </summary>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of <see cref="SessionOrder"/> objects.
-        /// Returns HTTP 200 (OK) with the list of all orders on success.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the list of all orders</response>
-        /// <response code="500">If an internal error occurs while retrieving orders</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     GET /api/order
-        ///
-        /// Returns all orders in the system without any filtering.
-        /// </remarks>
-        //GET api/order
-        //Get all Orders
-        [HttpGet]
-        [Authorize(Policy = "staffOnly")]
-        [ProducesResponseType(typeof(IEnumerable<SessionOrder>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<SessionOrder>>> GetAllOrder()
-        {
-            try
-            {
-                var scope = await _locationAccess.ResolveLocationAsync(User, null);
-                if (scope.IsForbidden) return LocationResults.NoLocation();
-
-                var order = await _context.SessionOrders
-                    .Where(o => scope.LocationId == null || o.DiningSession.Location_Id == scope.LocationId)
-                    .ToListAsync();
-
-                return Ok(order);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting Orders");
-                return StatusCode(500, "Internal Server Error");
-            }
-        }
-
-        /// <summary>
         /// Retrieves all orders, optionally filtered by location and delivered open sessions.
         /// </summary>
         /// <param name="locationId">Optional location filter</param>
