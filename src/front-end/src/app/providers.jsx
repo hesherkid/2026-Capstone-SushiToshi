@@ -29,29 +29,29 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: "'Open Sans', sans-serif",
+    fontFamily: "var(--font-open-sans), sans-serif",
     h1: {
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: "var(--font-montserrat), sans-serif",
       fontWeight: 600,
     },
     h2: {
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: "var(--font-montserrat), sans-serif",
       fontWeight: 600,
     },
     h3: {
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: "var(--font-montserrat), sans-serif",
       fontWeight: 600,
     },
     h4: {
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: "var(--font-montserrat), sans-serif",
       fontWeight: 600,
     },
     h5: {
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: "var(--font-montserrat), sans-serif",
       fontWeight: 600,
     },
     h6: {
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: "var(--font-montserrat), sans-serif",
       fontWeight: 600,
     },
   },

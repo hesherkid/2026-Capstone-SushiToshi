@@ -1,16 +1,17 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat, Open_Sans } from "next/font/google";
 import "@/app/globals.css";
 
 import Providers from "@/app/providers";
 import { MATERIAL_SYMBOLS_URL } from "@/components/common/MaterialSymbol";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Self-hosted by next/font; the theme and globals.css use these through the CSS variables
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const openSans = Open_Sans({
+  variable: "--font-open-sans",
   subsets: ["latin"],
 });
 
@@ -30,7 +31,7 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href={MATERIAL_SYMBOLS_URL} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${montserrat.variable} ${openSans.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>
