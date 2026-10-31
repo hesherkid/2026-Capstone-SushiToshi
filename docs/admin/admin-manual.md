@@ -160,7 +160,7 @@ Generated codes are saved on the server and reused until they are regenerated.
 
 ## Locations and Menus
 
-**Manage Locations** has two parts: **Location Management** for your restaurant branches, and **Menu Management** for menu types (such as Lunch and Dinner) and which locations offer them.
+**Locations & Menus** has two parts: **Location Management** for your restaurant branches, and **Menu Management** for menu types (such as Lunch and Dinner) and which locations offer them.
 
 ### Location Management
 
@@ -209,7 +209,7 @@ Select **Save default pricing** to save. The button is only available once you'v
 
 ### Location pricing
 
-To give one location its own prices, open **Manage Locations** and select **Pricing** on that location's row.
+To give one location its own prices, open **Locations & Menus** and select **Pricing** on that location's row.
 
 1. Turn on **Custom pricing for this location**. The form starts from the default prices.
 2. Change what you need and select **Save location pricing**.
