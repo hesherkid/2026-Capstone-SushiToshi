@@ -15,6 +15,9 @@ import storage from "@/utils/storage";
 // localStorage key for the items picked but not yet ordered
 const CART_STORAGE_KEY = "menuCart";
 
+// The server takes 1-99 of an item per order (OrderController.AddOrderItems)
+export const MAX_PER_ITEM = 99;
+
 export const MENU_PATH = "/menu/full-menu";
 export const REVIEW_ORDER_PATH = "/menu/review";
 
@@ -302,10 +305,10 @@ export const TableOrderProvider = ({ children }) => {
 
   // Most of this item the cart can hold before a limit that blocks: the item's own caps, and
   // whatever its category has left after the other items from that category already in the cart.
-  // null = no limit that blocks
+  // Never more than the server takes in one order, even for items with no limit
   const maxFor = useCallback(
     (cart, categoryId, itemId) => {
-      if (!limits) return null;
+      if (!limits) return MAX_PER_ITEM;
       const lowest = (row) => {
         const caps = [row?.per_order, row?.session_left].filter(
           (n) => n != null,
@@ -324,7 +327,7 @@ export const TableOrderProvider = ({ children }) => {
           : Math.max(0, categoryCap - othersInCategory);
 
       const caps = [itemCap, categoryRoom].filter((n) => n != null);
-      return caps.length ? Math.min(...caps) : null;
+      return Math.min(MAX_PER_ITEM, ...caps);
     },
     [limits],
   );

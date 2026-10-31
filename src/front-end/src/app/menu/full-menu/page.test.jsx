@@ -147,6 +147,18 @@ describe("FullMenu guest flow", () => {
       expect(screen.getByRole("button", { name: "Add one Salmon Roll" })).toBeInTheDocument();
     });
 
+    it("stops an item with no limit at 99, the most one order takes", async () => {
+      localStorage.setItem("menuCart", JSON.stringify({ sessionId: 42, quantities: { 1: { 11: 98 } } }));
+      render(<FullMenu />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Add one Miso Soup" }));
+
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument(),
+      );
+      expect(screen.getByRole("button", { name: "Add one Salmon Roll" })).toBeInTheDocument();
+    });
+
     it("can't add an item the table has already used up", async () => {
       api.get.mockImplementation(
         tableApi({
