@@ -160,7 +160,7 @@ Generated codes are saved on the server and reused until they are regenerated.
 
 ## Locations and Menus
 
-**Manage Locations** has two parts: **Location Management** for your restaurant branches, and **Menu Management** for menu types (such as Lunch and Dinner) and which locations offer them.
+**Locations & Menus** has two parts: **Location Management** for your restaurant branches, and **Menu Management** for menu types (such as Lunch and Dinner) and which locations offer them.
 
 ### Location Management
 
@@ -184,7 +184,7 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
   - Start Time and End Time: when the menu is available
   - **Is Active Menu**: turn the menu on or off
 - **Assign Locations**: opens **Manage Locations** for the menu. It lists the **Assigned Locations**; use **Add Location** to add another, or remove one from the list. Changes save straight away.
-- **Delete**: delete the menu type. It will no longer be available to guests.
+- **Delete**: delete a menu that has never been used. A menu with past sessions or orders can't be deleted, so turn off **Is Active Menu** instead.
 
 ---
 
@@ -209,7 +209,7 @@ Select **Save default pricing** to save. The button is only available once you'v
 
 ### Location pricing
 
-To give one location its own prices, open **Manage Locations** and select **Pricing** on that location's row.
+To give one location its own prices, open **Locations & Menus** and select **Pricing** on that location's row.
 
 1. Turn on **Custom pricing for this location**. The form starts from the default prices.
 2. Change what you need and select **Save location pricing**.

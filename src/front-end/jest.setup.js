@@ -1,6 +1,10 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
+
+// MUI grids can take over 1 s to render when every suite runs at once (testTimeout doesn't cover this)
+configure({ asyncUtilTimeout: 5000 })
+
 
 // Cleanup after each test automatically
 afterEach(() => {

@@ -123,7 +123,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 - AdminQrCodeController
 - AuthController (email login, guest login)
-- BillController (access, gratuity, price snapshots, bill requests, leftover fees)
+- BillController
 - CategoryController and TagController
 - CustomerController
 - DashboardController and DiningSessionController (session join, active session lookup, menu access)
@@ -131,7 +131,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - LocationController
 - MenuController
 - MenuItemViewController
-- OrderController (table orders, order limit enforcement)
+- OrderController
 - PricingController
 - ServiceRequestController
 - StaffController
@@ -445,7 +445,12 @@ import api from "@/config/api";
 import { useAuth } from "@/hooks/useAuth";
 
 jest.mock("@/config/api", () => {
-  const mockApi = { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() };
+  const mockApi = {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  };
   return { __esModule: true, default: mockApi, api: mockApi };
 });
 
@@ -458,7 +463,10 @@ jest.mock("next/navigation", () => ({
 describe("YourComponent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useAuth.mockReturnValue({ userRole: "admin", userEmail: "admin@example.com" });
+    useAuth.mockReturnValue({
+      userRole: "admin",
+      userEmail: "admin@example.com",
+    });
   });
 
   it("should render component correctly", async () => {
@@ -906,7 +914,7 @@ page.getByRole('heading', { name: /start your order/i })
 ---
 
 **Version**: 1.2
-**Last Updated**: 2026-10-27
+**Last Updated**: 2026-10-28
 **Status**: Active Development
 
 For questions or issues with testing, please contact the development team or submit an issue on GitHub.

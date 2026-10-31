@@ -34,7 +34,7 @@ const fillLoginForm = async (
   password = "password123",
 ) => {
   const emailInput = screen.getByLabelText(/Email Address/i);
-  const passwordInput = screen.getByLabelText(/Password/i);
+  const passwordInput = screen.getByLabelText(/^Password/i);
   await user.clear(emailInput);
   await user.type(emailInput, email);
   await user.clear(passwordInput);
@@ -67,7 +67,7 @@ describe("LoginForm", () => {
         screen.getByRole("heading", { name: /Start your order/i }),
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: /^Sign In$/i }),
       ).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe("LoginForm", () => {
       render(<LoginForm />);
 
       expect(screen.getByLabelText(/Email Address/i)).toHaveValue("");
-      expect(screen.getByLabelText(/Password/i)).toHaveValue("");
+      expect(screen.getByLabelText(/^Password/i)).toHaveValue("");
     });
 
     it("pre-fills fields from NEXT_PUBLIC_DEFAULT_* when set", () => {
@@ -99,7 +99,7 @@ describe("LoginForm", () => {
         expect(screen.getByLabelText(/Email Address/i)).toHaveValue(
           "admin.user@sushitoshi.ca",
         );
-        expect(screen.getByLabelText(/Password/i)).toHaveValue("AdminPass123!");
+        expect(screen.getByLabelText(/^Password/i)).toHaveValue("AdminPass123!");
       } finally {
         delete process.env.NEXT_PUBLIC_DEFAULT_EMAIL;
         delete process.env.NEXT_PUBLIC_DEFAULT_PASSWORD;
@@ -127,7 +127,7 @@ describe("LoginForm", () => {
       expect(screen.getByLabelText(/Email Address/i)).toHaveValue(
         "user@test.com",
       );
-      expect(screen.getByLabelText(/Password/i)).toHaveValue("newpassword123");
+      expect(screen.getByLabelText(/^Password/i)).toHaveValue("newpassword123");
     });
   });
 
@@ -189,7 +189,7 @@ describe("LoginForm", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Something went wrong\. Please try again\./i),
+          screen.getByText(/Sign-in isn't working right now/i),
         ).toBeInTheDocument();
       });
       expect(mockReplace).not.toHaveBeenCalled();
@@ -296,6 +296,20 @@ describe("LoginForm", () => {
 
       expect(
         await screen.findByText(/Please wait a moment and try again/)
+      ).toBeInTheDocument();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("asks guests to rescan the QR code when guest sign-in is rejected", async () => {
+      const user = userEvent.setup({ delay: null });
+      loginAsGuest.mockRejectedValue({ response: { status: 401, data: {} } });
+      useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
+
+      render(<LoginForm />);
+      await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
+
+      expect(
+        await screen.findByText(/Please scan the QR code on your table again/)
       ).toBeInTheDocument();
       expect(mockReplace).not.toHaveBeenCalled();
     });
@@ -568,7 +582,23 @@ describe("LoginForm", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Something went wrong\. Please try again\./i),
+          screen.getByText(/Sign-in isn't working right now/i),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("tells the user to check their connection when the server can't be reached", async () => {
+      const user = userEvent.setup({ delay: null });
+      // What axios rejects with when the request gets no reply
+      loginUser.mockRejectedValue({ request: {}, message: "Network Error" });
+
+      render(<LoginForm />);
+      await fillLoginForm(user);
+      await user.click(screen.getByRole("button", { name: /^Sign In$/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Check your Wi-Fi or mobile data/i),
         ).toBeInTheDocument();
       });
     });
@@ -683,9 +713,24 @@ describe("LoginForm", () => {
     it("password input has type password and is required", () => {
       render(<LoginForm />);
 
-      const passwordInput = screen.getByLabelText(/Password/i);
+      const passwordInput = screen.getByLabelText(/^Password/i);
       expect(passwordInput).toHaveAttribute("type", "password");
       expect(passwordInput).toBeRequired();
+    });
+
+    it("shows and hides the password with the toggle", async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const passwordInput = screen.getByLabelText(/^Password/i);
+      await user.type(passwordInput, "secret123");
+
+      await user.click(screen.getByRole("button", { name: /Show password/i }));
+      expect(passwordInput).toHaveAttribute("type", "text");
+      expect(passwordInput).toHaveValue("secret123");
+
+      await user.click(screen.getByRole("button", { name: /Hide password/i }));
+      expect(passwordInput).toHaveAttribute("type", "password");
     });
 
     it("sign in button is a submit button", () => {

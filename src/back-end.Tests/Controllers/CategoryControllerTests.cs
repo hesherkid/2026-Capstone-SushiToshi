@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using back_end.Controllers;
-using back_end.controllers; // For TagController
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
+using back_end.DTO.TagDTOs;
 
 namespace back_end.Tests.Controllers;
 
@@ -114,116 +114,6 @@ public class CategoryControllerTests : IDisposable
         // categories!.Should().BeInAscendingOrder(c => c.Display_Order);
         categories!.Should().HaveCount(3);
     }
-
-    public void Dispose()
-    {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
-    }
-}
-
-public class TagControllerTests : IDisposable
-{
-    private readonly ApplicationDbContext _context;
-    private readonly TagController _controller;
-
-    public TagControllerTests()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        _context = new ApplicationDbContext(options);
-        var mockTagLogger = new Mock<ILogger<TagController>>();
-        _controller = new TagController(_context, mockTagLogger.Object);
-
-        SeedTestData();
-    }
-
-    private void SeedTestData()
-    {
-        var tags = new List<Tag>
-        {
-            new Tag
-            {
-                tag_id = 1,
-                tag_name = "Vegetarian",
-                tag_color = "#00FF00"
-            },
-            new Tag
-            {
-                tag_id = 2,
-                tag_name = "Spicy",
-                tag_color = "#FF0000"
-            },
-            new Tag
-            {
-                tag_id = 3,
-                tag_name = "Gluten-Free",
-                tag_color = "#0000FF"
-            }
-        };
-
-        _context.Tags.AddRange(tags);
-        _context.SaveChanges();
-    }
-
-    // Note: GetTags method doesn't exist in TagController - commented out
-    /*
-    [Fact]
-    public async Task GetAllTags_ReturnsAllTags()
-    {
-        // Act
-        var result = await _controller.GetTags();
-
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-        var okResult = result.Result as OkObjectResult;
-        var tags = okResult!.Value as List<Tag>;
-
-        tags.Should().NotBeNull();
-        tags!.Should().HaveCount(3);
-    }
-    */
-
-    [Fact]
-    public async Task GetTagById_ValidId_ReturnsTag()
-    {
-        // Act
-        var result = await _controller.GetTagById(1);
-
-        // Assert
-        result.Should().BeOfType<OkObjectResult>();
-        var okResult = result as OkObjectResult;
-
-        // The controller returns TagBaseDTO, not Tag entity
-        var value = okResult!.Value;
-        value.Should().NotBeNull();
-
-        // Use dynamic or reflection to check properties since it's an anonymous DTO type
-        dynamic tag = value!;
-        ((int)tag.Tag_Id).Should().Be(1);
-        ((string)tag.Tag_Name).Should().Be("Vegetarian");
-    }
-
-    [Fact]
-    public async Task GetTagById_InvalidId_ReturnsNotFound()
-    {
-        // Act
-        var result = await _controller.GetTagById(999);
-
-        // Assert
-        result.Should().BeOfType<NotFoundObjectResult>();
-    }
-
-    // Note: GetTags method doesn't exist in TagController
-    /*
-    [Fact]
-    public async Task GetTags_AllTagsHaveColors()
-    {
-        // TagController doesn't have a GetTags method
-    }
-    */
 
     public void Dispose()
     {

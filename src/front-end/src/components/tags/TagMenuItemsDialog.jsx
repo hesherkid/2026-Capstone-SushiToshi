@@ -58,14 +58,23 @@ const getTagItemColumns = ({ onRemoveItem }) => [
     minWidth: 200,
     // Wraps instead of cutting off; the row grows to fit (see getRowHeight below)
     renderCell: ({ value }) => (
-      <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "normal", py: 1 }}>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ whiteSpace: "normal", py: 1 }}
+      >
         {value}
       </Typography>
     ),
   },
   actionsColumn(
     (row) => [
-      { label: `Remove tag from ${row.name}`, icon: X, color: "error", onClick: () => onRemoveItem(row) },
+      {
+        label: `Remove tag from ${row.name}`,
+        icon: X,
+        color: "error",
+        onClick: () => onRemoveItem(row),
+      },
     ],
     { width: 90 },
   ),

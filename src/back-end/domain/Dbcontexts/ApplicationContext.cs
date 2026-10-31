@@ -140,6 +140,18 @@ namespace back_end.domain.DbContexts
 
             // DiningSession relationships
             modelBuilder.Entity<DiningSession>()
+                .HasOne(ds => ds.Menu)
+                .WithMany(m => m.DiningSessions)
+                .HasForeignKey(ds => ds.Menu_Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OrderItems>()
+                .HasOne(oi => oi.Menu)
+                .WithMany(m => m.OrderItems)
+                .HasForeignKey(oi => oi.Menu_Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DiningSession>()
                 .HasOne(ds => ds.Location)
                 .WithMany(l => l.DiningSessions)
                 .HasForeignKey(ds => ds.Location_Id)
