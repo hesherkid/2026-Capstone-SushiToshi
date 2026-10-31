@@ -17,7 +17,11 @@ jest.mock("@mui/x-data-grid", () => {
   const React = jest.requireActual("react");
   return {
     ...actual,
-    DataGrid: (props) => React.createElement(actual.DataGrid, { ...props, disableVirtualization: true }),
+    DataGrid: (props) =>
+      React.createElement(actual.DataGrid, {
+        ...props,
+        disableVirtualization: true,
+      }),
   };
 });
 
@@ -89,8 +93,7 @@ const ITEMS = [
 
 const mockGets = (items = ITEMS) =>
   api.get.mockImplementation((url) => {
-    if (url === "/Tag/colors")
-      return Promise.resolve({ status: 200, data: [SPICY] });
+    if (url === "/Tag") return Promise.resolve({ status: 200, data: [SPICY] });
     if (url === "/tag/5/menu_items")
       return Promise.resolve({ status: 200, data: items });
     return Promise.resolve({ status: 200, data: [] });
@@ -99,6 +102,20 @@ const mockGets = (items = ITEMS) =>
 const rowAction = async (label) => {
   const row = (await screen.findByText("#FF5733")).closest("tr");
   fireEvent.click(within(row).getByRole("button", { name: label }));
+};
+
+const tagListLoads = () => api.get.mock.calls.filter(([url]) => url === "/Tag");
+
+const openForm = async (heading) => {
+  if (heading === "Add New Tag") {
+    await screen.findByText("#FF5733");
+    fireEvent.click(screen.getByRole("button", { name: "Add New Tag" }));
+  } else {
+    await rowAction("Edit");
+  }
+  return (await screen.findByRole("heading", { name: heading })).closest(
+    '[role="dialog"]',
+  );
 };
 
 describe("Tag delete dialog", () => {
@@ -125,9 +142,9 @@ describe("Tag delete dialog", () => {
       "Tag deleted successfully",
     );
     await waitFor(() =>
-      expect(
-        api.get.mock.calls.filter(([url]) => url === "/Tag/colors"),
-      ).toHaveLength(2),
+      expect(api.get.mock.calls.filter(([url]) => url === "/Tag")).toHaveLength(
+        2,
+      ),
     );
   });
 
@@ -146,6 +163,26 @@ describe("Tag delete dialog", () => {
     expect(
       await within(dialog).findByText("Tag not found"),
     ).toBeInTheDocument();
+  });
+
+  it("doesn't show a failed delete's error on the page after cancelling", async () => {
+    api.delete.mockRejectedValue({
+      response: { status: 404, data: { detail: "Tag not found" } },
+    });
+    render(<TagManagement />);
+
+    await rowAction("Delete");
+    const dialog = (
+      await screen.findByText("Are you sure you want to delete this tag?")
+    ).closest('[role="dialog"]');
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await within(dialog).findByText("Tag not found");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("page-error")).not.toBeInTheDocument();
   });
 });
 
@@ -282,5 +319,99 @@ describe("Tag add/edit dialog", () => {
     ).closest('[role="dialog"]');
     expect(within(dialog).queryByText("Tag not found")).not.toBeInTheDocument();
   });
+
+  it("creates a tag, closes the dialog and reloads the list", async () => {
+    api.post.mockResolvedValue({ status: 201, data: {} });
+    render(<TagManagement />);
+    const dialog = await openForm("Add New Tag");
+
+    fireEvent.change(within(dialog).getByLabelText("Tag Name"), {
+      target: { value: "Vegan" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/Tag", {
+        tag_name: "Vegan",
+        tag_color: expect.stringMatching(/^#[0-9a-f]{6}$/),
+      }),
+    );
+    expect(await screen.findByTestId("page-success")).toHaveTextContent(
+      "Tag created successfully",
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(tagListLoads()).toHaveLength(2));
+  });
+
+  it("updates a tag through its id", async () => {
+    api.put.mockResolvedValue({ status: 200, data: {} });
+    render(<TagManagement />);
+    const dialog = await openForm("Update Tag");
+
+    expect(within(dialog).getByLabelText("Tag Name")).toHaveValue("Spicy");
+    fireEvent.change(within(dialog).getByLabelText("Tag Name"), {
+      target: { value: "Extra Spicy" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Update" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/Tag/5", {
+        tag_id: 5,
+        tag_name: "Extra Spicy",
+        tag_color: "#FF5733",
+      }),
+    );
+    expect(await screen.findByTestId("page-success")).toHaveTextContent(
+      "Tag updated successfully",
+    );
+  });
+
+  it("keeps the dialog open with the server's reason when saving fails", async () => {
+    api.post.mockRejectedValue({
+      response: { status: 400, data: { detail: "Tag already exists" } },
+    });
+    render(<TagManagement />);
+    const dialog = await openForm("Add New Tag");
+
+    fireEvent.change(within(dialog).getByLabelText("Tag Name"), {
+      target: { value: "Spicy" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(
+      await within(dialog).findByText("Tag already exists"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("page-error")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("page-success")).not.toBeInTheDocument();
+    expect(tagListLoads()).toHaveLength(1);
+  });
+
+  it("asks for a name without calling the server", async () => {
+    render(<TagManagement />);
+    const dialog = await openForm("Add New Tag");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(
+      await within(dialog).findByText("Tag name is required"),
+    ).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  });
 });
 
+describe("Tag list", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("shows a page error when the tags can't be loaded", async () => {
+    api.get.mockRejectedValue(new Error("network"));
+    render(<TagManagement />);
+
+    expect(await screen.findByTestId("page-error")).toHaveTextContent(
+      "Failed to fetch tags",
+    );
+  });
+});

@@ -86,8 +86,11 @@ describe("Review order page", () => {
     // The bill shows at the top and again right above the button
     expect(screen.getByText("Lee", { selector: "p" })).toBeInTheDocument();
     expect(screen.getByText(/Order on/)).toHaveTextContent("Order on Lee");
-    expect(screen.getByText("1 item · 2 units")).toBeInTheDocument();
+    expect(screen.getByText("2 items in your order")).toBeInTheDocument();
     expect(screen.getByText("$0.00")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Additional leftover fees may apply/),
+    ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", { name: "Place order · 2 items" }),
     ).toBeEnabled();

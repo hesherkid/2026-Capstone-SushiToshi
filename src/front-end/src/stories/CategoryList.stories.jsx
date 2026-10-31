@@ -94,7 +94,7 @@ api.delete = async (url) => {
   return { data: {} };
 };
 
-export default {
+const meta = {
   title: "Admin/CategoryList",
   component: CategoryList,
   parameters: {
@@ -131,6 +131,8 @@ export default {
     ],
   },
 };
+
+export default meta;
 
 export const Default = (args) => {
   const [dialogOpen, setDialogOpen] = useState(false);

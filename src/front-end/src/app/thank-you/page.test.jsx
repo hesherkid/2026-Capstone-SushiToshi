@@ -31,6 +31,7 @@ describe("Thank-you page", () => {
     render(<ThankYouPage />);
 
     expect(screen.getByText(/scan the QR code on your table/)).toBeInTheDocument();
+    expect(screen.getByText(/Make an account to save favourites/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Back to home page" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Log out" })).not.toBeInTheDocument();
 
@@ -44,6 +45,7 @@ describe("Thank-you page", () => {
     render(<ThankYouPage />);
 
     expect(screen.queryByRole("button", { name: "Back to sign in" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Make an account/)).not.toBeInTheDocument();
   });
 
   it("keeps the back button on this page instead of the visit that ended", () => {

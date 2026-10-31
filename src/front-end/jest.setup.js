@@ -1,6 +1,10 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
+
+// MUI grids can take over 1 s to render when every suite runs at once (testTimeout doesn't cover this)
+configure({ asyncUtilTimeout: 5000 })
+
 
 // Cleanup after each test automatically
 afterEach(() => {
@@ -56,14 +60,14 @@ global.console = {
 jest.mock('next/image', () => ({
   __esModule: true,
   default: (props) => {
-    // eslint-disable-next-line jsx-a11y/alt-text
+    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
     return <img {...props} />
   },
 }))
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href, onClick }) => {
+  return function Link({ children, href, onClick }) {
     return <a href={href} onClick={onClick}>{children}</a>
   }
 })

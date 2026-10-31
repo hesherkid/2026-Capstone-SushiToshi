@@ -85,7 +85,7 @@ export const orderService = {
   updateOrderItem: async (orderId, itemId, updateData) => {
     const response = await api.patch(
       `/Order/${orderId}/items/${itemId}`,
-      updateData
+      updateData,
     );
     return response.data;
   },
@@ -98,7 +98,7 @@ export const orderService = {
    */
   completeOrderItem: async (orderId, itemId) => {
     const response = await api.patch(
-      `/Order/${orderId}/items/${itemId}/complete`
+      `/Order/${orderId}/items/${itemId}/complete`,
     );
     return response.data;
   },
@@ -110,23 +110,13 @@ export const orderService = {
    * @returns {Promise<string>} Success message
    */
   removeOrderItem: async (orderId, orderItemId) => {
-    const response = await api.delete(
-      `/Order/${orderId}/items/${orderItemId}`
-    );
+    const response = await api.delete(`/Order/${orderId}/items/${orderItemId}`);
     return response.data;
   },
 
   // ORDER RETRIEVAL
 
-  // TODO: This method needs filters by session or date range instead of returning all orders.
-  /**
-   * Gets all orders (Staff/Admin only)
-   * @returns {Promise<Array>} Array of all orders
-   */
-  getAllOrders: async () => {
-    const response = await api.get("/Order");
-    return response.data;
-  },
+  // Past orders use GET /Order/history via useOrderHistory; live orders use all_orders below
 
   /**
    * Gets all orders based on location (Staff/Admin only)

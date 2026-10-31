@@ -23,7 +23,9 @@ export const ManagementPage = ({
 }) => {
   // Success messages dismiss themselves; errors stay until closed.
   const onSuccessCloseRef = useRef(onSuccessClose);
-  onSuccessCloseRef.current = onSuccessClose;
+  useEffect(() => {
+    onSuccessCloseRef.current = onSuccessClose;
+  });
 
   useEffect(() => {
     if (!success) return;

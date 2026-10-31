@@ -256,7 +256,7 @@ const RegisterFormContent = () => {
             variant="caption"
             color="text.secondary"
           >
-            Didn't receive the email? Check your spam folder
+            Didn&apos;t receive the email? Check your spam folder
             or request another verification link.
           </Typography>
         </Box>

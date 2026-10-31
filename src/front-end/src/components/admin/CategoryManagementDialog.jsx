@@ -288,10 +288,10 @@ const CategoryManagementDialog = ({
               }
             >
               <MenuItem value="Block">Block</MenuItem>
-              <MenuItem value="Charge">Charge the item's price</MenuItem>
+              <MenuItem value="Charge">Charge the item&apos;s price</MenuItem>
             </Select>
             <FormHelperText>
-              Charge bills each item's price for every extra over the
+              Charge bills each item&apos;s price for every extra over the
               limits above. Items need a price set in their menu
               assignment.
             </FormHelperText>

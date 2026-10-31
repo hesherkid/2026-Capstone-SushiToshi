@@ -9,7 +9,7 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/menu/full-menu",
 }));
 
-// eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+// eslint-disable-next-line @next/next/no-img-element
 jest.mock("next/image", () => ({ __esModule: true, default: (props) => <img alt={props.alt} /> }));
 
 jest.mock("@/hooks/useAuth", () => ({

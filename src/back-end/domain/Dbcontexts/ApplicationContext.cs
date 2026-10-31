@@ -11,6 +11,7 @@ namespace back_end.domain.DbContexts
         public DbSet<AuthActionToken> AuthActionTokens => Set<AuthActionToken>();
         public DbSet<Billing> Bills { get; set; } = null!;
         public DbSet<Category> Categories { get; set; } = null!;
+        public DbSet<FavouriteItem> FavouriteItems { get; set; } = null!;
         public DbSet<DiningSession> DiningSessions { get; set; } = null!;
         public DbSet<Locations> Locations { get; set; } = null!;
         public DbSet<MenuItemAssignment> MenuItemAssignments { get; set; } = null!;
@@ -102,6 +103,22 @@ namespace back_end.domain.DbContexts
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // Deleting a customer or a menu item takes it off favourites
+            modelBuilder.Entity<FavouriteItem>(entity =>
+            {
+                entity.HasKey(f => new { f.User_Id, f.Item_Id });
+
+                entity.HasOne(f => f.User)
+                    .WithMany()
+                    .HasForeignKey(f => f.User_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(f => f.MenuItem)
+                    .WithMany()
+                    .HasForeignKey(f => f.Item_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             modelBuilder.Entity<MenuItemView>(entity =>
             {
                 entity.HasOne(v => v.MenuItem)
@@ -122,6 +139,18 @@ namespace back_end.domain.DbContexts
             });
 
             // DiningSession relationships
+            modelBuilder.Entity<DiningSession>()
+                .HasOne(ds => ds.Menu)
+                .WithMany(m => m.DiningSessions)
+                .HasForeignKey(ds => ds.Menu_Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OrderItems>()
+                .HasOne(oi => oi.Menu)
+                .WithMany(m => m.OrderItems)
+                .HasForeignKey(oi => oi.Menu_Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<DiningSession>()
                 .HasOne(ds => ds.Location)
                 .WithMany(l => l.DiningSessions)

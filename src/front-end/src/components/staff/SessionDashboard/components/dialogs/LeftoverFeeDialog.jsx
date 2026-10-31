@@ -110,7 +110,7 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
           <Typography variant="body2" color="text.secondary">
             For tables that leave too much food. One fee for the whole table,
             split evenly across its open bills and taxed with the bill. Apply
-            it before closing the bills; closed bills aren't changed.
+            it before closing the bills; closed bills aren&apos;t changed.
           </Typography>
 
           <TextField

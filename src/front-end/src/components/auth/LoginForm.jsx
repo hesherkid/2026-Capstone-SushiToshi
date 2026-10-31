@@ -10,9 +10,11 @@ import {
   CircularProgress,
   Divider,
   Link,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
 
-import { Lock } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import AuthCard from "@/components/auth/AuthCard";
 import NextLink from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -24,6 +26,11 @@ import { decodeToken, extractRoles, isTokenExpired } from "@/config/auth";
 import { startTableVisit } from "@/utils/tableVisit";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+const OFFLINE_MESSAGE =
+  "We can't connect to Sushi Toshi. Check your Wi-Fi or mobile data, then try again.";
+const SERVER_ERROR_MESSAGE =
+  "Sign-in isn't working right now. Please try again in a few minutes. If you're at the restaurant, staff can help.";
 
 // Sign-in worked but the table couldn't be joined; its message is shown on the form as-is
 class TableJoinError extends Error {
@@ -45,6 +52,7 @@ const LoginFormContent = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   // Signed in, but the table couldn't be joined (e.g. staff haven't started it yet)
   const [joinFailed, setJoinFailed] = useState(false);
   // A signed-in customer scanned a table's QR code and is being joined to it
@@ -143,9 +151,17 @@ const LoginFormContent = () => {
       return;
     }
 
+    // The request was sent but nothing came back: the phone is offline or the server is down
+    if (err.request && !err.response) {
+      setNeedsVerification(false);
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
+
+    // A problem on our side (including a sign-in that returned no token); the user can only wait or ask staff
     if (status === 404 || status >= 500 || !err.response) {
       setNeedsVerification(false);
-      setError("Something went wrong. Please try again.");
+      setError(SERVER_ERROR_MESSAGE);
       return;
     }
 
@@ -248,7 +264,7 @@ const LoginFormContent = () => {
     } catch (err) {
       if (err.response?.status === 401) {
         setJoinFailed(false);
-        setError("Something went wrong. Please try again.");
+        setError("We couldn't start your guest visit. Please scan the QR code on your table again.");
       } else {
         handleAuthError(err);
       }
@@ -296,7 +312,6 @@ const LoginFormContent = () => {
 
     setJoiningTable(true);
     handleRetryJoin().finally(() => setJoiningTable(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationId, tableNumber]);
 
   // --------------------------------------------------
@@ -526,12 +541,30 @@ const LoginFormContent = () => {
           id="login-password"
           label="Password"
           name="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           defaultValue={defaultPassword}
           autoComplete="current-password"
           required
           fullWidth
           disabled={loading}
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword((shown) => !shown)}
+                    onMouseDown={(event) => event.preventDefault()}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                    edge="end"
+                    disabled={loading}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
         />
 
         {/* Forgot password */}

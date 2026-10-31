@@ -113,6 +113,15 @@ describe('HomePage', () => {
       expect(replace).not.toHaveBeenCalled();
     });
 
+    it('links to their past visits', async () => {
+      signIn();
+
+      render(<HomePage />);
+      fireEvent.click(await screen.findByRole('button', { name: /Past visits/ }));
+
+      expect(push).toHaveBeenCalledWith('/visits');
+    });
+
     it('lets them log out between visits, clearing the last visit too', async () => {
       const { logoutCustomer } = require('@/utils/auth');
       signIn();

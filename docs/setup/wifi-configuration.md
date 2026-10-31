@@ -13,7 +13,7 @@ For a location with ID `N`, the backend uses the first of these that has **both*
 
 If neither is set, generating a WiFi QR code for that location fails with "Location N not found or WiFi credentials not configured".
 
-Location IDs come from the database. You can find them on the admin **Manage Locations** page.
+Location IDs come from the database. You can find them on the admin **Locations & Menus** page.
 
 ## Where to put the credentials
 

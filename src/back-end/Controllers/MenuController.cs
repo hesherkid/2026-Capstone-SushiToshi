@@ -24,9 +24,10 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
-        [Authorize(Policy = "staffOnly")]
+        [Authorize(Policy = "adminOnly")]
         [HttpPost("createmenu")]
-        [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Create_Menu(
@@ -54,8 +55,15 @@ namespace back_end.Controllers
                 };
                 _context.Add(newMenu);
                 await _context.SaveChangesAsync();
-                return Ok(newMenu);
-
+                return Ok(new MenuResponseDTO
+                {
+                    Menu_Id = newMenu.Menu_id,
+                    Name = newMenu.Name,
+                    Description = newMenu.Description,
+                    Start_Time = newMenu.Start_time,
+                    End_Time = newMenu.End_time,
+                    Is_Active = newMenu.Is_active
+                });
             }
             catch (Exception ex)
             {
@@ -254,64 +262,6 @@ namespace back_end.Controllers
         }
 
         /// <summary>
-        /// Retrieves all active menus available at a specific time.
-        /// </summary>
-        /// <param name="time">Optional time in HH:mm:ss format. If not provided, uses current time.</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of <see cref="Menu"/> objects.
-        /// Returns HTTP 200 (OK) with the list of active menus on success.
-        /// Returns HTTP 400 (Bad Request) if the time format is invalid.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the list of active menus available at the specified time</response>
-        /// <response code="400">If the time format is invalid</response>
-        /// <response code="500">If an internal error occurs while retrieving menus</response>
-        /// <remarks>
-        /// Sample requests:
-        ///
-        ///     GET /api/menu/time
-        ///     (Uses current time)
-        ///     
-        ///     GET /api/menu/time?time=18:30:00
-        ///     (Uses specified time)
-        ///
-        /// Returns only active menus where the specified time falls within the menu's start and end times.
-        /// Time format should be HH:mm:ss (e.g., "18:30:00" for 6:30 PM).
-        /// </remarks>
-        [HttpGet("time")]
-        [ProducesResponseType(typeof(IEnumerable<Menu>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<Menu>>> GetMenuByTime([FromQuery] string? time)
-        {
-            TimeOnly currentTime;
-
-            try
-            {
-                if (string.IsNullOrEmpty(time))
-                {
-                    currentTime = TimeOnly.FromDateTime(DateTime.UtcNow);
-                }
-                else if (!TimeOnly.TryParse(time, out currentTime))
-                {
-                    return BadRequest(new { message = "Improper time given." });
-                }
-                //TODO: Test this part more
-                var currentMenu = await _context.Menus.Where(m => m.Is_active &&
-                                            m.Start_time <= currentTime &&
-                                            m.End_time >= currentTime)
-                                        .ToListAsync();
-
-                return Ok(currentMenu);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting the current Menu");
-                return StatusCode(500, "Internal Server Error");
-            }
-        }
-
-        /// <summary>
         /// Retrieves all available items from a specific menu with their details, prices, categories, and tags.
         /// </summary>
         /// <param name="menu">The unique identifier of the menu</param>
@@ -335,7 +285,6 @@ namespace back_end.Controllers
         /// - Price for this specific menu
         /// - Category and item limits per person / per order
         /// - Associated tags with names and color codes
-        /// - Full price for over limit charges
         /// </remarks>
         //GET: api/menu/{menu}/items
         //Get items from a Menu
@@ -376,7 +325,6 @@ namespace back_end.Controllers
                         description = m.MenuItem.Description,
                         category = m.MenuItem.Category.Category_name,
                         price = m.Price,
-                        fullPrice = m.Price,
                         categoryID = m.MenuItem.Category_id,
                         categoryLimits = new
                         {
@@ -578,10 +526,12 @@ namespace back_end.Controllers
         /// An <see cref="IActionResult"/> indicating the result of the operation.
         /// Returns HTTP 200 (OK) with a success message when the menu is deleted.
         /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
+        /// Returns HTTP 409 (Conflict) if the menu has past dining sessions or orders.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during deletion.
         /// </returns>
         /// <response code="200">Returns a success message when the menu is deleted</response>
         /// <response code="404">If the menu is not found</response>
+        /// <response code="409">If the menu has past dining sessions or orders</response>
         /// <response code="500">If an internal error occurs while deleting the menu</response>
         /// <remarks>
         /// Sample request:
@@ -589,12 +539,14 @@ namespace back_end.Controllers
         ///     DELETE /api/menu/123
         ///
         /// This endpoint requires Admin role authorization.
-        /// Permanently removes the menu from the database.
+        /// Permanently removes a menu that has never been used.
+        /// A menu with past sessions or orders can't be deleted; deactivate it instead.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("{menu_id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete_Menu(
             int menu_id
@@ -606,6 +558,12 @@ namespace back_end.Controllers
                 if (menuToDelete == null)
                 {
                     return NotFound("Could Not Find the Menu To Delete");
+                }
+                var hasHistory = await _context.DiningSessions.AnyAsync(s => s.Menu_Id == menu_id)
+                    || await _context.OrderItems.AnyAsync(o => o.Menu_Id == menu_id);
+                if (hasHistory)
+                {
+                    return Conflict("This menu has past sessions or orders, so it can't be deleted. Deactivate it instead.");
                 }
                 _context.Remove(menuToDelete);
                 await _context.SaveChangesAsync();

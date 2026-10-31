@@ -415,7 +415,6 @@ namespace back_end.Controllers
 
                 if (order.Status != OrderStatus.Pending)
                 {
-                    // TODO: Please verify new functionality
                     if (!(userRole.Contains("Staff") || userRole.Contains("Admin")) && userId != order.User_Id)
                     {
                         return Conflict("Can not Modify a Approved Order");
@@ -619,11 +618,14 @@ namespace back_end.Controllers
         /// This endpoint requires authentication.
         /// Only orders with 'Pending' status can be cancelled.
         /// Orders that are approved or delivered cannot be cancelled.
+        /// Staff can cancel any order at their location. Customers (guests included) can cancel
+        /// orders they placed, while they're seated at that table.
         /// </remarks>
         [HttpPatch("{order_id}/cancel")]
-        [Authorize(Policy = "staffOnly")]
+        [Authorize]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -639,9 +641,19 @@ namespace back_end.Controllers
                     return NotFound("Order was not found to cancel");
                 }
 
-                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                var isStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+                if (isStaff)
                 {
-                    return LocationResults.OtherLocation();
+                    if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                    {
+                        return LocationResults.OtherLocation();
+                    }
+                }
+                // Customers only their own orders, and only while seated at that table
+                else if (order.User_Id?.ToString() != ClaimsHelpers.GetUserId(User)
+                         || !await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, "You can only cancel your own orders");
                 }
                 if (order.Status == OrderStatus.Delivered)
                 {
@@ -1068,49 +1080,6 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating order item");
-                return StatusCode(500, "Internal Server Error");
-            }
-        }
-
-        /// <summary>
-        /// Retrieves all orders from the database.
-        /// </summary>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of <see cref="SessionOrder"/> objects.
-        /// Returns HTTP 200 (OK) with the list of all orders on success.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the list of all orders</response>
-        /// <response code="500">If an internal error occurs while retrieving orders</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     GET /api/order
-        ///
-        /// Returns all orders in the system without any filtering.
-        /// </remarks>
-        //GET api/order
-        //Get all Orders
-        [HttpGet]
-        [Authorize(Policy = "staffOnly")]
-        [ProducesResponseType(typeof(IEnumerable<SessionOrder>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<SessionOrder>>> GetAllOrder()
-        {
-            try
-            {
-                var scope = await _locationAccess.ResolveLocationAsync(User, null);
-                if (scope.IsForbidden) return LocationResults.NoLocation();
-
-                var order = await _context.SessionOrders
-                    .Where(o => scope.LocationId == null || o.DiningSession.Location_Id == scope.LocationId)
-                    .ToListAsync();
-
-                return Ok(order);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting Orders");
                 return StatusCode(500, "Internal Server Error");
             }
         }
