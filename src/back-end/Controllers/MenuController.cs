@@ -24,9 +24,10 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
-        [Authorize(Policy = "staffOnly")]
+        [Authorize(Policy = "adminOnly")]
         [HttpPost("createmenu")]
-        [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Create_Menu(
@@ -54,8 +55,15 @@ namespace back_end.Controllers
                 };
                 _context.Add(newMenu);
                 await _context.SaveChangesAsync();
-                return Ok(newMenu);
-
+                return Ok(new MenuResponseDTO
+                {
+                    Menu_Id = newMenu.Menu_id,
+                    Name = newMenu.Name,
+                    Description = newMenu.Description,
+                    Start_Time = newMenu.Start_time,
+                    End_Time = newMenu.End_time,
+                    Is_Active = newMenu.Is_active
+                });
             }
             catch (Exception ex)
             {
@@ -518,10 +526,12 @@ namespace back_end.Controllers
         /// An <see cref="IActionResult"/> indicating the result of the operation.
         /// Returns HTTP 200 (OK) with a success message when the menu is deleted.
         /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
+        /// Returns HTTP 409 (Conflict) if the menu has past dining sessions or orders.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during deletion.
         /// </returns>
         /// <response code="200">Returns a success message when the menu is deleted</response>
         /// <response code="404">If the menu is not found</response>
+        /// <response code="409">If the menu has past dining sessions or orders</response>
         /// <response code="500">If an internal error occurs while deleting the menu</response>
         /// <remarks>
         /// Sample request:
@@ -529,12 +539,14 @@ namespace back_end.Controllers
         ///     DELETE /api/menu/123
         ///
         /// This endpoint requires Admin role authorization.
-        /// Permanently removes the menu from the database.
+        /// Permanently removes a menu that has never been used.
+        /// A menu with past sessions or orders can't be deleted; deactivate it instead.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("{menu_id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete_Menu(
             int menu_id
@@ -546,6 +558,12 @@ namespace back_end.Controllers
                 if (menuToDelete == null)
                 {
                     return NotFound("Could Not Find the Menu To Delete");
+                }
+                var hasHistory = await _context.DiningSessions.AnyAsync(s => s.Menu_Id == menu_id)
+                    || await _context.OrderItems.AnyAsync(o => o.Menu_Id == menu_id);
+                if (hasHistory)
+                {
+                    return Conflict("This menu has past sessions or orders, so it can't be deleted. Deactivate it instead.");
                 }
                 _context.Remove(menuToDelete);
                 await _context.SaveChangesAsync();
