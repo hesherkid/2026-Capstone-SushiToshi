@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using back_end.domain;
 using back_end.domain.Entities;
@@ -12,6 +13,7 @@ namespace back_end.domain.Seeders
     /// <summary>
     /// Seeder for the users table with initial data.
     /// Creates 1 admin account, 3 staff accounts and 11 customer accounts.
+    /// Only runs in Development, because the passwords are in the source code.
     /// </summary>
     public class UserSeeder : ISeeder
     {
@@ -22,15 +24,24 @@ namespace back_end.domain.Seeders
 
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserSeeder> _logger;
+        private readonly IHostEnvironment _environment;
 
-        public UserSeeder(ApplicationDbContext context, ILogger<UserSeeder> logger)
+        public UserSeeder(ApplicationDbContext context, ILogger<UserSeeder> logger, IHostEnvironment environment)
         {
             _context = context;
             _logger = logger;
+            _environment = environment;
         }
 
         public void Seed()
         {
+            // Accounts with known passwords must never reach production
+            if (!_environment.IsDevelopment())
+            {
+                _logger.LogInformation("Not in Development: skipping seeded user accounts.");
+                return;
+            }
+
             // Admin accounts
             List<User> adminUsers = [
                   new()

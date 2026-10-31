@@ -356,7 +356,11 @@ using (var scope = app.Services.CreateScope())
             // Missing default prices would make every bill wrong: stop now instead
             await PricingService.EnsureDefaultProfileAsync(context);
 
-            if (!context.MenuItems.Any())
+            if (!app.Configuration.GetValue("Seeding:Enabled", true))
+            {
+                logger.LogInformation("Seeding:Enabled is off: skipping database seed");
+            }
+            else if (!context.MenuItems.Any())
             {
                 await seeder.SeedDatabase();
                 logger.LogInformation("Database seed completed.");
@@ -368,6 +372,9 @@ using (var scope = app.Services.CreateScope())
                 userSeeder.Seed();
                 await context.SaveChangesAsync();
             }
+
+            // Production seeds no accounts, so the first admin comes from configuration
+            await AdminBootstrap.EnsureAdminAsync(context, app.Configuration, logger);
         }
         else
         {

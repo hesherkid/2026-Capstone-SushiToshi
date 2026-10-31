@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using back_end.domain.Entities;
 using back_end.domain.DbContexts;
@@ -16,6 +17,7 @@ namespace back_end.domain.Seeders
   {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DatabaseSeeder> _logger;
+    private readonly IHostEnvironment _environment;
 
     private readonly CategorySeeder _categorySeeder;
     private readonly TagSeeder _tagSeeder;
@@ -39,6 +41,7 @@ namespace back_end.domain.Seeders
     public DatabaseSeeder(
         ApplicationDbContext context,
         ILogger<DatabaseSeeder> logger,
+        IHostEnvironment environment,
         CategorySeeder categorySeeder,
         TagSeeder tagSeeder,
         MenuSeeder menuSeeder,
@@ -57,6 +60,7 @@ namespace back_end.domain.Seeders
     {
       _context = context;
       _logger = logger;
+      _environment = environment;
 
       _categorySeeder = categorySeeder;
       _tagSeeder = tagSeeder;
@@ -184,6 +188,13 @@ namespace back_end.domain.Seeders
         await _context.SaveChangesAsync();
         _tableGroupSeeder.Seed(); _logger.LogInformation("Table groups seeded successfully");
         await _context.SaveChangesAsync();
+
+        // Users and session history are sample data for Development only
+        if (!_environment.IsDevelopment())
+        {
+          _logger.LogInformation("Not in Development: skipping users and session data");
+          return;
+        }
 
         // Users must be seeded before session-driven data
         _userSeeder.Seed(); _logger.LogInformation("Users seeded successfully");

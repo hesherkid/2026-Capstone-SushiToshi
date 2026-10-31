@@ -114,18 +114,27 @@ Use `npm run start`, not `npm run dev`, in production.
 
 ## 4. Default accounts (security)
 
-> **Known issue:** the backend creates sample accounts on every startup, with passwords that are in the source code. This includes an admin account (`admin.user@sushitoshi.ca`) and staff accounts. The `Seeding:Enabled` setting exists but isn't read by the code yet, so seeding can't be turned off. A code fix is needed so these accounts aren't created in production.
+Outside Development, the backend doesn't create any of the sample accounts (admin, staff or customer), because their passwords are in the source code.
 
-Until that's fixed:
+On an empty database, the first start still loads the **menu and restaurant setup**: the two sample locations, categories, tags, menus, menu items, tables and table groups. It doesn't load the sample dining sessions, orders, bills, service requests or menu views. Review the menu and setup data and change anything that isn't real before opening to customers. To start with none of it, set `Seeding:Enabled` to `false` (for example, the environment variable `Seeding__Enabled=false`) before the first start.
 
-1. Start the backend once, then sign in as the seeded admin.
-2. Create a real admin account for the restaurant.
-3. Lock down **every** seeded account. They're listed in `src/back-end/domain/Seeders/UserSeeder.cs`.
-   - **Manage Staff:** change the password of each seeded admin and staff account, or deactivate it.
-   - **Manage Customers:** deactivate each seeded customer account. This page has no password change.
-   - **Don't delete them.** The seeder recreates any missing account, with its default password, the next time the backend starts. It leaves existing accounts alone, so changed passwords and deactivations stick.
+### First admin account
 
-On an empty database, the first start also loads **sample data** (menu items and other records). Review it and remove anything that isn't real before opening to customers.
+No admin is seeded in production, so the backend creates the first one from these settings when it starts and finds no admin in the database:
+
+```bash
+Bootstrap__AdminEmail=owner@your-restaurant.example
+Bootstrap__AdminPassword=<at least 12 characters>
+# Optional, default to "Admin" and "User"
+Bootstrap__AdminFirstName=...
+Bootstrap__AdminLastName=...
+```
+
+- Set the password in an environment variable or secret store, never in a committed file.
+- Use an email that isn't registered yet. The backend won't turn an existing account into an admin.
+- Once any admin exists, these settings are ignored, so they can't overwrite or take over an account. Still, **remove `Bootstrap__AdminPassword` after the first sign-in**, then change the password from your own row in **Manage Staff**.
+- If a setting is missing or invalid (bad email, password too short or long, email already in use), the backend logs an error under `An error occurred during database initialization` and creates no admin. Fix it and restart.
+- Add more admins and staff from **Manage Staff** once you're signed in.
 
 ## 5. Table QR codes
 
