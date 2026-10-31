@@ -53,7 +53,7 @@ All sign-in endpoints are in `AuthController` under `/api/auth`. Each one return
 
 There are also endpoints for verifying email, resending verification, and forgot/reset password.
 
-**The token** contains the user's ID, email and role. Regular tokens last `Jwt:ExpiresInMinutes` (120). Guest tokens last 6 hours (`Jwt:GuestExpiresInMinutes`) and carry a `guest` claim. The signing key is `Jwt:Key`, which must be replaced in production (see [production setup](../../setup/production-setup.md)).
+**The token** contains the user's ID, email and role. Regular tokens last `Jwt:ExpiresInMinutes` (120). Guest tokens last 6 hours (`Jwt:GuestExpiresInMinutes`) and carry a `guest` claim. The signing key is `Jwt:Key`. Only `appsettings.Development.json` has one; production sets its own with the `Jwt__Key` environment variable (see [production setup](../../setup/production-setup.md)).
 
 **In the browser**, the token is stored in `localStorage` (`authToken`). The shared axios instance in `src/front-end/src/config/api.js` adds it to every request as `Authorization: Bearer ...`. On a 401 it clears the token and sends the user to `/auth/login`. Calls that must not send a token, such as before sign-in, use `config/publicApi.js`.
 

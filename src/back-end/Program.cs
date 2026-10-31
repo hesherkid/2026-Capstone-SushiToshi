@@ -114,8 +114,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Seeders registration
 builder.Services.AddDatabaseSeeders();
 
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+// The key is not in appsettings.json. Development gets one from appsettings.Development.json;
+// everywhere else it must come from the Jwt__Key environment variable.
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException("Jwt:Key is not configured. Set the Jwt__Key environment variable.");
+// HMAC-SHA256 needs at least 256 bits of key
+if (System.Text.Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("Jwt:Key must be at least 32 bytes long.");
 
 // Simple JWT Authentication
 builder.Services

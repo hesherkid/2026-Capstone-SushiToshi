@@ -48,13 +48,14 @@ ConnectionStrings__MySqlConnection=Server=<host>;Port=3306;Database=sushi_toshi_
 Jwt__Key=<new random secret>
 ```
 
-**The development key is committed to git.** Anyone who has seen the repo could use it to create valid login tokens, including admin ones. Production must use a new key:
+`appsettings.json` has no signing key, so **the backend won't start outside Development until `Jwt__Key` is set**. The development key in `appsettings.Development.json` is committed to git, and anyone who has seen the repo could use it to create valid login tokens, including admin ones. Production must use its own new key:
 
 ```bash
 openssl rand -base64 48
 ```
 
-- Use at least 32 characters. Tokens are signed with HMAC-SHA256.
+- It must be at least 32 bytes, or the backend refuses to start. Tokens are signed with HMAC-SHA256.
+- Never reuse the old key that used to be in `appsettings.json` (`ThisIsAVerySecure...`). It is still in the git history.
 - Changing the key signs everyone out, because existing tokens stop being valid.
 - Optional: `Jwt__ExpiresInMinutes` (default `120`) and `Jwt__GuestExpiresInMinutes` (default `360`) control how long logins last.
 
@@ -164,7 +165,7 @@ Both pages still exist in the frontend (`src/front-end/src/app/join/` and `src/f
 
 - [ ] `ASPNETCORE_ENVIRONMENT=Production`
 - [ ] `ConnectionStrings__MySqlConnection` points at the production database, with a strong password
-- [ ] `Jwt__Key` is a new random secret, not the committed one
+- [ ] `Jwt__Key` is a new random secret, not the development key or the old key from git history
 - [ ] `Cors__AllowedOrigins__0` (and more if needed) lists the frontend's origin
 - [ ] `AuthEmail__FrontendBaseUrl`, `QRCodeSettings__SessionPageUrl` and `Restaurant__BaseUrl` are the real frontend URL
 - [ ] SendGrid API key and sender are set, and the domain is authenticated
