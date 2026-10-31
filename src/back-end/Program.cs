@@ -260,9 +260,18 @@ builder.Services.AddHttpClient<IHolidayProvider, CanadaHolidaysClient>((sp, http
 builder.Services.AddScoped<QrGeneratorService>();
 builder.Services.AddAnalyticsServices();
 
+var forwardedHeaders = builder.Configuration.GetSection(ForwardedHeadersSettings.SectionName)
+    .Get<ForwardedHeadersSettings>() ?? new ForwardedHeadersSettings();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
+// First, so the rate limiters, HTTPS redirection and logging all see the real client
+if (forwardedHeaders.Enabled)
+{
+    app.UseForwardedHeaders(forwardedHeaders.ToOptions());
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();

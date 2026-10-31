@@ -82,6 +82,27 @@ All three take the frontend origin, e.g. `https://sushitoshi.example.com`, with 
 
 **After setting `SessionPageUrl`, regenerate and reprint every location's QR codes.** Saved codes keep the old URL. See [Table QR codes](#5-table-qr-codes) for the full steps.
 
+### Behind a reverse proxy
+
+The guest sign-in limit (30 a minute) is counted per client IP address. Behind a proxy, every request reaches the backend from the proxy's address, so without this setting the limit is shared by **everyone**. That includes the default setup, where the Next.js `/api` rewrite forwards calls from `127.0.0.1`.
+
+Turn on forwarded headers so the backend reads the real client address from `X-Forwarded-For`:
+
+```bash
+ForwardedHeaders__Enabled=true
+# Only if a proxy reaches the backend from another machine (loopback is always trusted)
+ForwardedHeaders__KnownProxies__0=10.0.0.5
+ForwardedHeaders__KnownNetworks__0=10.0.0.0/24
+```
+
+The header is only read from trusted proxies, and a mistyped address stops the backend from starting.
+
+**Only turn this on when a real reverse proxy (nginx, Caddy, a cloud load balancer) is the only public entry point and sets `X-Forwarded-For` itself.** The Next.js rewrite doesn't count: if the browser sends its own `X-Forwarded-For`, Next.js passes it on unchanged. If browsers could reach Next.js (or the backend) directly, anyone could send a new made-up address on every request and skip the limit completely. So:
+
+- Make the edge proxy **overwrite** the header with the address it sees. For nginx: `proxy_set_header X-Forwarded-For $remote_addr;` and `proxy_set_header X-Forwarded-Proto $scheme;`.
+- Don't let the internet reach the Next.js port (3000) or the backend port (5264) directly. Bind them to `127.0.0.1` or block them with a firewall.
+- `ForwardedHeaders__ForwardLimit` (default `1`) is how many `X-Forwarded-For` entries to read from the right. Leave it at `1` unless more than one proxy in the chain adds an entry.
+
 ## 2. Backend: integrations
 
 | Integration | What to do |
@@ -176,6 +197,7 @@ Both pages still exist in the frontend (`src/front-end/src/app/join/` and `src/f
 - [ ] `ConnectionStrings__MySqlConnection` points at the production database, with a strong password
 - [ ] `Jwt__Key` is a new random secret, not the development key or the old key from git history
 - [ ] `Cors__AllowedOrigins__0` (and more if needed) lists the frontend's origin
+- [ ] Behind a reverse proxy: `ForwardedHeaders__Enabled=true`, the proxy overwrites `X-Forwarded-For`, and ports 3000 and 5264 aren't publicly reachable
 - [ ] `AuthEmail__FrontendBaseUrl`, `QRCodeSettings__SessionPageUrl` and `Restaurant__BaseUrl` are the real frontend URL
 - [ ] SendGrid API key and sender are set, and the domain is authenticated
 - [ ] WiFi credentials are set for every location
@@ -190,7 +212,7 @@ Both pages still exist in the frontend (`src/front-end/src/app/join/` and `src/f
 
 **After the first start**
 
-- [ ] Every seeded account's password is changed, or the account is deactivated
+- [ ] `Bootstrap__AdminPassword` is removed once the first admin has signed in
 - [ ] A real admin account exists
 - [ ] Sample data is reviewed and cleaned up
 - [ ] QR codes are bulk generated for every location, a test scan works with the phone's WiFi off, and the codes are printed
