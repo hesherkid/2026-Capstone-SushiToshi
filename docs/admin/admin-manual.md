@@ -174,7 +174,7 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
   - Phone Number
 - **Assign Menus**: opens **Manage Menus** for the location. Add or remove each menu type it offers. Changes save straight away.
 - **Pricing**: open this location's pricing. See [Location pricing](#location-pricing).
-- **Delete**: delete a menu that has never been used. A menu with past sessions or orders can't be deleted, so turn off **Is Active Menu** instead.
+- **Delete**: delete the location. This also removes all of its menu assignments and can't be undone.
 
 ### Menu Management
 
@@ -184,7 +184,7 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
   - Start Time and End Time: when the menu is available
   - **Is Active Menu**: turn the menu on or off
 - **Assign Locations**: opens **Manage Locations** for the menu. It lists the **Assigned Locations**; use **Add Location** to add another, or remove one from the list. Changes save straight away.
-- **Delete**: delete the menu type. It will no longer be available to guests.
+- **Delete**: delete a menu that has never been used. A menu with past sessions or orders can't be deleted, so turn off **Is Active Menu** instead.
 
 ---
 
