@@ -526,10 +526,12 @@ namespace back_end.Controllers
         /// An <see cref="IActionResult"/> indicating the result of the operation.
         /// Returns HTTP 200 (OK) with a success message when the menu is deleted.
         /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
+        /// Returns HTTP 409 (Conflict) if the menu has past dining sessions or orders.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during deletion.
         /// </returns>
         /// <response code="200">Returns a success message when the menu is deleted</response>
         /// <response code="404">If the menu is not found</response>
+        /// <response code="409">If the menu has past dining sessions or orders</response>
         /// <response code="500">If an internal error occurs while deleting the menu</response>
         /// <remarks>
         /// Sample request:
@@ -537,7 +539,8 @@ namespace back_end.Controllers
         ///     DELETE /api/menu/123
         ///
         /// This endpoint requires Admin role authorization.
-        /// Permanently removes the menu from the database.
+        /// Permanently removes a menu that has never been used.
+        /// A menu with past sessions or orders can't be deleted; deactivate it instead.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("{menu_id}")]
