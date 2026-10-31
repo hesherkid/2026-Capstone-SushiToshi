@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import { useOrderActions } from "@/hooks/useOrderActions";
 
 const OrderContext = createContext(null);
@@ -50,7 +56,7 @@ export const OrderProvider = ({ children }) => {
     removeOrderItem: baseRemoveOrderItem,
 
     // Order Retrieval
-    getAllOrders,
+    // getAllOrders,
     getOrderById,
     getOrdersBySession,
     getActiveSessionOrders,
@@ -78,7 +84,7 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseCreateOrder, orders, groupOrdersByStatus]
+    [baseCreateOrder, orders, groupOrdersByStatus],
   );
 
   const approveOrder = useCallback(
@@ -86,10 +92,10 @@ export const OrderProvider = ({ children }) => {
       const result = await baseApproveOrder(orderId);
       if (result) {
         setOrders((prev) =>
-          prev.map((order) => (order.orderId === orderId ? result : order))
+          prev.map((order) => (order.orderId === orderId ? result : order)),
         );
         groupOrdersByStatus(
-          orders.map((order) => (order.orderId === orderId ? result : order))
+          orders.map((order) => (order.orderId === orderId ? result : order)),
         );
         if (selectedOrder?.orderId === orderId) {
           setSelectedOrder(result);
@@ -98,7 +104,7 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseApproveOrder, orders, selectedOrder, groupOrdersByStatus]
+    [baseApproveOrder, orders, selectedOrder, groupOrdersByStatus],
   );
 
   const cancelOrder = useCallback(
@@ -106,10 +112,10 @@ export const OrderProvider = ({ children }) => {
       const result = await baseCancelOrder(orderId);
       if (result) {
         setOrders((prev) =>
-          prev.map((order) => (order.orderId === orderId ? result : order))
+          prev.map((order) => (order.orderId === orderId ? result : order)),
         );
         groupOrdersByStatus(
-          orders.map((order) => (order.orderId === orderId ? result : order))
+          orders.map((order) => (order.orderId === orderId ? result : order)),
         );
         if (selectedOrder?.orderId === orderId) {
           setSelectedOrder(result);
@@ -118,7 +124,7 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseCancelOrder, orders, selectedOrder, groupOrdersByStatus]
+    [baseCancelOrder, orders, selectedOrder, groupOrdersByStatus],
   );
 
   const completeOrder = useCallback(
@@ -126,10 +132,10 @@ export const OrderProvider = ({ children }) => {
       const result = await baseCompleteOrder(orderId);
       if (result) {
         setOrders((prev) =>
-          prev.map((order) => (order.orderId === orderId ? result : order))
+          prev.map((order) => (order.orderId === orderId ? result : order)),
         );
         groupOrdersByStatus(
-          orders.map((order) => (order.orderId === orderId ? result : order))
+          orders.map((order) => (order.orderId === orderId ? result : order)),
         );
         if (selectedOrder?.orderId === orderId) {
           setSelectedOrder(result);
@@ -138,7 +144,7 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseCompleteOrder, orders, selectedOrder, groupOrdersByStatus]
+    [baseCompleteOrder, orders, selectedOrder, groupOrdersByStatus],
   );
 
   const addOrderItems = useCallback(
@@ -150,13 +156,13 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           if (selectedOrder?.orderId === orderId) {
             setSelectedOrder(updatedOrder);
@@ -166,7 +172,13 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseAddOrderItems, getOrderById, orders, selectedOrder, groupOrdersByStatus]
+    [
+      baseAddOrderItems,
+      getOrderById,
+      orders,
+      selectedOrder,
+      groupOrdersByStatus,
+    ],
   );
 
   const updateOrderItem = useCallback(
@@ -178,13 +190,13 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           if (selectedOrder?.orderId === orderId) {
             setSelectedOrder(updatedOrder);
@@ -194,7 +206,13 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseUpdateOrderItem, getOrderById, orders, selectedOrder, groupOrdersByStatus]
+    [
+      baseUpdateOrderItem,
+      getOrderById,
+      orders,
+      selectedOrder,
+      groupOrdersByStatus,
+    ],
   );
 
   const completeOrderItem = useCallback(
@@ -206,13 +224,13 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           if (selectedOrder?.orderId === orderId) {
             setSelectedOrder(updatedOrder);
@@ -222,7 +240,13 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseCompleteOrderItem, getOrderById, orders, selectedOrder, groupOrdersByStatus]
+    [
+      baseCompleteOrderItem,
+      getOrderById,
+      orders,
+      selectedOrder,
+      groupOrdersByStatus,
+    ],
   );
 
   const removeOrderItem = useCallback(
@@ -234,13 +258,13 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order
-            )
+              order.orderId === orderId ? updatedOrder : order,
+            ),
           );
           if (selectedOrder?.orderId === orderId) {
             setSelectedOrder(updatedOrder);
@@ -250,19 +274,16 @@ export const OrderProvider = ({ children }) => {
       }
       return null;
     },
-    [baseRemoveOrderItem, getOrderById, orders, selectedOrder, groupOrdersByStatus]
+    [
+      baseRemoveOrderItem,
+      getOrderById,
+      orders,
+      selectedOrder,
+      groupOrdersByStatus,
+    ],
   );
 
   // Fetch and set orders
-  const fetchAllOrders = useCallback(async () => {
-    const result = await getAllOrders();
-    if (result) {
-      setOrders(result);
-      groupOrdersByStatus(result);
-    }
-    return result;
-  }, [getAllOrders, groupOrdersByStatus]);
-
   const fetchOrdersBySession = useCallback(
     async (sessionId) => {
       const result = await getOrdersBySession(sessionId);
@@ -272,7 +293,7 @@ export const OrderProvider = ({ children }) => {
       }
       return result;
     },
-    [getOrdersBySession, groupOrdersByStatus]
+    [getOrdersBySession, groupOrdersByStatus],
   );
 
   const fetchActiveSessionOrders = useCallback(
@@ -284,7 +305,7 @@ export const OrderProvider = ({ children }) => {
       }
       return result;
     },
-    [getActiveSessionOrders, groupOrdersByStatus]
+    [getActiveSessionOrders, groupOrdersByStatus],
   );
 
   const selectOrder = useCallback(
@@ -300,7 +321,7 @@ export const OrderProvider = ({ children }) => {
       }
       return result;
     },
-    [getOrderById]
+    [getOrderById],
   );
 
   const setBillFilter = useCallback((billId) => {
@@ -334,7 +355,7 @@ export const OrderProvider = ({ children }) => {
     removeOrderItem,
 
     // Order Retrieval
-    fetchAllOrders,
+    // fetchAllOrders,
     getOrderById,
     fetchOrdersBySession,
     fetchActiveSessionOrders,

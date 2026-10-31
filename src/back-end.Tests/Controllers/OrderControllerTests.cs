@@ -930,4 +930,99 @@ public class OrderControllerTests : IDisposable
         // Assert
         BadRequestDetails(result).Errors.Should().ContainKey("to");
     }
+
+    private SessionOrder SeedOrderOwnedBy(int? ownerId, OrderStatus orderStatus, params OrderStatus[] itemStatuses)
+    {
+        var order = SeedOrder(orderStatus, itemStatuses);
+
+        var tracked = _context.SessionOrders.Single(o => o.Order_Id == order.Order_Id);
+        tracked.User_Id = ownerId;
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+
+        order.User_Id = ownerId;
+        return order;
+    }
+
+    private bool ItemExists(int orderItemId) =>
+        _context.OrderItems.AsNoTracking().Any(oi => oi.Order_Item_Id == orderItemId);
+
+
+    [Fact]
+    public async Task RemoveOrderItem_PendingOrder_DeletesOnlyThatItem()
+    {
+        SetupUserClaims("123");
+        var order = SeedOrderOwnedBy(123, OrderStatus.Pending, OrderStatus.Pending, OrderStatus.Pending);
+        var target = order.OrderItems.First().Order_Item_Id;
+        var keep = order.OrderItems.Last().Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        result.Should().BeOfType<OkObjectResult>();
+        ItemExists(target).Should().BeFalse();
+        ItemExists(keep).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_StaffApprovedOrder_DeletesItem()
+    {
+        SetupUserClaims("42", role: "Staff");
+        var order = SeedOrderOwnedBy(123, OrderStatus.Processing, OrderStatus.Processing);
+        var target = order.OrderItems.First().Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        result.Should().BeOfType<OkObjectResult>();
+        ItemExists(target).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_NonOwnerCustomerApprovedOrder_ReturnsConflict()
+    {
+        SetupUserClaims("456");
+        var order = SeedOrderOwnedBy(123, OrderStatus.Processing, OrderStatus.Processing);
+        var target = order.OrderItems.First().Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        ItemExists(target).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_OrderNotFound_ReturnsNotFound()
+    {
+        SetupUserClaims("123");
+
+        var result = await _controller.RemoveOrderItem(999, 1);
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_ItemFromAnotherOrder_ReturnsBadRequest()
+    {
+        SetupUserClaims("123");
+        var order1 = SeedOrderOwnedBy(123, OrderStatus.Pending, OrderStatus.Pending);
+        var order2 = SeedOrderOwnedBy(123, OrderStatus.Pending, OrderStatus.Pending);
+        var target = order2.OrderItems.First().Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order1.Order_Id, target);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        ItemExists(target).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_CustomerNotSeatedAtTable_ReturnsForbidden()
+    {
+        SetupUserClaims("123");
+        var order = SeedOrderAt(2, 3, OrderStatus.Pending, OrderStatus.Pending);
+        var target = order.OrderItems.First().Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        ItemExists(target).Should().BeTrue();
+    }
 }

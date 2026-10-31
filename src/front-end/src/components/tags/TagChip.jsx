@@ -5,7 +5,7 @@ import PropTypes from "prop-types";
 
 const getContrastColor = (hexColor) => {
   // Add safety check for undefined or invalid hex color
-  if (!hexColor || typeof hexColor !== 'string' || !hexColor.startsWith('#')) {
+  if (!hexColor || typeof hexColor !== "string" || !hexColor.startsWith("#")) {
     return "#EBEBEB"; // Return default color if invalid
   }
 
@@ -117,9 +117,9 @@ const TagChip = ({
   };
 
   // Support both naming conventions: tag_color/color_code and tag_name/name
-  const tagColor = tag.tag_color || tag.color_code || '#cccccc';
-  const tagName = tag.tag_name || tag.name || 'Unnamed Tag';
-  
+  const tagColor = tag.tag_color || tag.color_code || "#cccccc";
+  const tagName = tag.tag_name || tag.name || "Unnamed Tag";
+
   const contrastColor = getContrastColor(tagColor);
 
   const chipProps = {
