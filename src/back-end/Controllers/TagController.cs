@@ -7,7 +7,7 @@ using back_end.DTO.TagDTOs;
 using Swashbuckle.AspNetCore.Annotations;
 using back_end.Helpers;
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
@@ -47,6 +47,7 @@ namespace back_end.controllers
         Description = "Creates a new tag with a name and optional color. Requires Admin role."
     )]
     [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateTag([FromBody] TagBaseDTO tagData)
     {
       try
@@ -57,7 +58,7 @@ namespace back_end.controllers
 
         if (existingTag != null)
         {
-          return BadRequest(new { detail = "Tag already exists" });
+          return Conflict(new { detail = "Tag already exists" });
         }
 
         var tag = new Tag
@@ -86,45 +87,67 @@ namespace back_end.controllers
 
 
     /// <summary>
-    /// Retrieves all tags with their corresponding colors.
+    /// Retrieves all tags.
     /// </summary>
     /// <remarks>
-    /// Returns a list of all tags, including their ID, name, and color.  
+    /// Returns every tag with its ID, name, and color, ordered by ID.
     /// Requires authentication.
     /// </remarks>
-    /// <response code="200">A list of tags and their associated colors was returned successfully.</response>
+    /// <response code="200">The list of tags was returned successfully.</response>
     /// <response code="403">The user is not authorized to access this resource.</response>
-    /// <response code="500">An internal server error occurred while retrieving tag colors.</response>
-
-    [HttpGet("colors")]
+    /// <response code="500">An internal server error occurred while retrieving tags.</response>
+    [HttpGet]
     [Produces("application/json")]
     [SwaggerOperation(
-        OperationId = "GetTagColors",
-        Summary = "Retrieve all tag colors",
-        Description = "Returns a list of all tags with their name and color properties. Requires authentication."
+        OperationId = "GetTags",
+        Summary = "Retrieve all tags",
+        Description = "Returns every tag with its ID, name, and color. Requires authentication."
     )]
     [ProducesResponseType(typeof(IEnumerable<TagBaseDTO>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetTagColors()
+    public async Task<IActionResult> GetTags()
     {
       try
       {
-        var tags = await _context.Tags.ToListAsync();
+        var tags = await _context.Tags
+          .AsNoTracking()
+          .OrderBy(t => t.tag_id)
+          .Select(t => new TagBaseDTO
+          {
+            Tag_Id = t.tag_id,
+            Tag_Name = t.tag_name,
+            Tag_Color = t.tag_color
+          })
+          .ToListAsync();
 
-        var response = tags.Select(t => new TagBaseDTO
-        {
-          Tag_Id = t.tag_id,
-          Tag_Name = t.tag_name,
-          Tag_Color = t.tag_color
-        }).ToList();
-
-        return Ok(response);
+        return Ok(tags);
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error retrieving tag colors");
-        return StatusCode(500, new { detail = "Error retrieving tag colors" });
+        _logger.LogError(ex, "Error retrieving tags");
+        return StatusCode(500, new { detail = "Error retrieving tags" });
       }
     }
+
+    /// <summary>
+    /// Retrieves all tags. Deprecated: use <c>GET /api/Tag</c> instead.
+    /// </summary>
+    /// <remarks>
+    /// Kept so older callers keep working while they move to <see cref="GetTags"/>.
+    /// Returns exactly the same response. Remove once nothing calls <c>/api/Tag/colors</c>.
+    /// </remarks>
+    /// <response code="200">The list of tags was returned successfully.</response>
+    /// <response code="403">The user is not authorized to access this resource.</response>
+    /// <response code="500">An internal server error occurred while retrieving tags.</response>
+    // [Obsolete("Use GET /api/Tag (GetTags) instead.")]
+    // [HttpGet("colors")]
+    // [Produces("application/json")]
+    // [SwaggerOperation(
+    //     OperationId = "GetTagColors",
+    //     Summary = "Retrieve all tags (deprecated)",
+    //     Description = "Deprecated alias of GET /api/Tag. Returns every tag with its ID, name, and color."
+    // )]
+    // [ProducesResponseType(typeof(IEnumerable<TagBaseDTO>), StatusCodes.Status200OK)]
+    // public Task<IActionResult> GetTagColors() => GetTags();
 
 
     /// <summary>
@@ -150,7 +173,7 @@ namespace back_end.controllers
     )]
     [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status200OK)]
     [SwaggerResponse(StatusCodes.Status200OK, "Tag retrieved successfully", typeof(TagBaseDTO))]
-        public async Task<IActionResult> GetTagById(int tag_id)
+    public async Task<IActionResult> GetTagById(int tag_id)
     {
       try
       {
@@ -172,11 +195,11 @@ namespace back_end.controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error retrieving tag with ID {TagId}", tag_id);
-        return StatusCode(500, new { detail = "Error retrieving tag with ID {TagId}", tag_id});
+        return StatusCode(500, new { detail = $"Error retrieving tag {tag_id}" });
       }
     }
-    
-    
+
+
     /// <summary>
     /// Updates an existing tag.
     /// </summary>
@@ -191,6 +214,7 @@ namespace back_end.controllers
     /// <response code="400">The request body is invalid, or no updatable fields were provided.</response>
     /// <response code="403">The user does not have permission to update tags.</response>
     /// <response code="404">A tag with the specified <paramref name="tag_id"/> does not exist.</response>
+    /// <response code="409">Another tag already uses the new name.</response>
     /// <response code="500">An unexpected error occurred while updating the tag.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpPut("{tag_id:int}")]
@@ -203,6 +227,7 @@ namespace back_end.controllers
     )]
     [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status200OK)]
     [SwaggerResponse(StatusCodes.Status200OK, "Tag updated", typeof(TagBaseDTO))]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateTag(int tag_id, [FromBody] TagUpdateDTO tagData)
     {
       try
@@ -213,6 +238,18 @@ namespace back_end.controllers
         if (tag is null)
         {
           return NotFound(new { detail = "Tag not found" });
+        }
+
+        // Another tag may not share the new name (renaming a tag to its own name is fine)
+        if (tagData.Tag_Name != null)
+        {
+          var nameTaken = await _context.Tags
+            .AnyAsync(t => t.tag_name == tagData.Tag_Name && t.tag_id != tag_id);
+
+          if (nameTaken)
+          {
+            return Conflict(new { detail = "Tag already exists" });
+          }
         }
 
         // Update only provided fields
@@ -237,10 +274,10 @@ namespace back_end.controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error updating tag {TagId}", tag_id);
-        return StatusCode(500, new { detail = "Error updating tag {TagId}", tag_id });
+        return StatusCode(500, new { detail = $"Error updating tag {tag_id}" });
       }
     }
-    
+
     /// <summary>
     /// Retrieves all menu items associated with a specific tag.
     /// </summary>
@@ -265,7 +302,7 @@ namespace back_end.controllers
     [SwaggerResponse(StatusCodes.Status200OK, "List of menu items returned successfully", typeof(IEnumerable<Menu_Item>))]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Permission denied", typeof(ProblemDetails))]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Tag not found", typeof(ProblemDetails))]
-    [SwaggerResponse(StatusCodes.Status500InternalServerError, "Server error", typeof(ProblemDetails))]   
+    [SwaggerResponse(StatusCodes.Status500InternalServerError, "Server error", typeof(ProblemDetails))]
     public async Task<IActionResult> GetMenuItemsByTag(int tag_id)
     {
       try
@@ -309,7 +346,7 @@ namespace back_end.controllers
         Summary = "Delete a tag",              // Short summary (shows in list)
         Description = "Deletes a tag by ID and removes all related MenuItemTags. Requires Admin role.", // Full description
         OperationId = "DeleteTag"              // Internal name in Swagger/OpenAPI
-    )]    
+    )]
     public async Task<IActionResult> DeleteTag(int tag_id)
     {
       try
