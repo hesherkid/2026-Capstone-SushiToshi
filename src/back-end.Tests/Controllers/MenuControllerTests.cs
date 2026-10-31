@@ -373,6 +373,37 @@ public class MenuControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteMenu_WithDiningSession_ReturnsConflictAndKeepsMenu()
+    {
+        // Arrange
+        _context.DiningSessions.Add(new DiningSession { Session_Id = 7, Menu_Id = MainMenu, Location_Id = North, Table_Id = 101, Started_At = DateTime.UtcNow });
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.Delete_Menu(MainMenu);
+
+        // Assert
+        result.Should().BeOfType<ConflictObjectResult>();
+        _context.Menus.Should().ContainSingle(m => m.Menu_id == MainMenu);
+        _context.DiningSessions.Should().ContainSingle(s => s.Session_Id == 7);
+    }
+
+    [Fact]
+    public async Task DeleteMenu_WithOrderItem_ReturnsConflictAndKeepsMenu()
+    {
+        // Arrange
+        _context.OrderItems.Add(new OrderItems { Menu_Id = MainMenu, Item_Id = Salmon, Order_Key = 1, Quantity = 1 });
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.Delete_Menu(MainMenu);
+
+        // Assert
+        result.Should().BeOfType<ConflictObjectResult>();
+        _context.Menus.Should().ContainSingle(m => m.Menu_id == MainMenu);
+    }
+
+    [Fact]
     public async Task CreateMenu_ReturnsMenuResponseDto()
     {
         // Act

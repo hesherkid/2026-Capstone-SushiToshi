@@ -543,6 +543,7 @@ namespace back_end.Controllers
         [HttpDelete("{menu_id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete_Menu(
             int menu_id
@@ -554,6 +555,12 @@ namespace back_end.Controllers
                 if (menuToDelete == null)
                 {
                     return NotFound("Could Not Find the Menu To Delete");
+                }
+                var hasHistory = await _context.DiningSessions.AnyAsync(s => s.Menu_Id == menu_id)
+                    || await _context.OrderItems.AnyAsync(o => o.Menu_Id == menu_id);
+                if (hasHistory)
+                {
+                    return Conflict("This menu has past sessions or orders, so it can't be deleted. Deactivate it instead.");
                 }
                 _context.Remove(menuToDelete);
                 await _context.SaveChangesAsync();
