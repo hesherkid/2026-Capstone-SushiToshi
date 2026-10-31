@@ -658,7 +658,7 @@ namespace back_end.controllers
         Session_Id = session.Session_Id,
         Table_Id = tableId.Value,
         Request_By = userId,
-        Notes = $"Ready for bill: {bill.Bill_Name}",
+        Notes = $"{back_end.Controllers.ServiceRequestController.BillRequestNotePrefix} {bill.Bill_Name}",
         Status = ServiceRequestStatus.Pending,
       });
       await _context.SaveChangesAsync();

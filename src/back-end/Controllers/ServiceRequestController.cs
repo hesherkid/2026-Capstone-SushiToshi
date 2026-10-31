@@ -22,6 +22,11 @@ namespace back_end.Controllers
     private readonly ILogger<ServiceRequestController> _logger;
     private readonly ILocationAccessService _locationAccess;
 
+    // How long a table waits between service requests
+    public static readonly TimeSpan RequestCooldown = TimeSpan.FromSeconds(30);
+    // BillController writes bill requests with this prefix
+    public const string BillRequestNotePrefix = "Ready for bill:";
+
     public ServiceRequestController(ApplicationDbContext context, ILogger<ServiceRequestController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
@@ -44,6 +49,7 @@ namespace back_end.Controllers
     /// <response code="200">Returns the newly created service request</response>
     /// <response code="400">If the user is not authorized or not a valid session participant</response>
     /// <response code="404">If the session is not found or has already ended</response>
+    /// <response code="429">If the table sent a request within the last 30 seconds; the body's retry_after_seconds (and the Retry-After header) say how long to wait</response>
     /// <response code="500">If an internal error occurs while creating the service request</response>
     /// <remarks>
     /// Sample request:
@@ -114,6 +120,28 @@ namespace back_end.Controllers
         if (!tableId.HasValue)
         {
           return BadRequest("Session does not have a table or table group assigned");
+        }
+
+        // One cooldown per table, so guests on different phones can't take turns sending.
+        // Asking for the bill has its own once-only check and doesn't count here.
+        var lastRequestAt = await _context.ServiceRequests
+            .Where(sr => sr.Session_Id == session_id && !sr.Notes.StartsWith(BillRequestNotePrefix))
+            .OrderByDescending(sr => sr.Created_At)
+            .Select(sr => (DateTime?)sr.Created_At)
+            .FirstOrDefaultAsync();
+        if (lastRequestAt.HasValue)
+        {
+          var waitFor = lastRequestAt.Value.Add(RequestCooldown) - DateTime.UtcNow;
+          if (waitFor > TimeSpan.Zero)
+          {
+            var retryAfterSeconds = (int)Math.Ceiling(waitFor.TotalSeconds);
+            Response.Headers.RetryAfter = retryAfterSeconds.ToString();
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+              message = "Your server has your last request. You can send another in a moment.",
+              retry_after_seconds = retryAfterSeconds,
+            });
+          }
         }
 
         var serviceRequest = new ServiceRequest

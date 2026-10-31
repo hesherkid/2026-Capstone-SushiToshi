@@ -78,6 +78,29 @@ describe("Call server form", () => {
     expect(screen.getByRole("button", { name: /Napkins/ })).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("holds the send button for the cooldown after a request goes out", async () => {
+    api.post.mockResolvedValue({ status: 201, data: {} });
+
+    await sendWaterRequest();
+
+    expect(await screen.findByRole("button", { name: "Send another in 30s" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Napkins" }));
+    expect(screen.getByRole("button", { name: /Send another in/ })).toBeDisabled();
+  });
+
+  it("counts down from the server's time when a request is too soon", async () => {
+    api.post.mockRejectedValue({
+      response: { status: 429, data: { message: "Your server has your last request.", retry_after_seconds: 42 } },
+    });
+
+    await sendWaterRequest();
+
+    expect(await screen.findByText("Your server has your last request.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send another in 42s" })).toBeDisabled();
+    // What they picked stays, ready to send once the wait is over
+    expect(screen.getByRole("button", { name: /Water refill/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("unpicks a quick request when it's tapped again", async () => {
     await renderSeated();
 
