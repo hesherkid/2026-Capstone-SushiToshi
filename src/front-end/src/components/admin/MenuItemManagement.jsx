@@ -53,7 +53,7 @@ const MenuItemManagement = () => {
         api.get("/menuItem"),
         api.get("/Category"),
         api.get("/Menu"),
-        api.get("/tag/colors"),
+        api.get("/Tag"),
       ]);
       setItems(Array.isArray(itemsData) ? itemsData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);

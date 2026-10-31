@@ -129,28 +129,6 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// Retrieves all tags. Deprecated: use <c>GET /api/Tag</c> instead.
-    /// </summary>
-    /// <remarks>
-    /// Kept so older callers keep working while they move to <see cref="GetTags"/>.
-    /// Returns exactly the same response. Remove once nothing calls <c>/api/Tag/colors</c>.
-    /// </remarks>
-    /// <response code="200">The list of tags was returned successfully.</response>
-    /// <response code="403">The user is not authorized to access this resource.</response>
-    /// <response code="500">An internal server error occurred while retrieving tags.</response>
-    // [Obsolete("Use GET /api/Tag (GetTags) instead.")]
-    // [HttpGet("colors")]
-    // [Produces("application/json")]
-    // [SwaggerOperation(
-    //     OperationId = "GetTagColors",
-    //     Summary = "Retrieve all tags (deprecated)",
-    //     Description = "Deprecated alias of GET /api/Tag. Returns every tag with its ID, name, and color."
-    // )]
-    // [ProducesResponseType(typeof(IEnumerable<TagBaseDTO>), StatusCodes.Status200OK)]
-    // public Task<IActionResult> GetTagColors() => GetTags();
-
-
-    /// <summary>
     /// Retrieves a tag by its unique identifier.
     /// </summary>
     /// <param name="tag_id">The unique identifier of the tag to retrieve.</param>
