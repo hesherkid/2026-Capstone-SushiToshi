@@ -372,8 +372,52 @@ public class MenuControllerTests : IDisposable
         _context.Menus.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task DeleteMenu_WithDiningSession_ReturnsConflictAndKeepsMenu()
+    {
+        // Arrange
+        _context.DiningSessions.Add(new DiningSession { Session_Id = 7, Menu_Id = MainMenu, Location_Id = North, Table_Id = 101, Started_At = DateTime.UtcNow });
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.Delete_Menu(MainMenu);
+
+        // Assert
+        result.Should().BeOfType<ConflictObjectResult>();
+        _context.Menus.Should().ContainSingle(m => m.Menu_id == MainMenu);
+        _context.DiningSessions.Should().ContainSingle(s => s.Session_Id == 7);
+    }
+
+    [Fact]
+    public async Task DeleteMenu_WithOrderItem_ReturnsConflictAndKeepsMenu()
+    {
+        // Arrange
+        _context.OrderItems.Add(new OrderItems { Menu_Id = MainMenu, Item_Id = Salmon, Order_Key = 1, Quantity = 1 });
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.Delete_Menu(MainMenu);
+
+        // Assert
+        result.Should().BeOfType<ConflictObjectResult>();
+        _context.Menus.Should().ContainSingle(m => m.Menu_id == MainMenu);
+    }
+
+    [Fact]
+    public async Task CreateMenu_ReturnsMenuResponseDto()
+    {
+        // Act
+        var result = await _controller.Create_Menu(new MenuCreateDTO { Name = "Dinner" });
+
+        // Assert
+        var dto = ((OkObjectResult)result).Value.Should().BeOfType<MenuResponseDTO>().Subject;
+        dto.Name.Should().Be("Dinner");
+        dto.Is_Active.Should().BeTrue();
+        dto.Menu_Id.Should().BePositive();
+    }
+
     [Theory]
-    [InlineData(nameof(MenuController.Create_Menu), "staffOnly")]
+    [InlineData(nameof(MenuController.Create_Menu), "adminOnly")]
     [InlineData(nameof(MenuController.Create_Menu_Item), "staffOnly")]
     [InlineData(nameof(MenuController.Update_Menu), "adminOnly")]
     [InlineData(nameof(MenuController.Delete_Menu), "adminOnly")]

@@ -18,7 +18,7 @@ const MenuForm = ({
     description: initialData?.description || "",
     start_time: initialData?.start_time || "",
     end_time: initialData?.end_time || "",
-    is_active: initialData?.is_active || false,
+    is_active: initialData?.is_active ?? true,
   });
 
   const handleChange = (e) => {
