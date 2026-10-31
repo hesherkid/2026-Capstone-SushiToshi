@@ -49,9 +49,9 @@ All sign-in endpoints are in `AuthController` under `/api/auth`. Each one return
 | Email and password  | `POST /api/auth/login`           | Password hashed with BCrypt. Email must be verified                                                     |
 | Register            | `POST /api/auth/register`        | Sends a verification email through SendGrid (see [email setup](../../setup/email-sendgrid-setup.md))   |
 | Google              | `POST /api/auth/google`          | The frontend sends Google's ID token; the backend checks it and creates a customer the first time (see [google-signin-setup.md](../google-signin-setup.md)) |
-| Continue as Guest   | `POST /api/auth/guest`           | Creates a throwaway customer account with no password. Rate limited per IP address                      |
+| Continue as Guest   | `POST /api/auth/guest`           | Creates a throwaway customer account with no password                                                   |
 
-There are also endpoints for verifying email, resending verification, and forgot/reset password.
+There are also endpoints for verifying email, resending verification, and forgot/reset password. All of these are rate limited per IP address (see **Rate limits** below).
 
 **The token** contains the user's ID, email and role. Regular tokens last `Jwt:ExpiresInMinutes` (120). Guest tokens last 6 hours (`Jwt:GuestExpiresInMinutes`) and carry a `guest` claim. The signing key is `Jwt:Key`. Only `appsettings.Development.json` has one; production sets its own with the `Jwt__Key` environment variable (see [production setup](../../setup/production-setup.md)).
 
@@ -127,7 +127,16 @@ Old QR codes that link to `/join` or `/start-session` still work. Those pages fo
 
 Most controllers use `ApplicationDbContext` directly. There's no repository layer. When logic is needed by more than one controller, or is complex enough to test on its own, it moves to `Services/` (with an interface, registered in `Program.cs`) or, for pure calculations, to `Helpers/`.
 
-**Rate limits** (`Program.cs`): endpoints opt in with `[EnableRateLimiting(...)]`. Only two do today: guest sign-in (per IP address) and menu item view tracking (per token). `Program.cs` also defines `api` and `auth` policies, but no endpoint uses them yet, so login and register aren't rate limited.
+**Rate limits** (`Program.cs`): endpoints opt in with `[EnableRateLimiting(...)]`. There's no site-wide limit. Over a limit, the backend answers `429 Too Many Requests` straight away.
+
+| Policy | Endpoints | Limit | Counted per |
+| --- | --- | --- | --- |
+| Guest sign-in (`GuestAccounts`) | `guest` | 30 a minute | IP address |
+| Sign-in (`AuthRateLimits.SignInPolicy`) | `login`, `google`, `verify-email`, `reset-password` | 20 a minute, shared by these endpoints | IP address |
+| Email (`AuthRateLimits.EmailPolicy`) | `register`, `forgot-password`, `resend-verification` | 5 a minute, shared by these endpoints | IP address |
+| Menu item views (`ViewTrackingRules`) | `POST /api/menu-item-views` | `ViewTrackingRules.RateLimitPerMinute` | Sign-in token (IP address without one) |
+
+Diners on the restaurant Wi-Fi share one IP address, so the per-IP limits are set to allow a busy room. Behind a proxy, they only work per client with forwarded headers turned on (see [Behind a reverse proxy](../../setup/production-setup.md#behind-a-reverse-proxy)).
 
 ### Frontend (`src/front-end/src`)
 

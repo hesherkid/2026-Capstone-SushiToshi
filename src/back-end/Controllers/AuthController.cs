@@ -124,6 +124,7 @@ namespace back_end.controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -220,6 +221,7 @@ namespace back_end.controllers
         /// New accounts are created with email confirmation pending.
         /// </remarks>
         [HttpPost("register")]
+        [EnableRateLimiting(AuthRateLimits.EmailPolicy)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -288,6 +290,7 @@ namespace back_end.controllers
 
 
         [HttpPost("verify-email")]
+        [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDTO request)
         {
             var token = await _tokenService.FindValidAsync(
@@ -328,6 +331,7 @@ namespace back_end.controllers
         }
 
         [HttpPost("forgot-password")]
+        [EnableRateLimiting(AuthRateLimits.EmailPolicy)]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO request)
         {
             const string successMessage =
@@ -363,6 +367,7 @@ namespace back_end.controllers
         }
 
         [HttpPost("reset-password")]
+        [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO request)
         {
             var token = await _tokenService.FindValidAsync(
@@ -405,6 +410,7 @@ namespace back_end.controllers
         }
 
         [HttpPost("resend-verification")]
+        [EnableRateLimiting(AuthRateLimits.EmailPolicy)]
         public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationDTO request)
         {
             const string message =
@@ -436,6 +442,7 @@ namespace back_end.controllers
         }
 
         [HttpPost("google")]
+        [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

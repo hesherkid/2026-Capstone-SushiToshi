@@ -84,7 +84,7 @@ All three take the frontend origin, e.g. `https://sushitoshi.example.com`, with 
 
 ### Behind a reverse proxy
 
-The guest sign-in limit (30 a minute) is counted per client IP address. Behind a proxy, every request reaches the backend from the proxy's address, so without this setting the limit is shared by **everyone**. That includes the default setup, where the Next.js `/api` rewrite forwards calls from `127.0.0.1`.
+The sign-in limits (guest sign-in, login, register, password reset and the other account endpoints) are counted per client IP address. Behind a proxy, every request reaches the backend from the proxy's address, so without this setting each limit is shared by **everyone**, and one script could block sign-in for all users. That includes the default setup, where the Next.js `/api` rewrite forwards calls from `127.0.0.1`.
 
 Turn on forwarded headers so the backend reads the real client address from `X-Forwarded-For`:
 
@@ -97,7 +97,7 @@ ForwardedHeaders__KnownNetworks__0=10.0.0.0/24
 
 The header is only read from trusted proxies, and a mistyped address stops the backend from starting.
 
-**Only turn this on when a real reverse proxy (nginx, Caddy, a cloud load balancer) is the only public entry point and sets `X-Forwarded-For` itself.** The Next.js rewrite doesn't count: if the browser sends its own `X-Forwarded-For`, Next.js passes it on unchanged. If browsers could reach Next.js (or the backend) directly, anyone could send a new made-up address on every request and skip the limit completely. So:
+**Only turn this on when a real reverse proxy (nginx, Caddy, a cloud load balancer) is the only public entry point and sets `X-Forwarded-For` itself.** The Next.js rewrite doesn't count: if the browser sends its own `X-Forwarded-For`, Next.js passes it on unchanged. If browsers could reach Next.js (or the backend) directly, anyone could send a new made-up address on every request and skip the limits completely. So:
 
 - Make the edge proxy **overwrite** the header with the address it sees. For nginx: `proxy_set_header X-Forwarded-For $remote_addr;` and `proxy_set_header X-Forwarded-Proto $scheme;`.
 - Don't let the internet reach the Next.js port (3000) or the backend port (5264) directly. Bind them to `127.0.0.1` or block them with a firewall.

@@ -162,22 +162,6 @@ builder.Services.AddAuthorization(options =>
 // Add rate limiting for API protection
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("api", config =>
-    {
-        config.PermitLimit = 100;
-        config.Window = TimeSpan.FromMinutes(1);
-        config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        config.QueueLimit = 5;
-    });
-
-    options.AddFixedWindowLimiter("auth", config =>
-    {
-        config.PermitLimit = 10;
-        config.Window = TimeSpan.FromMinutes(1);
-        config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        config.QueueLimit = 2;
-    });
-
     // Menu item view tracking (POST api/menu-item-views).
     // Partitioned by the bearer token, not IP or user id: every guest at the restaurant shares the
     // Wi-Fi IP and the guest account, but each sign-in gets its own token.
@@ -208,6 +192,24 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
+
+    // Sign-in and account endpoints, also per IP address with no queue (see AuthRateLimits)
+    foreach (var (policy, permitLimit) in new[]
+    {
+        (AuthRateLimits.SignInPolicy, AuthRateLimits.SignInPerMinute),
+        (AuthRateLimits.EmailPolicy, AuthRateLimits.EmailPerMinute)
+    })
+    {
+        options.AddPolicy(policy, httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                $"ip:{httpContext.Connection.RemoteIpAddress}",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = permitLimit,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }));
+    }
 
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });

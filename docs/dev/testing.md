@@ -61,7 +61,7 @@ src/
 │   ├── Helpers/                 # Helper tests (bill calculator, order limits, claims, date ranges)
 │   ├── DTO/                     # DTO validation tests
 │   └── Seeders/                 # Seed data rule tests
-└── back-end.IntegrationTests/   # Integration tests (QR codes, guest login rate limiting)
+└── back-end.IntegrationTests/   # Integration tests (QR codes, rate limits, forwarded headers)
 ```
 
 ### Frontend Testing Stack
@@ -142,7 +142,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, analytics date ranges, DTO validation, and seeder rules.
 
-**Integration tests:** QR code endpoints and guest login rate limiting.
+**Integration tests:** QR code endpoints, the guest sign-in and auth endpoint rate limits, and forwarded headers.
 
 **Not yet tested:**
 
