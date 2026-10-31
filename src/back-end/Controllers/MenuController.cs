@@ -24,9 +24,10 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
-        [Authorize(Policy = "staffOnly")]
+        [Authorize(Policy = "adminOnly")]
         [HttpPost("createmenu")]
-        [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Create_Menu(
@@ -54,8 +55,15 @@ namespace back_end.Controllers
                 };
                 _context.Add(newMenu);
                 await _context.SaveChangesAsync();
-                return Ok(newMenu);
-
+                return Ok(new MenuResponseDTO
+                {
+                    Menu_Id = newMenu.Menu_id,
+                    Name = newMenu.Name,
+                    Description = newMenu.Description,
+                    Start_Time = newMenu.Start_time,
+                    End_Time = newMenu.End_time,
+                    Is_Active = newMenu.Is_active
+                });
             }
             catch (Exception ex)
             {

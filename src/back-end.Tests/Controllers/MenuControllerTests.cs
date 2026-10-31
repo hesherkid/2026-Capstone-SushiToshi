@@ -372,8 +372,21 @@ public class MenuControllerTests : IDisposable
         _context.Menus.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task CreateMenu_ReturnsMenuResponseDto()
+    {
+        // Act
+        var result = await _controller.Create_Menu(new MenuCreateDTO { Name = "Dinner" });
+
+        // Assert
+        var dto = ((OkObjectResult)result).Value.Should().BeOfType<MenuResponseDTO>().Subject;
+        dto.Name.Should().Be("Dinner");
+        dto.Is_Active.Should().BeTrue();
+        dto.Menu_Id.Should().BePositive();
+    }
+
     [Theory]
-    [InlineData(nameof(MenuController.Create_Menu), "staffOnly")]
+    [InlineData(nameof(MenuController.Create_Menu), "adminOnly")]
     [InlineData(nameof(MenuController.Create_Menu_Item), "staffOnly")]
     [InlineData(nameof(MenuController.Update_Menu), "adminOnly")]
     [InlineData(nameof(MenuController.Delete_Menu), "adminOnly")]
