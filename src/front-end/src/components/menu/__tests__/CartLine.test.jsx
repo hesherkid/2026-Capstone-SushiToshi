@@ -22,6 +22,18 @@ describe("Cart line", () => {
     expect(screen.getByText("2 per order")).toBeInTheDocument();
   });
 
+  it("splits an included item into what's free and the extras past a limit that charges", () => {
+    const { rerender } = render(
+      <CartLine item={misoSoup} categoryId={1} quantity={3} extra={2} extraPrice={5} onQuantityChange={jest.fn()} />,
+    );
+    expect(screen.getByText(/included/)).toHaveTextContent("1 included + 2 extra $5.00 each");
+
+    // None left free: all of them are extras
+    rerender(<CartLine item={misoSoup} categoryId={1} quantity={2} extra={2} extraPrice={5} onQuantityChange={jest.fn()} />);
+    expect(screen.getByText(/Extra/)).toHaveTextContent("Extra $5.00 each");
+    expect(screen.queryByText("Included")).not.toBeInTheDocument();
+  });
+
   it("changes the quantity with the stepper", () => {
     const onQuantityChange = jest.fn();
     render(<CartLine item={misoSoup} categoryId={1} quantity={2} onQuantityChange={onQuantityChange} />);

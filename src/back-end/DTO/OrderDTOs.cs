@@ -79,7 +79,8 @@ namespace back_end.DTO.OrdersDTOs
     }
     /// <summary>
     /// How much the table can still order before a limit that blocks stops them.
-    /// null = no blocking limit. Charge limits are left out: going over them is allowed at full price.
+    /// null = no blocking limit. Charge limits don't block: going over them is allowed at full price,
+    /// so they're reported separately as Free_Left.
     /// </summary>
     public class OrderLimitLeftDTO
     {
@@ -88,6 +89,12 @@ namespace back_end.DTO.OrdersDTOs
 
         [JsonPropertyName("session_left")]
         public int? Session_Left { get; set; }
+
+        /// <summary>
+        /// Units left before a Charge limit bills each extra; null = no Charge limit
+        /// </summary>
+        [JsonPropertyName("free_left")]
+        public int? Free_Left { get; set; }
     }
 
     public class ItemOrderLimitDTO : OrderLimitLeftDTO
@@ -97,6 +104,12 @@ namespace back_end.DTO.OrdersDTOs
 
         [JsonPropertyName("category_id")]
         public int Category_Id { get; set; }
+
+        /// <summary>
+        /// What each unit past Free_Left (the item's or its category's) costs
+        /// </summary>
+        [JsonPropertyName("extra_price")]
+        public decimal Extra_Price { get; set; }
     }
 
     public class CategoryOrderLimitDTO : OrderLimitLeftDTO

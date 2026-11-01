@@ -73,8 +73,8 @@ namespace back_end.Controllers
         /// <response code="404">If the session doesn't exist</response>
         /// <remarks>
         /// Uses the same headcount and usage as adding items to an order. Per-order limits are
-        /// for a new order. Limits set to Charge are left out: going over them is allowed and
-        /// billed at full price.
+        /// for a new order. Limits set to Charge don't count in session_left: going over them is
+        /// allowed and billed at extra_price. free_left says how many are left before that.
         /// </remarks>
         [Authorize]
         [HttpGet("session/{sessionId}/limits")]
@@ -120,6 +120,8 @@ namespace back_end.Controllers
                         Category_Id = a.MenuItem.Category_id,
                         Per_Order = OrderLimitRules.PerOrderCap(limits),
                         Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
+                        Free_Left = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
+                        Extra_Price = a.Price,
                     };
                 }).ToList(),
                 Categories = assignments
@@ -133,6 +135,7 @@ namespace back_end.Controllers
                             Category_Id = c.Category_id,
                             Per_Order = OrderLimitRules.PerOrderCap(limits),
                             Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
+                            Free_Left = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
                         };
                     }).ToList(),
             };

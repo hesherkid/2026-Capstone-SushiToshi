@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import ReviewOrderPage from "./page";
 import { TableOrderProvider } from "@/contexts/TableOrderContext";
-import { tableApi } from "../_testing/tableApiMock";
+import { tableApi, MISO_SOUP, SALMON_ROLL } from "../_testing/tableApiMock";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -129,6 +129,34 @@ describe("Review order page", () => {
     expect(mockPush).toHaveBeenCalledWith("/dashboard/orders");
   });
 
+  it("tells the guest what the extras over a limit will cost once the order is sent", async () => {
+    withCart();
+    mockCreateOrder.mockResolvedValue({ order_Id: 500 });
+    // The server split the 2 into 1 included and 1 charged extra
+    mockAddOrderItems.mockImplementation(async () => {
+      await mockOnSuccess();
+      return {
+        lines: [
+          { itemId: 11, quantity: 1, priceAtTime: 0, chargeReason: "None" },
+          { itemId: 11, quantity: 1, priceAtTime: 5, chargeReason: "OverLimit" },
+        ],
+      };
+    });
+    renderPage();
+
+    const placeOrder = await screen.findByRole("button", {
+      name: "Place order · 2 items",
+    });
+    await waitFor(() => expect(placeOrder).toBeEnabled());
+    fireEvent.click(placeOrder);
+
+    await screen.findByRole("heading", { name: "Order sent!" });
+    expect(
+      await screen.findByText(/\$5\.00 in extras will be added to your bill/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 extra × $5.00")).toBeInTheDocument();
+  });
+
   it("shows why an order couldn't be placed on the page itself", async () => {
     withCart();
     mockCreateOrder.mockResolvedValue(null);
@@ -181,6 +209,34 @@ describe("Review order page", () => {
       await screen.findByRole("combobox", { name: "Put this order on" }),
     ).toHaveTextContent("Lee");
     expect(screen.getByText(/Your table has 2 bills/)).toBeInTheDocument();
+  });
+
+  it("charges for what's past a limit that charges, with the category's free units shared", async () => {
+    // 2 Miso Soup and 1 Salmon Roll, both in a category with 2 free left, then $5 each
+    const SALMON_IN_APPETIZERS = { ...SALMON_ROLL, category_id: 1 };
+    api.get.mockImplementation(
+      tableApi({
+        bills: [LEE],
+        items: [MISO_SOUP, SALMON_IN_APPETIZERS],
+        limits: {
+          items: [
+            { item_id: 11, category_id: 1, free_left: null, extra_price: 5 },
+            { item_id: 12, category_id: 1, free_left: null, extra_price: 5 },
+          ],
+          categories: [{ category_id: 1, free_left: 2 }],
+        },
+      }),
+    );
+    withCart({ 1: { 11: 2, 12: 1 } });
+    renderPage();
+
+    // Miso Soup uses both free ones, so the Salmon Roll is an extra
+    expect(await screen.findByText(/^Extra/)).toHaveTextContent(
+      "Extra $5.00 each",
+    );
+    expect(screen.getAllByText("Included")).toHaveLength(1);
+    expect(screen.getByText("Add-ons and extras")).toBeInTheDocument();
+    expect(screen.getByText("$5.00")).toBeInTheDocument();
   });
 
   it("stops ordering once the guests have asked for their bill", async () => {

@@ -7,8 +7,18 @@ const money = (value) => `$${(Number(value) || 0).toFixed(2)}`;
 // One row of the Review order list: just the name, what it costs, and a quantity stepper.
 // The full card (photo, description, tags) is for browsing the menu
 // atLimit: the cart holds as many as the limit allows, so no more adding and the note turns red
-const CartLine = ({ item, categoryId, quantity, onQuantityChange, atLimit = false }) => {
+// extra: units past a limit that charges (e.g. Hot Stone past 1 per person), at extraPrice each
+const CartLine = ({
+  item,
+  categoryId,
+  quantity,
+  onQuantityChange,
+  atLimit = false,
+  extra = 0,
+  extraPrice = 0,
+}) => {
   const limits = limitText(item);
+  const included = quantity - extra;
 
   return (
     <Box sx={{ px: 2, py: 2, textAlign: "left" }}>
@@ -23,6 +33,13 @@ const CartLine = ({ item, categoryId, quantity, onQuantityChange, atLimit = fals
                 Add-on{" "}
                 <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
                   {money(item.price)} each
+                </Box>
+              </>
+            ) : extra > 0 ? (
+              <>
+                {included > 0 ? `${included} included + ${extra} extra` : "Extra"}{" "}
+                <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
+                  {money(extraPrice)} each
                 </Box>
               </>
             ) : (

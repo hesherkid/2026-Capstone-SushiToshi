@@ -367,23 +367,44 @@ export const TableOrderProvider = ({ children }) => {
 
   const clearCart = useCallback(() => setQuantities({}), []);
 
-  // Every item in the cart with its menu details, in menu order
-  const cartLines = useMemo(
-    () =>
-      categories.flatMap((category) =>
-        Object.entries(quantities[category.category_id] || {})
-          .filter(([, quantity]) => quantity > 0)
-          .map(([itemId, quantity]) => ({
-            category,
-            quantity,
-            item: menuItems[category.category_id]?.find(
-              (menuItem) => menuItem.item_id === Number(itemId),
-            ),
-          }))
-          .filter(({ item }) => item),
-      ),
-    [categories, quantities, menuItems],
-  );
+  // Every item in the cart with its menu details, in menu order (the order it's sent in).
+  // extra: units past a Charge limit (e.g. Hot Stone past 1 per person), billed at extraPrice each.
+  // Worked out like the server does: each item uses up its category's free units in turn
+  const cartLines = useMemo(() => {
+    const categoryFree = {};
+    return categories.flatMap((category) =>
+      Object.entries(quantities[category.category_id] || {})
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => ({
+          category,
+          quantity,
+          item: menuItems[category.category_id]?.find(
+            (menuItem) => menuItem.item_id === Number(itemId),
+          ),
+        }))
+        .filter(({ item }) => item)
+        .map((line) => {
+          const itemRow = limits?.items[String(line.item.item_id)];
+          const key = String(category.category_id);
+          if (!(key in categoryFree))
+            categoryFree[key] = limits?.categories[key]?.free_left ?? null;
+
+          const frees = [itemRow?.free_left, categoryFree[key]].filter(
+            (n) => n != null,
+          );
+          const free = Math.min(line.quantity, ...frees);
+          if (categoryFree[key] != null)
+            categoryFree[key] = Math.max(0, categoryFree[key] - line.quantity);
+
+          const extra = line.item.is_add_on ? 0 : line.quantity - free;
+          return {
+            ...line,
+            extra,
+            extraPrice: extra > 0 ? Number(itemRow?.extra_price) || 0 : 0,
+          };
+        }),
+    );
+  }, [categories, quantities, menuItems, limits]);
 
   // Total units picked (2 Salmon + 1 Tuna = 3), counted from the saved cart so it's
   // right even before the menu has loaded

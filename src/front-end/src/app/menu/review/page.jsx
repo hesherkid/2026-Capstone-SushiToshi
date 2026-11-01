@@ -62,6 +62,8 @@ const ReviewOrderPage = () => {
   const [orderError, setOrderError] = useState(null);
   // The items just sent, for the confirmation screen
   const [placedItems, setPlacedItems] = useState(null);
+  // Lines the server charged for going over a limit (e.g. extra Hot Stones), by item
+  const [placedExtras, setPlacedExtras] = useState([]);
   const sending = useRef([]);
 
   // Re-check the table and bills (staff may have opened one since the menu loaded)
@@ -113,11 +115,15 @@ const ReviewOrderPage = () => {
     (total, { quantity }) => total + quantity,
     0,
   );
+  // Add-ons, plus anything past a limit that charges (e.g. extra Hot Stones)
   const subtotal = cartLines.reduce(
-    (total, { item, quantity }) =>
-      total + (item.is_add_on ? (Number(item.price) || 0) * quantity : 0),
+    (total, { item, quantity, extra, extraPrice }) =>
+      total +
+      (item.is_add_on ? (Number(item.price) || 0) * quantity : 0) +
+      extra * extraPrice,
     0,
   );
+  const hasExtras = cartLines.some(({ extra }) => extra > 0);
 
   const handlePlaceOrder = async () => {
     if (!selectedBillId) {
@@ -141,6 +147,7 @@ const ReviewOrderPage = () => {
 
     setOrderError(null);
     clearActionError();
+    setPlacedExtras([]);
 
     const orderItems = cartLines.map(({ item, quantity }) => ({
       menu_id: Number(menuId),
@@ -165,7 +172,12 @@ const ReviewOrderPage = () => {
         throw new Error("Couldn't start your order. Please try again.");
       const orderId = Number(orderResponse.order_Id);
 
-      await addOrderItems(orderId, orderItems);
+      const added = await addOrderItems(orderId, orderItems);
+      setPlacedExtras(
+        (added?.lines ?? []).filter(
+          (line) => line.chargeReason === "OverLimit",
+        ),
+      );
     } catch (err) {
       console.error("Error processing order:", err);
       setOrderError(
@@ -176,6 +188,10 @@ const ReviewOrderPage = () => {
 
   // ---- Order sent ----
   if (placedItems) {
+    const extrasTotal = placedExtras.reduce(
+      (total, line) => total + line.quantity * line.priceAtTime,
+      0,
+    );
     return (
       <CustomerPageContainer sx={{ maxWidth: 640 }}>
         <Box sx={{ textAlign: "center", pt: { xs: 3, sm: 5 } }}>
@@ -197,21 +213,39 @@ const ReviewOrderPage = () => {
           </Typography>
         </Box>
 
+        {extrasTotal > 0 && (
+          <Alert severity="info" sx={{ mt: 3 }}>
+            Some items were over your table&apos;s limit. $
+            {extrasTotal.toFixed(2)} in extras will be added to your bill.
+          </Alert>
+        )}
+
         <Paper
           variant="outlined"
           sx={{ mt: 3, borderRadius: 3, overflow: "hidden" }}
         >
-          {placedItems.map(({ item_id, name, quantity }, index) => (
-            <Box key={item_id}>
-              {index > 0 && <Divider />}
-              <Box sx={{ display: "flex", gap: 1.5, px: 2, py: 1.5 }}>
-                <Typography sx={{ fontWeight: 700, minWidth: 28 }}>
-                  {quantity}×
-                </Typography>
-                <Typography>{name}</Typography>
+          {placedItems.map(({ item_id, name, quantity }, index) => {
+            const extra = placedExtras.find((line) => line.itemId === item_id);
+            return (
+              <Box key={item_id}>
+                {index > 0 && <Divider />}
+                <Box sx={{ display: "flex", gap: 1.5, px: 2, py: 1.5 }}>
+                  <Typography sx={{ fontWeight: 700, minWidth: 28 }}>
+                    {quantity}×
+                  </Typography>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography>{name}</Typography>
+                    {extra && (
+                      <Typography variant="body2" color="text.secondary">
+                        {extra.quantity} extra × $
+                        {Number(extra.priceAtTime).toFixed(2)}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
               </Box>
-            </Box>
-          ))}
+            );
+          })}
         </Paper>
 
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 3 }}>
@@ -416,20 +450,24 @@ const ReviewOrderPage = () => {
             variant="outlined"
             sx={{ borderRadius: 3, overflow: "hidden" }}
           >
-            {cartLines.map(({ category, item, quantity }, index) => (
-              <Box key={`${category.category_id}-${item.item_id}`}>
-                {index > 0 && <Divider />}
-                <CartLine
-                  item={item}
-                  categoryId={category.category_id}
-                  quantity={quantity}
-                  onQuantityChange={handleQuantityChange}
-                  atLimit={
-                    limitStatus(category.category_id, item.item_id).atLimit
-                  }
-                />
-              </Box>
-            ))}
+            {cartLines.map(
+              ({ category, item, quantity, extra, extraPrice }, index) => (
+                <Box key={`${category.category_id}-${item.item_id}`}>
+                  {index > 0 && <Divider />}
+                  <CartLine
+                    item={item}
+                    categoryId={category.category_id}
+                    quantity={quantity}
+                    extra={extra}
+                    extraPrice={extraPrice}
+                    onQuantityChange={handleQuantityChange}
+                    atLimit={
+                      limitStatus(category.category_id, item.item_id).atLimit
+                    }
+                  />
+                </Box>
+              ),
+            )}
           </Paper>
 
           {/* ---- Summary ---- */}
@@ -440,7 +478,9 @@ const ReviewOrderPage = () => {
             </Typography>
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Typography sx={{ fontWeight: 700 }}>Add-ons subtotal</Typography>
+              <Typography sx={{ fontWeight: 700 }}>
+                {hasExtras ? "Add-ons and extras" : "Add-ons subtotal"}
+              </Typography>
               <Typography sx={{ fontWeight: 700 }}>
                 ${subtotal.toFixed(2)}
               </Typography>

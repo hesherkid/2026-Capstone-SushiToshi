@@ -302,11 +302,11 @@ const OrdersPage = () => {
                       >
                         {item.name || `Item #${item.item_id ?? item.itemId}`}
                       </Typography>
-                      {/* Same wording as Review order */}
+                      {/* Same wording as Review order; extras are the units over a limit that charges */}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                         {price ? (
                           <>
-                            Add-on{" "}
+                            {item.chargeReason === "OverLimit" ? "Extra" : "Add-on"}{" "}
                             <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
                               {price}
                             </Box>

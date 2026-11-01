@@ -323,6 +323,21 @@ public class OrderLimitEnforcementTests : IDisposable
     }
 
     [Fact]
+    public async Task Limits_CountDownFreeUnitsForChargeLimits_WithTheExtraPrice()
+    {
+        // Hot Stone: 1 per person, 2 adults = 2 free for the table, then $5 each
+        var before = await Limits();
+        before.Categories.Single(c => c.Category_Id == 3).Free_Left.Should().Be(2);
+        before.Items.Single(i => i.Item_Id == HotStoneSteak).Extra_Price.Should().Be(5.00m);
+
+        await Add(NewOrder(), (HotStoneSteak, 3));
+
+        (await Limits()).Categories.Single(c => c.Category_Id == 3).Free_Left.Should().Be(0);
+        // Block limits have no free units to count
+        (await Limits()).Items.Single(i => i.Item_Id == ChopChop).Free_Left.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Limits_AreOnlyForTheTableYoureAt()
     {
         var controller = new OrderController(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context))

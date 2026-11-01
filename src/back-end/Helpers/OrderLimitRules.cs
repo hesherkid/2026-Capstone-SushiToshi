@@ -78,6 +78,17 @@ namespace back_end.Helpers
         }
 
         /// <summary>
+        /// Units the table can still order this session before a Charge limit bills them at Price,
+        /// or null when there is no Charge limit.
+        /// </summary>
+        public static int? SessionLeftBeforeCharge(Limits limits, Headcount heads, int sessionUsed)
+        {
+            if (limits.Behavior != OverLimitBehavior.Charge) return null;
+            var cap = SessionCap(limits, heads);
+            return cap == int.MaxValue ? null : Math.Max(0, cap - sessionUsed);
+        }
+
+        /// <summary>
         /// Works out the order lines for one requested item, or an error if a Block limit is exceeded.
         /// </summary>
         public static LimitResult ApplyLimits(
