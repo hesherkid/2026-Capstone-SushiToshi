@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using back_end.domain;
 using back_end.domain.Entities;
@@ -11,8 +12,8 @@ namespace back_end.domain.Seeders
 {
     /// <summary>
     /// Seeder for the users table with initial data.
-    /// Creates 3 staff accounts, 10 customer accounts, and a guest account.
-    /// Note: Admin account (user_id: 1) should be created separately.
+    /// Creates 1 admin account, 3 staff accounts and 11 customer accounts.
+    /// Only runs in Development, because the passwords are in the source code.
     /// </summary>
     public class UserSeeder : ISeeder
     {
@@ -23,15 +24,24 @@ namespace back_end.domain.Seeders
 
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserSeeder> _logger;
+        private readonly IHostEnvironment _environment;
 
-        public UserSeeder(ApplicationDbContext context, ILogger<UserSeeder> logger)
+        public UserSeeder(ApplicationDbContext context, ILogger<UserSeeder> logger, IHostEnvironment environment)
         {
             _context = context;
             _logger = logger;
+            _environment = environment;
         }
 
         public void Seed()
         {
+            // Accounts with known passwords must never reach production
+            if (!_environment.IsDevelopment())
+            {
+                _logger.LogInformation("Not in Development: skipping seeded user accounts.");
+                return;
+            }
+
             // Admin accounts
             List<User> adminUsers = [
                   new()
@@ -96,18 +106,6 @@ namespace back_end.domain.Seeders
 
             // Customer accounts
             List<User> customerUsers = [
-                new ()
-                {
-                    Email = "guestemail@email.com",
-                    Password_hash = HashPassword("GuestUser!"),
-                    First_name = "Guest",
-                    Last_name = "User",
-                    Role = UserRoles.Customer,
-                    Status = UserStatus.Active,
-                    Is_email_confirmed = true,
-                    Created_at = DateTime.UtcNow,
-                    Last_Interaction_at = DateTime.UtcNow
-                },
                 new()
                 {
                     Email = "emma.wilson@email.com",
@@ -254,7 +252,7 @@ namespace back_end.domain.Seeders
             {
                 _context.Users.AddRange(usersToAdd);
                 // Note: SaveChanges is called in DatabaseSeeder after each seeder
-                _logger.LogInformation($"Added {adminUsers.Count} admin users, {staffUsers.Count} staff users, {customerUsers.Count} customer users and any missing guest account.");
+                _logger.LogInformation($"Added {adminUsers.Count} admin users, {staffUsers.Count} staff users and {customerUsers.Count} customer users.");
             }
             else
             {

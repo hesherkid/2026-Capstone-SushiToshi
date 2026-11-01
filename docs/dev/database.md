@@ -38,9 +38,11 @@ You don't need to run `dotnet ef database update` yourself. Every time the backe
 2. **Drops the database, if asked.** This happens only in Development, and only when `Seeding:ResetOnStartup` is `true` (see [Resetting the database](#resetting-the-database)).
 3. **Applies any pending migrations** (`Database.MigrateAsync()`).
 4. **Checks default pricing exists.** The `LocationPricingAndHolidays` migration inserts the default pricing profile and its rates. If any are missing, startup logs an error and skips seeding, because every bill would be wrong.
-5. **Seeds the data:**
-   - **No menu items in the database:** runs the full seed (see [Seed data](#seed-data)).
-   - **Otherwise:** only re-adds any missing seeded user accounts, matched by email. Everything else is left alone.
+5. **Seeds the data**, unless `Seeding:Enabled` is `false`:
+   - **No menu items in the database:** runs the full seed (see [Seed data](#seed-data)). Outside Development it stops after tables and table groups, so no users or session data are seeded.
+   - **Otherwise:** only re-adds any missing seeded user accounts, matched by email (Development only). Everything else is left alone.
+
+6. **Creates the first admin, if there is none,** from `Bootstrap:AdminEmail` and `Bootstrap:AdminPassword` (see [First admin account](../setup/production-setup.md#first-admin-account)). In Development the seeded admin already exists, so this does nothing.
 
 Errors during these steps are logged (`An error occurred during database initialization`), but they don't stop the backend from starting. If the app behaves oddly after a pull, scroll up in the backend console and look for that line.
 
@@ -60,7 +62,7 @@ Not seeded: holidays are not loaded from the holiday API. An admin loads them fr
 
 ### Seeded accounts
 
-All seeded accounts are active and have a confirmed email. They're created by `UserSeeder.cs`.
+All seeded accounts are active and have a confirmed email. They're created by `UserSeeder.cs`, in Development only.
 
 | Role     | Email                         | Password         | Notes                                                                         |
 | -------- | ----------------------------- | ---------------- | ----------------------------------------------------------------------------- |
@@ -70,18 +72,17 @@ All seeded accounts are active and have a confirmed email. They're created by `U
 | Staff    | `michael.chen@sushitoshi.ca`  | `StaffPass123!`  | Assigned to location 2                                                        |
 | Customer | `emma.wilson@email.com`       | `Customer123!`   | One of 10 customers with order history (see `UserSeeder.cs` for the rest)     |
 | Customer | `noah.clarke@email.com`       | `Customer123!`   | No sessions, orders or bills. Use it to try the new-customer flow from scratch |
-| Customer | `guestemail@email.com`        | `GuestUser!`     | Old shared guest account                                                      |
 
 "Continue as Guest" doesn't use any of these. It creates a new throwaway account each time, with an email ending in `@guest.sushitoshi.invalid` and no password (see `Helpers/GuestAccounts.cs`).
 
-> **These passwords are in the source code and the accounts are recreated on every startup, including in production.** See the known issue under [Default accounts](../setup/production-setup.md#4-default-accounts-security) in the production setup guide.
+> **These passwords are in the source code**, so none of these accounts are seeded outside Development. See [Default accounts](../setup/production-setup.md#4-default-accounts-security) in the production setup guide.
 
 ### Seeding settings
 
 | Setting                   | Default | What it does                                                                                     |
 | ------------------------- | ------- | ------------------------------------------------------------------------------------------------ |
 | `Seeding:ResetOnStartup`  | `false` | Development only. When `true`, drops the whole database on startup, then migrates and seeds fresh |
-| `Seeding:Enabled`         | `true`  | **Not read by the code yet.** Seeding always runs; changing this does nothing                    |
+| `Seeding:Enabled`         | `true`  | When `false`, skips all seeding on startup, including re-adding missing seeded accounts           |
 
 `userSeedData.csv` in the Seeders folder is loaded by `DatabaseSeeder` but its data isn't used. The seeded users come from `UserSeeder.cs`.
 

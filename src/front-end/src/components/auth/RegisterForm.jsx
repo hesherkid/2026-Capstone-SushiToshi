@@ -122,6 +122,8 @@ const RegisterFormContent = () => {
               ? data.detail
               : "Please check your registration information.",
         );
+      } else if (status === 429) {
+        setError("Too many requests. Please try again later.");
       } else if (!err.response) {
         setError("Unable to connect to the server. Please try again.");
       } else {

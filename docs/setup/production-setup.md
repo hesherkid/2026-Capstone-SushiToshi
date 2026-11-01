@@ -48,13 +48,14 @@ ConnectionStrings__MySqlConnection=Server=<host>;Port=3306;Database=sushi_toshi_
 Jwt__Key=<new random secret>
 ```
 
-**The development key is committed to git.** Anyone who has seen the repo could use it to create valid login tokens, including admin ones. Production must use a new key:
+`appsettings.json` has no signing key, so **the backend won't start outside Development until `Jwt__Key` is set**. The development key in `appsettings.Development.json` is committed to git, and anyone who has seen the repo could use it to create valid login tokens, including admin ones. Production must use its own new key:
 
 ```bash
 openssl rand -base64 48
 ```
 
-- Use at least 32 characters. Tokens are signed with HMAC-SHA256.
+- It must be at least 32 bytes, or the backend refuses to start. Tokens are signed with HMAC-SHA256.
+- Never reuse the old key that used to be in `appsettings.json` (`ThisIsAVerySecure...`). It is still in the git history.
 - Changing the key signs everyone out, because existing tokens stop being valid.
 - Optional: `Jwt__ExpiresInMinutes` (default `120`) and `Jwt__GuestExpiresInMinutes` (default `360`) control how long logins last.
 
@@ -80,6 +81,27 @@ These must be the real frontend address, or emails and printed QR codes will lin
 All three take the frontend origin, e.g. `https://sushitoshi.example.com`, with no trailing slash.
 
 **After setting `SessionPageUrl`, regenerate and reprint every location's QR codes.** Saved codes keep the old URL. See [Table QR codes](#5-table-qr-codes) for the full steps.
+
+### Behind a reverse proxy
+
+The sign-in limits (guest sign-in, login, register, password reset and the other account endpoints) are counted per client IP address. Behind a proxy, every request reaches the backend from the proxy's address, so without this setting each limit is shared by **everyone**, and one script could block sign-in for all users. That includes the default setup, where the Next.js `/api` rewrite forwards calls from `127.0.0.1`.
+
+Turn on forwarded headers so the backend reads the real client address from `X-Forwarded-For`:
+
+```bash
+ForwardedHeaders__Enabled=true
+# Only if a proxy reaches the backend from another machine (loopback is always trusted)
+ForwardedHeaders__KnownProxies__0=10.0.0.5
+ForwardedHeaders__KnownNetworks__0=10.0.0.0/24
+```
+
+The header is only read from trusted proxies, and a mistyped address stops the backend from starting.
+
+**Only turn this on when a real reverse proxy (nginx, Caddy, a cloud load balancer) is the only public entry point and sets `X-Forwarded-For` itself.** The Next.js rewrite doesn't count: if the browser sends its own `X-Forwarded-For`, Next.js passes it on unchanged. If browsers could reach Next.js (or the backend) directly, anyone could send a new made-up address on every request and skip the limits completely. So:
+
+- Make the edge proxy **overwrite** the header with the address it sees. For nginx: `proxy_set_header X-Forwarded-For $remote_addr;` and `proxy_set_header X-Forwarded-Proto $scheme;`.
+- Don't let the internet reach the Next.js port (3000) or the backend port (5264) directly. Bind them to `127.0.0.1` or block them with a firewall.
+- `ForwardedHeaders__ForwardLimit` (default `1`) is how many `X-Forwarded-For` entries to read from the right. Leave it at `1` unless more than one proxy in the chain adds an entry.
 
 ## 2. Backend: integrations
 
@@ -113,18 +135,27 @@ Use `npm run start`, not `npm run dev`, in production.
 
 ## 4. Default accounts (security)
 
-> **Known issue:** the backend creates sample accounts on every startup, with passwords that are in the source code. This includes an admin account (`admin.user@sushitoshi.ca`) and staff accounts. The `Seeding:Enabled` setting exists but isn't read by the code yet, so seeding can't be turned off. A code fix is needed so these accounts aren't created in production.
+Outside Development, the backend doesn't create any of the sample accounts (admin, staff or customer), because their passwords are in the source code.
 
-Until that's fixed:
+On an empty database, the first start still loads the **menu and restaurant setup**: the two sample locations, categories, tags, menus, menu items, tables and table groups. It doesn't load the sample dining sessions, orders, bills, service requests or menu views. Review the menu and setup data and change anything that isn't real before opening to customers. To start with none of it, set `Seeding:Enabled` to `false` (for example, the environment variable `Seeding__Enabled=false`) before the first start.
 
-1. Start the backend once, then sign in as the seeded admin.
-2. Create a real admin account for the restaurant.
-3. Lock down **every** seeded account. They're listed in `src/back-end/domain/Seeders/UserSeeder.cs`.
-   - **Manage Staff:** change the password of each seeded admin and staff account, or deactivate it.
-   - **Manage Customers:** deactivate each seeded customer account. This page has no password change.
-   - **Don't delete them.** The seeder recreates any missing account, with its default password, the next time the backend starts. It leaves existing accounts alone, so changed passwords and deactivations stick.
+### First admin account
 
-On an empty database, the first start also loads **sample data** (menu items and other records). Review it and remove anything that isn't real before opening to customers.
+No admin is seeded in production, so the backend creates the first one from these settings when it starts and finds no admin in the database:
+
+```bash
+Bootstrap__AdminEmail=owner@your-restaurant.example
+Bootstrap__AdminPassword=<at least 12 characters>
+# Optional, default to "Admin" and "User"
+Bootstrap__AdminFirstName=...
+Bootstrap__AdminLastName=...
+```
+
+- Set the password in an environment variable or secret store, never in a committed file.
+- Use an email that isn't registered yet. The backend won't turn an existing account into an admin.
+- Once any admin exists, these settings are ignored, so they can't overwrite or take over an account. Still, **remove `Bootstrap__AdminPassword` after the first sign-in**, then change the password from your own row in **Manage Staff**.
+- If a setting is missing or invalid (bad email, password too short or long, email already in use), the backend logs an error under `An error occurred during database initialization` and creates no admin. Fix it and restart.
+- Add more admins and staff from **Manage Staff** once you're signed in.
 
 ## 5. Table QR codes
 
@@ -164,8 +195,9 @@ Both pages still exist in the frontend (`src/front-end/src/app/join/` and `src/f
 
 - [ ] `ASPNETCORE_ENVIRONMENT=Production`
 - [ ] `ConnectionStrings__MySqlConnection` points at the production database, with a strong password
-- [ ] `Jwt__Key` is a new random secret, not the committed one
+- [ ] `Jwt__Key` is a new random secret, not the development key or the old key from git history
 - [ ] `Cors__AllowedOrigins__0` (and more if needed) lists the frontend's origin
+- [ ] Behind a reverse proxy: `ForwardedHeaders__Enabled=true`, the proxy overwrites `X-Forwarded-For`, and ports 3000 and 5264 aren't publicly reachable
 - [ ] `AuthEmail__FrontendBaseUrl`, `QRCodeSettings__SessionPageUrl` and `Restaurant__BaseUrl` are the real frontend URL
 - [ ] SendGrid API key and sender are set, and the domain is authenticated
 - [ ] WiFi credentials are set for every location
@@ -180,7 +212,7 @@ Both pages still exist in the frontend (`src/front-end/src/app/join/` and `src/f
 
 **After the first start**
 
-- [ ] Every seeded account's password is changed, or the account is deactivated
+- [ ] `Bootstrap__AdminPassword` is removed once the first admin has signed in
 - [ ] A real admin account exists
 - [ ] Sample data is reviewed and cleaned up
 - [ ] QR codes are bulk generated for every location, a test scan works with the phone's WiFi off, and the codes are printed
