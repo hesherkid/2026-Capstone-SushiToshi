@@ -37,8 +37,10 @@ const VerifyEmailFormContent = () => {
       setIsSuccess(true);
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-        "Verification failed. The link may be invalid or expired.",
+        err.response?.status === 429
+          ? "Too many requests. Please try again later."
+          : err.response?.data?.message ||
+            "Verification failed. The link may be invalid or expired.",
       );
     } finally {
       setLoading(false);

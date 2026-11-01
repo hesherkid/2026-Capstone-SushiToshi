@@ -89,7 +89,7 @@ public class SeederRulesTests
             new User { User_id = 2, Email = "staff@sushitoshi.ca", Role = UserRoles.Staff, Location_id = LocationId, Password_hash = "x" },
             new User { User_id = 3, Email = "emma@email.com", First_name = "Emma", Last_name = "Wilson", Role = UserRoles.Customer, Password_hash = "x" },
             new User { User_id = 4, Email = "liam@email.com", First_name = "Liam", Last_name = "Brown", Role = UserRoles.Customer, Password_hash = "x" },
-            new User { User_id = 5, Email = "guestemail@email.com", First_name = "Guest", Last_name = "User", Role = UserRoles.Customer, Password_hash = "x" });
+            new User { User_id = 5, Email = "olivia@email.com", First_name = "Olivia", Last_name = "Taylor", Role = UserRoles.Customer, Password_hash = "x" });
 
         context.Tables.AddRange(
             new TableEntity { Table_Id = 1, table_number = 1, seat_count = 4, Location_Id = LocationId, is_active = true },

@@ -2,6 +2,7 @@ using Xunit;
 using Moq;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
@@ -18,12 +19,15 @@ public class NewCustomerSeedTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
 
+    private static IHostEnvironment Environment(string name) =>
+        Mock.Of<IHostEnvironment>(e => e.EnvironmentName == name);
+
     [Fact]
     public void UserSeeder_AddsTheNewCustomerAsASignInReadyCustomer()
     {
         using var context = NewContext();
 
-        new UserSeeder(context, new Mock<ILogger<UserSeeder>>().Object).Seed();
+        new UserSeeder(context, new Mock<ILogger<UserSeeder>>().Object, Environment(Environments.Development)).Seed();
         context.SaveChanges();
 
         var noah = context.Users.Single(u => u.Email == UserSeeder.NewCustomerEmail);
