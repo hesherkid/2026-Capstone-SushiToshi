@@ -6,10 +6,16 @@ import api from "@/config/api";
 import storage from "@/utils/storage";
 import serverMessage from "@/utils/serverMessage";
 
+// The working location chosen in the app bar, as a number to match the location ids
+const getWorkingLocation = () => {
+  const stored = storage.get("branch-location");
+  return stored ? Number(stored) : "";
+};
+
 const emptyForm = () => ({
   table_Number: "",
   seat_count: "",
-  location_Id: storage.get("branch-location") || "",
+  location_Id: getWorkingLocation(),
 });
 
 const NewTableDialog = ({ open }) => {
@@ -26,6 +32,12 @@ const NewTableDialog = ({ open }) => {
       .then((response) => setAvailableLocations(response.data))
       .catch((err) => setError(serverMessage(err, "Couldn't load locations.")));
   }, [open]);
+
+  // Tables can only be added at the working location; the list is only open without one
+  const workingLocation = getWorkingLocation();
+  const locationOptions = workingLocation
+    ? availableLocations.filter((location) => location.location_Id === workingLocation)
+    : availableLocations;
 
   const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
@@ -67,8 +79,15 @@ const NewTableDialog = ({ open }) => {
       busyLabel="Creating..."
       busy={isSubmitting}
     >
-      <TextField select label="Location" required value={formData.location_Id} onChange={set("location_Id")}>
-        {availableLocations.map((location) => (
+      <TextField
+        select
+        label="Location"
+        required
+        value={locationOptions.length ? formData.location_Id : ""}
+        onChange={set("location_Id")}
+        disabled={Boolean(workingLocation)}
+      >
+        {locationOptions.map((location) => (
           <MenuItem key={location.location_Id} value={location.location_Id}>
             {location.name}
           </MenuItem>
