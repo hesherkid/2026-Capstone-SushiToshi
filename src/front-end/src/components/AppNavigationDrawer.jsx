@@ -148,7 +148,6 @@ const AppNavigationDrawer = ({ open, role, onClose, onNavigate, onLogout }) => (
             onClick={onLogout}
             sx={{
             justifyContent: "center",
-            textTransform: "none",
             py: 1.25,
             px: 2,
             borderRadius: 2,

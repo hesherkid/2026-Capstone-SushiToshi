@@ -48,6 +48,7 @@ import {
   exportFileName,
   printReport,
 } from "@/components/analytics/ReportExport";
+import { isHtmlPage } from "@/utils/serverMessage";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -113,7 +114,7 @@ const getErrorMessage = (err) => {
   if (status === 401)
     return "Your session has expired. Log in again to continue.";
   if (data?.errors) return Object.values(data.errors).flat().join(" ");
-  if (typeof data === "string" && data) return data;
+  if (typeof data === "string" && data && !isHtmlPage(data)) return data;
   return (
     data?.message || data?.title || "Something went wrong loading order timing."
   );

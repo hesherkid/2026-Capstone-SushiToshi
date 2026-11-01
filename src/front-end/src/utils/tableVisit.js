@@ -1,4 +1,5 @@
 // The table a customer is sitting at, from the table's QR code, kept in localStorage.
+import storage from "@/utils/storage";
 
 // Fired when the QR table changes so the app bar's "Table X" chip updates without a page change
 export const TABLE_VISIT_EVENT = "table-visit-changed";
@@ -14,9 +15,9 @@ const VISIT_KEYS = ["session_id", "currentBillId", "menuCart"];
 export const startTableVisit = ({ locationId, tableNumber }) => {
   if (typeof window === "undefined" || !locationId || !tableNumber) return;
 
-  localStorage.setItem("locationId", String(locationId));
-  localStorage.setItem("tableNumber", String(tableNumber));
-  VISIT_KEYS.forEach((key) => localStorage.removeItem(key));
+  storage.set("locationId", String(locationId));
+  storage.set("tableNumber", String(tableNumber));
+  VISIT_KEYS.forEach((key) => storage.remove(key));
 
   window.dispatchEvent(new Event(TABLE_VISIT_EVENT));
 };
@@ -24,8 +25,7 @@ export const startTableVisit = ({ locationId, tableNumber }) => {
 // Whether this phone has joined a table and the visit is still on. Set by the QR join and
 // cleared when the visit ends, so a session the server still lists but this phone never
 // joined (e.g. seed data) doesn't count
-export const hasTableVisit = () =>
-  typeof window !== "undefined" && !!localStorage.getItem("session_id");
+export const hasTableVisit = () => !!storage.get("session_id");
 
 // Fired when staff close the table's session; customers are shown the thank-you screen
 export const TABLE_VISIT_ENDED_EVENT = "table-visit-ended";
@@ -41,7 +41,7 @@ export const endTableVisit = () => {
   if (typeof window === "undefined") return;
 
   [...VISIT_KEYS, "tableNumber", "locationId", "pendingOrder"].forEach((key) =>
-    localStorage.removeItem(key),
+    storage.remove(key),
   );
 
   window.dispatchEvent(new Event(TABLE_VISIT_EVENT));

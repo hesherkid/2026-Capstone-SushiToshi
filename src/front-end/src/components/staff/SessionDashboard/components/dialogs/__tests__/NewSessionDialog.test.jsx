@@ -13,13 +13,18 @@ jest.mock("@/config/api", () => {
   return { __esModule: true, default: mockApi, api: mockApi };
 });
 
+// localStorage hands back strings
+let mockBranchLocation = "1";
 jest.mock("@/utils/storage", () => ({
   __esModule: true,
-  default: { get: (key) => (key === "branch-location" ? 1 : null) },
+  default: { get: (key) => (key === "branch-location" ? mockBranchLocation : null) },
 }));
 
 const responses = {
-  "/Location": [{ location_Id: 1, name: "Downtown" }],
+  "/Location": [
+    { location_Id: 1, name: "Downtown" },
+    { location_Id: 2, name: "Uptown" },
+  ],
   "/Menu": [{ menu_id: 10, name: "Dinner" }],
   "/TableEntity/empty": [{ table_Id: 5, table_number: 3, seat_count: 4, tableGroup_Id: null }],
   "/TableGroup/available": [],
@@ -37,10 +42,28 @@ const fillIn = async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockBranchLocation = "1";
   api.get.mockImplementation(async (url) => ({ data: responses[url] }));
 });
 
 describe("NewSessionDialog", () => {
+  it("only offers the working location", async () => {
+    render(<NewSessionDialog open onClose={jest.fn()} />);
+
+    const location = screen.getByRole("combobox", { name: /Location/ });
+    await waitFor(() => expect(location).toHaveTextContent("Downtown"));
+    expect(location).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByText("Uptown")).not.toBeInTheDocument();
+  });
+
+  it("offers every location when there is no working location", async () => {
+    mockBranchLocation = null;
+    render(<NewSessionDialog open onClose={jest.fn()} />);
+
+    await choose("Location", "Uptown");
+    expect(screen.getByRole("combobox", { name: /Location/ })).toHaveTextContent("Uptown");
+  });
+
   it("can't be created until a menu and table are chosen", async () => {
     render(<NewSessionDialog open onClose={jest.fn()} />);
 

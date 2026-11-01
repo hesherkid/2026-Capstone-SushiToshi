@@ -14,6 +14,7 @@ import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { useNotification } from "@/contexts/NotificationContext";
 import { sortBillsByStatus } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import storage from "@/utils/storage";
 
 const billName = (bill) => bill.bill_name || `Bill #${bill.bill_id}`;
 
@@ -21,7 +22,7 @@ const billName = (bill) => bill.bill_name || `Bill #${bill.bill_id}`;
 const myBillId = (bills) => {
   // Also runs while rendering, which happens on the server too
   if (typeof window === "undefined") return null;
-  const saved = Number(localStorage.getItem("currentBillId"));
+  const saved = Number(storage.get("currentBillId"));
   return bills.some((bill) => bill.bill_id === saved) ? saved : null;
 };
 

@@ -166,6 +166,26 @@ describe("Customer orders page", () => {
     expect(screen.queryByRole("button", { name: /Order #/ })).not.toBeInTheDocument();
   });
 
+  it("labels units over a charged limit as extras, apart from add-ons", async () => {
+    const charged = [{
+      orderId: 902, userId: 22, userName: "Guest 4MXA", billName: "Lee", status: "Pending",
+      items: [
+        { ...item(3, "Hot Stone Steak"), quantity: 2, priceAtTime: 5, chargeReason: "OverLimit" },
+        { ...item(4, "Toro Nigiri"), priceAtTime: 9, isAddOn: true, chargeReason: "None" },
+      ],
+    }];
+    api.get.mockImplementation((url) => {
+      if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+      if (url === "/Order/session/269") return Promise.resolve({ data: charged });
+      return Promise.resolve({ data: [] });
+    });
+    render(<OrdersPage />);
+
+    const order = await screen.findByRole("region", { name: "Order #902" });
+    expect(within(order).getByText(/^Extra/)).toHaveTextContent("Extra $10.00 ($5.00 each)");
+    expect(within(order).getByText(/^Add-on/)).toHaveTextContent("Add-on $9.00");
+  });
+
   it("keeps the orders up when a background refresh fails", async () => {
     render(<OrdersPage />);
     await screen.findByText("Order #901");

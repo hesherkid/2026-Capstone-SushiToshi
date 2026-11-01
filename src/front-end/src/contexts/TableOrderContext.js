@@ -10,9 +10,13 @@ import {
 } from "react";
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
+import storage from "@/utils/storage";
 
 // localStorage key for the items picked but not yet ordered
 const CART_STORAGE_KEY = "menuCart";
+
+// The server takes 1-99 of an item per order (OrderController.AddOrderItems)
+export const MAX_PER_ITEM = 99;
 
 export const MENU_PATH = "/menu/full-menu";
 export const REVIEW_ORDER_PATH = "/menu/review";
@@ -78,7 +82,7 @@ export const TableOrderProvider = ({ children }) => {
 
   const chooseBill = useCallback((billId) => {
     setSelectedBillId(billId);
-    localStorage.setItem("currentBillId", String(billId));
+    storage.set("currentBillId", String(billId));
   }, []);
 
   const loadBills = useCallback(
@@ -101,7 +105,7 @@ export const TableOrderProvider = ({ children }) => {
 
         // Keep the bill this phone ordered on last, so a guest doesn't drift onto another
         // party's bill; otherwise the newest bill that can still take orders
-        const lastUsed = Number(localStorage.getItem("currentBillId"));
+        const lastUsed = Number(storage.get("currentBillId"));
         const current =
           open.find((bill) => bill.bill_id === lastUsed) ??
           open.find((bill) => !bill.requested_at) ??
@@ -277,7 +281,7 @@ export const TableOrderProvider = ({ children }) => {
     cartRestoredFor.current = sessionId;
     try {
       const saved = JSON.parse(
-        localStorage.getItem(CART_STORAGE_KEY) || "null",
+        storage.get(CART_STORAGE_KEY) || "null",
       );
       setQuantities(
         saved?.sessionId === sessionId && saved.quantities
@@ -285,7 +289,7 @@ export const TableOrderProvider = ({ children }) => {
           : {},
       );
     } catch {
-      localStorage.removeItem(CART_STORAGE_KEY);
+      storage.remove(CART_STORAGE_KEY);
       setQuantities({});
     }
   }, [sessionId]);
@@ -293,7 +297,7 @@ export const TableOrderProvider = ({ children }) => {
   useEffect(() => {
     // Wait until the saved cart has been read, or the empty starting cart would replace it
     if (!sessionId || cartRestoredFor.current !== sessionId) return;
-    localStorage.setItem(
+    storage.set(
       CART_STORAGE_KEY,
       JSON.stringify({ sessionId, quantities }),
     );
@@ -301,10 +305,10 @@ export const TableOrderProvider = ({ children }) => {
 
   // Most of this item the cart can hold before a limit that blocks: the item's own caps, and
   // whatever its category has left after the other items from that category already in the cart.
-  // null = no limit that blocks
+  // Never more than the server takes in one order, even for items with no limit
   const maxFor = useCallback(
     (cart, categoryId, itemId) => {
-      if (!limits) return null;
+      if (!limits) return MAX_PER_ITEM;
       const lowest = (row) => {
         const caps = [row?.per_order, row?.session_left].filter(
           (n) => n != null,
@@ -323,7 +327,7 @@ export const TableOrderProvider = ({ children }) => {
           : Math.max(0, categoryCap - othersInCategory);
 
       const caps = [itemCap, categoryRoom].filter((n) => n != null);
-      return caps.length ? Math.min(...caps) : null;
+      return Math.min(MAX_PER_ITEM, ...caps);
     },
     [limits],
   );
@@ -363,23 +367,44 @@ export const TableOrderProvider = ({ children }) => {
 
   const clearCart = useCallback(() => setQuantities({}), []);
 
-  // Every item in the cart with its menu details, in menu order
-  const cartLines = useMemo(
-    () =>
-      categories.flatMap((category) =>
-        Object.entries(quantities[category.category_id] || {})
-          .filter(([, quantity]) => quantity > 0)
-          .map(([itemId, quantity]) => ({
-            category,
-            quantity,
-            item: menuItems[category.category_id]?.find(
-              (menuItem) => menuItem.item_id === Number(itemId),
-            ),
-          }))
-          .filter(({ item }) => item),
-      ),
-    [categories, quantities, menuItems],
-  );
+  // Every item in the cart with its menu details, in menu order (the order it's sent in).
+  // extra: units past a Charge limit (e.g. Hot Stone past 1 per person), billed at extraPrice each.
+  // Worked out like the server does: each item uses up its category's free units in turn
+  const cartLines = useMemo(() => {
+    const categoryFree = {};
+    return categories.flatMap((category) =>
+      Object.entries(quantities[category.category_id] || {})
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => ({
+          category,
+          quantity,
+          item: menuItems[category.category_id]?.find(
+            (menuItem) => menuItem.item_id === Number(itemId),
+          ),
+        }))
+        .filter(({ item }) => item)
+        .map((line) => {
+          const itemRow = limits?.items[String(line.item.item_id)];
+          const key = String(category.category_id);
+          if (!(key in categoryFree))
+            categoryFree[key] = limits?.categories[key]?.free_left ?? null;
+
+          const frees = [itemRow?.free_left, categoryFree[key]].filter(
+            (n) => n != null,
+          );
+          const free = Math.min(line.quantity, ...frees);
+          if (categoryFree[key] != null)
+            categoryFree[key] = Math.max(0, categoryFree[key] - line.quantity);
+
+          const extra = line.item.is_add_on ? 0 : line.quantity - free;
+          return {
+            ...line,
+            extra,
+            extraPrice: extra > 0 ? Number(itemRow?.extra_price) || 0 : 0,
+          };
+        }),
+    );
+  }, [categories, quantities, menuItems, limits]);
 
   // Total units picked (2 Salmon + 1 Tuna = 3), counted from the saved cart so it's
   // right even before the menu has loaded

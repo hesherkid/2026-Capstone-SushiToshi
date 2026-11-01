@@ -302,11 +302,11 @@ const OrdersPage = () => {
                       >
                         {item.name || `Item #${item.item_id ?? item.itemId}`}
                       </Typography>
-                      {/* Same wording as Review order */}
+                      {/* Same wording as Review order; extras are the units over a limit that charges */}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                         {price ? (
                           <>
-                            Add-on{" "}
+                            {item.chargeReason === "OverLimit" ? "Extra" : "Add-on"}{" "}
                             <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
                               {price}
                             </Box>
@@ -344,7 +344,6 @@ const OrdersPage = () => {
                 color="error"
                 onClick={() => setOrderToCancel(order)}
                 startIcon={<MaterialSymbol name="close" size={20} />}
-                sx={{ textTransform: "none", fontWeight: 600 }}
               >
                 Cancel order
               </Button>
@@ -437,7 +436,7 @@ const OrdersPage = () => {
                     </Button>
                     {/* Someone else at the table may have ordered for them */}
                     {view === VIEWS.MINE && (
-                      <Button onClick={() => setView(VIEWS.TABLE)} sx={{ textTransform: "none", fontWeight: 600 }}>
+                      <Button onClick={() => setView(VIEWS.TABLE)}>
                         See the whole table&apos;s orders
                       </Button>
                     )}

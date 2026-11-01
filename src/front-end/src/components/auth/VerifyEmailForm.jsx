@@ -83,7 +83,6 @@ const VerifyEmailFormContent = () => {
               },
               fontSize: "1rem",
               height: 56,
-              textTransform: "none",
             }}
             onClick={() => router.push("/auth/login")}
           >
@@ -118,13 +117,8 @@ const VerifyEmailFormContent = () => {
             disabled={loading || !token}
             sx={{
               paddingY: 2,
-              backgroundColor: "red.600",
-              "&:hover": {
-                backgroundColor: "red.700",
-              },
               fontSize: "1rem",
               height: 56,
-              textTransform: "none",
             }}
             onClick={handleVerifyEmail}
           >
@@ -143,7 +137,6 @@ const VerifyEmailFormContent = () => {
             variant="text"
             sx={{
               marginTop: 2,
-              textTransform: "none",
             }}
             onClick={() =>
               router.push("/auth/resend-verification")

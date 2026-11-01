@@ -72,19 +72,3 @@ jest.mock('next/link', () => {
   }
 })
 
-// Mock CSS modules
-jest.mock('../styles/Layout.module.css', () => ({
-  header: 'header',
-  headerText: 'headerText',
-  navbar: 'navbar',
-  navbarLogo: 'navbarLogo',
-  logoImage: 'logoImage',
-  navbarLinks: 'navbarLinks',
-  navbarLinksTitles: 'navbarLinksTitles',
-  navbarLinksContainer: 'navbarLinksContainer',
-  navbarRightContainer: 'navbarRightContainer',
-  authButton: 'authButton',
-  menuDropdownContainer: 'menuDropdownContainer',
-  dropdownMenu: 'dropdownMenu',
-  dropdownMenuVisible: 'dropdownMenuVisible',
-}))

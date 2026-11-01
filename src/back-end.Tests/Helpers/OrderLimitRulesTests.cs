@@ -218,6 +218,23 @@ public class OrderLimitRulesTests
     }
 
     [Fact]
+    public void SessionLeftBeforeCharge_IsTheFreeUnitsLeft_AndNeverBelowZero()
+    {
+        OrderLimitRules.SessionLeftBeforeCharge(PerPerson(1, OverLimitBehavior.Charge), TwoAdults, sessionUsed: 1)
+            .Should().Be(1);
+        OrderLimitRules.SessionLeftBeforeCharge(PerPerson(1, OverLimitBehavior.Charge), TwoAdults, sessionUsed: 5)
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public void SessionLeftBeforeCharge_IsNullForBlockAndUnlimited()
+    {
+        OrderLimitRules.SessionLeftBeforeCharge(PerPerson(1, OverLimitBehavior.Block), TwoAdults, sessionUsed: 0)
+            .Should().BeNull();
+        OrderLimitRules.SessionLeftBeforeCharge(Unlimited, TwoAdults, sessionUsed: 0).Should().BeNull();
+    }
+
+    [Fact]
     public void ItemCharge_CannotPushPastCategoryBlock()
     {
         // Category Block: 5 per person x 2 = 10, 5 used -> 5 left. Item Charge: 1 per person x 2 = 2, 2 used -> 0 left

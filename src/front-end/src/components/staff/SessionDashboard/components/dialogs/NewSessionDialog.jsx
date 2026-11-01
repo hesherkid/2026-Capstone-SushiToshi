@@ -14,10 +14,16 @@ import { useSession } from "../../context/SessionContext";
 import api from "@/config/api";
 import storage from "@/utils/storage";
 
+// The working location chosen in the app bar, as a number to match the location ids
+const getWorkingLocation = () => {
+  const stored = storage.get("branch-location");
+  return stored ? Number(stored) : "";
+};
+
 const NewSessionDialog = ({ open, onClose }) => {
   const { createSession } = useSession();
   const [selectedMenu, setSelectedMenu] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState(storage.get("branch-location") ?? "");
+  const [selectedLocation, setSelectedLocation] = useState(getWorkingLocation);
   const [tableAssignmentType, setTableAssignmentType] = useState("table");
   const [selectedTable, setSelectedTable] = useState("");
   const [selectedTableGroup, setSelectedTableGroup] = useState("");
@@ -63,9 +69,15 @@ const NewSessionDialog = ({ open, onClose }) => {
 
   const ungroupedTables = availableTables.filter((table) => table.tableGroup_Id === null);
 
+  // Sessions can only be created at the working location; the list is only open without one
+  const workingLocation = getWorkingLocation();
+  const locationOptions = workingLocation
+    ? availableLocations.filter((location) => location.location_Id === workingLocation)
+    : availableLocations;
+
   const handleClose = () => {
     setSelectedMenu("");
-    setSelectedLocation(storage.get("branch-location") ?? "");
+    setSelectedLocation(getWorkingLocation());
     setTableAssignmentType("table");
     setSelectedTable("");
     setSelectedTableGroup("");
@@ -115,10 +127,11 @@ const NewSessionDialog = ({ open, onClose }) => {
         select
         label="Location"
         required
-        value={selectedLocation}
+        value={locationOptions.length ? selectedLocation : ""}
         onChange={(e) => setSelectedLocation(e.target.value)}
+        disabled={Boolean(workingLocation)}
       >
-        {availableLocations.map((location) => (
+        {locationOptions.map((location) => (
           <MenuItem key={location.location_Id} value={location.location_Id}>
             {location.name}
           </MenuItem>

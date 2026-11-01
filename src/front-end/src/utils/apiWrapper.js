@@ -1,3 +1,5 @@
+import { isHtmlPage } from "./serverMessage";
+
 /**
  * Creates a reusable API wrapper that handles loading states, errors, and success callbacks.
  * This eliminates the repetitive try-catch-finally blocks in API hooks.
@@ -49,9 +51,10 @@ export const createApiWrapper = ({
       const errorData = error.response?.data;
       const detailedError = {
         ...error,
-        userMessage: errorData?.detail || 
-                    errorData?.message || 
+        userMessage: errorData?.detail ||
+                    errorData?.message ||
                     errorData?.error ||
+                    (isHtmlPage(errorData) ? "Couldn't reach the server. Please try again." : null) ||
                     (typeof errorData === 'string' ? errorData : null) ||
                     error.message
       };

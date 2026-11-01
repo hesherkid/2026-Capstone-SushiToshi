@@ -24,10 +24,13 @@ import MaterialSymbol from "@/components/common/MaterialSymbol";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { setPageLoading } from "@/utils/pageLoading";
 import { formatTime } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { isHtmlPage } from "@/utils/serverMessage";
 
 const SUCCESS_MESSAGE_MS = 8000;
 const NOTE_MAX_LENGTH = 200;
 const BILL_PATH = "/dashboard/bills";
+// Matches the server's per-table cooldown; a 429 tells us the real time left
+const REQUEST_COOLDOWN_SECONDS = 30;
 
 // Tiles show the short label; staff see "Need water refill, napkins"
 const COMMON_REQUESTS = [
@@ -54,7 +57,7 @@ const buildNotes = (picked, note) => {
 
 const getErrorMessage = (err, fallback) => {
   const data = err?.response?.data;
-  if (typeof data === "string" && data.trim()) return data;
+  if (typeof data === "string" && data.trim() && !isHtmlPage(data)) return data;
   return data?.message || data?.detail || data?.title || fallback;
 };
 
@@ -108,12 +111,20 @@ const ServiceRequestForm = () => {
   const [sessionChecked, setSessionChecked] = useState(false);
   // This table's requests staff haven't picked up yet
   const [waiting, setWaiting] = useState([]);
+  // Seconds until this table can send another request
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     if (!success) return;
     const timer = setTimeout(() => setSuccess(false), SUCCESS_MESSAGE_MS);
     return () => clearTimeout(timer);
   }, [success]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   // The app bar's spinner shows while we find the table
   useEffect(() => {
@@ -182,7 +193,7 @@ const ServiceRequestForm = () => {
   //Send the service request to the staff
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!notes || !sessionId) return;
+    if (!notes || !sessionId || cooldown > 0) return;
 
     setIsSubmitting(true);
     setError("");
@@ -194,8 +205,23 @@ const ServiceRequestForm = () => {
       setSuccess(true);
       setPicked([]);
       setNote("");
+      setCooldown(REQUEST_COOLDOWN_SECONDS);
       fetchWaiting();
     } catch (err) {
+      // Too soon: keep what they picked and count down to when they can send it
+      if (err?.response?.status === 429) {
+        setCooldown(
+          Number(err.response.data?.retry_after_seconds) ||
+            REQUEST_COOLDOWN_SECONDS,
+        );
+        setError(
+          getErrorMessage(
+            err,
+            "Please wait a moment before sending another request.",
+          ),
+        );
+        return;
+      }
       console.error("Service request error:", err);
       setError(
         getErrorMessage(err, "Couldn't send your request. Please try again."),
@@ -359,7 +385,7 @@ const ServiceRequestForm = () => {
           variant="contained"
           fullWidth
           size="large"
-          disabled={isSubmitting || !notes || !sessionId}
+          disabled={isSubmitting || !notes || !sessionId || cooldown > 0}
           startIcon={
             isSubmitting ? (
               <CircularProgress size={20} color="inherit" />
@@ -369,7 +395,11 @@ const ServiceRequestForm = () => {
           }
           sx={{ mt: 2, minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
         >
-          {isSubmitting ? "Sending..." : "Send request"}
+          {isSubmitting
+            ? "Sending..."
+            : cooldown > 0
+              ? `Send another in ${cooldown}s`
+              : "Send request"}
         </Button>
       </Paper>
 

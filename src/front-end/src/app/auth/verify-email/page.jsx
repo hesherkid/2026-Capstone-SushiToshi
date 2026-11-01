@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import VerifyEmailForm from "@/components/auth/VerifyEmailForm";
 
 export const metadata = {
-  title: "Verify Email | Sushi Toshi",
+  title: "Verify Email",
   description: "Verify your Sushi Toshi account email",
 };
 

@@ -4,6 +4,7 @@ import FormDialog from "@/components/common/FormDialog";
 import { useSession } from "../../context/SessionContext";
 import { validateBillData } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import { tableLabel } from "../SessionColumns";
+import storage from "@/utils/storage";
 
 // "Table 3" / "Tables 1, 2" for the dialog title, or null if the table isn't known
 const useBillTableLabel = (sessionId, sessions = []) =>
@@ -13,7 +14,7 @@ const useBillTableLabel = (sessionId, sessions = []) =>
     if (session?.table_Numbers?.length) return tableLabel(session.table_Numbers);
 
     // Guests: the table number saved from their QR code
-    const qrTable = typeof window !== "undefined" ? localStorage.getItem("tableNumber") : null;
+    const qrTable = storage.get("tableNumber");
     return qrTable ? `Table ${qrTable}` : null;
   }, [sessionId, sessions]);
 

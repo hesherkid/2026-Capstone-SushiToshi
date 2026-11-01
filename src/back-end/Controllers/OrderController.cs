@@ -23,6 +23,9 @@ namespace back_end.Controllers
         private const string BillRequestedMessage =
             "You've asked for this bill, so no more orders can be added to it. Please ask your server if you'd like anything else.";
 
+        private const string BillNotOpenMessage =
+            "This bill has been closed, so no more orders can be added to it. Please ask your server if you'd like anything else.";
+
         // Once guests press "Ready for Bill" they can't add to that bill; staff still can
         private bool BillOrderingClosed(Billing? bill) =>
             bill?.Requested_At != null && !User.IsInRole("Admin") && !User.IsInRole("Staff");
@@ -70,8 +73,8 @@ namespace back_end.Controllers
         /// <response code="404">If the session doesn't exist</response>
         /// <remarks>
         /// Uses the same headcount and usage as adding items to an order. Per-order limits are
-        /// for a new order. Limits set to Charge are left out: going over them is allowed and
-        /// billed at full price.
+        /// for a new order. Limits set to Charge don't count in session_left: going over them is
+        /// allowed and billed at extra_price. free_left says how many are left before that.
         /// </remarks>
         [Authorize]
         [HttpGet("session/{sessionId}/limits")]
@@ -117,6 +120,8 @@ namespace back_end.Controllers
                         Category_Id = a.MenuItem.Category_id,
                         Per_Order = OrderLimitRules.PerOrderCap(limits),
                         Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
+                        Free_Left = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
+                        Extra_Price = a.Price,
                     };
                 }).ToList(),
                 Categories = assignments
@@ -130,6 +135,7 @@ namespace back_end.Controllers
                             Category_Id = c.Category_id,
                             Per_Order = OrderLimitRules.PerOrderCap(limits),
                             Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
+                            Free_Left = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
                         };
                     }).ToList(),
             };
@@ -175,6 +181,9 @@ namespace back_end.Controllers
         {
             try
             {
+                // Waits for a close of this bill in progress, so the bill read below is current
+                await using var billLock = await BillLock.LockAsync(_context, order_data.Bill_Id);
+
                 var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == order_data.Session_Id);
                 if (session is null)
                 {
@@ -187,10 +196,14 @@ namespace back_end.Controllers
                     return Forbid();
                 }
 
-                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == order_data.Bill_Id && b.Status == BillStatus.Open);
+                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == order_data.Bill_Id);
                 if (bill is null)
                 {
                     return NotFound("Bill Was not found for the current session order Create Bill");
+                }
+                if (bill.Status != BillStatus.Open)
+                {
+                    return BadRequest(new { message = BillNotOpenMessage });
                 }
 
                 if (BillOrderingClosed(bill))
@@ -237,6 +250,7 @@ namespace back_end.Controllers
                 };
                 _context.SessionOrders.Add(newOrder);
                 await _context.SaveChangesAsync();
+                if (billLock != null) await billLock.CommitAsync();
 
                 return Ok(new OrderResponseDTO
                 {
@@ -786,6 +800,10 @@ namespace back_end.Controllers
                 }
 
                 // Guests can't add to a bill after pressing "Ready for Bill", but staff can
+                if (order.Bill?.Status != BillStatus.Open)
+                {
+                    return BadRequest(new { message = BillNotOpenMessage });
+                }
                 if (BillOrderingClosed(order.Bill))
                 {
                     return BadRequest(new { message = BillRequestedMessage });

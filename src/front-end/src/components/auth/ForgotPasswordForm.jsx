@@ -108,8 +108,6 @@ export const ForgotPasswordForm = () => {
               display: "inline-block",
               fontSize: "0.875rem",
               padding: "0.5rem 1rem",
-              color: "blue.600",
-              "&:hover": { color: "blue.800" },
             }}
           >
             Back to Login

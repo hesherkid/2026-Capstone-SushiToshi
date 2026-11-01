@@ -24,6 +24,7 @@ import api from "@/config/api";
 import { loginUser, loginAsGuest, getReusableGuestToken, getAuthToken, isGuestClaims } from "@/utils/auth";
 import { decodeToken, extractRoles, isTokenExpired } from "@/config/auth";
 import { startTableVisit } from "@/utils/tableVisit";
+import storage from "@/utils/storage";
 
 const googleClientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -77,11 +78,11 @@ const LoginFormContent = () => {
 
   const saveRestaurantContext = () => {
     if (locationId) {
-      localStorage.setItem("locationId", locationId);
+      storage.set("locationId", locationId);
     }
 
     if (tableNumber) {
-      localStorage.setItem("tableNumber", tableNumber);
+      storage.set("tableNumber", tableNumber);
     }
   };
 
@@ -96,7 +97,7 @@ const LoginFormContent = () => {
         { Table_Number: Number(tableNumber), Location_Id: Number(locationId) },
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
-      localStorage.setItem("session_id", String(data.session_Id));
+      storage.set("session_id", String(data.session_Id));
       return data.session_Id;
     } catch (err) {
       // e.g. "Table 4 doesn't have an active session yet. Please ask staff to start your table."
@@ -109,11 +110,11 @@ const LoginFormContent = () => {
   };
 
   const clearExistingAuthentication = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("tokenExpiresAt");
-    localStorage.removeItem("user");
-    localStorage.removeItem("guest");
+    storage.remove("authToken");
+    storage.remove("access_token");
+    storage.remove("tokenExpiresAt");
+    storage.remove("user");
+    storage.remove("guest");
   };
 
   const getAuthRoute = (path) => {
@@ -222,7 +223,7 @@ const LoginFormContent = () => {
   // --------------------------------------------------
 
   const clearGuestSession = () => {
-    localStorage.removeItem("guest");
+    storage.remove("guest");
   };
 
   const handleContinueAsGuest = async () => {
@@ -239,7 +240,7 @@ const LoginFormContent = () => {
         throw new Error("Guest login succeeded but no token was returned.");
       }
 
-      localStorage.setItem("guest", "true");
+      storage.set("guest", "true");
       return response.access_token;
     };
 
@@ -304,7 +305,7 @@ const LoginFormContent = () => {
     if (!locationId || !tableNumber) return;
 
     const token = getAuthToken();
-    if (!token || isTokenExpired(token) || localStorage.getItem("guest") === "true") return;
+    if (!token || isTokenExpired(token) || storage.get("guest") === "true") return;
 
     const claims = decodeToken(token);
     const isCustomer = extractRoles(claims).some((role) => String(role).toLowerCase() === "customer");
@@ -342,15 +343,15 @@ const LoginFormContent = () => {
 
       clearExistingAuthentication();
 
-      localStorage.setItem("authToken", data.access_token);
-      localStorage.setItem("access_token", data.access_token);
+      storage.set("authToken", data.access_token);
+      storage.set("access_token", data.access_token);
 
       // The JWT itself contains its expiration.
       // No tokenExpiresAt is required when expires_in
       // is not returned.
 
       if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
+        storage.set("user", JSON.stringify(data.user));
       }
 
       saveRestaurantContext();
@@ -463,7 +464,7 @@ const LoginFormContent = () => {
               fullWidth
               onClick={handleRetryJoin}
               disabled={loading}
-              sx={{ mt: 2, textTransform: "none", fontWeight: 600, }}
+              sx={{ mt: 2, fontWeight: 600, }}
             >
               Try again
             </Button>
@@ -477,7 +478,6 @@ const LoginFormContent = () => {
                 sx={{
                   mt: 1,
                   color: "#92400e",
-                  textTransform: "none",
                   fontWeight: 600,
                 }}
               >
