@@ -24,6 +24,7 @@ import MaterialSymbol from "@/components/common/MaterialSymbol";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { setPageLoading } from "@/utils/pageLoading";
 import { formatTime } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { isHtmlPage } from "@/utils/serverMessage";
 
 const SUCCESS_MESSAGE_MS = 8000;
 const NOTE_MAX_LENGTH = 200;
@@ -56,7 +57,7 @@ const buildNotes = (picked, note) => {
 
 const getErrorMessage = (err, fallback) => {
   const data = err?.response?.data;
-  if (typeof data === "string" && data.trim()) return data;
+  if (typeof data === "string" && data.trim() && !isHtmlPage(data)) return data;
   return data?.message || data?.detail || data?.title || fallback;
 };
 

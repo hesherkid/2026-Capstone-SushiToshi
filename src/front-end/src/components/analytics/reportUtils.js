@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import storage from "@/utils/storage";
+import { isHtmlPage } from "@/utils/serverMessage";
 
 const RANGE_NOTES = {
   today: "today so far",
@@ -50,7 +51,7 @@ export const getErrorMessage = (err, fallback) => {
   if (status === 401)
     return "Your session has expired. Log in again to continue.";
   if (data?.errors) return Object.values(data.errors).flat().join(" ");
-  if (typeof data === "string" && data) return data;
+  if (typeof data === "string" && data && !isHtmlPage(data)) return data;
   return data?.message || data?.title || fallback;
 };
 

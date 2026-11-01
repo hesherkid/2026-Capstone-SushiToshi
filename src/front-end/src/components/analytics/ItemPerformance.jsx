@@ -32,6 +32,7 @@ import {
   exportFileName,
   printReport,
 } from "@/components/analytics/ReportExport";
+import { isHtmlPage } from "@/utils/serverMessage";
 
 const TOP_N = 5;
 
@@ -87,7 +88,7 @@ const getErrorMessage = (err) => {
   if (status === 401)
     return "Your session has expired. Log in again to continue.";
   if (data?.errors) return Object.values(data.errors).flat().join(" ");
-  if (typeof data === "string" && data) return data;
+  if (typeof data === "string" && data && !isHtmlPage(data)) return data;
   return (
     data?.message ||
     data?.title ||

@@ -29,6 +29,7 @@ import ManagementHeader from '@/components/common/ManagementHeader';
 import { Download, QrCode, Wifi, Menu } from 'lucide-react';
 import { api } from '@/config/api';
 import storage from '@/utils/storage';
+import { isHtmlPage } from '@/utils/serverMessage';
 
 // The QR endpoints return error text (e.g. "WiFi credentials not configured"). Downloads request
 // a blob, so an error body arrives as a Blob too and has to be read before it can be shown.
@@ -45,10 +46,10 @@ const getErrorMessage = async (error, fallback) => {
     try {
       data = JSON.parse(data);
     } catch {
-      return data.trim() || fallback;
+      return isHtmlPage(data) ? fallback : data.trim() || fallback;
     }
   }
-  if (typeof data === 'string') return data.trim() || fallback;
+  if (typeof data === 'string') return isHtmlPage(data) ? fallback : data.trim() || fallback;
   return data?.message || data?.title || fallback;
 };
 
