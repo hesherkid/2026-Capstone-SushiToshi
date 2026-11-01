@@ -242,7 +242,7 @@ public class OrderControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateOrder_ClosedBill_ReturnsNotFound()
+    public async Task CreateOrder_ClosedBill_ReturnsBadRequest()
     {
         // Arrange
         SetupUserClaims("123");
@@ -273,7 +273,8 @@ public class OrderControllerTests : IDisposable
         var result = await _controller.CreateOrder(orderCreateDto);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        _context.SessionOrders.Should().NotContain(o => o.Bill_Id == 2);
     }
 
     [Fact]
@@ -609,6 +610,28 @@ public class OrderControllerTests : IDisposable
 
         // Assert
         result.Should().BeOfType<ForbidResult>();
+        var saved = await _context.SessionOrders.Include(o => o.OrderItems)
+            .SingleAsync(o => o.Order_Id == order.Order_Id);
+        saved.OrderItems.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task AddOrderItems_BillClosed_ReturnsBadRequest()
+    {
+        // Arrange: a pending order left on a bill that staff have since closed
+        var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
+        var bill = await _context.Bills.SingleAsync(b => b.Bill_Id == order.Bill_Id);
+        bill.Status = BillStatus.Closed;
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+        SetupUserClaims("123");
+
+        // Act
+        var result = await _controller.AddOrderItems(order.Order_Id,
+            new List<OrderItemCreateDTO> { new() { Item_Id = 1, Quantity = 1 } });
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
         var saved = await _context.SessionOrders.Include(o => o.OrderItems)
             .SingleAsync(o => o.Order_Id == order.Order_Id);
         saved.OrderItems.Should().HaveCount(1);

@@ -395,6 +395,9 @@ namespace back_end.controllers
     {
       try
       {
+        // Waits for an order being placed on this bill, so the pending order check below sees it
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+
         var bill = await _context.Bills
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.Table)
@@ -440,6 +443,7 @@ namespace back_end.controllers
         bill.Status = BillStatus.Closed;
         bill.Closed_At = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
         await _context.Entry(bill).ReloadAsync();
 
         return Ok(new BillResponse
