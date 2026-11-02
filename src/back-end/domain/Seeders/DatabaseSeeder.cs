@@ -216,6 +216,8 @@ namespace back_end.domain.Seeders
         await _context.SaveChangesAsync();
         _billSeeder.Seed(); _logger.LogInformation("Bills seeded successfully");
         await _context.SaveChangesAsync();
+        await _billSeeder.FreezeClosedBillsAsync();
+        await _context.SaveChangesAsync();
         _sessionOrderSeeder.Seed(); _logger.LogInformation("Session orders seeded successfully");
         await _context.SaveChangesAsync();
         _orderItemSeeder.Seed(); _logger.LogInformation("Order items seeded successfully");

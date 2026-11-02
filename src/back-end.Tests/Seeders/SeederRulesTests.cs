@@ -8,6 +8,7 @@ using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.domain.Seeders;
 using back_end.Helpers;
+using back_end.Services;
 
 namespace back_end.Tests.Seeders;
 
@@ -17,6 +18,20 @@ public class SeederRulesTests
     private const int Runs = 5;
     private const int LocationId = 1;
     private const int UnavailableItemId = 99;
+
+    // Gratuity from 6 guests, so the freeze test can check it follows the table's party size
+    private static readonly PricingInfo SeedPricing = new()
+    {
+        PricingType = "Weekday",
+        PricingSource = "Default",
+        AdultBasePrice = 30m,
+        SeniorBasePrice = 25m,
+        ChildBasePrice = 15m,
+        ToddlerBasePrice = 0m,
+        TaxRate = 0.05m,
+        GratuityRate = 0.18m,
+        GratuityMinPartySize = 6,
+    };
 
     private static ApplicationDbContext NewContext() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -113,9 +128,15 @@ public class SeederRulesTests
         participants.Seed();
         context.SaveChanges();
 
-        var bills = new BillSeeder(context, new Mock<ILogger<BillSeeder>>().Object);
+        var pricing = new Mock<IPricingService>();
+        pricing.Setup(p => p.GetPricingAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(SeedPricing);
+
+        var bills = new BillSeeder(context, new Mock<ILogger<BillSeeder>>().Object, pricing.Object);
         bills.SetUserSeedData(pool);
         bills.Seed();
+        context.SaveChanges();
+        bills.FreezeClosedBillsAsync().GetAwaiter().GetResult();
         context.SaveChanges();
 
         var orders = new SessionOrderSeeder(context, new Mock<ILogger<SessionOrderSeeder>>().Object);
@@ -316,5 +337,39 @@ public class SeederRulesTests
     public void BuildNotes_MatchesTheCustomerForm(string[] picked, string? note, string expected)
     {
         ServiceRequestSeeder.BuildNotes(picked, note).Should().Be(expected);
+    }
+
+    [Fact]
+    public void ClosedBills_HaveFrozenPrices_OpenAndCancelledBillsDoNot()
+    {
+        for (var run = 0; run < Runs; run++)
+        {
+            using var context = Seeded();
+            var bills = context.Bills.ToList();
+
+            bills.Where(b => b.Status == BillStatus.Closed)
+                 .Should().OnlyContain(b => b.Pricing_Type == PricingDayType.Weekday && b.Adult_Price == SeedPricing.AdultBasePrice);
+            bills.Where(b => b.Status != BillStatus.Closed)
+                 .Should().OnlyContain(b => b.Pricing_Type == null);
+        }
+    }
+
+    [Fact]
+    public void ClosedBills_FreezeTheGratuityTheTableEarned()
+    {
+        for (var run = 0; run < Runs; run++)
+        {
+            using var context = Seeded();
+            var bills = context.Bills.ToList();
+
+            foreach (var bill in bills.Where(b => b.Status == BillStatus.Closed))
+            {
+                var partySize = bills
+                    .Where(b => b.Session_Id == bill.Session_Id && b.Status != BillStatus.Cancelled)
+                    .Sum(b => b.Adult_Count + b.Senior_Count + b.Child_Count + b.Tot_Count);
+
+                bill.Gratuity_Rate.Should().Be(partySize >= SeedPricing.GratuityMinPartySize ? SeedPricing.GratuityRate : 0m);
+            }
+        }
     }
 }
