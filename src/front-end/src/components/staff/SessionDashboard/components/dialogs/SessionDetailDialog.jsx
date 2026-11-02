@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
 import DialogHeader from "@/components/common/DialogHeader";
-import { Check, Receipt, ReceiptText, LogOut, Bell } from "lucide-react";
+import { Check, Receipt, ReceiptText, LogOut, Bell, Plus } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
 import {
@@ -116,22 +116,8 @@ const SessionDetailDialog = () => {
                 <List sx={{ py: 0 }}>
                   {bills.map((bill, index) => (
                     <Box key={bill.bill_Id}>
-                      <ListItem
-                        sx={{ px: 3, gap: 1 }}
-                        secondaryAction={
-                          <Box sx={{ display: "flex", gap: 1 }}>
-                            <Tooltip title="View bill summary">
-                              <Button
-                                aria-label={`View ${bill.bill_Name} summary`}
-                                onClick={() => setSummaryBillId(bill.bill_Id)}
-                                startIcon={<Receipt />}
-                              >
-                                View Bill Summary
-                              </Button>
-                            </Tooltip>
-                          </Box>
-                        }
-                      >
+                      {/* Buttons sit in the row (not secondaryAction) so they wrap under the name on phones */}
+                      <ListItem sx={{ px: 3, gap: 1, flexWrap: "wrap" }}>
                         <ListItemText
                           primary={
                             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -153,8 +139,28 @@ const SessionDetailDialog = () => {
                             </Box>
                           }
                           secondary={formatGuestBreakdown(bill)}
-                          sx={{ pr: 16 }}
                         />
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                          {isOpenBill(bill) && (
+                            <Button
+                              variant="outlined"
+                              aria-label={`Add order to ${bill.bill_Name}`}
+                              onClick={() => actions.addOrder(session, bill)}
+                              startIcon={<Plus size={18} />}
+                            >
+                              Add Order
+                            </Button>
+                          )}
+                          <Tooltip title="View bill summary">
+                            <Button
+                              aria-label={`View ${bill.bill_Name} summary`}
+                              onClick={() => setSummaryBillId(bill.bill_Id)}
+                              startIcon={<Receipt />}
+                            >
+                              View Bill Summary
+                            </Button>
+                          </Tooltip>
+                        </Box>
                       </ListItem>
                       {index < bills.length - 1 && <Divider component="li" />}
                     </Box>

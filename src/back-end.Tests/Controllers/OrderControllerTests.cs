@@ -660,47 +660,18 @@ public class OrderControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateOrder_CustomerSetsRequestBy_IsIgnored()
-    {
-        // Arrange
-        SetupUserClaims("123", "User One");
-
-        // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO
-        {
-            Session_Id = 1,
-            Bill_Id = 1,
-            Request_By_User_Id = 456,
-            Request_By_Name = "User Two",
-            Items = OneItem()
-        });
-
-        // Assert
-        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
-        order!.User_Id.Should().Be(123);
-        order.User_Name.Should().Be("User One");
-    }
-
-    [Fact]
-    public async Task CreateOrder_StaffOrderingForCustomer_UsesRequestBy()
+    public async Task CreateOrder_Staff_RecordsStaffMember()
     {
         // Arrange: staff aren't seated at the table but can order at any table
         SetupUserClaims("42", "Server", "Staff");
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO
-        {
-            Session_Id = 1,
-            Bill_Id = 1,
-            Request_By_User_Id = 123,
-            Request_By_Name = "User One",
-            Items = OneItem()
-        });
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
 
         // Assert
         var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
-        order!.User_Id.Should().Be(123);
-        order.User_Name.Should().Be("User One");
+        order!.User_Id.Should().Be(42);
+        order.User_Name.Should().Be("Server");
     }
 
     [Fact]

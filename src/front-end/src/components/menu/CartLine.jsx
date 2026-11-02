@@ -8,6 +8,7 @@ const money = (value) => `$${(Number(value) || 0).toFixed(2)}`;
 // The full card (photo, description, tags) is for browsing the menu
 // atLimit: the cart holds as many as the limit allows, so no more adding and the note turns red
 // extra: units past a limit that charges (e.g. Hot Stone past 1 per person), at extraPrice each
+// nameComponent: the item name's heading level (h4 under category headings, as staff ordering has)
 const CartLine = ({
   item,
   categoryId,
@@ -16,6 +17,7 @@ const CartLine = ({
   atLimit = false,
   extra = 0,
   extraPrice = 0,
+  nameComponent = "h3",
 }) => {
   const limits = limitText(item);
   const included = quantity - extra;
@@ -24,7 +26,7 @@ const CartLine = ({
     <Box sx={{ px: 2, py: 2, textAlign: "left" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography component="h3" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+          <Typography component={nameComponent} sx={{ fontWeight: 600, lineHeight: 1.3 }}>
             {item.name}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>

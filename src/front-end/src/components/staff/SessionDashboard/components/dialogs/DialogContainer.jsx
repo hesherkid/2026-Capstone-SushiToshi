@@ -3,6 +3,7 @@ import NewSessionDialog from "./NewSessionDialog";
 import AddTableDialog from "./AddTableDialog";
 import NewBillDialog from "./NewBillDialog";
 import SessionDetailDialog from "./SessionDetailDialog";
+import StaffOrderDialog from "./StaffOrderDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const DialogContainer = () => {
@@ -24,6 +25,14 @@ const DialogContainer = () => {
       <NewBillDialog
         open={type === "newBill"}
         sessionId={data}
+        onClose={closeDialog}
+      />
+
+      {/* data: { sessionId, billId } */}
+      <StaffOrderDialog
+        open={type === "staffOrder"}
+        sessionId={data?.sessionId}
+        billId={data?.billId}
         onClose={closeDialog}
       />
 
