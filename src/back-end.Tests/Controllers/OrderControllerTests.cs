@@ -52,6 +52,7 @@ public class OrderControllerTests : IDisposable
         var session = new DiningSession
         {
             Session_Id = 1,
+            Menu_Id = 1,
             Location_Id = 1,
         };
 
@@ -72,6 +73,7 @@ public class OrderControllerTests : IDisposable
         var otherSession = new DiningSession
         {
             Session_Id = 2,
+            Menu_Id = 1,
             Location_Id = 1,
         };
 
@@ -123,29 +125,48 @@ public class OrderControllerTests : IDisposable
     private SessionOrder SeedOrder(OrderStatus orderStatus, params OrderStatus[] itemStatuses) =>
         SeedOrderAt(1, 1, orderStatus, itemStatuses);
 
+    // Salmon Nigiri (item 1) on menu 1, orderable at sessions 1 and 2
+    private void SeedMenuItem(Action<MenuItemAssignment>? configure = null)
+    {
+        if (_context.MenuItems.Any())
+        {
+            return;
+        }
+
+        _context.Menus.Add(new Menu
+        {
+            Menu_id = 1,
+            Name = "Dinner",
+            Description = "Dinner",
+            Start_time = new TimeOnly(16, 0),
+            End_time = new TimeOnly(22, 0),
+            Is_active = true
+        });
+        _context.Categories.Add(new Category { Category_id = 1, Category_name = "Nigiri", Description = "Nigiri" });
+        _context.MenuItems.Add(new Menu_Item
+        {
+            item_id = 1,
+            Name = "Salmon Nigiri",
+            Description = "Salmon",
+            Category_id = 1,
+            Status = MenuItemStatus.Available
+        });
+        var assignment = new MenuItemAssignment { Assignment_Id = 1, Menu_Id = 1, Item_Id = 1, Status = MenuItemStatus.Available };
+        configure?.Invoke(assignment);
+        _context.MenuItemAssignments.Add(assignment);
+        _context.SaveChanges();
+    }
+
+    // Items for a new order: one Salmon Nigiri
+    private List<OrderItemCreateDTO> OneItem()
+    {
+        SeedMenuItem();
+        return new List<OrderItemCreateDTO> { new() { Menu_Id = 1, Item_Id = 1, Quantity = 1 } };
+    }
+
     private SessionOrder SeedOrderAt(int sessionId, int billId, OrderStatus orderStatus, params OrderStatus[] itemStatuses)
     {
-        if (!_context.MenuItems.Any())
-        {
-            _context.Menus.Add(new Menu
-            {
-                Menu_id = 1,
-                Name = "Dinner",
-                Description = "Dinner",
-                Start_time = new TimeOnly(16, 0),
-                End_time = new TimeOnly(22, 0),
-                Is_active = true
-            });
-            _context.Categories.Add(new Category { Category_id = 1, Category_name = "Nigiri", Description = "Nigiri" });
-            _context.MenuItems.Add(new Menu_Item
-            {
-                item_id = 1,
-                Name = "Salmon Nigiri",
-                Description = "Salmon",
-                Category_id = 1,
-                Status = MenuItemStatus.Available
-            });
-        }
+        SeedMenuItem();
 
         var order = new SessionOrder
         {
@@ -179,7 +200,8 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 1,
-            Bill_Id = 1
+            Bill_Id = 1,
+            Items = OneItem()
         };
 
         // Act
@@ -196,11 +218,87 @@ public class OrderControllerTests : IDisposable
         orderResponse.User_Id.Should().Be(123);
         orderResponse.User_Name.Should().Be("Test User");
         orderResponse.Status.Should().Be(OrderStatus.Pending);
+        orderResponse.OrderItems.Should().ContainSingle()
+            .Which.Should().Match<OrderItemResponseDTO>(i =>
+                i.Item_Id == 1 && i.Quantity == 1 && i.Name == "Salmon Nigiri" && i.Charge_Reason == "None");
 
-        // Verify order was saved to database
-        var savedOrder = await _context.SessionOrders.FirstOrDefaultAsync();
+        // Verify the order was saved to the database with its items
+        var savedOrder = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync();
         savedOrder.Should().NotBeNull();
         savedOrder!.User_Id.Should().Be(123);
+        savedOrder.OrderItems.Should().ContainSingle().Which.Item_Id.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreateOrder_NoItems_ReturnsBadRequest_AndSavesNothing()
+    {
+        // Arrange
+        SetupUserClaims("123");
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+
+        // Assert
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        _context.SessionOrders.Should().BeEmpty();
+        (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateOrder_ItemNotAvailable_ReturnsBadRequest_AndSavesNothing()
+    {
+        // Arrange: item 999 isn't on the menu
+        SetupUserClaims("123");
+        var items = OneItem();
+        items.Add(new OrderItemCreateDTO { Menu_Id = 1, Item_Id = 999, Quantity = 1 });
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = items });
+
+        // Assert: the valid item isn't saved either
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        _context.SessionOrders.Should().BeEmpty();
+        _context.OrderItems.Should().BeEmpty();
+        (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateOrder_OverPerOrderLimit_ReturnsBadRequest_AndSavesNothing()
+    {
+        // Arrange: one Salmon Nigiri per order
+        SetupUserClaims("123");
+        SeedMenuItem(a => a.Per_Order_Limit = 1);
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO
+        {
+            Session_Id = 1,
+            Bill_Id = 1,
+            Items = new List<OrderItemCreateDTO> { new() { Menu_Id = 1, Item_Id = 1, Quantity = 2 } }
+        });
+
+        // Assert
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        _context.SessionOrders.Should().BeEmpty();
+        (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(100)]
+    public async Task CreateOrder_BadQuantity_ReturnsBadRequest_AndSavesNothing(int quantity)
+    {
+        // Arrange
+        SetupUserClaims("123");
+        var items = OneItem();
+        items[0].Quantity = quantity;
+
+        // Act
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = items });
+
+        // Assert
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        _context.SessionOrders.Should().BeEmpty();
     }
 
     [Fact]
@@ -212,7 +310,8 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 999,
-            Bill_Id = 1
+            Bill_Id = 1,
+            Items = OneItem()
         };
 
         // Act
@@ -231,7 +330,8 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 1,
-            Bill_Id = 999
+            Bill_Id = 999,
+            Items = OneItem()
         };
 
         // Act
@@ -266,7 +366,8 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 1,
-            Bill_Id = 2
+            Bill_Id = 2,
+            Items = OneItem()
         };
 
         // Act
@@ -287,7 +388,8 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 1,
-            Bill_Id = 1
+            Bill_Id = 1,
+            Items = OneItem()
         };
 
         // Act
@@ -311,7 +413,8 @@ public class OrderControllerTests : IDisposable
         var orderCreateDto = new OrderCreateDTO
         {
             Session_Id = 1,
-            Bill_Id = 1
+            Bill_Id = 1,
+            Items = OneItem()
         };
 
         // Act
@@ -339,7 +442,8 @@ public class OrderControllerTests : IDisposable
             var orderCreateDto = new OrderCreateDTO
             {
                 Session_Id = 1,
-                Bill_Id = 1
+                Bill_Id = 1,
+                Items = OneItem()
             };
             await _controller.CreateOrder(orderCreateDto);
         }
@@ -376,7 +480,7 @@ public class OrderControllerTests : IDisposable
         };
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
 
         // Assert
         var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
@@ -477,10 +581,10 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("123");
 
         // Act
-        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
         var first = (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At;
 
-        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
         var after = (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At;
 
         // Assert
@@ -535,7 +639,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("123");
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 2, Bill_Id = 3 });
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 2, Bill_Id = 3, Items = OneItem() });
 
         // Assert
         result.Result.Should().BeOfType<ForbidResult>();
@@ -549,7 +653,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("789");
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
 
         // Assert
         result.Result.Should().BeOfType<ForbidResult>();
@@ -567,7 +671,8 @@ public class OrderControllerTests : IDisposable
             Session_Id = 1,
             Bill_Id = 1,
             Request_By_User_Id = 456,
-            Request_By_Name = "User Two"
+            Request_By_Name = "User Two",
+            Items = OneItem()
         });
 
         // Assert
@@ -588,7 +693,8 @@ public class OrderControllerTests : IDisposable
             Session_Id = 1,
             Bill_Id = 1,
             Request_By_User_Id = 123,
-            Request_By_Name = "User One"
+            Request_By_Name = "User One",
+            Items = OneItem()
         });
 
         // Assert
@@ -760,6 +866,23 @@ public class OrderControllerTests : IDisposable
             endedDelivered.Order_Id, endedProcessing.Order_Id
         });
 
+    }
+
+    [Fact]
+    public async Task GetAllOrdersByLocation_HidesOrdersWithNoItems()
+    {
+        // Arrange: an empty order left behind before orders were saved with their items
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        var empty = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Pending);
+        var withItems = SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Pending, OrderStatus.Pending);
+
+        // Act
+        var ids = OrderIds(await _controller.GetAllOrdersByLocation(locationId: 1));
+
+        // Assert
+        ids.Should().Equal(withItems.Order_Id);
+        ids.Should().NotContain(empty.Order_Id);
     }
 
     [Fact]
@@ -984,6 +1107,40 @@ public class OrderControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         ItemExists(target).Should().BeFalse();
         ItemExists(keep).Should().BeTrue();
+        // Other items are left, so the order stays open
+        (await _context.SessionOrders.AsNoTracking().SingleAsync(o => o.Order_Id == order.Order_Id))
+            .Status.Should().Be(OrderStatus.Pending);
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_LastItem_CancelsTheOrder()
+    {
+        SetupUserClaims("42", role: "Staff");
+        var order = SeedOrderOwnedBy(123, OrderStatus.Pending, OrderStatus.Pending);
+        var target = order.OrderItems.Single().Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        result.Should().BeOfType<OkObjectResult>();
+        ItemExists(target).Should().BeFalse();
+        var saved = await _context.SessionOrders.AsNoTracking().SingleAsync(o => o.Order_Id == order.Order_Id);
+        saved.Status.Should().Be(OrderStatus.Cancelled);
+        saved.Completed_At.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_LastItemThatIsntCancelled_CancelsTheOrder()
+    {
+        // Arrange: the only other item was already cancelled
+        SetupUserClaims("42", role: "Staff");
+        var order = SeedOrderOwnedBy(123, OrderStatus.Pending, OrderStatus.Cancelled, OrderStatus.Pending);
+        var target = order.OrderItems.Single(oi => oi.Order_Item_Status == OrderStatus.Pending).Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        result.Should().BeOfType<OkObjectResult>();
+        (await _context.SessionOrders.AsNoTracking().SingleAsync(o => o.Order_Id == order.Order_Id))
+            .Status.Should().Be(OrderStatus.Cancelled);
     }
 
     [Fact]

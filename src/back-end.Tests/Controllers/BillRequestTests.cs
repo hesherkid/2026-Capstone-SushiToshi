@@ -49,8 +49,15 @@ public class BillRequestTests : IDisposable
             new Billing { Bill_Id = 333, Session_Id = 269, Bill_Name = "Park", Adult_Count = 2, Total_Count = 2 },
             new Billing { Bill_Id = 334, Session_Id = 269, Bill_Name = "Closed", Status = BillStatus.Closed });
         _context.SessionOrders.Add(new SessionOrder { Order_Id = 900, session_id = 269, Bill_Id = 332, Status = OrderStatus.Pending, Created_At = DateTime.UtcNow });
+        _context.Categories.Add(new Category { Category_id = 1, Category_name = "Nigiri", Description = "Nigiri" });
+        _context.MenuItems.Add(new Menu_Item { item_id = 1, Name = "Salmon Nigiri", Description = "Salmon", Category_id = 1 });
+        _context.MenuItemAssignments.Add(new MenuItemAssignment { Assignment_Id = 1, Menu_Id = 1, Item_Id = 1, Status = MenuItemStatus.Available });
         _context.SaveChanges();
     }
+
+    // Items for a new order: one Salmon Nigiri
+    private static List<OrderItemCreateDTO> OneItem() =>
+        new() { new() { Menu_Id = 1, Item_Id = 1, Quantity = 1 } };
 
     public void Dispose() => _context.Dispose();
 
@@ -112,7 +119,7 @@ public class BillRequestTests : IDisposable
     {
         await Bills(Guest).Request_Bill(269, 332);
 
-        var result = await Orders(Guest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 332 });
+        var result = await Orders(Guest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 332, Items = OneItem() });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -136,7 +143,7 @@ public class BillRequestTests : IDisposable
     {
         await Bills(Guest).Request_Bill(269, 332);
 
-        var result = await Orders(Guest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 333 });
+        var result = await Orders(Guest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 333, Items = OneItem() });
 
         result.Result.Should().NotBeOfType<BadRequestObjectResult>();
         (await _context.SessionOrders.AnyAsync(o => o.Bill_Id == 333)).Should().BeTrue();
@@ -147,7 +154,7 @@ public class BillRequestTests : IDisposable
     {
         await Bills(Guest).Request_Bill(269, 332);
 
-        var result = await Orders(Server, "Staff").CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 332 });
+        var result = await Orders(Server, "Staff").CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 332, Items = OneItem() });
 
         result.Result.Should().NotBeOfType<BadRequestObjectResult>();
     }

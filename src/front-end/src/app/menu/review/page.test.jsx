@@ -11,14 +11,18 @@ jest.mock("next/navigation", () => ({
 }));
 
 const mockCreateOrder = jest.fn();
-const mockAddOrderItems = jest.fn();
 let mockOnSuccess;
+// The server saves the order with its items, then the page's success callback runs
+const ordersPlaced = (order = { order_Id: 500, orderItems: [] }) =>
+  mockCreateOrder.mockImplementation(async () => {
+    await mockOnSuccess();
+    return order;
+  });
 jest.mock("@/hooks/useOrderActions", () => ({
   useOrderActions: (onSuccess) => {
     mockOnSuccess = onSuccess;
     return {
       createOrder: mockCreateOrder,
-      addOrderItems: mockAddOrderItems,
       actionError: null,
       isLoading: false,
       clearActionError: jest.fn(),
@@ -98,8 +102,7 @@ describe("Review order page", () => {
 
   it("places the order with each item's name and shows a confirmation", async () => {
     withCart();
-    mockCreateOrder.mockResolvedValue({ order_Id: 500 });
-    mockAddOrderItems.mockImplementation(async () => mockOnSuccess());
+    ordersPlaced();
     renderPage();
 
     const placeOrder = await screen.findByRole("button", {
@@ -108,15 +111,18 @@ describe("Review order page", () => {
     await waitFor(() => expect(placeOrder).toBeEnabled());
     fireEvent.click(placeOrder);
 
-    await waitFor(() => expect(mockCreateOrder).toHaveBeenCalledWith(42, 8));
-    expect(mockAddOrderItems).toHaveBeenCalledWith(500, [
-      expect.objectContaining({
-        item_id: 11,
-        quantity: 2,
-        name: "Miso Soup",
-        menu_id: 7,
-      }),
-    ]);
+    // One request with the items, so a failure can't leave an empty order
+    await waitFor(() =>
+      expect(mockCreateOrder).toHaveBeenCalledWith(42, 8, [
+        expect.objectContaining({
+          item_id: 11,
+          quantity: 2,
+          name: "Miso Soup",
+          menu_id: 7,
+        }),
+      ]),
+    );
+    expect(mockCreateOrder).toHaveBeenCalledTimes(1);
 
     expect(
       await screen.findByRole("heading", { name: "Order sent!" }),
@@ -131,16 +137,13 @@ describe("Review order page", () => {
 
   it("tells the guest what the extras over a limit will cost once the order is sent", async () => {
     withCart();
-    mockCreateOrder.mockResolvedValue({ order_Id: 500 });
     // The server split the 2 into 1 included and 1 charged extra
-    mockAddOrderItems.mockImplementation(async () => {
-      await mockOnSuccess();
-      return {
-        lines: [
-          { itemId: 11, quantity: 1, priceAtTime: 0, chargeReason: "None" },
-          { itemId: 11, quantity: 1, priceAtTime: 5, chargeReason: "OverLimit" },
-        ],
-      };
+    ordersPlaced({
+      order_Id: 500,
+      orderItems: [
+        { item_id: 11, quantity: 1, price_at_time: 0, charge_reason: "None" },
+        { item_id: 11, quantity: 1, price_at_time: 5, charge_reason: "OverLimit" },
+      ],
     });
     renderPage();
 
@@ -169,7 +172,7 @@ describe("Review order page", () => {
     fireEvent.click(placeOrder);
 
     expect(
-      await screen.findByText("Couldn't start your order. Please try again."),
+      await screen.findByText("Couldn't place your order. Please try again."),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Order sent!" }),
@@ -284,8 +287,7 @@ describe("Review order page", () => {
 
   it("reloads the table's limits after an order goes through, so the menu shows what's left", async () => {
     withCart();
-    mockCreateOrder.mockResolvedValue({ order_Id: 500 });
-    mockAddOrderItems.mockImplementation(async () => mockOnSuccess());
+    ordersPlaced();
     renderPage();
 
     const placeOrder = await screen.findByRole("button", {
@@ -303,14 +305,9 @@ describe("Review order page", () => {
     await waitFor(() => expect(limitsLoads()).toBeGreaterThan(before));
   });
 
-  it("starts a new order on the next try instead of reusing one that failed", async () => {
+  it("sends the whole order again on the next try after one fails", async () => {
     withCart();
-    mockCreateOrder
-      .mockResolvedValueOnce({ order_Id: 500 })
-      .mockResolvedValueOnce({ order_Id: 501 });
-    mockAddOrderItems
-      .mockResolvedValueOnce(null)
-      .mockImplementationOnce(async () => mockOnSuccess());
+    mockCreateOrder.mockResolvedValueOnce(null);
     renderPage();
 
     const placeOrder = await screen.findByRole("button", {
@@ -318,7 +315,9 @@ describe("Review order page", () => {
     });
     await waitFor(() => expect(placeOrder).toBeEnabled());
     fireEvent.click(placeOrder);
-    await waitFor(() => expect(mockAddOrderItems).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockCreateOrder).toHaveBeenCalledTimes(1));
+
+    ordersPlaced({ order_Id: 501, orderItems: [] });
 
     await waitFor(() =>
       expect(
@@ -329,12 +328,13 @@ describe("Review order page", () => {
       screen.getByRole("button", { name: "Place order · 2 items" }),
     );
 
-    await waitFor(() => expect(mockAddOrderItems).toHaveBeenCalledTimes(2));
+    await screen.findByRole("heading", { name: "Order sent!" });
     expect(mockCreateOrder).toHaveBeenCalledTimes(2);
-    expect(mockAddOrderItems).toHaveBeenLastCalledWith(501, expect.any(Array));
-    // No saved order to reuse, and no lookup of the old one
+    expect(mockCreateOrder).toHaveBeenLastCalledWith(42, 8, [
+      expect.objectContaining({ item_id: 11, quantity: 2 }),
+    ]);
+    // No saved order to reuse
     expect(localStorage.getItem("pendingOrder")).toBeNull();
-    expect(api.get).not.toHaveBeenCalledWith("/Order/500");
   });
 
   it("shows an empty bag with a way back to the menu", async () => {
