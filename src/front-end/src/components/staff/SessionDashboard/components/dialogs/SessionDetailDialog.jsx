@@ -24,6 +24,7 @@ import {
   getBillStatusColor,
   formatGuestBreakdown,
   sortBillsByStatus,
+  sessionGuestCount,
 } from "../../utils/sessionHelpers";
 import { tableLabel, isOpenBill, SeatedFor } from "../SessionColumns";
 import BillSummaryDialog from "./BillSummaryDialog";
@@ -48,6 +49,7 @@ const SessionDetailDialog = () => {
   const requests = session ? requestsBySession[session.session_Id] || [] : [];
   const bills = sortBillsByStatus(session?.bills || []);
   const hasOpenBills = bills.some(isOpenBill);
+  const guestCount = sessionGuestCount(session);
 
 
   return (
@@ -61,8 +63,7 @@ const SessionDetailDialog = () => {
                 <>
                   Started {formatTime(session.started_At)} ·{" "}
                   <SeatedFor startedAt={session.started_At} /> ·{" "}
-                  {session.active_Participants ?? 0} guest
-                  {session.active_Participants === 1 ? "" : "s"}
+                  {guestCount} guest{guestCount === 1 ? "" : "s"}
                 </>
               }
               onClose={closeSession}
