@@ -89,7 +89,7 @@ public class BillControllerTests : IDisposable
             new User { User_id = StaffElsewhere, Email = "staff2@example.com", Role = UserRoles.Staff, Location_id = 2 });
 
         _context.SessionParticipants.AddRange(
-            new SessionParticipant { Session_Id = TableSession, User_Id = SeatedGuest, User_Name = "Guest K7P2" },
+            new SessionParticipant { Session_Id = TableSession, User_Id = SeatedGuest, User_Name = "Guest K7P2", Bill_Id = LeeBill },
             new SessionParticipant { Session_Id = TableSession, User_Id = GuestWhoLeft, User_Name = "Guest 4MXA", Left_At = DateTime.UtcNow });
 
         _context.Bills.AddRange(

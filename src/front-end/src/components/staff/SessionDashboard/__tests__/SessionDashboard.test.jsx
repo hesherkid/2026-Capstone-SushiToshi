@@ -57,7 +57,7 @@ const sessions = [
     table_Numbers: [1, 2],
     started_At: "2026-10-14T20:10:00Z",
     active_Participants: 4,
-    bills: [{ bill_Id: 80, bill_Name: "Lee", status: "Open", total_Guests: 4 }],
+    bills: [{ bill_Id: 80, bill_Name: "Lee", status: "Open", total_Guests: 4, started_By_Guest: true }],
     bill_Count: 1,
     is_Closable: false,
   },
@@ -137,6 +137,14 @@ describe("Session dashboard", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Mark request done" }));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith("/ServiceRequest/11/complete"));
+  });
+
+  it("flags bills a guest started on their phone so staff check the guest count", async () => {
+    await renderDashboard();
+
+    fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Started by guest")).toBeInTheDocument();
   });
 
   it("closes a bill from its summary and blocks ending the session until then", async () => {

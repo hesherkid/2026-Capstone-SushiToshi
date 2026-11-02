@@ -26,6 +26,10 @@ namespace back_end.Controllers
         private const string BillNotOpenMessage =
             "This bill has been closed, so no more orders can be added to it. Please ask your server if you'd like anything else.";
 
+        // A customer ordering onto a bill they aren't on (or before they've picked one)
+        private const string NotYourBillMessage =
+            "You can only order on your own bill. Choose your bill and try again.";
+
         // Once guests press "Ready for Bill" they can't add to that bill; staff still can
         private bool BillOrderingClosed(Billing? bill) =>
             bill?.Requested_At != null && !User.IsInRole("Admin") && !User.IsInRole("Staff");
@@ -318,10 +322,16 @@ namespace back_end.Controllers
                     return Forbid();
                 }
 
-                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == order_data.Bill_Id);
+                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == order_data.Bill_Id && b.Session_Id == session.Session_Id);
                 if (bill is null)
                 {
                     return NotFound("Bill Was not found for the current session order Create Bill");
+                }
+
+                // Customers only order onto the bill they're on
+                if (!await SessionAccess.CanUseBillAsync(_context, User, session.Session_Id, bill.Bill_Id))
+                {
+                    return BadRequest(new { message = NotYourBillMessage });
                 }
                 if (bill.Status != BillStatus.Open)
                 {
@@ -937,10 +947,14 @@ namespace back_end.Controllers
                     return NotFound(new { message = $"Order {orderId} not found" });
                 }
 
-                // Staff can add to any order; customers only to orders at the table they're seated at
+                // Staff can add to any order; customers only to orders on the bill they're on
                 if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
                 {
                     return Forbid();
+                }
+                if (!await SessionAccess.CanUseBillAsync(_context, User, order.session_id, order.Bill_Id))
+                {
+                    return BadRequest(new { message = NotYourBillMessage });
                 }
 
                 // Guests can't add to a bill after pressing "Ready for Bill", but staff can
@@ -1426,8 +1440,8 @@ namespace back_end.Controllers
                     return NotFound(new { message = $"Can't find Order with ID: {id}" });
                 }
 
-                // Staff see any order; customers only orders at the table they're seated at
-                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
+                // Staff see any order; customers only orders on the bill they're on
+                if (!await SessionAccess.CanUseBillAsync(_context, User, order.session_id, order.Bill_Id))
                 {
                     return Forbid();
                 }
@@ -1513,11 +1527,20 @@ namespace back_end.Controllers
                     return NotFound(new { message = $"Can't find session with the ID: {sessionId}" });
                 }
 
-                // Staff see any table; customers see every order at the table they're seated at,
-                // so when one person orders for everyone the rest of the table can see it too
+                // Staff see any table; customers see every order on their own bill,
+                // so when one person orders for their party the rest of it can see it too
                 if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
                 {
                     return Forbid();
+                }
+                if (!SessionAccess.IsStaff(User))
+                {
+                    var myBillId = await SessionAccess.MyBillIdAsync(_context, User, sessionId);
+                    if (bill_id.HasValue && bill_id != myBillId)
+                    {
+                        return Forbid();
+                    }
+                    bill_id = myBillId ?? -1; // Not on a bill yet: nothing to show
                 }
 
                 var sessionOrder = await _context.SessionOrders

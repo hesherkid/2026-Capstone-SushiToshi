@@ -94,8 +94,8 @@ public class OrderControllerTests : IDisposable
         _context.DiningSessions.AddRange(session, otherSession);
         _context.Bills.AddRange(bill, otherBill);
         _context.SessionParticipants.AddRange(
-            new SessionParticipant { Session_Id = 1, User_Id = 123, User_Name = "User One" },
-            new SessionParticipant { Session_Id = 1, User_Id = 456, User_Name = "User Two" },
+            new SessionParticipant { Session_Id = 1, User_Id = 123, User_Name = "User One", Bill_Id = 1 },
+            new SessionParticipant { Session_Id = 1, User_Id = 456, User_Name = "User Two", Bill_Id = 1 },
             // Left the table, so no longer counts as seated
             new SessionParticipant { Session_Id = 1, User_Id = 789, User_Name = "Gone", Left_At = DateTime.UtcNow });
         // Staff only see sessions at the location they're working at

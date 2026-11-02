@@ -65,8 +65,14 @@ export const TableOrderProvider = ({ children }) => {
   const [menuId, setMenuId] = useState("");
   const [locationId, setLocationId] = useState(null);
   // The table's open bills, newest first; the orderer picks which one this order goes on
+  // The table's open bills (names and party size only) and the one this guest is on.
+  // The server decides which bill is theirs; guests only see and order on that one
   const [openBills, setOpenBills] = useState([]);
-  const [selectedBillId, setSelectedBillId] = useState("");
+  const [myBill, setMyBill] = useState(null);
+  // False until the server says which bill (if any) this guest is on
+  const [billChecked, setBillChecked] = useState(false);
+  // Why they can't move themselves to another bill (staff can), or null
+  const [billChangeBlocked, setBillChangeBlocked] = useState(null);
   const [quantities, setQuantities] = useState({});
   // What the table can still order before a limit that blocks: { items: {id: ...}, categories: {id: ...} }.
   // null until loaded (or if it failed); the server still checks every order either way
@@ -80,47 +86,64 @@ export const TableOrderProvider = ({ children }) => {
   const categoriesLoaded = useRef(false);
   const cartRestoredFor = useRef(null);
 
-  const chooseBill = useCallback((billId) => {
-    setSelectedBillId(billId);
-    storage.set("currentBillId", String(billId));
+  const applyMyBill = useCallback((data) => {
+    const toBill = (bill) => ({
+      bill_id: Number(bill.bill_id),
+      bill_name: bill.bill_name,
+      total_count: bill.total_count,
+      status: bill.status,
+      requested_at: bill.requested_at,
+    });
+    setOpenBills((data?.open_bills ?? []).map(toBill));
+    setMyBill(data?.my_bill ? toBill(data.my_bill) : null);
+    setBillChangeBlocked(data?.change_blocked_reason ?? null);
+    setBillChecked(true);
   }, []);
 
   const loadBills = useCallback(
     async (forSession) => {
       try {
-        const response = await api.get(`/Bill/get_bills/${forSession}`);
-        const bills = Array.isArray(response.data) ? response.data : [];
-
-        // Only open bills can take orders; newest first
-        const open = bills
-          .filter((bill) => String(bill.status ?? "").toUpperCase() === "OPEN")
-          .map((bill) => ({
-            bill_id: Number(bill.bill_id),
-            bill_name: bill.bill_name,
-            requested_at: bill.requested_at,
-            created_at: bill.created_at,
-          }))
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        setOpenBills(open);
-
-        // Keep the bill this phone ordered on last, so a guest doesn't drift onto another
-        // party's bill; otherwise the newest bill that can still take orders
-        const lastUsed = Number(storage.get("currentBillId"));
-        const current =
-          open.find((bill) => bill.bill_id === lastUsed) ??
-          open.find((bill) => !bill.requested_at) ??
-          open[0];
-
-        if (current) {
-          chooseBill(current.bill_id);
-        } else {
-          setSelectedBillId("");
-        }
+        const { data } = await api.get(`/SessionParticipant/${forSession}/bill`);
+        applyMyBill(data);
       } catch (err) {
-        console.error("Error fetching current bill:", err);
+        console.error("Error fetching your bill:", err);
       }
     },
-    [chooseBill],
+    [applyMyBill],
+  );
+
+  // Join one of the table's open bills. Throws with the server's reason if it can't
+  const chooseBill = useCallback(
+    async (billId) => {
+      try {
+        const { data } = await api.put(`/SessionParticipant/${sessionId}/bill`, {
+          bill_id: billId,
+        });
+        applyMyBill(data);
+      } catch (err) {
+        throw new Error(apiMessage(err, "Couldn't put you on that bill."));
+      }
+    },
+    [sessionId, applyMyBill],
+  );
+
+  // Start a new bill for this guest's party; they're put on it
+  const startBill = useCallback(
+    async ({ billName, adults, seniors, children, toddlers }) => {
+      try {
+        await api.post(`/Bill/create_Bill/${sessionId}`, {
+          bill_name: billName.trim(),
+          adult_count: adults,
+          senior_count: seniors,
+          child_count: children,
+          tot_count: toddlers,
+        });
+      } catch (err) {
+        throw new Error(apiMessage(err, "Couldn't start your bill."));
+      }
+      await loadBills(sessionId);
+    },
+    [sessionId, loadBills],
   );
 
   const loadMenu = useCallback(async (forSession) => {
@@ -226,7 +249,9 @@ export const TableOrderProvider = ({ children }) => {
       setMenuId("");
       setLocationId(null);
       setOpenBills([]);
-      setSelectedBillId("");
+      setMyBill(null);
+      setBillChecked(false);
+      setBillChangeBlocked(null);
       setLimits(null);
       menuScrollYRef.current = 0;
     }
@@ -419,10 +444,15 @@ export const TableOrderProvider = ({ children }) => {
     [quantities],
   );
 
+  // Orders go on the guest's own bill, while it's open
+  const selectedBillId =
+    myBill && String(myBill.status).toUpperCase() === "OPEN" ? myBill.bill_id : "";
+
   // The guests pressed "Ready for Bill" on this bill, so the server won't take more orders on it
-  const billRequested = Boolean(
-    openBills.find((bill) => bill.bill_id === selectedBillId)?.requested_at,
-  );
+  const billRequested = Boolean(selectedBillId && myBill?.requested_at);
+
+  // Seated, but not on a bill yet: they pick their party's bill or start one before ordering
+  const needsBill = Boolean(sessionId && billChecked && !myBill);
 
   const value = {
     sessionId,
@@ -435,8 +465,12 @@ export const TableOrderProvider = ({ children }) => {
     itemsLoaded,
     menuId,
     openBills,
+    myBill,
     selectedBillId,
+    needsBill,
+    billChangeBlocked,
     chooseBill,
+    startBill,
     billRequested,
     quantities,
     changeQuantity,

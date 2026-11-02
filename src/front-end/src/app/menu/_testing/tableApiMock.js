@@ -22,17 +22,34 @@ export const SALMON_ROLL = {
   item_image_url: "",
 };
 
-// `bills` is what /Bill/get_bills/42 returns (none open by default);
+// What GET /SessionParticipant/42/bill returns: the guest's bill and the table's open bills
+export const myBillResponse = ({ bills = [], myBillId, blocked = null } = {}) => ({
+  my_bill: bills.find((bill) => bill.bill_id === myBillId) ?? null,
+  open_bills: bills.filter((bill) => String(bill.status ?? "Open").toUpperCase() === "OPEN"),
+  change_blocked_reason: blocked,
+});
+
+// The guest's bill unless a test says otherwise
+export const LEE_BILL = { bill_id: 8, bill_name: "Lee", status: "Open", total_count: 2, requested_at: null };
+
+// `bills` are the table's bills (just Lee's by default). The guest is on `myBillId`, which is
+// the first bill unless a test says otherwise (null: not on a bill yet).
 // `limits` is what's left before a blocking limit (none by default)
 export const tableApi =
-  ({ bills = [], items = [MISO_SOUP, SALMON_ROLL], limits = { items: [], categories: [] } } = {}) =>
+  ({
+    bills = [LEE_BILL],
+    myBillId = bills[0]?.bill_id ?? null,
+    blocked = null,
+    items = [MISO_SOUP, SALMON_ROLL],
+    limits = { items: [], categories: [] },
+  } = {}) =>
   (url) => {
     // The page asks the server which session the guest is seated in
     if (url === "/DiningSession/participants/active-session-id") {
       return Promise.resolve({ status: 200, data: { session_id: 42 } });
     }
-    if (url.includes("/Bill/get_bills/42")) {
-      return Promise.resolve({ status: 200, data: bills });
+    if (url === "/SessionParticipant/42/bill") {
+      return Promise.resolve({ status: 200, data: myBillResponse({ bills, myBillId, blocked }) });
     }
     if (url.includes("/DiningSession/session-menu/42")) {
       return Promise.resolve({ status: 200, data: { menu_id: 7, location_Id: 3 } });

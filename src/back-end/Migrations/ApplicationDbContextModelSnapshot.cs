@@ -123,6 +123,9 @@ namespace back_end.Migrations
                     b.Property<int>("Session_Id")
                         .HasColumnType("int");
 
+                    b.Property<bool>("Started_By_Guest")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -825,6 +828,9 @@ namespace back_end.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Participant_Id"));
 
+                    b.Property<int?>("Bill_Id")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("Joined_At")
                         .HasColumnType("datetime(6)");
 
@@ -842,6 +848,8 @@ namespace back_end.Migrations
                         .HasColumnType("varchar(200)");
 
                     b.HasKey("Participant_Id");
+
+                    b.HasIndex("Bill_Id");
 
                     b.HasIndex("Session_Id");
 
@@ -1301,6 +1309,11 @@ namespace back_end.Migrations
 
             modelBuilder.Entity("back_end.domain.Entities.SessionParticipant", b =>
                 {
+                    b.HasOne("back_end.domain.Entities.Billing", "Bill")
+                        .WithMany()
+                        .HasForeignKey("Bill_Id")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("back_end.domain.Entities.DiningSession", "DiningSession")
                         .WithMany("Participants")
                         .HasForeignKey("Session_Id")
@@ -1310,6 +1323,8 @@ namespace back_end.Migrations
                     b.HasOne("back_end.domain.Entities.User", "User")
                         .WithMany("SessionParticipants")
                         .HasForeignKey("User_Id");
+
+                    b.Navigation("Bill");
 
                     b.Navigation("DiningSession");
 

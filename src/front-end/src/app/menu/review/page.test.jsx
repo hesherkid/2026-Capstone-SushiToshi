@@ -1,8 +1,8 @@
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import ReviewOrderPage from "./page";
 import { TableOrderProvider } from "@/contexts/TableOrderContext";
-import { tableApi, MISO_SOUP, SALMON_ROLL } from "../_testing/tableApiMock";
+import { tableApi, myBillResponse, MISO_SOUP, SALMON_ROLL } from "../_testing/tableApiMock";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -32,7 +32,7 @@ jest.mock("@/hooks/useOrderActions", () => ({
 
 jest.mock("@/config/api", () => ({
   __esModule: true,
-  default: { get: jest.fn() },
+  default: { get: jest.fn(), put: jest.fn(), post: jest.fn() },
 }));
 
 const api = require("@/config/api").default;
@@ -179,39 +179,48 @@ describe("Review order page", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("can't order without an open bill, and can check again", async () => {
+  it("can't order before the guest is on a bill, and asks them which one", async () => {
     withCart();
-    api.get.mockImplementation(tableApi({ bills: [] }));
+    api.get.mockImplementation(tableApi({ bills: [LEE, PARK], myBillId: null }));
+    api.put.mockResolvedValue({ data: myBillResponse({ bills: [LEE, PARK], myBillId: 8 }) });
     renderPage();
 
-    expect(
-      await screen.findByText(/doesn't have an open bill yet/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Place order · 2 items" }),
-    ).toBeDisabled();
+    const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+    expect(screen.getByRole("button", { name: "Place order · 2 items", hidden: true })).toBeDisabled();
 
-    // Staff open a bill
-    api.get.mockImplementation(tableApi({ bills: [LEE] }));
-    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /Lee/ }));
 
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Place order · 2 items" }),
-      ).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeEnabled(),
     );
+    expect(api.put).toHaveBeenCalledWith("/SessionParticipant/42/bill", { bill_id: 8 });
+    expect(screen.getByText(/Order on/)).toHaveTextContent("Order on Lee");
   });
 
-  it("lets the guest pick the bill when the table has several, starting on the last one used", async () => {
+  it("shows the guest's bill with a way to change it", async () => {
     withCart();
-    localStorage.setItem("currentBillId", "8");
-    api.get.mockImplementation(tableApi({ bills: [PARK, LEE] }));
+    api.get.mockImplementation(tableApi({ bills: [PARK, LEE], myBillId: 8 }));
     renderPage();
 
-    expect(
-      await screen.findByRole("combobox", { name: "Put this order on" }),
-    ).toHaveTextContent("Lee");
-    expect(screen.getByText(/Your table has 2 bills/)).toBeInTheDocument();
+    expect(await screen.findByText("Lee", { selector: "p" })).toBeInTheDocument();
+    expect(screen.queryByText("Park")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change bill from Lee" }));
+    const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+    expect(within(dialog).getByRole("button", { name: /Lee/ })).toHaveAttribute("aria-current", "true");
+    expect(within(dialog).getByRole("button", { name: /Park/ })).toBeEnabled();
+  });
+
+  it("once a guest has ordered on their bill, only staff can move them", async () => {
+    withCart();
+    api.get.mockImplementation(
+      tableApi({ bills: [PARK, LEE], myBillId: 8, blocked: "You've already ordered on Lee." }),
+    );
+    renderPage();
+
+    expect(await screen.findByText("Lee", { selector: "p" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Change bill/ })).not.toBeInTheDocument();
   });
 
   it("charges for what's past a limit that charges, with the category's free units shared", async () => {

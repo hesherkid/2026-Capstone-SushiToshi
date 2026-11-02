@@ -22,9 +22,15 @@ namespace back_end.domain.Entities
 
         public DateTime? Left_At { get; set; }
 
+        // The bill this person orders on and can see; null until they pick or start one.
+        // Customers only ever see their own bill (see SessionAccess.CanUseBillAsync)
+        [ForeignKey(nameof(Bill))]
+        public int? Bill_Id { get; set; }
+
 
         public DiningSession DiningSession { get; set; } = null!;
         public User? User { get; set; } = null!;
+        public Billing? Bill { get; set; }
         
     }
 

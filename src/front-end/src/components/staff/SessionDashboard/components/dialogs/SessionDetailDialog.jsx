@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
 import DialogHeader from "@/components/common/DialogHeader";
-import { Check, Receipt, ReceiptText, LogOut, Bell } from "lucide-react";
+import { Check, Receipt, ReceiptText, LogOut, Bell, Smartphone } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
 import {
@@ -149,6 +149,18 @@ const SessionDetailDialog = () => {
                                   color="warning"
                                   size="small"
                                 />
+                              )}
+                              {/* A guest entered this party's size on their phone; worth a check */}
+                              {isOpenBill(bill) && bill.started_By_Guest && (
+                                <Tooltip title="A guest started this bill on their phone. Check the number of guests.">
+                                  <Chip
+                                    icon={<Smartphone size={14} />}
+                                    label="Started by guest"
+                                    color="info"
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                </Tooltip>
                               )}
                             </Box>
                           }

@@ -38,6 +38,9 @@ namespace back_end.domain.Entities
 
         public decimal Leftover_Charge { get; set; } = 0m;
 
+        // A guest started this bill from their phone, so staff should check its guest counts
+        public bool Started_By_Guest { get; set; }
+
         // Prices frozen when the bill closes, so later price changes don't alter old bills.
         // NULL = not closed yet (or closed before snapshots existed): prices are worked out live.
         public PricingDayType? Pricing_Type { get; set; }

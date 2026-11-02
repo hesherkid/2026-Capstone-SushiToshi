@@ -18,8 +18,8 @@ namespace back_end.Tests.Controllers;
 // GET /api/Order/session/{id}: everyone seated at a table sees all of its orders
 public class TableOrdersTests : IDisposable
 {
-    private const int Orderer = 21;      // ordered for the whole table
-    private const int Friend = 22;       // same table, ordered nothing
+    private const int Orderer = 21;      // ordered for their party (and once on another bill)
+    private const int Friend = 22;       // same bill, ordered nothing
     private const int OtherTable = 23;
 
     private readonly ApplicationDbContext _context;
@@ -35,8 +35,8 @@ public class TableOrdersTests : IDisposable
             new DiningSession { Session_Id = 269, Menu_Id = 1, Location_Id = 1, Table_Id = 6, Started_At = DateTime.UtcNow },
             new DiningSession { Session_Id = 143, Menu_Id = 1, Location_Id = 1, Table_Id = 19, Started_At = DateTime.UtcNow });
         _context.SessionParticipants.AddRange(
-            new SessionParticipant { Session_Id = 269, User_Id = Orderer, User_Name = "Guest K7P2" },
-            new SessionParticipant { Session_Id = 269, User_Id = Friend, User_Name = "Guest 4MXA" },
+            new SessionParticipant { Session_Id = 269, User_Id = Orderer, User_Name = "Guest K7P2", Bill_Id = 332 },
+            new SessionParticipant { Session_Id = 269, User_Id = Friend, User_Name = "Guest 4MXA", Bill_Id = 332 },
             new SessionParticipant { Session_Id = 143, User_Id = OtherTable, User_Name = "Mia Chen" });
         _context.Bills.AddRange(
             new Billing { Bill_Id = 332, Session_Id = 269, Bill_Name = "Lee" },
@@ -71,19 +71,38 @@ public class TableOrdersTests : IDisposable
         JsonSerializer.SerializeToElement((result.Result as OkObjectResult)!.Value);
 
     [Fact]
-    public async Task EveryoneAtTheTable_SeesOrdersPlacedForThem()
+    public async Task EveryoneOnTheBill_SeesOrdersPlacedForThem_ButNotOtherBills()
     {
         var orders = Orders(await ControllerFor(Friend).GetOrderBySession(269));
 
-        orders.GetArrayLength().Should().Be(2);
+        orders.EnumerateArray().Select(o => o.GetProperty("orderId").GetInt32()).Should().Equal(900);
         orders.EnumerateArray().Select(o => o.GetProperty("userName").GetString()).Should().AllBe("Guest K7P2");
-        orders.EnumerateArray().Select(o => o.GetProperty("billName").GetString()).Should().BeEquivalentTo("Lee", "Park");
     }
 
     [Fact]
-    public async Task TableOrders_CanBeFilteredByBill()
+    public async Task Customers_CantAskForAnotherBillsOrders()
     {
-        var orders = Orders(await ControllerFor(Friend).GetOrderBySession(269, bill_id: 333));
+        var result = await ControllerFor(Friend).GetOrderBySession(269, bill_id: 333);
+
+        result.Result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task CustomersNotOnABillYet_SeeNoOrders()
+    {
+        var seat = await _context.SessionParticipants.SingleAsync(sp => sp.User_Id == Friend);
+        seat.Bill_Id = null;
+        await _context.SaveChangesAsync();
+
+        var orders = Orders(await ControllerFor(Friend).GetOrderBySession(269));
+
+        orders.GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Staff_CanFilterTableOrdersByBill()
+    {
+        var orders = Orders(await ControllerFor(30, "Staff").GetOrderBySession(269, bill_id: 333));
 
         orders.EnumerateArray().Select(o => o.GetProperty("orderId").GetInt32()).Should().Equal(901);
     }

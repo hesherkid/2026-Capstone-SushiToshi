@@ -77,8 +77,12 @@ namespace back_end.controllers
     /// - At least one guest (adult, senior, or child) must be specified
     /// 
     /// The bill is automatically created with 'Open' status.
+    ///
+    /// Guests seated at the table can start their own bill from their phone: they're put on it,
+    /// and it's marked Started_By_Guest so staff check the guest counts. A guest who has already
+    /// ordered on another open bill can't start a new one (staff can move them).
     /// </remarks>
-    [Authorize(Policy = "staffOnly")]
+    [Authorize]
     [HttpPost("create_Bill/{_session_id}")]
     public async Task<IActionResult> Create_Bill(int _session_id, CreateBill bill_data)
     {
@@ -103,6 +107,24 @@ namespace back_end.controllers
         if (session.Ended_At != null)
         {
           return BadRequest(new { message = $"Cannot create bill for session that ended {session.Ended_At}" });
+        }
+
+        // A guest starting their own bill is put on it
+        SessionParticipant? seat = null;
+        if (!SessionAccess.IsStaff(User))
+        {
+          var userId = int.TryParse(ClaimsHelpers.GetUserId(User), out var parsed) ? parsed : 0;
+          seat = await _context.SessionParticipants.FirstOrDefaultAsync(sp =>
+              sp.Session_Id == _session_id && sp.User_Id == userId && sp.Left_At == null);
+          if (seat == null)
+          {
+            return Forbid();
+          }
+          var cantLeave = await BillLinks.CantLeaveReasonAsync(_context, seat);
+          if (cantLeave != null)
+          {
+            return BadRequest(new { message = cantLeave });
+          }
         }
 
         // Check if session has either a table or table group assigned
@@ -162,10 +184,15 @@ namespace back_end.controllers
           Child_Count = bill_data.Child_Count,
           Tot_Count = bill_data.Tot_Count,
           Total_Count = totalCount,
-          Status = BillStatus.Open
+          Status = BillStatus.Open,
+          Started_By_Guest = seat != null
         };
 
         _context.Bills.Add(NewBill);
+        if (seat != null)
+        {
+          seat.Bill = NewBill;
+        }
         await _context.SaveChangesAsync();
         await _context.Entry(NewBill).ReloadAsync();
 
@@ -242,6 +269,13 @@ namespace back_end.controllers
         }
 
         var billQuery = _context.Bills.Where(b => b.Session_Id == _session_id);
+
+        // Customers only see their own bill; other parties' bills are private
+        if (!SessionAccess.IsStaff(User))
+        {
+          var myBillId = await SessionAccess.MyBillIdAsync(_context, User, _session_id);
+          billQuery = billQuery.Where(b => b.Bill_Id == myBillId);
+        }
 
         // If table_id is specified, validate it belongs to the session
         if (_table_id.HasValue)
@@ -321,7 +355,7 @@ namespace back_end.controllers
     {
       try
       {
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
         {
           return Forbid();
         }
@@ -612,17 +646,17 @@ namespace back_end.controllers
     /// <remarks>
     /// Marks the bill as requested, which stops any more orders being placed on it, and sends staff a
     /// "Ready for bill" service request. Asking again is safe: it returns the original request time.
-    /// Only guests seated at the table (or staff) can ask.
+    /// Only guests on this bill (or staff) can ask.
     /// </remarks>
     /// <response code="200">The bill is requested; returns when it was first requested.</response>
     /// <response code="400">The bill isn't open.</response>
-    /// <response code="403">The caller isn't seated at this table.</response>
+    /// <response code="403">The caller isn't on this bill.</response>
     /// <response code="404">The bill or session was not found.</response>
     [HttpPost("request_bill/{_bill_id}")]
     [Authorize]
     public async Task<IActionResult> Request_Bill(int _session_id, int _bill_id)
     {
-      if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+      if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
       {
         return Forbid();
       }
@@ -816,6 +850,7 @@ namespace back_end.controllers
             )
             .Where(x =>
                 x.participant.User_Id == userId &&
+                x.participant.Bill_Id == x.bill.Bill_Id && // Only the bill they're on
                 x.participant.Left_At == null &&  // User hasn't left
                 x.bill.DiningSession.Ended_At == null        // Session is active
             )
@@ -869,8 +904,8 @@ namespace back_end.controllers
     {
       try
       {
-        // Staff, or customers seated at this table (see SessionAccess)
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        // Staff, or customers on this bill (see SessionAccess)
+        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
         {
           return Forbid();
         }
