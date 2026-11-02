@@ -7,6 +7,8 @@ using back_end.domain;
 using back_end.domain.DbContexts;
 using back_end.domain.enums;
 using Microsoft.EntityFrameworkCore;
+using back_end.Helpers;
+using back_end.Services;
 
 namespace back_end.domain.Seeders
 {
@@ -17,15 +19,18 @@ namespace back_end.domain.Seeders
   {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<BillSeeder> _logger;
+    private readonly IPricingService _pricingService;
     private readonly Random _rng = new();
 
     private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData = new();
 
-    public BillSeeder(ApplicationDbContext context, ILogger<BillSeeder> logger)
+    public BillSeeder(ApplicationDbContext context, ILogger<BillSeeder> logger, IPricingService pricingService)
     {
       _context = context;
       _logger = logger;
+      _pricingService = pricingService;
     }
+
 
     public void SetUserSeedData(Dictionary<int, (string DisplayName, string GivenName, string Surname)> userSeedData)
     {
@@ -169,6 +174,51 @@ namespace back_end.domain.Seeders
       var totalClosed = _context.Bills.Count(b => b.Status == BillStatus.Closed);
       var totalCancelled = _context.Bills.Count(b => b.Status == BillStatus.Cancelled);
       _logger.LogInformation($"Created {created} bills ({totalOpen} open, {totalClosed} closed, {totalCancelled} cancelled)");
+    }
+
+    /// <summary>
+    /// Freezes prices on closed bills that don't have them yet, the same way Close_bill does:
+    /// the location's prices on the day the bill was made, and the gratuity the table's party size earns. 
+    /// Run it after Seed() has been saved, so every bill at a table counts towards the party size correctly.
+    /// </summary>
+    public async Task<int> FreezeClosedBillsAsync(CancellationToken ct = default)
+    {
+      var bills = await _context.Bills
+          .Include(b => b.DiningSession)
+          .Where(b => b.Status == BillStatus.Closed && b.Pricing_Type == null)
+          .ToListAsync(ct);
+
+      if (bills.Count == 0)
+      {
+        return 0;
+      }
+
+      var sessionIds = bills.Select(b => b.Session_Id).Distinct().ToList();
+      var partySizes = await _context.Bills
+          .Where(b => sessionIds.Contains(b.Session_Id) && b.Status != BillStatus.Cancelled)
+          .GroupBy(b => b.Session_Id)
+          .Select(g => new { Session_Id = g.Key, Size = g.Sum(b => b.Adult_Count + b.Senior_Count + b.Child_Count + b.Tot_Count) })
+          .ToDictionaryAsync(x => x.Session_Id, x => x.Size, ct);
+
+      var pricingByDay = new Dictionary<(int LocationId, DateOnly Day), PricingInfo>();
+
+      foreach (var bill in bills)
+      {
+        var locationId = bill.DiningSession.Location_Id;
+        var day = DateOnly.FromDateTime(PricingService.ToRestaurantTime(bill.Created_At));
+
+        if (!pricingByDay.TryGetValue((locationId, day), out var pricing))
+        {
+          pricing = await _pricingService.GetPricingAsync(locationId, bill.Created_At, ct);
+          pricingByDay[(locationId, day)] = pricing;
+        }
+
+        var partySize = partySizes.GetValueOrDefault(bill.Session_Id);
+        BillPriceSnapshot.Freeze(bill, pricing, BillCalculator.GratuityRateFor(pricing, partySize));
+      }
+
+      _logger.LogInformation("Froze prices on {Count} closed bills", bills.Count);
+      return bills.Count;
     }
   }
 }
