@@ -5,11 +5,14 @@ import api from "@/config/api";
  */
 export const orderService = {
   /**
-   * Creates a new order for a dining session
+   * Creates a new order for a dining session, saved together with its items
    * @param {Object} orderData - Order creation data
    * @param {number} orderData.session_Id - Session ID
    * @param {number} orderData.bill_Id - Bill ID
-   * @returns {Promise<Object>} Created order details
+   * @param {Array<Object>} orderData.items - Items to order (at least one)
+   * @param {number} orderData.items[].item_id - Item ID
+   * @param {number} orderData.items[].quantity - Quantity
+   * @returns {Promise<Object>} Created order details, with its saved items in orderItems
    */
   createOrder: async (orderData) => {
     try {

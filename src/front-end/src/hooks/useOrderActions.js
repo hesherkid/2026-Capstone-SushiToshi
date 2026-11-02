@@ -43,21 +43,23 @@ export const useOrderActions = (onSuccess) => {
 
   // ORDER CREATION
 
+  // The order is saved together with its items, so a failed order leaves nothing behind
   const createOrder = useCallback(
-    async (sessionId, billId) => {
+    async (sessionId, billId, items) => {
       return apiWrapper(
         "createOrder",
         async () => {
           const result = await orderService.createOrder({
             session_Id: sessionId,
             bill_Id: billId,
+            items,
           });
           return result;
         },
-        { triggerSuccess: false },
+        { triggerSuccess: true },
       );
     },
-    [apiWrapper], // Removed notifySuccess to avoid duplicate notifications. Create order in full-menu triggers its own success message with Alert.
+    [apiWrapper], // Removed notifySuccess to avoid duplicate notifications. Review order shows its own confirmation.
   );
 
   // ORDER MANAGEMENT
