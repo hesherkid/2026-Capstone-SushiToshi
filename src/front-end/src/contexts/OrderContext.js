@@ -75,8 +75,8 @@ export const OrderProvider = ({ children }) => {
 
   // Wrapped actions that update local state
   const createOrder = useCallback(
-    async (sessionId, billId) => {
-      const result = await baseCreateOrder(sessionId, billId);
+    async (sessionId, billId, items) => {
+      const result = await baseCreateOrder(sessionId, billId, items);
       if (result) {
         setOrders((prev) => [...prev, result]);
         groupOrdersByStatus([...orders, result]);

@@ -52,6 +52,10 @@ namespace back_end.DTO.OrdersDTOs
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
+        // "OverLimit" for extra units charged past a limit
+        [JsonPropertyName("charge_reason")]
+        public string? Charge_Reason { get; set; }
+
     }
     public class OrderItemInsertResponse
     {
@@ -146,6 +150,10 @@ namespace back_end.DTO.OrdersDTOs
 
         public int? Request_By_User_Id { get; set; }
         public string? Request_By_Name { get; set; }
+
+        // Saved together with the order, so an order is never left without items
+        [JsonPropertyName("items")]
+        public List<OrderItemCreateDTO> Items { get; set; } = new();
     }
 
     // public class OrderUpdateDTO

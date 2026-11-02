@@ -90,7 +90,6 @@ const ReviewOrderPage = () => {
 
   const {
     createOrder,
-    addOrderItems,
     actionError,
     isLoading,
     clearActionError,
@@ -167,16 +166,19 @@ const ReviewOrderPage = () => {
       // The cart can't go over a limit (+ stops there, and Place order is disabled when it is)
       // so the server should accept these items, it still checks every order.
 
-      const orderResponse = await createOrder(sessionId, selectedBillId);
-      if (!orderResponse)
-        throw new Error("Couldn't start your order. Please try again.");
-      const orderId = Number(orderResponse.order_Id);
+      // The order and its items are saved together, so a failure leaves no empty order behind
+      const order = await createOrder(sessionId, selectedBillId, orderItems);
+      if (!order)
+        throw new Error("Couldn't place your order. Please try again.");
 
-      const added = await addOrderItems(orderId, orderItems);
       setPlacedExtras(
-        (added?.lines ?? []).filter(
-          (line) => line.chargeReason === "OverLimit",
-        ),
+        (order.orderItems ?? [])
+          .filter((line) => line.charge_reason === "OverLimit")
+          .map((line) => ({
+            itemId: line.item_id,
+            quantity: line.quantity,
+            priceAtTime: line.price_at_time,
+          })),
       );
     } catch (err) {
       console.error("Error processing order:", err);
