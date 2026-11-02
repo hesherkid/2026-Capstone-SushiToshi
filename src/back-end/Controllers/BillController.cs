@@ -80,6 +80,10 @@ namespace back_end.controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("create_Bill/{_session_id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create_Bill(int _session_id, CreateBill bill_data)
     {
       try
@@ -111,9 +115,9 @@ namespace back_end.controllers
           return BadRequest(new { message = "Cannot create a bill for a session that has no table or table group assigned" });
         }
 
-        if (bill_data.Adult_Count <= 0 && bill_data.Senior_Count <= 0 && bill_data.Child_Count <= 0 && bill_data.Tot_Count <= 0)
+        if (bill_data.Adult_Count < 0 || bill_data.Senior_Count < 0 || bill_data.Child_Count < 0 || bill_data.Tot_Count < 0)
         {
-          return BadRequest(new { message = "Bill must have at least one guest in the session" });
+          return BadRequest(new { message = "Guest counts can't be negative." });
         }
 
         // Validate Bill_Name is required
@@ -122,8 +126,12 @@ namespace back_end.controllers
           return BadRequest(new { message = "Bill_Name is required." });
         }
 
-        int totalCount = bill_data.Total_Count
-            ?? (bill_data.Adult_Count + bill_data.Senior_Count + bill_data.Child_Count + bill_data.Tot_Count);
+        int totalCount = bill_data.Adult_Count + bill_data.Senior_Count + bill_data.Child_Count + bill_data.Tot_Count;
+
+        if (totalCount == 0)
+        {
+          return BadRequest(new { message = "Bill must have at least one guest in the session" });
+        }
 
         // Validate against table capacity
         int tableCapacity = 0;
@@ -185,10 +193,10 @@ namespace back_end.controllers
           Table_Numbers = GetTableNumbers(session)
         });
       }
-      catch (DbUpdateException ex)
+      catch (Exception ex)
       {
-        Console.WriteLine($"Error in Create Bill {ex}");
-        return StatusCode(500, "There was a Problem in the Create Bill Method");
+        _logger.LogError(ex, "Error creating bill for session {SessionId}", _session_id);
+        return StatusCode(500, new { message = "Error creating bill" });
       }
     }
 
@@ -289,8 +297,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"Error in Get Bill: {ex}");
-        return StatusCode(500, "There was a Problem in the Get Bill Method");
+        _logger.LogError(ex, "Error getting bill for session {SessionId}", _session_id);
+        return StatusCode(500, new { message = "Error getting bill" });
       }
     }
 
@@ -358,8 +366,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"Error in Get Bill: {ex}");
-        return StatusCode(500, "There was a Problem in the Get Bill Method");
+        _logger.LogError(ex, "Error getting bill for session {SessionId}", _session_id);
+        return StatusCode(500, new { message = "Error getting bill" });
       }
     }
 
@@ -465,8 +473,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"Error in Close Bill: {ex}");
-        return StatusCode(500, "There was a Problem in the Close Bill Method");
+        _logger.LogError(ex, "Error closing bill {BillId} for session {SessionId}", _bill_id, _session_id);
+        return StatusCode(500, new { message = "Error closing bill" });
       }
     }
 
@@ -476,6 +484,7 @@ namespace back_end.controllers
     /// <param name="_session_id">The dining session (table)</param>
     /// <response code="200">The default fee, the current total and each open bill's share</response>
     /// <response code="404">If the session doesn't exist</response>
+    /// <response code="500">If there was an error retrieving the leftover fee</response>
     /// <remarks>
     /// Used to fill in the "Add leftover fee" dialog before staff apply it.
     /// </remarks>
@@ -483,22 +492,31 @@ namespace back_end.controllers
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetLeftoverFee(int _session_id)
     {
-      var locationId = await SessionLocationAsync(_session_id);
-      if (locationId == null)
+      try
       {
-        return NotFound(new { message = "Session was not found" });
-      }
+        var locationId = await SessionLocationAsync(_session_id);
+        if (locationId == null)
+        {
+          return NotFound(new { message = "Session was not found" });
+        }
 
-      if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
+        var openBills = await OpenBillsAsync(_session_id);
+        var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
+        return Ok(LeftoverFeeResult(_session_id, openBills, pricing.LeftoverFee));
+      }
+      catch (Exception ex)
       {
-        return LocationResults.OtherLocation();
+        _logger.LogError(ex, "Error getting leftover fee for session {SessionId}", _session_id);
+        return StatusCode(500, new { message = "Error getting leftover fee" });
       }
-
-      var openBills = await OpenBillsAsync(_session_id);
-      var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
-      return Ok(LeftoverFeeResult(_session_id, openBills, pricing.LeftoverFee));
     }
 
     /// <summary>
@@ -622,52 +640,60 @@ namespace back_end.controllers
     [Authorize]
     public async Task<IActionResult> Request_Bill(int _session_id, int _bill_id)
     {
-      if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+      try
       {
-        return Forbid();
-      }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        {
+          return Forbid();
+        }
 
-      var bill = await _context.Bills
-          .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
-          .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
-      if (bill == null)
-      {
-        return NotFound(new { message = "Bill or session was not found" });
-      }
-      if (bill.Status != BillStatus.Open)
-      {
-        return BadRequest(new { message = $"This bill is already {bill.Status.ToString().ToLower()}." });
-      }
-      if (bill.Requested_At != null)
-      {
-        return Ok(new { requested_at = bill.Requested_At, already_requested = true });
-      }
+        var bill = await _context.Bills
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+        if (bill == null)
+        {
+          return NotFound(new { message = "Bill or session was not found" });
+        }
+        if (bill.Status != BillStatus.Open)
+        {
+          return BadRequest(new { message = $"This bill is already {bill.Status.ToString().ToLower()}." });
+        }
+        if (bill.Requested_At != null)
+        {
+          return Ok(new { requested_at = bill.Requested_At, already_requested = true });
+        }
 
-      if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
-      {
-        return Unauthorized(new { message = "Please sign in to ask for your bill." });
+        if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
+        {
+          return Unauthorized(new { message = "Please sign in to ask for your bill." });
+        }
+
+        // Requests are tied to a table; a table group's go to its first table
+        var session = bill.DiningSession;
+        int? tableId = session.Table_Id ?? session.TableGroup?.Tables.OrderBy(t => t.table_number).FirstOrDefault()?.Table_Id;
+        if (tableId == null)
+        {
+          return BadRequest(new { message = "This session has no table to send the request to." });
+        }
+
+        bill.Requested_At = DateTime.UtcNow;
+        _context.ServiceRequests.Add(new ServiceRequest
+        {
+          Session_Id = session.Session_Id,
+          Table_Id = tableId.Value,
+          Request_By = userId,
+          Notes = $"{back_end.Controllers.ServiceRequestController.BillRequestNotePrefix} {bill.Bill_Name}",
+          Status = ServiceRequestStatus.Pending,
+        });
+        await _context.SaveChangesAsync();
+
+        return Ok(new { requested_at = bill.Requested_At, already_requested = false });
       }
-
-      // Requests are tied to a table; a table group's go to its first table
-      var session = bill.DiningSession;
-      int? tableId = session.Table_Id ?? session.TableGroup?.Tables.OrderBy(t => t.table_number).FirstOrDefault()?.Table_Id;
-      if (tableId == null)
+      catch (Exception ex)
       {
-        return BadRequest(new { message = "This session has no table to send the request to." });
+        _logger.LogError(ex, "Error requesting bill {BillId} for session {SessionId}", _bill_id, _session_id);
+        return StatusCode(500, new { message = "Error requesting bill" });
       }
-
-      bill.Requested_At = DateTime.UtcNow;
-      _context.ServiceRequests.Add(new ServiceRequest
-      {
-        Session_Id = session.Session_Id,
-        Table_Id = tableId.Value,
-        Request_By = userId,
-        Notes = $"{back_end.Controllers.ServiceRequestController.BillRequestNotePrefix} {bill.Bill_Name}",
-        Status = ServiceRequestStatus.Pending,
-      });
-      await _context.SaveChangesAsync();
-
-      return Ok(new { requested_at = bill.Requested_At, already_requested = false });
     }
 
     /// <summary>
@@ -701,6 +727,7 @@ namespace back_end.controllers
     {
       try
       {
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
         var bill = await _context.Bills
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.Table)
@@ -740,6 +767,7 @@ namespace back_end.controllers
         bill.Status = BillStatus.Cancelled;
         bill.Closed_At = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
         await _context.Entry(bill).ReloadAsync();
 
         return Ok(new BillResponse
@@ -761,8 +789,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"Error in Cancel Bill: {ex}");
-        return StatusCode(500, "There was a Problem in the Cancel Bill Method");
+        _logger.LogError(ex, "Error cancelling bill {BillId} for session {SessionId}", _bill_id, _session_id);
+        return StatusCode(500, new { message = "Error cancelling bill" });
       }
     }
 
@@ -985,7 +1013,7 @@ namespace back_end.controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error calculating bill summary for Bill {BillId}", _bill_id);
-        return StatusCode(500, new { message = "Error calculating bill summary", error = ex.Message });
+        return StatusCode(500, new { message = "Error calculating bill summary" });
       }
     }
 
