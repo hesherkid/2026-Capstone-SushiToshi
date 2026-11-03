@@ -173,9 +173,6 @@ namespace back_end.Migrations
                     b.Property<string>("image_url")
                         .HasColumnType("longtext");
 
-                    b.Property<DateTime>("last_viewed_at")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<int>("over_limit_behavior")
                         .HasColumnType("int");
 
@@ -186,13 +183,6 @@ namespace back_end.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("toddler_limit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("total_view_seconds")
-                        .HasColumnType("int");
-
-                    b.Property<int>("total_views")
-                        .HasMaxLength(255)
                         .HasColumnType("int");
 
                     b.HasKey("Category_id");

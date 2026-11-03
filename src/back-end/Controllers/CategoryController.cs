@@ -38,7 +38,7 @@ namespace back_end.Controllers
         ///
         ///     GET /api/category
         ///
-        /// Returns all categories in the system with their details including limits and statistics.
+        /// Returns all categories in the system with their details including limits.
         /// </remarks>
         //GET api/category
         //Get all categories
@@ -90,7 +90,6 @@ namespace back_end.Controllers
         ///
         /// Creates a new category with the provided information.
         /// Category names must be unique.
-        /// Last viewed timestamp is automatically set to current UTC time.
         /// adult_limit, child_limit, and senior_limit are required (0 = unlimited).
         /// toddler_limit is optional: 0 or omitted = same as child_limit.
         /// Rules: child and senior ≤ adult, toddler ≤ child.
@@ -126,8 +125,7 @@ namespace back_end.Controllers
                     senior_limit = category.Senior_Limit!.Value,
                     toddler_limit = category.Toddler_Limit,
                     per_order_limit = category.Per_Order_Limit,
-                    over_limit_behavior = category.Over_Limit_Behavior,
-                    last_viewed_at = DateTime.UtcNow
+                    over_limit_behavior = category.Over_Limit_Behavior
                 };
 
                 _context.Categories.Add(categoryEntity);
@@ -292,13 +290,14 @@ namespace back_end.Controllers
         ///     DELETE /api/category/delete_category/123
         ///
         /// Permanently removes the category from the database.
-        /// This may affect menu items associated with this category depending on cascade settings.
+        /// This will not affect menu items associated with this category as on delete is set to Restrict.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("delete_category/{_categoryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> DeleteCategory(int _categoryId)
         {
             try
@@ -310,6 +309,9 @@ namespace back_end.Controllers
                 {
                     return NotFound("Category not found.");
                 }
+
+                if (await _context.MenuItems.AnyAsync(m => m.Category_id == _categoryId))
+                    return Conflict("Cannot delete category, it has associated menu items. Remove or move them first.");
 
                 _context.Categories.Remove(category);
                 await _context.SaveChangesAsync();
@@ -374,69 +376,6 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Cannot get Menu Items by Category ID");
-                return StatusCode(500, "Internal Server Error");
-            }
-        }
-
-        /// <summary>
-        /// Tracks a view event for a specific category, recording view duration and incrementing view count.
-        /// </summary>
-        /// <param name="_categoryId">The unique identifier of the category</param>
-        /// <param name="viewSeconds">The number of seconds the category was viewed</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> indicating the result of the operation.
-        /// Returns HTTP 200 (OK) with a success message when the view is tracked.
-        /// Returns HTTP 400 (Bad Request) if view_seconds is negative.
-        /// Returns HTTP 404 (Not Found) if the category doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during tracking.
-        /// </returns>
-        /// <response code="200">Returns a success message when the category view is tracked</response>
-        /// <response code="400">If view_seconds is a negative value</response>
-        /// <response code="404">If the category is not found</response>
-        /// <response code="500">If an internal error occurs while tracking the view</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     POST /api/category/track_viewed/123?view_seconds=45
-        ///
-        /// Updates the category's tracking statistics:
-        /// - Increments total view count by 1
-        /// - Adds view_seconds to total view duration
-        /// - Updates last viewed timestamp to current UTC time
-        /// </remarks>
-        [Authorize(Policy = "staffOnly")]
-        [HttpPost("track_viewed/{_categoryId}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> TrackCategoryView(int _categoryId, [FromQuery(Name = "view_seconds")] int viewSeconds)
-        {
-            try
-            {
-                if (viewSeconds < 0)
-                {
-                    return BadRequest("view_seconds must be a non-negative integer.");
-                }
-                var category = await _context.Categories
-                    .FirstOrDefaultAsync(c => c.Category_id == _categoryId);
-
-                if (category == null)
-                {
-                    return NotFound("Category not found.");
-                }
-
-                category.last_viewed_at = DateTime.UtcNow;
-                category.total_view_seconds += viewSeconds;
-                category.total_views += 1;
-                _context.Categories.Update(category);
-                await _context.SaveChangesAsync();
-                return Ok("Category view tracked successfully.");
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Cannot track Category view");
                 return StatusCode(500, "Internal Server Error");
             }
         }
