@@ -54,7 +54,7 @@ const SessionDetailDialog = () => {
 
   return (
     <>
-      <AppDialog open={!!session} onClose={closeSession}>
+      <AppDialog open={!!session} onClose={closeSession} maxWidth="md">
         {session && (
           <>
             <DialogHeader
@@ -119,9 +119,11 @@ const SessionDetailDialog = () => {
                     <Box key={bill.bill_Id}>
                       {/* Buttons sit in the row (not secondaryAction) so they wrap under the name on phones */}
                       <ListItem sx={{ px: 3, gap: 1, flexWrap: "wrap" }}>
+                        {/* Shrinks so the buttons stay beside it on desktop; its chips wrap instead */}
                         <ListItemText
+                          sx={{ flex: "1 1 200px", minWidth: 0 }}
                           primary={
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                               {bill.bill_Name}
                               <Chip
                                 label={formatBillStatus(bill.status)}
@@ -153,7 +155,7 @@ const SessionDetailDialog = () => {
                           }
                           secondary={formatGuestBreakdown(bill)}
                         />
-                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", flexShrink: 0 }}>
                           {isOpenBill(bill) && (
                             <Button
                               variant="outlined"
