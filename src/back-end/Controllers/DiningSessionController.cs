@@ -83,7 +83,7 @@ namespace back_end.controllers
     /// </remarks>
     [HttpPost("Create_Dinning_Session")]
     // Staff seat tables; guests join an existing session through POST /api/DiningSession/join
-    [Authorize(Roles = "staffOnly")]
+    [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
