@@ -366,6 +366,143 @@ public class BillLinkTests : IDisposable
         (await Seats(Cy).UpdateGuestCounts(OtherTable, Counts(adults: 3))).Should().BeOfType<BadRequestObjectResult>();
     }
 
+    // ---- Staff fixing guest counts ----
+
+    private static string? StaffPolicy(Type controller, string method) =>
+        controller.GetMethod(method)!
+            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
+            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+            .Single().Policy;
+
+    [Fact]
+    public void StaffOnly_EditCountsAndMoveGuests()
+    {
+        StaffPolicy(typeof(BillController), nameof(BillController.Update_Guest_Counts)).Should().Be("staffOnly");
+        StaffPolicy(typeof(SessionParticipantController), nameof(SessionParticipantController.MoveGuest)).Should().Be("staffOnly");
+    }
+
+    [Fact]
+    public async Task StaffEditingCounts_SavesThem_AndClearsTheGuestFlags()
+    {
+        var lee = await _context.Bills.FindAsync(Lee);
+        lee!.Started_By_Guest = true;
+        lee.Counts_Changed_By_Guest = true;
+        _context.SaveChanges();
+
+        var result = await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 2, seniors: 1, toddlers: 1));
+
+        result.Should().BeOfType<OkObjectResult>();
+        var saved = await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee);
+        saved.Total_Count.Should().Be(4);
+        saved.Senior_Count.Should().Be(1);
+        saved.Tot_Count.Should().Be(1);
+        saved.Started_By_Guest.Should().BeFalse();
+        saved.Counts_Changed_By_Guest.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StaffEditingCounts_WorksAfterTheGuestsAskedForTheBill()
+    {
+        (await _context.Bills.FindAsync(Lee))!.Requested_At = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        (await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 3))).Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task StaffEditingCounts_KeepsTheSameRulesAsStartingABill()
+    {
+        (await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 0))).Should().BeOfType<BadRequestObjectResult>();
+        (await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 7))).Should().BeOfType<BadRequestObjectResult>();
+
+        (await _context.Bills.FindAsync(Park))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+        (await Bills(Server, "Staff").Update_Guest_Counts(Table, Park, Counts(adults: 1))).Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task StaffEditingCounts_NeedsTheBillAtThatSession()
+    {
+        var result = await Bills(Server, "Staff").Update_Guest_Counts(Table, OtherTableBill, Counts(adults: 1));
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    // ---- Staff moving guests between bills ----
+
+    private SessionParticipantController StaffSeats() =>
+        new(_context, new Mock<ILogger<SessionParticipantController>>().Object) { ControllerContext = As(Server, "Staff") };
+
+    private int SeatOf(int userId) =>
+        _context.SessionParticipants.AsNoTracking().Single(sp => sp.User_Id == userId && sp.Left_At == null).Participant_Id;
+
+    private int OrderBill(int orderId) =>
+        _context.SessionOrders.AsNoTracking().Single(o => o.Order_Id == orderId).Bill_Id;
+
+    [Fact]
+    public async Task StaffMovingAGuest_TakesTheirOrdersWithThem_ButNotCancelledOnes()
+    {
+        AnaOrderedOnLee();
+        _context.SessionOrders.AddRange(
+            new SessionOrder { Order_Id = 501, session_id = Table, Bill_Id = Lee, User_Id = Ana, Status = OrderStatus.Cancelled, Created_At = DateTime.UtcNow },
+            // Staff ordered this one for the table, so it isn't Ana's to take
+            new SessionOrder { Order_Id = 502, session_id = Table, Bill_Id = Lee, User_Id = Server, Status = OrderStatus.Pending, Created_At = DateTime.UtcNow });
+        _context.SaveChanges();
+
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park, Move_Orders = true });
+
+        result.Should().BeOfType<OkObjectResult>();
+        SeatBill(Ana).Should().Be(Park);
+        OrderBill(500).Should().Be(Park);
+        OrderBill(501).Should().Be(Lee);
+        OrderBill(502).Should().Be(Lee);
+    }
+
+    [Fact]
+    public async Task StaffMovingAGuest_CanLeaveTheirOrdersBehind()
+    {
+        AnaOrderedOnLee();
+
+        await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park, Move_Orders = false });
+
+        SeatBill(Ana).Should().Be(Park);
+        OrderBill(500).Should().Be(Lee);
+    }
+
+    [Fact]
+    public async Task StaffCanPutSomeoneWithNoBillOnOne()
+    {
+        await StaffSeats().MoveGuest(Table, SeatOf(Ben), new MoveGuestDTO { Bill_Id = Park });
+
+        SeatBill(Ben).Should().Be(Park);
+    }
+
+    [Fact]
+    public async Task StaffMovingAGuest_OnlyOntoAnOpenBillAtTheirTable()
+    {
+        (await _context.Bills.FindAsync(Park))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park })).Should().BeOfType<BadRequestObjectResult>();
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = OtherTableBill })).Should().BeOfType<BadRequestObjectResult>();
+        (await StaffSeats().MoveGuest(Table, SeatOf(Cy), new MoveGuestDTO { Bill_Id = Lee })).Should().BeOfType<NotFoundObjectResult>();
+        SeatBill(Ana).Should().Be(Lee);
+    }
+
+    [Fact]
+    public async Task StaffMovingAGuest_CantTakeOrdersOffAClosedBill()
+    {
+        AnaOrderedOnLee();
+        (await _context.Bills.FindAsync(Lee))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park, Move_Orders = true });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        OrderBill(500).Should().Be(Lee);
+        SeatBill(Ana).Should().Be(Lee);
+    }
+
     // ---- What staff see ----
 
     private async Task<DashBoardBillDTO> DashboardBill(int billId)
@@ -388,6 +525,20 @@ public class BillLinkTests : IDisposable
         lee.People_On_Bill.Should().Be(2);
         lee.Total_Guests.Should().Be(1);
         lee.Counts_Changed_By_Guest.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Dashboard_ListsWhoIsOnWhichBill()
+    {
+        var dashboard = new DashBoardController(_context, new Mock<IConfiguration>().Object,
+            new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        { ControllerContext = As(Server, "Staff") };
+        var sessions = ((await dashboard.GetDashBoardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
+
+        var people = sessions!.Single(s => s.Session_Id == Table).People;
+        people.Should().HaveCount(2);
+        people.Single(p => p.User_Name == "Ana").Bill_Id.Should().Be(Lee);
+        people.Single(p => p.User_Name == "Ben").Bill_Id.Should().BeNull();
     }
 
     // ---- Only their own bill ----

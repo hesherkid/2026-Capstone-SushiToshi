@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -19,6 +20,20 @@ namespace back_end.Helpers
             var transaction = await context.Database.BeginTransactionAsync();
             await context.Database.ExecuteSqlInterpolatedAsync(
                 $"SELECT Bill_Id FROM bills WHERE Bill_Id = {billId} FOR UPDATE");
+            return transaction;
+        }
+
+        // The same for several bills at once, locked in id order so two requests can't deadlock
+        public static async Task<IDbContextTransaction?> LockAsync(ApplicationDbContext context, params int[] billIds)
+        {
+            if (!context.Database.IsRelational()) return null;
+
+            var transaction = await context.Database.BeginTransactionAsync();
+            foreach (var billId in billIds.Distinct().OrderBy(id => id))
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"SELECT Bill_Id FROM bills WHERE Bill_Id = {billId} FOR UPDATE");
+            }
             return transaction;
         }
     }

@@ -39,5 +39,34 @@ namespace back_end.Helpers
         // Seats at the session's table, or across its table group's tables (load them first)
         public static int TableCapacity(DiningSession session) =>
             session.Table?.seat_count ?? session.TableGroup?.Tables.Sum(t => t.seat_count) ?? 0;
+
+        // Why an open bill can't have this many guests, or null if it can.
+        // The bill's DiningSession and its tables must be loaded
+        public static async Task<string?> GuestCountProblemAsync(ApplicationDbContext context, Billing bill, int total)
+        {
+            if (total == 0) return "A bill needs at least one guest.";
+
+            int capacity = TableCapacity(bill.DiningSession);
+            int otherGuests = await context.Bills
+                .Where(b => b.Session_Id == bill.Session_Id && b.Status == BillStatus.Open && b.Bill_Id != bill.Bill_Id)
+                .SumAsync(b => b.Total_Count);
+            return otherGuests + total > capacity
+                ? $"The table seats {capacity}, and the other bills have {otherGuests}."
+                : null;
+        }
+
+        // Sets a bill's counts; returns false if they were already these
+        public static bool SetCounts(Billing bill, int adults, int seniors, int children, int toddlers)
+        {
+            if (bill.Adult_Count == adults && bill.Senior_Count == seniors &&
+                bill.Child_Count == children && bill.Tot_Count == toddlers) return false;
+
+            bill.Adult_Count = adults;
+            bill.Senior_Count = seniors;
+            bill.Child_Count = children;
+            bill.Tot_Count = toddlers;
+            bill.Total_Count = adults + seniors + children + toddlers;
+            return true;
+        }
     }
 }

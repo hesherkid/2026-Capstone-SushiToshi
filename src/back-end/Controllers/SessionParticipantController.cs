@@ -246,33 +246,96 @@ namespace back_end.Controllers
         }
 
         int total = request.Adult_Count + request.Senior_Count + request.Child_Count + request.Tot_Count;
-        if (total == 0)
+        var problem = await BillLinks.GuestCountProblemAsync(_context, bill, total);
+        if (problem != null)
         {
-            return BadRequest(new { message = "Your bill needs at least one guest." });
+            return BadRequest(new { message = total == 0 ? problem : $"{problem} Ask your server if more of your party is coming." });
         }
 
-        int capacity = BillLinks.TableCapacity(bill.DiningSession);
-        int otherGuests = await _context.Bills
-            .Where(b => b.Session_Id == session_id && b.Status == BillStatus.Open && b.Bill_Id != bill.Bill_Id)
-            .SumAsync(b => b.Total_Count);
-        if (otherGuests + total > capacity)
+        if (BillLinks.SetCounts(bill, request.Adult_Count, request.Senior_Count, request.Child_Count, request.Tot_Count))
         {
-            return BadRequest(new { message = $"Your table seats {capacity}, and the other bills have {otherGuests}. Ask your server if more of your party is coming." });
-        }
-
-        bool changed = bill.Adult_Count != request.Adult_Count || bill.Senior_Count != request.Senior_Count ||
-                       bill.Child_Count != request.Child_Count || bill.Tot_Count != request.Tot_Count;
-        if (changed)
-        {
-            bill.Adult_Count = request.Adult_Count;
-            bill.Senior_Count = request.Senior_Count;
-            bill.Child_Count = request.Child_Count;
-            bill.Tot_Count = request.Tot_Count;
-            bill.Total_Count = total;
             bill.Counts_Changed_By_Guest = true;
             await _context.SaveChangesAsync();
         }
         return await GetMyBill(session_id);
+    }
+
+    /// <summary>
+    /// Staff: moves someone at the table to another of its open bills, or onto one if they have none.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/sessionparticipant/123/participants/45/bill
+    ///     { "bill_id": 67, "move_orders": true }
+    ///
+    /// With move_orders, the orders they placed on their old bill go with them (cancelled ones
+    /// stay), so their extras are charged on the new bill. Moving everyone who ordered something
+    /// onto a new bill, then fixing both bills' guest counts, splits a bill by person.
+    /// Orders can only move off a bill that's still open, since a closed bill's total is final.
+    /// Staff can move someone even after they've ordered, and onto a bill that has asked for the bill.
+    /// </remarks>
+    /// <response code="200">They're on the bill.</response>
+    /// <response code="400">The bill isn't open, isn't at the table, or their orders can't move.</response>
+    /// <response code="403">The table is at another location.</response>
+    /// <response code="404">Nobody with that seat is at the table.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPut("{session_id:int}/participants/{participant_id:int}/bill")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MoveGuest(int session_id, int participant_id, MoveGuestDTO request)
+    {
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        {
+            return LocationResults.OtherLocation();
+        }
+
+        var seat = await _context.SessionParticipants.FirstOrDefaultAsync(sp =>
+            sp.Participant_Id == participant_id && sp.Session_Id == session_id && sp.Left_At == null);
+        if (seat is null)
+        {
+            return NotFound(new { message = "That person isn't at this table." });
+        }
+        if (seat.Bill_Id == request.Bill_Id)
+        {
+            return Ok(new { bill_id = seat.Bill_Id, orders_moved = 0 });
+        }
+
+        var fromBillId = seat.Bill_Id;
+        // Nobody can close either bill, or order onto the old one, while their orders move
+        await using var billLock = await BillLock.LockAsync(_context, fromBillId is int fromId ? new[] { fromId, request.Bill_Id } : new[] { request.Bill_Id });
+
+        var to = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == request.Bill_Id);
+        if (to == null || to.Session_Id != session_id)
+        {
+            return BadRequest(new { message = "That bill isn't at this table." });
+        }
+        if (to.Status != BillStatus.Open)
+        {
+            return BadRequest(new { message = $"{to.Bill_Name} is already {to.Status.ToString().ToLower()}." });
+        }
+
+        var orders = new List<SessionOrder>();
+        if (request.Move_Orders && fromBillId != null && seat.User_Id != null)
+        {
+            var from = await _context.Bills.AsNoTracking().FirstAsync(b => b.Bill_Id == fromBillId);
+            orders = await _context.SessionOrders
+                .Where(o => o.Bill_Id == fromBillId && o.User_Id == seat.User_Id && o.Status != OrderStatus.Cancelled)
+                .ToListAsync();
+            if (orders.Count > 0 && from.Status != BillStatus.Open)
+            {
+                return BadRequest(new { message = $"{from.Bill_Name} is already {from.Status.ToString().ToLower()}, so its orders can't move." });
+            }
+            orders.ForEach(o => o.Bill_Id = to.Bill_Id);
+        }
+
+        seat.Bill_Id = to.Bill_Id;
+        await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
+
+        return Ok(new { bill_id = to.Bill_Id, orders_moved = orders.Count });
     }
 
     // The caller's seat at this table, if they're still seated

@@ -73,7 +73,19 @@ namespace back_end.DTO.SessionParticipantDTOs
         public int Bill_Id { get; set; }
     }
 
-    // New guest counts for the guest's own bill
+    // Staff moving someone at the table onto another bill
+    public class MoveGuestDTO
+    {
+        [Required]
+        [JsonPropertyName("bill_id")]
+        public int Bill_Id { get; set; }
+
+        // Take the orders they placed on their old bill with them
+        [JsonPropertyName("move_orders")]
+        public bool Move_Orders { get; set; } = true;
+    }
+
+    // New guest counts for a bill
     public class UpdateGuestCountsDTO
     {
         [Range(0, 50)]

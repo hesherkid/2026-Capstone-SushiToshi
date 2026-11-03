@@ -2,6 +2,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.bill;
+using back_end.DTO.SessionParticipantDTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -394,6 +395,86 @@ namespace back_end.controllers
       {
         _logger.LogError(ex, "Error getting bill for session {SessionId}", _session_id);
         return StatusCode(500, new { message = "Error getting bill" });
+      }
+    }
+
+    /// <summary>
+    /// Staff: changes an open bill's guest counts.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/guest_counts/123?_session_id=456
+    ///     { "adult_count": 3, "senior_count": 0, "child_count": 1, "tot_count": 0 }
+    ///
+    /// The same rules as starting a bill: at least one guest, and the table's open bills together
+    /// can't have more guests than it has seats. Works after the guests have asked for the bill.
+    /// Staff have now checked the counts, so the bill's Started_By_Guest and
+    /// Counts_Changed_By_Guest flags are cleared.
+    /// </remarks>
+    /// <response code="200">The bill with its new counts.</response>
+    /// <response code="400">The bill isn't open, or the counts aren't valid.</response>
+    /// <response code="403">The table is at another location.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPut("guest_counts/{_bill_id}")]
+    [ProducesResponseType(typeof(BillResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update_Guest_Counts(int _session_id, int _bill_id, UpdateGuestCountsDTO counts)
+    {
+      try
+      {
+        var bill = await _context.Bills
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+        if (bill == null)
+        {
+          return NotFound(new { message = "Bill or session was not found" });
+        }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, bill.Session_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+        if (bill.Status != BillStatus.Open)
+        {
+          return BadRequest(new { message = $"Only open bills can be changed (this bill is {bill.Status})." });
+        }
+
+        int total = counts.Adult_Count + counts.Senior_Count + counts.Child_Count + counts.Tot_Count;
+        var problem = await BillLinks.GuestCountProblemAsync(_context, bill, total);
+        if (problem != null)
+        {
+          return BadRequest(new { message = problem });
+        }
+
+        BillLinks.SetCounts(bill, counts.Adult_Count, counts.Senior_Count, counts.Child_Count, counts.Tot_Count);
+        bill.Started_By_Guest = false;
+        bill.Counts_Changed_By_Guest = false;
+        await _context.SaveChangesAsync();
+
+        return Ok(new BillResponse
+        {
+          Bill_Id = bill.Bill_Id,
+          Session_Id = bill.Session_Id,
+          Bill_Name = bill.Bill_Name,
+          Senior_Count = bill.Senior_Count,
+          Adult_Count = bill.Adult_Count,
+          Child_Count = bill.Child_Count,
+          Tot_Count = bill.Tot_Count,
+          Total_Count = bill.Total_Count,
+          Status = bill.Status.ToString(),
+          Created_At = bill.Created_At,
+          Closed_At = bill.Closed_At,
+          Table_Numbers = GetTableNumbers(bill.DiningSession)
+        });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error changing guest counts on bill {BillId}", _bill_id);
+        return StatusCode(500, new { message = "Error changing guest counts" });
       }
     }
 

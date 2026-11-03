@@ -10,6 +10,10 @@ namespace back_end.DTO.DashBoardDTOs
         public BillStatus Status { get; set; }
         public DateTime Created_At { get; set; }
         public int Total_Guests { get; set; }
+        public int Adult_Count { get; set; }
+        public int Senior_Count { get; set; }
+        public int Child_Count { get; set; }
+        public int Tot_Count { get; set; }
         public DateTime? Requested_At { get; set; }
         // Started by a guest on their phone: staff should check its guest counts
         public bool Started_By_Guest { get; set; }
@@ -17,6 +21,14 @@ namespace back_end.DTO.DashBoardDTOs
         public bool Counts_Changed_By_Guest { get; set; }
         // People at the table on this bill; more than Total_Guests means the count looks short
         public int People_On_Bill { get; set; }
+    }
+
+    // Someone seated at the table, and the bill they're on (null: not on one yet)
+    public class DashBoardPersonDTO
+    {
+        public int Participant_Id { get; set; }
+        public string? User_Name { get; set; }
+        public int? Bill_Id { get; set; }
     }
 
     public class DashBoardSessionsDTO
@@ -32,6 +44,8 @@ namespace back_end.DTO.DashBoardDTOs
         public int Active_Participants { get; set; }
 
         public List<DashBoardBillDTO> Bills { get; set; } = new List<DashBoardBillDTO>();
+        // Everyone still seated, so staff can move them between bills
+        public List<DashBoardPersonDTO> People { get; set; } = new List<DashBoardPersonDTO>();
         public int Bill_Count { get; set; }
         public bool Is_Closable { get; set; }
     }
