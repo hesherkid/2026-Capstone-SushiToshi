@@ -379,6 +379,7 @@ public class BillLinkTests : IDisposable
     {
         StaffPolicy(typeof(BillController), nameof(BillController.Update_Guest_Counts)).Should().Be("staffOnly");
         StaffPolicy(typeof(SessionParticipantController), nameof(SessionParticipantController.MoveGuest)).Should().Be("staffOnly");
+        StaffPolicy(typeof(BillController), nameof(BillController.Merge_Bill)).Should().Be("staffOnly");
     }
 
     [Fact]
@@ -500,6 +501,134 @@ public class BillLinkTests : IDisposable
 
         result.Should().BeOfType<BadRequestObjectResult>();
         OrderBill(500).Should().Be(Lee);
+        SeatBill(Ana).Should().Be(Lee);
+    }
+
+    private Billing SavedBill(int billId) => _context.Bills.AsNoTracking().Single(b => b.Bill_Id == billId);
+
+    [Fact]
+    public async Task StaffMovingAGuest_MovesThemFromOneBillsCountToTheOthers()
+    {
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park, Guest_Type = "adult" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        SavedBill(Lee).Adult_Count.Should().Be(1);
+        SavedBill(Lee).Total_Count.Should().Be(1);
+        SavedBill(Park).Adult_Count.Should().Be(3);
+        SavedBill(Park).Total_Count.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task StaffMovingAGuest_CanMoveSeveralGuestsForOnePhone()
+    {
+        var lee = (await _context.Bills.FindAsync(Lee))!;
+        lee.Adult_Count = 3;
+        lee.Child_Count = 2;
+        lee.Total_Count = 5;
+        _context.SaveChanges();
+
+        // Ana's phone stands for her and her two children
+        await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park, Guest_Type = "child", Guest_Count = 2 });
+
+        SavedBill(Lee).Child_Count.Should().Be(0);
+        SavedBill(Lee).Total_Count.Should().Be(3);
+        SavedBill(Park).Child_Count.Should().Be(2);
+        SavedBill(Park).Total_Count.Should().Be(4);
+
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ben), new MoveGuestDTO { Bill_Id = Lee }))
+            .Should().BeOfType<OkObjectResult>();
+        // Lee has 3 adults; moving 3 off would leave it empty
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ben), new MoveGuestDTO { Bill_Id = Park, Guest_Type = "adult", Guest_Count = 3 });
+        result.Should().BeOfType<BadRequestObjectResult>();
+        SavedBill(Lee).Total_Count.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task StaffMovingAGuest_LeavesTheCountsAloneWithoutAGuestType()
+    {
+        await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park });
+
+        SavedBill(Lee).Total_Count.Should().Be(2);
+        SavedBill(Park).Total_Count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task StaffMovingAGuest_NeedsThatKindOfGuestOnTheOldBill()
+    {
+        // Lee is two adults, no seniors
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park, Guest_Type = "senior" });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        SeatBill(Ana).Should().Be(Lee);
+        SavedBill(Park).Total_Count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task StaffMovingAGuest_CantTakeTheLastGuestOffABillsCount()
+    {
+        var lee = (await _context.Bills.FindAsync(Lee))!;
+        lee.Adult_Count = 1;
+        lee.Total_Count = 1;
+        _context.SaveChanges();
+
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDTO { Bill_Id = Park, Guest_Type = "adult" });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        SeatBill(Ana).Should().Be(Lee);
+        SavedBill(Lee).Total_Count.Should().Be(1);
+    }
+
+    // ---- Staff merging bills ----
+
+    [Fact]
+    public async Task StaffMergingBills_MovesEveryoneTheirOrdersAndTheGuestCounts()
+    {
+        AnaOrderedOnLee();
+        _context.SessionOrders.AddRange(
+            // Staff ordered this one for the table
+            new SessionOrder { Order_Id = 502, session_id = Table, Bill_Id = Lee, User_Id = Server, Status = OrderStatus.Delivered, Created_At = DateTime.UtcNow },
+            new SessionOrder { Order_Id = 503, session_id = Table, Bill_Id = Lee, User_Id = Ana, Status = OrderStatus.Cancelled, Created_At = DateTime.UtcNow });
+        // Someone on Lee who has since left
+        _context.SessionParticipants.Add(new SessionParticipant { Session_Id = Table, User_Id = Dee, User_Name = "Dee", Bill_Id = Lee, Left_At = DateTime.UtcNow });
+        var lee = (await _context.Bills.FindAsync(Lee))!;
+        lee.Child_Count = 1;
+        lee.Total_Count = 3;
+        lee.Leftover_Charge = 5m;
+        _context.SaveChanges();
+
+        var result = await Bills(Server, "Staff").Merge_Bill(Table, Lee, new MergeBillDTO { Into_Bill_Id = Park });
+
+        result.Should().BeOfType<OkObjectResult>();
+        SeatBill(Ana).Should().Be(Park);
+        _context.SessionParticipants.AsNoTracking().Single(sp => sp.User_Id == Dee).Bill_Id.Should().Be(Park);
+        OrderBill(500).Should().Be(Park);
+        OrderBill(502).Should().Be(Park);
+        OrderBill(503).Should().Be(Lee);
+
+        // Lee's 2 adults and a child who never joined on a phone
+        var park = SavedBill(Park);
+        park.Adult_Count.Should().Be(4);
+        park.Child_Count.Should().Be(1);
+        park.Total_Count.Should().Be(5);
+        park.Leftover_Charge.Should().Be(5m);
+        SavedBill(Lee).Status.Should().Be(BillStatus.Cancelled);
+        SavedBill(Lee).Leftover_Charge.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task StaffMergingBills_OnlyOpenBillsAtTheSameTable()
+    {
+        var staff = Bills(Server, "Staff");
+        (await staff.Merge_Bill(Table, Lee, new MergeBillDTO { Into_Bill_Id = Lee })).Should().BeOfType<BadRequestObjectResult>();
+        (await staff.Merge_Bill(Table, Lee, new MergeBillDTO { Into_Bill_Id = OtherTableBill })).Should().BeOfType<BadRequestObjectResult>();
+        (await staff.Merge_Bill(Table, OtherTableBill, new MergeBillDTO { Into_Bill_Id = Lee })).Should().BeOfType<NotFoundObjectResult>();
+
+        (await _context.Bills.FindAsync(Park))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+        (await staff.Merge_Bill(Table, Lee, new MergeBillDTO { Into_Bill_Id = Park })).Should().BeOfType<BadRequestObjectResult>();
+        (await staff.Merge_Bill(Table, Park, new MergeBillDTO { Into_Bill_Id = Lee })).Should().BeOfType<BadRequestObjectResult>();
+
+        SavedBill(Lee).Status.Should().Be(BillStatus.Open);
         SeatBill(Ana).Should().Be(Lee);
     }
 

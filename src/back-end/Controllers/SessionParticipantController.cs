@@ -232,6 +232,8 @@ namespace back_end.Controllers
             return BadRequest(new { message = "Choose your bill first." });
         }
 
+        // So staff can't close the bill, or change its count, while this one saves
+        await using var billLock = await BillLock.LockAsync(_context, seat.Bill_Id.Value);
         var bill = await _context.Bills
             .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
@@ -257,6 +259,7 @@ namespace back_end.Controllers
             bill.Counts_Changed_By_Guest = true;
             await _context.SaveChangesAsync();
         }
+        if (billLock != null) await billLock.CommitAsync();
         return await GetMyBill(session_id);
     }
 
@@ -267,11 +270,12 @@ namespace back_end.Controllers
     /// Sample request:
     ///
     ///     PUT /api/sessionparticipant/123/participants/45/bill
-    ///     { "bill_id": 67, "move_orders": true }
+    ///     { "bill_id": 67, "move_orders": true, "guest_type": "adult", "guest_count": 1 }
     ///
     /// With move_orders, the orders they placed on their old bill go with them (cancelled ones
-    /// stay), so their extras are charged on the new bill. Moving everyone who ordered something
-    /// onto a new bill, then fixing both bills' guest counts, splits a bill by person.
+    /// stay), so their extras are charged on the new bill. With guest_type, guest_count guests of
+    /// that kind also move from the old bill's count to the new one's; the old bill keeps at least one.
+    /// Moving everyone who ordered something onto a new bill this way splits a bill by person.
     /// Orders can only move off a bill that's still open, since a closed bill's total is final.
     /// Staff can move someone even after they've ordered, and onto a bill that has asked for the bill.
     /// </remarks>
@@ -300,7 +304,7 @@ namespace back_end.Controllers
         }
         if (seat.Bill_Id == request.Bill_Id)
         {
-            return Ok(new { bill_id = seat.Bill_Id, orders_moved = 0 });
+            return Ok(new { bill_id = seat.Bill_Id, orders_moved = 0, counts_moved = false });
         }
 
         var fromBillId = seat.Bill_Id;
@@ -317,12 +321,13 @@ namespace back_end.Controllers
             return BadRequest(new { message = $"{to.Bill_Name} is already {to.Status.ToString().ToLower()}." });
         }
 
+        var from = fromBillId is int id ? await _context.Bills.FirstAsync(b => b.Bill_Id == id) : null;
+
         var orders = new List<SessionOrder>();
-        if (request.Move_Orders && fromBillId != null && seat.User_Id != null)
+        if (request.Move_Orders && from != null && seat.User_Id != null)
         {
-            var from = await _context.Bills.AsNoTracking().FirstAsync(b => b.Bill_Id == fromBillId);
             orders = await _context.SessionOrders
-                .Where(o => o.Bill_Id == fromBillId && o.User_Id == seat.User_Id && o.Status != OrderStatus.Cancelled)
+                .Where(o => o.Bill_Id == from.Bill_Id && o.User_Id == seat.User_Id && o.Status != OrderStatus.Cancelled)
                 .ToListAsync();
             if (orders.Count > 0 && from.Status != BillStatus.Open)
             {
@@ -331,12 +336,51 @@ namespace back_end.Controllers
             orders.ForEach(o => o.Bill_Id = to.Bill_Id);
         }
 
+        // The guests leave the old bill's count and join the new one's, so the table's total stays the same
+        var countsMoved = false;
+        if (request.Guest_Type != null && from != null)
+        {
+            if (from.Status != BillStatus.Open)
+            {
+                return BadRequest(new { message = $"{from.Bill_Name} is already {from.Status.ToString().ToLower()}, so its guest count can't change." });
+            }
+            var n = request.Guest_Count;
+            var (adults, seniors, children, toddlers) = request.Guest_Type switch
+            {
+                "adult" => (n, 0, 0, 0),
+                "senior" => (0, n, 0, 0),
+                "child" => (0, 0, n, 0),
+                _ => (0, 0, 0, n),
+            };
+            if (from.Adult_Count < adults || from.Senior_Count < seniors ||
+                from.Child_Count < children || from.Tot_Count < toddlers)
+            {
+                return BadRequest(new { message = $"{from.Bill_Name} doesn't have {n} {GuestTypePlural(request.Guest_Type, n)} to move." });
+            }
+            if (from.Total_Count - n < 1)
+            {
+                return BadRequest(new { message = $"That would leave {from.Bill_Name} with no guests. Move fewer guests, move them without changing the guest counts, or cancel {from.Bill_Name}." });
+            }
+
+            BillLinks.SetCounts(from, from.Adult_Count - adults, from.Senior_Count - seniors,
+                from.Child_Count - children, from.Tot_Count - toddlers);
+            BillLinks.SetCounts(to, to.Adult_Count + adults, to.Senior_Count + seniors,
+                to.Child_Count + children, to.Tot_Count + toddlers);
+            countsMoved = true;
+        }
+
         seat.Bill_Id = to.Bill_Id;
         await _context.SaveChangesAsync();
         if (billLock != null) await billLock.CommitAsync();
 
-        return Ok(new { bill_id = to.Bill_Id, orders_moved = orders.Count });
+        return Ok(new { bill_id = to.Bill_Id, orders_moved = orders.Count, counts_moved = countsMoved });
     }
+
+    private static string GuestTypePlural(string guestType, int count) => count == 1 ? guestType : guestType switch
+    {
+        "child" => "children",
+        _ => guestType + "s",
+    };
 
     // The caller's seat at this table, if they're still seated
     private async Task<SessionParticipant?> MySeatAsync(int sessionId)

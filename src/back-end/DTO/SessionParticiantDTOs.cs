@@ -83,6 +83,24 @@ namespace back_end.DTO.SessionParticipantDTOs
         // Take the orders they placed on their old bill with them
         [JsonPropertyName("move_orders")]
         public bool Move_Orders { get; set; } = true;
+
+        // Take guest_count of this kind of guest off their old bill's count and add them to the new one's,
+        // e.g. 4 adults when one phone stands for a party of 4. Null leaves both counts alone.
+        [RegularExpression("^(adult|senior|child|toddler)$")]
+        [JsonPropertyName("guest_type")]
+        public string? Guest_Type { get; set; }
+
+        [Range(1, 50)]
+        [JsonPropertyName("guest_count")]
+        public int Guest_Count { get; set; } = 1;
+    }
+
+    // Staff merging one bill into another at the same table
+    public class MergeBillDTO
+    {
+        [Required]
+        [JsonPropertyName("into_bill_id")]
+        public int Into_Bill_Id { get; set; }
     }
 
     // New guest counts for a bill

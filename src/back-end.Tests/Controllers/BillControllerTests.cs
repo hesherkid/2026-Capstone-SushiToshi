@@ -350,7 +350,6 @@ public class BillControllerTests : IDisposable
         _context.Bills.Add(new Billing { Bill_Id = 902, Session_Id = TableSession, Bill_Name = "Choi", Adult_Count = 1, Total_Count = 1 });
         _context.SaveChanges();
         AddOrder(811, LeeBill, TableSession, OrderStatus.Pending);
-        AddOrder(812, LeeBill, TableSession, OrderStatus.Delivered);
         AddOrder(813, 902, TableSession, OrderStatus.Pending);
 
         var bill = OkValue<BillResponse>(await Bills().Cancel_Bill(TableSession, LeeBill));
@@ -358,8 +357,23 @@ public class BillControllerTests : IDisposable
         bill.Status.Should().Be("Cancelled");
         bill.Closed_At.Should().NotBeNull();
         _context.SessionOrders.Single(o => o.Order_Id == 811).Status.Should().Be(OrderStatus.Cancelled);
-        _context.SessionOrders.Single(o => o.Order_Id == 812).Status.Should().Be(OrderStatus.Delivered);
         _context.SessionOrders.Single(o => o.Order_Id == 813).Status.Should().Be(OrderStatus.Pending);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Processing)]
+    [InlineData(OrderStatus.Delivered)]
+    public async Task CancelBill_WithOrdersBeingMadeOrServed_Returns400(OrderStatus status)
+    {
+        // Cancelling would leave this food unpaid, since a cancelled bill is never charged
+        AddOrder(811, LeeBill, TableSession, OrderStatus.Pending);
+        AddOrder(812, LeeBill, TableSession, status);
+
+        var result = await Bills().Cancel_Bill(TableSession, LeeBill);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        Bill(LeeBill).Status.Should().Be(BillStatus.Open);
+        _context.SessionOrders.Single(o => o.Order_Id == 811).Status.Should().Be(OrderStatus.Pending);
     }
 
     [Theory]

@@ -426,6 +426,8 @@ namespace back_end.controllers
     {
       try
       {
+        // So nobody can close the bill, or change its count, while this saves
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
         var bill = await _context.Bills
             .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
@@ -454,6 +456,7 @@ namespace back_end.controllers
         bill.Started_By_Guest = false;
         bill.Counts_Changed_By_Guest = false;
         await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
 
         return Ok(new BillResponse
         {
@@ -475,6 +478,117 @@ namespace back_end.controllers
       {
         _logger.LogError(ex, "Error changing guest counts on bill {BillId}", _bill_id);
         return StatusCode(500, new { message = "Error changing guest counts" });
+      }
+    }
+
+    /// <summary>
+    /// Staff: merges an open bill into another open bill at the same table, e.g. when everyone wants one bill.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/merge/123?_session_id=456
+    ///     { "into_bill_id": 124 }
+    ///
+    /// Everything on bill 123 moves to bill 124: everyone on it, all of its orders that aren't
+    /// cancelled (including ones staff placed and ones from people who have left), its leftover
+    /// fee, and its guest counts, so guests who never joined on a phone move too. The table's total
+    /// doesn't change, so the seat limit still holds. Bill 123 is then cancelled, with nothing on it.
+    /// </remarks>
+    /// <response code="200">The bill everything moved to, with its new counts.</response>
+    /// <response code="400">Either bill isn't open, they're the same bill, or the other bill isn't at this table.</response>
+    /// <response code="403">The table is at another location.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPut("merge/{_bill_id}")]
+    [ProducesResponseType(typeof(BillResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Merge_Bill(int _session_id, int _bill_id, MergeBillDTO request)
+    {
+      try
+      {
+        if (request.Into_Bill_Id == _bill_id)
+        {
+          return BadRequest(new { message = "Pick another bill to merge into." });
+        }
+
+        // Nobody can order onto, close or change either bill while everything moves
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id, request.Into_Bill_Id);
+        var from = await _context.Bills
+            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+        if (from == null)
+        {
+          return NotFound(new { message = "Bill or session was not found" });
+        }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, from.Session_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
+        var into = await _context.Bills
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+            .FirstOrDefaultAsync(b => b.Bill_Id == request.Into_Bill_Id);
+        if (into == null || into.Session_Id != _session_id)
+        {
+          return BadRequest(new { message = "That bill isn't at this table." });
+        }
+        foreach (var bill in new[] { from, into })
+        {
+          if (bill.Status != BillStatus.Open)
+          {
+            return BadRequest(new { message = $"{bill.Bill_Name} is already {bill.Status.ToString().ToLower()}." });
+          }
+        }
+
+        var orders = await _context.SessionOrders
+            .Where(o => o.Bill_Id == from.Bill_Id && o.Status != OrderStatus.Cancelled)
+            .ToListAsync();
+        orders.ForEach(o => o.Bill_Id = into.Bill_Id);
+
+        // Everyone who was on it, including people who have left, so nothing points at the cancelled bill
+        var seats = await _context.SessionParticipants
+            .Where(sp => sp.Session_Id == _session_id && sp.Bill_Id == from.Bill_Id)
+            .ToListAsync();
+        seats.ForEach(sp => sp.Bill_Id = into.Bill_Id);
+
+        BillLinks.SetCounts(into,
+            into.Adult_Count + from.Adult_Count,
+            into.Senior_Count + from.Senior_Count,
+            into.Child_Count + from.Child_Count,
+            into.Tot_Count + from.Tot_Count);
+        into.Leftover_Charge += from.Leftover_Charge;
+        from.Leftover_Charge = 0m;
+
+        // Cancelled bills don't count towards guests or turnover, so its counts can stay as a record
+        from.Status = BillStatus.Cancelled;
+        from.Closed_At = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
+
+        return Ok(new BillResponse
+        {
+          Bill_Id = into.Bill_Id,
+          Session_Id = into.Session_Id,
+          Bill_Name = into.Bill_Name,
+          Senior_Count = into.Senior_Count,
+          Adult_Count = into.Adult_Count,
+          Child_Count = into.Child_Count,
+          Tot_Count = into.Tot_Count,
+          Total_Count = into.Total_Count,
+          Status = into.Status.ToString(),
+          Created_At = into.Created_At,
+          Closed_At = into.Closed_At,
+          Requested_At = into.Requested_At,
+          Table_Numbers = GetTableNumbers(into.DiningSession)
+        });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error merging bill {BillId} into {IntoBillId}", _bill_id, request.Into_Bill_Id);
+        return StatusCode(500, new { message = "Error merging bills" });
       }
     }
 
@@ -811,12 +925,12 @@ namespace back_end.controllers
     /// <returns>
     /// An <see cref="IActionResult"/> containing the cancelled <see cref="BillResponse"/> object.
     /// Returns HTTP 200 (OK) with the cancelled bill details on success.
-    /// Returns HTTP 400 (Bad Request) if the bill is not in Open status.
+    /// Returns HTTP 400 (Bad Request) if the bill is not in Open status, or has orders being made or served.
     /// Returns HTTP 404 (Not Found) if the bill or session doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during cancellation.
     /// </returns>
     /// <response code="200">Returns the cancelled bill details</response>
-    /// <response code="400">If the bill cannot be cancelled (not in Open status)</response>
+    /// <response code="400">If the bill cannot be cancelled (not in Open status, or has orders being made or served)</response>
     /// <response code="404">If the bill or session is not found</response>
     /// <response code="500">If an internal error occurs while cancelling the bill</response>
     /// <remarks>
@@ -825,7 +939,8 @@ namespace back_end.controllers
     ///     POST /api/bill/cancel_bill/123?_session_id=456
     ///
     /// Cancels the specified bill and automatically cancels all pending orders associated with it.
-    /// Only bills with 'Open' status can be cancelled.
+    /// Only bills with 'Open' status can be cancelled, and only if none of their orders are being made
+    /// or have been served: those still have to be paid for, so merge or close the bill instead.
     /// The bill's closed_at timestamp is set to the current UTC time.
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
@@ -856,6 +971,18 @@ namespace back_end.controllers
         if (bill.Status != BillStatus.Open)
         {
           return BadRequest(new { message = $"Cannot cancel bill with status {bill.Status}" });
+        }
+
+        // Food that's being made or has gone out still has to be paid for, and a cancelled bill is never charged
+        var madeOrders = await _context.SessionOrders
+            .CountAsync(o => o.Bill_Id == _bill_id && (o.Status == OrderStatus.Processing || o.Status == OrderStatus.Delivered));
+        if (madeOrders > 0)
+        {
+          return BadRequest(new
+          {
+            message = $"{bill.Bill_Name} has {madeOrders} order{(madeOrders == 1 ? "" : "s")} being made or served. " +
+              "Merge it into another bill, or close it, instead of cancelling it."
+          });
         }
 
         var pendingOrders = await _context.SessionOrders
