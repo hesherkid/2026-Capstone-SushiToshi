@@ -162,6 +162,17 @@ describe("Session dashboard", () => {
     expect(within(dialog).getByText("Started by guest")).toBeInTheDocument();
   });
 
+  it("shows which tables have a guest count to check, and opens the session from there", async () => {
+    await renderDashboard();
+
+    // Session 7's only bill is closed, so there's nothing to check
+    expect(within(rowFor("#7")).queryByText("Check guests")).not.toBeInTheDocument();
+
+    fireEvent.click(within(rowFor("#8")).getByText("Check guests"));
+    const dialog = await screen.findByRole("dialog", { name: /Dining Session #8/ });
+    expect(within(dialog).getByText("Started by guest")).toBeInTheDocument();
+  });
+
   it("warns staff when more people are on a bill than its guest count, or a guest changed it", async () => {
     // A guest said 1, then two more people joined from their phones
     const PARK = {
