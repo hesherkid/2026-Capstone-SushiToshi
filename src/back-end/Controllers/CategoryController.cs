@@ -22,6 +22,19 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
+        private static CategoryResponse ToResponse(Category c) => new()
+        {
+            Category_Id = c.Category_id,
+            Category_Name = c.Category_name,
+            Description = c.Description,
+            Adult_Limit = c.adult_limit,
+            Child_Limit = c.child_limit,
+            Senior_Limit = c.senior_limit,
+            Toddler_Limit = c.toddler_limit,
+            Per_Order_Limit = c.per_order_limit,
+            Over_Limit_Behavior = c.over_limit_behavior,
+        };
+
 
         /// <summary>
         /// Retrieves all categories from the database.
@@ -43,14 +56,14 @@ namespace back_end.Controllers
         //GET api/category
         //Get all categories
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<Category>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<CategoryResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<Category>>> GetAllCategories()
+        public async Task<ActionResult<IEnumerable<CategoryResponse>>> GetAllCategories()
         {
             try
             {
-                var category = await _context.Categories.ToListAsync();
-                return Ok(category);
+                var categories = await _context.Categories.ToListAsync();
+                return Ok(categories.Select(ToResponse).ToList());
             }
             catch (Exception ex)
             {
@@ -99,10 +112,12 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
-        [ProducesResponseType(typeof(Category), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateCategory(CreateCategory category)
         {
             try
@@ -131,7 +146,7 @@ namespace back_end.Controllers
                 _context.Categories.Add(categoryEntity);
                 await _context.SaveChangesAsync();
 
-                return Ok(categoryEntity);
+                return Ok(ToResponse(categoryEntity));
             }
             catch (Exception ex)
             {
@@ -163,7 +178,7 @@ namespace back_end.Controllers
         /// Returns the complete category details for the specified ID.
         /// </remarks>
         [HttpGet("get_category/{_categoryId}")]
-        [ProducesResponseType(typeof(Category), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetCategoryById(int _categoryId)
@@ -178,7 +193,7 @@ namespace back_end.Controllers
                     return NotFound("Category not found.");
                 }
 
-                return Ok(category);
+                return Ok(ToResponse(category));
             }
             catch (Exception ex)
             {
@@ -225,10 +240,12 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPut("update_category/{_categoryId}")]
-        [ProducesResponseType(typeof(Category), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UpdateCategory(int _categoryId, UpdateCategory updatedCategory)
         {
             try
@@ -260,7 +277,7 @@ namespace back_end.Controllers
                 existingCategory.over_limit_behavior = updatedCategory.Over_Limit_Behavior ?? existingCategory.over_limit_behavior;
                 _context.Categories.Update(existingCategory);
                 await _context.SaveChangesAsync();
-                return Ok(existingCategory);
+                return Ok(ToResponse(existingCategory));
 
 
             }
@@ -290,7 +307,7 @@ namespace back_end.Controllers
         ///     DELETE /api/category/delete_category/123
         ///
         /// Permanently removes the category from the database.
-        /// This will not affect menu items associated with this category as on delete is set to Restrict.
+        /// If the category has associated menu items, deletion will be blocked and a conflict response will be returned.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("delete_category/{_categoryId}")]
@@ -298,6 +315,8 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> DeleteCategory(int _categoryId)
         {
             try
@@ -353,9 +372,12 @@ namespace back_end.Controllers
         /// Default pagination: skip=0, limit=10
         /// </remarks>
         [HttpGet("get_menu_by_category/{_categoryId}")]
+        [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(IEnumerable<Menu_Item>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetMenuItemsByCategory(int _categoryId, int skip = 0, int limit = 10)
         {
             try
