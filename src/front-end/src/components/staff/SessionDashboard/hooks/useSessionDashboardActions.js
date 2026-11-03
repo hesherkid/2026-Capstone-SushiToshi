@@ -14,6 +14,10 @@ export const useSessionDashboardActions = () => {
 
     newBill: (session) => openDialog("newBill", session.session_Id),
 
+    // Staff ordering on one of the table's open bills
+    addOrder: (session, bill) =>
+      openDialog("staffOrder", { sessionId: session.session_Id, billId: bill.bill_Id }),
+
     endSession: (session) =>
       openDialog("confirm", {
         title: "End session",

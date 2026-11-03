@@ -148,9 +148,6 @@ namespace back_end.DTO.OrdersDTOs
         [JsonPropertyName("bill_id")]
         public int Bill_Id { get; set; }
 
-        public int? Request_By_User_Id { get; set; }
-        public string? Request_By_Name { get; set; }
-
         // Saved together with the order, so an order is never left without items
         [JsonPropertyName("items")]
         public List<OrderItemCreateDTO> Items { get; set; } = new();
