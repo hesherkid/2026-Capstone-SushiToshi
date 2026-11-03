@@ -31,35 +31,35 @@ namespace back_end.Controllers
         }
 
 
-    /// <summary>
-    /// Leaves the specified dining session.
-    /// </summary>
-    /// <param name="session_id">The session identifier to leave.</param>
-    /// <remarks>
-    /// - You must currently be an active participant.  
-    /// - You cannot leave if you have any non-delivered orders in the session.  
-    /// - Sets <c>Left_At</c> to the current UTC time.
-    /// </remarks>
-    /// <response code="200">Left the session successfully.</response>
-    /// <response code="401">The request is unauthenticated or the user claim is missing.</response>
-    /// <response code="404">The session or user record was not found.</response>
-    /// <response code="400">The user is not an active participant, or has active orders.</response>
-    /// <response code="500">An unexpected error occurred while leaving the session.</response>
-    [Authorize]
-    [HttpPost("{session_id:int}/leave")]
-    [Produces("application/json")]
+        /// <summary>
+        /// Leaves the specified dining session.
+        /// </summary>
+        /// <param name="session_id">The session identifier to leave.</param>
+        /// <remarks>
+        /// - You must currently be an active participant.  
+        /// - You cannot leave if you have any non-delivered orders in the session.  
+        /// - Sets <c>Left_At</c> to the current UTC time.
+        /// </remarks>
+        /// <response code="200">Left the session successfully.</response>
+        /// <response code="401">The request is unauthenticated or the user claim is missing.</response>
+        /// <response code="404">The session or user record was not found.</response>
+        /// <response code="400">The user is not an active participant, or has active orders.</response>
+        /// <response code="500">An unexpected error occurred while leaving the session.</response>
+        [Authorize]
+        [HttpPost("{session_id:int}/leave")]
+        [Produces("application/json")]
         [SwaggerOperation(
-        OperationId = "LeaveSession",
-        Summary = "Leave a dining session",
-        Description = "Marks the current user as having left the specified session, provided there are no active orders."
-    )]        
-    public async Task<IActionResult> LeaveSession(
-            int session_id
-        )
+            OperationId = "LeaveSession",
+            Summary = "Leave a dining session",
+            Description = "Marks the current user as having left the specified session, provided there are no active orders."
+        )]
+        public async Task<IActionResult> LeaveSession(
+                int session_id
+            )
         {
             try
-            {   
-                
+            {
+
                 var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
                 if (session is null)
                 {
@@ -76,7 +76,7 @@ namespace back_end.Controllers
 
                 var existingParticipant = await _context.SessionParticipants
                     .FirstOrDefaultAsync(sp => sp.Session_Id == session_id && sp.User_Id == userId && !sp.Left_At.HasValue);
-                if(existingParticipant is null)
+                if (existingParticipant is null)
                 {
                     return BadRequest("You are not a active participant to the session");
                 }
