@@ -33,6 +33,7 @@ const ACTION_BAR_HEIGHT = 112;
 
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
 const billName = (bill) => bill.bill_name || `Bill #${bill.bill_id}`;
+const guestCount = (count) => `${count} guest${count === 1 ? "" : "s"}`;
 
 // The guest's cart as a full page: check the items, pick the bill, place the order,
 // then a confirmation with where to go next
@@ -100,6 +101,12 @@ const ReviewOrderPage = () => {
 
   // Guests not on a bill yet pick or start one before they can order
   const [billDialogOpen, setBillDialogOpen] = useState(false);
+  // Which step it opens on: choosing a bill, or the guest count on theirs
+  const [billDialogView, setBillDialogView] = useState("choose");
+  const openBillDialog = (view = "choose") => {
+    setBillDialogView(view);
+    setBillDialogOpen(true);
+  };
   const askedForBill = useRef(false);
   useEffect(() => {
     if (needsBill && !askedForBill.current) {
@@ -347,7 +354,7 @@ const ReviewOrderPage = () => {
               severity="warning"
               sx={{ mb: 3 }}
               action={
-                <Button color="inherit" size="small" onClick={() => setBillDialogOpen(true)}>
+                <Button color="inherit" size="small" onClick={() => openBillDialog()}>
                   Choose bill
                 </Button>
               }
@@ -383,10 +390,26 @@ const ReviewOrderPage = () => {
                   >
                     {billName(selectedBill)}
                   </Typography>
+                  {/* Party size, which they can fix until they ask for the bill */}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {guestCount(selectedBill.total_count ?? 0)}
+                    </Typography>
+                    {!billRequested && (
+                      <Button
+                        size="small"
+                        onClick={() => openBillDialog("guests")}
+                        aria-label={`Edit guests on ${billName(selectedBill)}`}
+                        sx={{ minWidth: 0, py: 0 }}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </Box>
                 </Box>
                 {canChangeBill && (
                   <Button
-                    onClick={() => setBillDialogOpen(true)}
+                    onClick={() => openBillDialog()}
                     aria-label={`Change bill from ${billName(selectedBill)}`}
                   >
                     Change
@@ -539,7 +562,11 @@ const ReviewOrderPage = () => {
           </Paper>
         </>
       )}
-      <BillChoiceDialog open={billDialogOpen} onClose={() => setBillDialogOpen(false)} />
+      <BillChoiceDialog
+        open={billDialogOpen}
+        initialView={billDialogView}
+        onClose={() => setBillDialogOpen(false)}
+      />
     </CustomerPageContainer>
   );
 };

@@ -36,16 +36,8 @@ namespace back_end.Helpers
             return null;
         }
 
-        // The table's only bill that can take orders, if there's exactly one, so most guests
-        // never have to choose
-        public static async Task<int?> OnlyJoinableBillIdAsync(ApplicationDbContext context, int sessionId)
-        {
-            var open = await context.Bills
-                .Where(b => b.Session_Id == sessionId && b.Status == BillStatus.Open && b.Requested_At == null)
-                .Select(b => b.Bill_Id)
-                .Take(2)
-                .ToListAsync();
-            return open.Count == 1 ? open[0] : null;
-        }
+        // Seats at the session's table, or across its table group's tables (load them first)
+        public static int TableCapacity(DiningSession session) =>
+            session.Table?.seat_count ?? session.TableGroup?.Tables.Sum(t => t.seat_count) ?? 0;
     }
 }

@@ -287,7 +287,15 @@ describe("FullMenu guest flow", () => {
   });
 
   describe("choosing a bill", () => {
-    const PARK_BILL = { bill_id: 9, bill_name: "Park", status: "Open", total_count: 3, requested_at: null };
+    const PARK_BILL = {
+      bill_id: 9,
+      bill_name: "Park",
+      status: "Open",
+      total_count: 3,
+      adult_count: 3,
+      people_count: 1,
+      requested_at: null,
+    };
 
     it("asks a guest who isn't on a bill which one is theirs, and puts them on it", async () => {
       api.get.mockImplementation(tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }));
@@ -306,8 +314,64 @@ describe("FullMenu guest flow", () => {
       await waitFor(() =>
         expect(api.put).toHaveBeenCalledWith("/SessionParticipant/42/bill", { bill_id: 9 }),
       );
+      // Then they check the bill's guest count
+      expect(await within(dialog).findByRole("heading", { name: "How many in your party?" })).toBeInTheDocument();
+      expect(within(dialog).getByRole("status")).toHaveTextContent("3 guests on this bill");
+      fireEvent.click(within(dialog).getByRole("button", { name: "Looks right" }));
+
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(api.put).toHaveBeenCalledTimes(1); // nothing changed, so nothing saved
       expect(screen.queryByText("Choose your bill before placing an order.")).not.toBeInTheDocument();
+    });
+
+    it("after joining a bill with more people than guests, asks them to update the count", async () => {
+      const SOLO = { ...PARK_BILL, total_count: 1, adult_count: 1 };
+      api.get.mockImplementation(tableApi({ bills: [SOLO], myBillId: null }));
+      api.put
+        .mockResolvedValueOnce({
+          data: myBillResponse({ bills: [{ ...SOLO, people_count: 2 }], myBillId: 9 }),
+        })
+        .mockResolvedValueOnce({
+          data: myBillResponse({
+            bills: [{ ...SOLO, total_count: 2, adult_count: 2, people_count: 2 }],
+            myBillId: 9,
+          }),
+        });
+      render(<FullMenu />);
+
+      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+      fireEvent.click(within(dialog).getByRole("button", { name: /Park/ }));
+
+      expect(await within(dialog).findByText("2 people have joined this bill. Make sure everyone is counted."))
+        .toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole("button", { name: "More adults" }));
+      expect(within(dialog).queryByText(/people have joined/)).not.toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole("button", { name: "Save guest count" }));
+
+      await waitFor(() =>
+        expect(api.put).toHaveBeenLastCalledWith("/SessionParticipant/42/bill/guests", {
+          adult_count: 2,
+          senior_count: 0,
+          child_count: 0,
+          tot_count: 0,
+        }),
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("shows the server's reason when the guest count can't be saved", async () => {
+      api.get.mockImplementation(tableApi({ bills: [PARK_BILL], myBillId: null }));
+      api.put
+        .mockResolvedValueOnce({ data: myBillResponse({ bills: [PARK_BILL], myBillId: 9 }) })
+        .mockRejectedValueOnce({ response: { data: { message: "Your table seats 4, and the other bills have 0." } } });
+      render(<FullMenu />);
+
+      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+      fireEvent.click(within(dialog).getByRole("button", { name: /Park/ }));
+      fireEvent.click(await within(dialog).findByRole("button", { name: "More adults" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "Save guest count" }));
+
+      expect(await within(dialog).findByText("Your table seats 4, and the other bills have 0.")).toBeInTheDocument();
     });
 
     it("lets a guest at a table with no bills start one", async () => {

@@ -151,7 +151,9 @@ namespace back_end.controllers
               Created_At = b.Created_At,
               Total_Guests = b.Total_Count,
               Requested_At = b.Requested_At,
-              Started_By_Guest = b.Started_By_Guest
+              Started_By_Guest = b.Started_By_Guest,
+              Counts_Changed_By_Guest = b.Counts_Changed_By_Guest,
+              People_On_Bill = session.Participants.Count(p => p.Left_At == null && p.Bill_Id == b.Bill_Id)
             }).ToList(),
             Bill_Count = session.Bills.Count(),
             Is_Closable = Is_Closable

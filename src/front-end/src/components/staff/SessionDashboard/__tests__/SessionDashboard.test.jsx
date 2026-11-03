@@ -57,7 +57,9 @@ const sessions = [
     table_Numbers: [1, 2],
     started_At: "2026-10-14T20:10:00Z",
     active_Participants: 1, // one phone for a party of 4
-    bills: [{ bill_Id: 80, bill_Name: "Lee", status: "Open", total_Guests: 4, started_By_Guest: true }],
+    bills: [
+      { bill_Id: 80, bill_Name: "Lee", status: "Open", total_Guests: 4, people_On_Bill: 1, started_By_Guest: true },
+    ],
     bill_Count: 1,
     is_Closable: false,
   },
@@ -146,6 +148,31 @@ describe("Session dashboard", () => {
     fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Started by guest")).toBeInTheDocument();
+  });
+
+  it("warns staff when more people are on a bill than its guest count, or a guest changed it", async () => {
+    // A guest said 1, then two more people joined from their phones
+    const PARK = {
+      bill_Id: 81,
+      bill_Name: "Park",
+      status: "Open",
+      total_Guests: 1,
+      people_On_Bill: 3,
+      counts_Changed_By_Guest: true,
+    };
+    const withPark = sessions.map((s) => (s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK] } : s));
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url.startsWith("/Dashboard/sessions") ? Promise.resolve({ status: 200, data: withPark }) : defaultGet(url),
+    );
+    await renderDashboard();
+
+    fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("3 people on 1-guest bill")).toBeInTheDocument();
+    expect(within(dialog).getByText("Count changed by guest")).toBeInTheDocument();
+    // Lee's 4 guests share one phone, which is fine
+    expect(within(dialog).queryByText(/people on 4-guest bill/)).not.toBeInTheDocument();
   });
 
   it("closes a bill from its summary and blocks ending the session until then", async () => {

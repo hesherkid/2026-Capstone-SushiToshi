@@ -41,6 +41,9 @@ const LEE = {
   bill_id: 8,
   bill_name: "Lee",
   status: "Open",
+  total_count: 2,
+  adult_count: 2,
+  people_count: 1,
   created_at: "2026-10-18T04:00:00Z",
 };
 const PARK = {
@@ -189,6 +192,7 @@ describe("Review order page", () => {
     expect(screen.getByRole("button", { name: "Place order · 2 items", hidden: true })).toBeDisabled();
 
     fireEvent.click(within(dialog).getByRole("button", { name: /Lee/ }));
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Looks right" }));
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Place order · 2 items" })).toBeEnabled(),
@@ -210,6 +214,44 @@ describe("Review order page", () => {
     const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
     expect(within(dialog).getByRole("button", { name: /Lee/ })).toHaveAttribute("aria-current", "true");
     expect(within(dialog).getByRole("button", { name: /Park/ })).toBeEnabled();
+  });
+
+  it("shows the bill's guest count, which the guest can change", async () => {
+    withCart();
+    api.get.mockImplementation(tableApi({ bills: [LEE], myBillId: 8 }));
+    api.put.mockResolvedValue({
+      data: myBillResponse({ bills: [{ ...LEE, total_count: 3, adult_count: 2, child_count: 1 }], myBillId: 8 }),
+    });
+    renderPage();
+
+    expect(await screen.findByText("2 guests")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit guests on Lee" }));
+
+    const dialog = await screen.findByRole("dialog", { name: /^How many in your party\?/ });
+    expect(within(dialog).getByRole("status")).toHaveTextContent("2 guests on this bill");
+    fireEvent.click(within(dialog).getByRole("button", { name: "More children" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save guest count" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/SessionParticipant/42/bill/guests", {
+        adult_count: 2,
+        senior_count: 0,
+        child_count: 1,
+        tot_count: 0,
+      }),
+    );
+    expect(await screen.findByText("3 guests")).toBeInTheDocument();
+  });
+
+  it("can't change the guest count once the guests have asked for their bill", async () => {
+    withCart();
+    api.get.mockImplementation(
+      tableApi({ bills: [{ ...LEE, requested_at: "2026-10-18T04:30:00Z" }], myBillId: 8 }),
+    );
+    renderPage();
+
+    expect(await screen.findByText("2 guests")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit guests/ })).not.toBeInTheDocument();
   });
 
   it("once a guest has ordered on their bill, only staff can move them", async () => {

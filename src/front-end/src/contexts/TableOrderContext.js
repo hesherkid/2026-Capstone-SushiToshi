@@ -76,18 +76,32 @@ export const TableOrderProvider = ({ children }) => {
   const categoriesLoaded = useRef(false);
   const cartRestoredFor = useRef(null);
 
+  // Returns the guest's own bill, now that it's saved
   const applyMyBill = useCallback((data) => {
     const toBill = (bill) => ({
       bill_id: Number(bill.bill_id),
       bill_name: bill.bill_name,
       total_count: bill.total_count,
+      // How many people at the table are on it
+      people_count: bill.people_count ?? 0,
       status: bill.status,
       requested_at: bill.requested_at,
     });
+    // Only the guest's own bill comes with its counts by kind of guest
+    const mine = data?.my_bill
+      ? {
+          ...toBill(data.my_bill),
+          adult_count: data.my_bill.adult_count ?? 0,
+          senior_count: data.my_bill.senior_count ?? 0,
+          child_count: data.my_bill.child_count ?? 0,
+          tot_count: data.my_bill.tot_count ?? 0,
+        }
+      : null;
     setOpenBills((data?.open_bills ?? []).map(toBill));
-    setMyBill(data?.my_bill ? toBill(data.my_bill) : null);
+    setMyBill(mine);
     setBillChangeBlocked(data?.change_blocked_reason ?? null);
     setBillChecked(true);
+    return mine;
   }, []);
 
   const loadBills = useCallback(
@@ -102,16 +116,34 @@ export const TableOrderProvider = ({ children }) => {
     [applyMyBill],
   );
 
-  // Join one of the table's open bills. Throws with the server's reason if it can't
+  // Join one of the table's open bills and return it. Throws with the server's reason if it can't
   const chooseBill = useCallback(
     async (billId) => {
       try {
         const { data } = await api.put(`/SessionParticipant/${sessionId}/bill`, {
           bill_id: billId,
         });
-        applyMyBill(data);
+        return applyMyBill(data);
       } catch (err) {
         throw new Error(apiMessage(err, "Couldn't put you on that bill."));
+      }
+    },
+    [sessionId, applyMyBill],
+  );
+
+  // Change the guest counts on this guest's own bill
+  const updateGuestCounts = useCallback(
+    async ({ adults, seniors, children, toddlers }) => {
+      try {
+        const { data } = await api.put(`/SessionParticipant/${sessionId}/bill/guests`, {
+          adult_count: adults,
+          senior_count: seniors,
+          child_count: children,
+          tot_count: toddlers,
+        });
+        applyMyBill(data);
+      } catch (err) {
+        throw new Error(apiMessage(err, "Couldn't update your guest count."));
       }
     },
     [sessionId, applyMyBill],
@@ -367,6 +399,7 @@ export const TableOrderProvider = ({ children }) => {
     billChangeBlocked,
     chooseBill,
     startBill,
+    updateGuestCounts,
     billRequested,
     quantities,
     changeQuantity,

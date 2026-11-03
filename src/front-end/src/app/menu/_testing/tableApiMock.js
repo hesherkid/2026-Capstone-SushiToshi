@@ -30,7 +30,18 @@ export const myBillResponse = ({ bills = [], myBillId, blocked = null } = {}) =>
 });
 
 // The guest's bill unless a test says otherwise
-export const LEE_BILL = { bill_id: 8, bill_name: "Lee", status: "Open", total_count: 2, requested_at: null };
+export const LEE_BILL = {
+  bill_id: 8,
+  bill_name: "Lee",
+  status: "Open",
+  total_count: 2,
+  adult_count: 2,
+  senior_count: 0,
+  child_count: 0,
+  tot_count: 0,
+  people_count: 1,
+  requested_at: null,
+};
 
 // `bills` are the table's bills (just Lee's by default). The guest is on `myBillId`, which is
 // the first bill unless a test says otherwise (null: not on a bill yet).

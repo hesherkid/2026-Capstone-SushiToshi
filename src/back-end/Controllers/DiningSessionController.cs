@@ -1053,9 +1053,6 @@ namespace back_end.controllers
         _context.SessionParticipants.Add(participant);
       }
 
-      // With only one bill at the table there's nothing to choose
-      participant.Bill_Id ??= await BillLinks.OnlyJoinableBillIdAsync(_context, session.Session_Id);
-
       await _context.SaveChangesAsync();
 
       return Ok(new JoinTableSessionResponseDTO

@@ -13,6 +13,10 @@ namespace back_end.DTO.DashBoardDTOs
         public DateTime? Requested_At { get; set; }
         // Started by a guest on their phone: staff should check its guest counts
         public bool Started_By_Guest { get; set; }
+        // A guest changed its guest counts on their phone: staff should check them
+        public bool Counts_Changed_By_Guest { get; set; }
+        // People at the table on this bill; more than Total_Guests means the count looks short
+        public int People_On_Bill { get; set; }
     }
 
     public class DashBoardSessionsDTO

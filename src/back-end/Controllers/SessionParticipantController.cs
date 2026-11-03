@@ -124,12 +124,32 @@ namespace back_end.Controllers
             .OrderBy(b => b.Created_At)
             .ToListAsync();
 
+        // People still seated on each bill
+        var people = await _context.SessionParticipants
+            .Where(sp => sp.Session_Id == session_id && sp.Left_At == null && sp.Bill_Id != null)
+            .GroupBy(sp => sp.Bill_Id!.Value)
+            .Select(g => new { Bill_Id = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Bill_Id, g => g.Count);
+        int PeopleOn(Billing bill) => people.GetValueOrDefault(bill.Bill_Id);
+
         var myBill = bills.FirstOrDefault(b => b.Bill_Id == seat.Bill_Id);
         return Ok(new MyBillResponseDTO
         {
-            My_Bill = myBill is null ? null : Choice(myBill),
+            My_Bill = myBill is null ? null : new MyBillDTO
+            {
+                Bill_Id = myBill.Bill_Id,
+                Bill_Name = myBill.Bill_Name,
+                Total_Count = myBill.Total_Count,
+                Status = myBill.Status.ToString(),
+                Requested_At = myBill.Requested_At,
+                People_Count = PeopleOn(myBill),
+                Adult_Count = myBill.Adult_Count,
+                Senior_Count = myBill.Senior_Count,
+                Child_Count = myBill.Child_Count,
+                Tot_Count = myBill.Tot_Count,
+            },
             Change_Blocked_Reason = await BillLinks.CantLeaveReasonAsync(_context, seat),
-            Open_Bills = bills.Where(b => b.Status == BillStatus.Open).Select(Choice).ToList(),
+            Open_Bills = bills.Where(b => b.Status == BillStatus.Open).Select(b => Choice(b, PeopleOn(b))).ToList(),
         });
     }
 
@@ -179,6 +199,82 @@ namespace back_end.Controllers
         return await GetMyBill(session_id);
     }
 
+    /// <summary>
+    /// Changes the guest counts on your bill, e.g. when more of your party arrives.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/sessionparticipant/123/bill/guests
+    ///     { "adult_count": 3, "senior_count": 0, "child_count": 1, "tot_count": 0 }
+    ///
+    /// Anyone on the bill can change it while it's open and nobody has asked for the bill.
+    /// The table's open bills together can't seat more guests than the table has seats.
+    /// A change marks the bill Counts_Changed_By_Guest so staff check the counts.
+    /// </remarks>
+    /// <response code="200">The counts are saved; returns the same as GET.</response>
+    /// <response code="400">You aren't on a bill, it can't be changed, or the counts aren't valid.</response>
+    /// <response code="403">You aren't seated at this table.</response>
+    [Authorize]
+    [HttpPut("{session_id:int}/bill/guests")]
+    [ProducesResponseType(typeof(MyBillResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UpdateGuestCounts(int session_id, UpdateGuestCountsDTO request)
+    {
+        var seat = await MySeatAsync(session_id);
+        if (seat is null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You aren't seated at this table." });
+        }
+        if (seat.Bill_Id is null)
+        {
+            return BadRequest(new { message = "Choose your bill first." });
+        }
+
+        var bill = await _context.Bills
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+            .FirstAsync(b => b.Bill_Id == seat.Bill_Id);
+        if (bill.Status != BillStatus.Open)
+        {
+            return BadRequest(new { message = $"{bill.Bill_Name} is already {bill.Status.ToString().ToLower()}." });
+        }
+        if (bill.Requested_At != null)
+        {
+            return BadRequest(new { message = $"{bill.Bill_Name} has already asked for the bill. Ask your server to change the guest count." });
+        }
+
+        int total = request.Adult_Count + request.Senior_Count + request.Child_Count + request.Tot_Count;
+        if (total == 0)
+        {
+            return BadRequest(new { message = "Your bill needs at least one guest." });
+        }
+
+        int capacity = BillLinks.TableCapacity(bill.DiningSession);
+        int otherGuests = await _context.Bills
+            .Where(b => b.Session_Id == session_id && b.Status == BillStatus.Open && b.Bill_Id != bill.Bill_Id)
+            .SumAsync(b => b.Total_Count);
+        if (otherGuests + total > capacity)
+        {
+            return BadRequest(new { message = $"Your table seats {capacity}, and the other bills have {otherGuests}. Ask your server if more of your party is coming." });
+        }
+
+        bool changed = bill.Adult_Count != request.Adult_Count || bill.Senior_Count != request.Senior_Count ||
+                       bill.Child_Count != request.Child_Count || bill.Tot_Count != request.Tot_Count;
+        if (changed)
+        {
+            bill.Adult_Count = request.Adult_Count;
+            bill.Senior_Count = request.Senior_Count;
+            bill.Child_Count = request.Child_Count;
+            bill.Tot_Count = request.Tot_Count;
+            bill.Total_Count = total;
+            bill.Counts_Changed_By_Guest = true;
+            await _context.SaveChangesAsync();
+        }
+        return await GetMyBill(session_id);
+    }
+
     // The caller's seat at this table, if they're still seated
     private async Task<SessionParticipant?> MySeatAsync(int sessionId)
     {
@@ -188,13 +284,14 @@ namespace back_end.Controllers
             .FirstOrDefaultAsync(sp => sp.Session_Id == sessionId);
     }
 
-    private static TableBillChoiceDTO Choice(Billing bill) => new()
+    private static TableBillChoiceDTO Choice(Billing bill, int peopleCount) => new()
     {
         Bill_Id = bill.Bill_Id,
         Bill_Name = bill.Bill_Name,
         Total_Count = bill.Total_Count,
         Status = bill.Status.ToString(),
         Requested_At = bill.Requested_At,
+        People_Count = peopleCount,
     };
 
     }

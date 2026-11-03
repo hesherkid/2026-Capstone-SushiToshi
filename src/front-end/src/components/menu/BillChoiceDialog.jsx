@@ -28,6 +28,16 @@ const MAX_OF_EACH = 50;
 const NEW_PARTY = { billName: "", adults: 1, seniors: 0, children: 0, toddlers: 0 };
 
 const guests = (count) => `${count} guest${count === 1 ? "" : "s"}`;
+const totalOf = (party) => GUEST_TYPES.reduce((sum, { key }) => sum + party[key], 0);
+const billLabel = (bill) => bill.bill_name || `Bill #${bill.bill_id}`;
+
+// A bill's counts in the form's shape
+const countsOf = (bill) => ({
+  adults: bill?.adult_count ?? 0,
+  seniors: bill?.senior_count ?? 0,
+  children: bill?.child_count ?? 0,
+  toddlers: bill?.tot_count ?? 0,
+});
 
 const BILL_STEPS = [
   { icon: "group", text: "One person starts the bill for your party." },
@@ -86,36 +96,96 @@ const GuestCounter = ({ label, hint, value, onChange, disabled }) => (
   </Box>
 );
 
+// The party card: a counter for each kind of guest, with the total underneath
+const PartyCounts = ({ party, onChange, disabled }) => {
+  const total = totalOf(party);
+  return (
+    <Box>
+      <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
+        Who&apos;s in your party?
+      </Typography>
+      <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+        <Stack divider={<Divider />}>
+          {GUEST_TYPES.map(({ key, label, hint }) => (
+            <GuestCounter
+              key={key}
+              label={label}
+              hint={hint}
+              value={party[key]}
+              onChange={(value) => onChange({ ...party, [key]: value })}
+              disabled={disabled}
+            />
+          ))}
+        </Stack>
+        <Typography
+          role="status"
+          sx={{
+            px: 2,
+            py: 1.25,
+            bgcolor: "action.hover",
+            borderTop: 1,
+            borderColor: "divider",
+            fontWeight: 700,
+            color: total > 0 ? "text.primary" : "error.main",
+          }}
+        >
+          {total > 0 ? `${guests(total)} on this bill` : "Add at least one guest"}
+        </Typography>
+      </Paper>
+    </Box>
+  );
+};
+
+const TITLES = {
+  choose: "Which bill are you on?",
+  start: "Start your bill",
+  guests: "How many in your party?",
+};
+
 /**
  * Which bill a guest is on: join one of the table's open bills, or start their party's own.
  * Shown when a seated guest isn't on a bill yet, and from Review order to switch bills.
+ * After joining a bill they check its guest count ("guests"), which Review order can also open.
  * Only names and party sizes of other bills are shown, never what's on them.
  */
-const BillChoiceDialog = ({ open, onClose }) => {
-  const { openBills, myBill, billChangeBlocked, chooseBill, startBill } = useTableOrder();
-  const [starting, setStarting] = useState(false);
+const BillChoiceDialog = ({ open, onClose, initialView = "choose" }) => {
+  const { openBills, myBill, billChangeBlocked, chooseBill, startBill, updateGuestCounts } =
+    useTableOrder();
+  // "choose" a bill, "start" a new one, or check the "guests" on their own
+  const [view, setView] = useState(initialView);
   const [party, setParty] = useState(NEW_PARTY);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
   // With no bills at the table yet, starting one is the only choice
-  const showForm = starting || openBills.length === 0;
-  const totalGuests = GUEST_TYPES.reduce((sum, { key }) => sum + party[key], 0);
+  const shown = view === "choose" && openBills.length === 0 ? "start" : view;
+  const totalGuests = totalOf(party);
   const canStart = party.billName.trim().length > 0 && totalGuests > 0;
+  const countsChanged = Boolean(myBill) && GUEST_TYPES.some(({ key }) => party[key] !== countsOf(myBill)[key]);
 
+  const showGuests = (bill) => {
+    setParty({ ...NEW_PARTY, ...countsOf(bill) });
+    setView("guests");
+  };
+
+  // Only as the dialog opens: a background refresh of myBill mustn't undo the guest's edits
   useEffect(() => {
     if (!open) return;
-    setStarting(false);
-    setParty(NEW_PARTY);
     setError(null);
-  }, [open]);
+    if (initialView === "guests" && myBill) {
+      showGuests(myBill);
+    } else {
+      setView(initialView === "guests" ? "choose" : initialView);
+      setParty(NEW_PARTY);
+    }
+  }, [open, initialView]);
 
-  const run = async (action) => {
+  // Runs a server call; `after` gets its result (closing the dialog by default)
+  const run = async (action, after = onClose) => {
     setBusy(true);
     setError(null);
     try {
-      await action();
-      onClose();
+      after(await action());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -128,19 +198,36 @@ const BillChoiceDialog = ({ open, onClose }) => {
     if (canStart) run(() => startBill(party));
   };
 
+  // Joining a bill goes on to checking its guest count
+  const handleChoose = (billId) => run(() => chooseBill(billId), showGuests);
+
+  const handleGuests = (event) => {
+    event.preventDefault();
+    if (!countsChanged) onClose();
+    else if (totalGuests > 0) run(() => updateGuestCounts(party));
+  };
+
   const handleClose = () => {
     if (!busy) onClose();
   };
 
+  const subtitles = {
+    choose: "Add yourself to your party's bill so your orders go on it.",
+    start: "Your server will check the number of guests.",
+    guests: myBill
+      ? `You're on ${billLabel(myBill)}. Your server will check the number of guests.`
+      : "",
+  };
+
+  // Back to the table's bills, unless they can't move off theirs
+  const showBack =
+    (shown === "start" && openBills.length > 0) || (shown === "guests" && !billChangeBlocked);
+
   return (
     <AppDialog open={open} onClose={handleClose} maxWidth="xs">
       <DialogHeader
-        title={showForm ? "Start your bill" : "Which bill are you on?"}
-        subtitle={
-          showForm
-            ? "Your server will check the number of guests."
-            : "Add yourself to your party's bill so your orders go on it."
-        }
+        title={TITLES[shown]}
+        subtitle={subtitles[shown]}
         onClose={handleClose}
         closeDisabled={busy}
       />
@@ -151,16 +238,16 @@ const BillChoiceDialog = ({ open, onClose }) => {
             {error}
           </Alert>
         )}
-        {billChangeBlocked && (
+        {billChangeBlocked && shown !== "guests" && (
           <Alert severity="info" sx={{ mb: 2 }}>
             {billChangeBlocked}
           </Alert>
         )}
 
-        {/* Back to the table's bills, so the Start Bill button can have the whole bottom */}
-        {showForm && openBills.length > 0 && (
+        {/* Top-left, so the main button can have the whole bottom */}
+        {showBack && (
           <Button
-            onClick={() => setStarting(false)}
+            onClick={() => setView("choose")}
             disabled={busy}
             color="inherit"
             size="small"
@@ -171,9 +258,9 @@ const BillChoiceDialog = ({ open, onClose }) => {
           </Button>
         )}
 
-        <HowBillsWork />
+        {shown !== "guests" && <HowBillsWork />}
 
-        {showForm ? (
+        {shown === "start" && (
           <Stack component="form" id="start-bill-form" spacing={2.5} onSubmit={handleStart}>
             <TextField
               label="Name for the bill"
@@ -186,41 +273,23 @@ const BillChoiceDialog = ({ open, onClose }) => {
               autoFocus
               slotProps={{ htmlInput: { maxLength: 100 } }}
             />
-            <Box>
-              <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
-                Who&apos;s in your party?
-              </Typography>
-              <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
-                <Stack divider={<Divider />}>
-                  {GUEST_TYPES.map(({ key, label, hint }) => (
-                    <GuestCounter
-                      key={key}
-                      label={label}
-                      hint={hint}
-                      value={party[key]}
-                      onChange={(value) => setParty((prev) => ({ ...prev, [key]: value }))}
-                      disabled={busy}
-                    />
-                  ))}
-                </Stack>
-                <Typography
-                  role="status"
-                  sx={{
-                    px: 2,
-                    py: 1.25,
-                    bgcolor: "action.hover",
-                    borderTop: 1,
-                    borderColor: "divider",
-                    fontWeight: 700,
-                    color: totalGuests > 0 ? "text.primary" : "error.main",
-                  }}
-                >
-                  {totalGuests > 0 ? `${guests(totalGuests)} on this bill` : "Add at least one guest"}
-                </Typography>
-              </Paper>
-            </Box>
+            <PartyCounts party={party} onChange={setParty} disabled={busy} />
           </Stack>
-        ) : (
+        )}
+
+        {shown === "guests" && myBill && (
+          <Stack component="form" id="guest-count-form" spacing={2.5} onSubmit={handleGuests}>
+            {/* More phones on the bill than guests on it: someone probably isn't counted */}
+            {myBill.people_count > totalGuests && (
+              <Alert severity="warning">
+                {myBill.people_count} people have joined this bill. Make sure everyone is counted.
+              </Alert>
+            )}
+            <PartyCounts party={party} onChange={setParty} disabled={busy} />
+          </Stack>
+        )}
+
+        {shown === "choose" && (
           <Stack spacing={1.5}>
             {openBills.map((bill) => {
               const isMine = bill.bill_id === myBill?.bill_id;
@@ -230,7 +299,7 @@ const BillChoiceDialog = ({ open, onClose }) => {
                   key={bill.bill_id}
                   variant={isMine ? "contained" : "outlined"}
                   size="large"
-                  onClick={() => run(() => chooseBill(bill.bill_id))}
+                  onClick={() => handleChoose(bill.bill_id)}
                   disabled={busy || requested || (!isMine && !!billChangeBlocked)}
                   aria-current={isMine || undefined}
                   sx={{ justifyContent: "space-between", textAlign: "left", py: 1.5 }}
@@ -238,7 +307,7 @@ const BillChoiceDialog = ({ open, onClose }) => {
                 >
                   <Box component="span" sx={{ display: "flex", flexDirection: "column" }}>
                     <Box component="span" sx={{ fontWeight: 700 }}>
-                      {bill.bill_name || `Bill #${bill.bill_id}`}
+                      {billLabel(bill)}
                     </Box>
                     <Box component="span" sx={{ typography: "body2" }}>
                       {requested ? "Has asked for the bill" : guests(bill.total_count ?? 0)}
@@ -253,7 +322,7 @@ const BillChoiceDialog = ({ open, onClose }) => {
                 <Button
                   variant="text"
                   startIcon={<MaterialSymbol name="add" size={20} />}
-                  onClick={() => setStarting(true)}
+                  onClick={() => setView("start")}
                   disabled={busy}
                 >
                   Start a new bill
@@ -264,18 +333,19 @@ const BillChoiceDialog = ({ open, onClose }) => {
         )}
       </DialogContent>
 
-      {showForm && (
+      {shown !== "choose" && (
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             type="submit"
-            form="start-bill-form"
+            form={shown === "start" ? "start-bill-form" : "guest-count-form"}
             variant="contained"
             size="large"
             fullWidth
-            disabled={busy || !canStart}
+            disabled={busy || (shown === "start" ? !canStart : totalGuests === 0)}
             sx={{ minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
           >
-            {busy ? "Starting..." : "Start Bill"}
+            {shown === "start" && (busy ? "Starting..." : "Start Bill")}
+            {shown === "guests" && (busy ? "Saving..." : countsChanged ? "Save guest count" : "Looks right")}
           </Button>
         </DialogActions>
       )}

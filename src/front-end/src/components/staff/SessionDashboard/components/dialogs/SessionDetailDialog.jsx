@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
 import DialogHeader from "@/components/common/DialogHeader";
-import { Check, Receipt, ReceiptText, LogOut, Bell, Smartphone, Plus } from "lucide-react";
+import { Check, Receipt, ReceiptText, LogOut, Bell, Smartphone, Plus, Users, Pencil } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
 import {
@@ -148,6 +148,30 @@ const SessionDetailDialog = () => {
                                     color="info"
                                     size="small"
                                     variant="outlined"
+                                  />
+                                </Tooltip>
+                              )}
+                              {isOpenBill(bill) && bill.counts_Changed_By_Guest && (
+                                <Tooltip title="A guest changed this bill's guest count on their phone. Check the number of guests.">
+                                  <Chip
+                                    icon={<Pencil size={14} />}
+                                    label="Count changed by guest"
+                                    color="info"
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                </Tooltip>
+                              )}
+                              {/* More people joined on their phones than the bill has guests */}
+                              {isOpenBill(bill) && bill.people_On_Bill > bill.total_Guests && (
+                                <Tooltip
+                                  title={`${bill.people_On_Bill} people have joined this bill on their phones, but it's for ${bill.total_Guests}. Check the number of guests.`}
+                                >
+                                  <Chip
+                                    icon={<Users size={14} />}
+                                    label={`${bill.people_On_Bill} people on ${bill.total_Guests}-guest bill`}
+                                    color="warning"
+                                    size="small"
                                   />
                                 </Tooltip>
                               )}

@@ -33,13 +33,29 @@ namespace back_end.DTO.SessionParticipantDTOs
         public string Status { get; set; } = string.Empty;
         [JsonPropertyName("requested_at")]
         public DateTime? Requested_At { get; set; }
+        // How many people at the table are on it, so a guest can see when its count looks short
+        [JsonPropertyName("people_count")]
+        public int People_Count { get; set; }
+    }
+
+    // The guest's own bill: also its counts by kind of guest, so they can update them
+    public class MyBillDTO : TableBillChoiceDTO
+    {
+        [JsonPropertyName("adult_count")]
+        public int Adult_Count { get; set; }
+        [JsonPropertyName("senior_count")]
+        public int Senior_Count { get; set; }
+        [JsonPropertyName("child_count")]
+        public int Child_Count { get; set; }
+        [JsonPropertyName("tot_count")]
+        public int Tot_Count { get; set; }
     }
 
     public class MyBillResponseDTO
     {
         // The bill this guest is on, or null if they still need to pick or start one
         [JsonPropertyName("my_bill")]
-        public TableBillChoiceDTO? My_Bill { get; set; }
+        public MyBillDTO? My_Bill { get; set; }
 
         // Why they can't move to another bill themselves (staff can), or null if they can
         [JsonPropertyName("change_blocked_reason")]
@@ -55,6 +71,23 @@ namespace back_end.DTO.SessionParticipantDTOs
         [Required]
         [JsonPropertyName("bill_id")]
         public int Bill_Id { get; set; }
+    }
+
+    // New guest counts for the guest's own bill
+    public class UpdateGuestCountsDTO
+    {
+        [Range(0, 50)]
+        [JsonPropertyName("adult_count")]
+        public int Adult_Count { get; set; }
+        [Range(0, 50)]
+        [JsonPropertyName("senior_count")]
+        public int Senior_Count { get; set; }
+        [Range(0, 50)]
+        [JsonPropertyName("child_count")]
+        public int Child_Count { get; set; }
+        [Range(0, 50)]
+        [JsonPropertyName("tot_count")]
+        public int Tot_Count { get; set; }
     }
     
 }

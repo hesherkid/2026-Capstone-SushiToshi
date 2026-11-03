@@ -14,6 +14,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.bill;
+using back_end.DTO.DashBoardDTOs;
 using back_end.DTO.DiningSessionDTOs;
 using back_end.DTO.OrdersDTOs;
 using back_end.DTO.SessionParticipantDTOs;
@@ -117,8 +118,9 @@ public class BillLinkTests : IDisposable
 
     // ---- Joining the table ----
 
+    // Guests always confirm their bill themselves, even when the table has only one
     [Fact]
-    public async Task Joining_ATableWithOneBill_PutsTheGuestOnIt()
+    public async Task Joining_ATableWithOneBill_LeavesTheChoiceToTheGuest()
     {
         _context.Bills.Add(new Billing { Bill_Id = 91, Session_Id = OtherTable + 1, Bill_Name = "Solo" });
         _context.DiningSessions.Add(new DiningSession { Session_Id = OtherTable + 1, Menu_Id = 1, Location_Id = 1, Table_Id = 103, Started_At = DateTime.UtcNow });
@@ -126,7 +128,7 @@ public class BillLinkTests : IDisposable
 
         await Sessions(Dee).JoinTableSession(new JoinTableSessionDTO { Table_Number = 3, Location_Id = 1 });
 
-        SeatBill(Dee).Should().Be(91);
+        SeatBill(Dee).Should().BeNull();
     }
 
     [Fact]
@@ -135,17 +137,6 @@ public class BillLinkTests : IDisposable
         await Sessions(Dee).JoinTableSession(new JoinTableSessionDTO { Table_Number = 1, Location_Id = 1 });
 
         SeatBill(Dee).Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Joining_ATableWhoseOnlyOtherBillAskedForTheBill_StillPutsTheGuestOnTheOpenOne()
-    {
-        (await _context.Bills.FindAsync(Lee))!.Requested_At = DateTime.UtcNow;
-        _context.SaveChanges();
-
-        await Sessions(Dee).JoinTableSession(new JoinTableSessionDTO { Table_Number = 1, Location_Id = 1 });
-
-        SeatBill(Dee).Should().Be(Park);
     }
 
     // ---- Seeing and choosing a bill ----
@@ -289,6 +280,114 @@ public class BillLinkTests : IDisposable
 
         result.Should().BeOfType<BadRequestObjectResult>();
         SeatBill(Ben).Should().BeNull();
+    }
+
+    // ---- Changing their bill's guest count ----
+
+    private static UpdateGuestCountsDTO Counts(int adults, int seniors = 0, int children = 0, int toddlers = 0) =>
+        new() { Adult_Count = adults, Senior_Count = seniors, Child_Count = children, Tot_Count = toddlers };
+
+    [Fact]
+    public async Task MyBill_ShowsHowManyPeopleAreOnEachBill()
+    {
+        await Seats(Ben).ChooseBill(Table, new ChooseBillDTO { Bill_Id = Lee });
+
+        var body = Body(await Seats(Ana).GetMyBill(Table));
+
+        body.My_Bill!.People_Count.Should().Be(2);
+        body.My_Bill.Adult_Count.Should().Be(2);
+        body.Open_Bills.Single(b => b.Bill_Id == Park).People_Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task UpdateGuestCounts_SavesThem_AndAsksStaffToCheck()
+    {
+        var body = Body(await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 3, children: 1)));
+
+        body.My_Bill!.Total_Count.Should().Be(4);
+        var lee = await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee);
+        lee.Adult_Count.Should().Be(3);
+        lee.Child_Count.Should().Be(1);
+        lee.Total_Count.Should().Be(4);
+        lee.Counts_Changed_By_Guest.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateGuestCounts_WithTheSameCounts_DoesntFlagTheBill()
+    {
+        await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 2));
+
+        (await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee)).Counts_Changed_By_Guest.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateGuestCounts_NeedsABill()
+    {
+        var result = await Seats(Ben).UpdateGuestCounts(Table, Counts(adults: 1));
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateGuestCounts_RefusesGuestsAtAnotherTable()
+    {
+        var result = await Seats(Cy).UpdateGuestCounts(Table, Counts(adults: 1));
+
+        (result as ObjectResult)!.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    [Fact]
+    public async Task UpdateGuestCounts_NeedsAtLeastOneGuest()
+    {
+        var result = await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 0));
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        (await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee)).Total_Count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task UpdateGuestCounts_CantSeatMoreThanTheTableHas()
+    {
+        // Table 1 seats 8 and Park's bill has 2
+        var result = await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 7));
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        (await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 6))).Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateGuestCounts_RefusesBillsThatAskedForTheBillOrClosed()
+    {
+        (await _context.Bills.FindAsync(Lee))!.Requested_At = DateTime.UtcNow;
+        (await _context.Bills.FindAsync(OtherTableBill))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+
+        (await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 3))).Should().BeOfType<BadRequestObjectResult>();
+        (await Seats(Cy).UpdateGuestCounts(OtherTable, Counts(adults: 3))).Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    // ---- What staff see ----
+
+    private async Task<DashBoardBillDTO> DashboardBill(int billId)
+    {
+        var dashboard = new DashBoardController(_context, new Mock<IConfiguration>().Object,
+            new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        { ControllerContext = As(Server, "Staff") };
+        var sessions = ((await dashboard.GetDashBoardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
+        return sessions!.SelectMany(s => s.Bills).Single(b => b.Bill_Id == billId);
+    }
+
+    [Fact]
+    public async Task Dashboard_ShowsHowManyPeopleAreOnABill_AndWhenAGuestChangedItsCount()
+    {
+        await Seats(Ben).ChooseBill(Table, new ChooseBillDTO { Bill_Id = Lee });
+        await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 1));
+
+        var lee = await DashboardBill(Lee);
+
+        lee.People_On_Bill.Should().Be(2);
+        lee.Total_Guests.Should().Be(1);
+        lee.Counts_Changed_By_Guest.Should().BeTrue();
     }
 
     // ---- Only their own bill ----

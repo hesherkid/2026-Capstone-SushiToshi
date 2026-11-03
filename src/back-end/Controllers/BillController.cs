@@ -156,15 +156,7 @@ namespace back_end.controllers
         }
 
         // Validate against table capacity
-        int tableCapacity = 0;
-        if (session.Table_Id.HasValue && session.Table != null)
-        {
-          tableCapacity = session.Table.seat_count;
-        }
-        else if (session.TableGroup_Id.HasValue && session.TableGroup?.Tables != null)
-        {
-          tableCapacity = session.TableGroup.Tables.Sum(t => t.seat_count);
-        }
+        int tableCapacity = BillLinks.TableCapacity(session);
 
         // Check total guest count across open bills in this session
         var existingBillsGuestCount = await _context.Bills
