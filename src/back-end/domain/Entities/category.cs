@@ -21,13 +21,6 @@ namespace back_end.domain.Entities
 
         public string? image_url { get; set; }
 
-        [MaxLength(255)]
-        public int total_views { get; set; } = 0;
-
-        public int total_view_seconds { get; set; } = 0;
-
-        public DateTime last_viewed_at { get; set; }
-
         public int adult_limit { get; set; } = 0;
 
         public int child_limit { get; set; } = 0;

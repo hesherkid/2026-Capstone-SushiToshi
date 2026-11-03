@@ -290,8 +290,7 @@ namespace back_end.Controllers
         /// Items follow the same limits and pricing as POST /api/order/{orderId}/items.
         /// The order is automatically created with 'Pending' status.
         /// The authenticated user is automatically assigned as the order owner.
-        /// Staff may set Request_By_User_Id / Request_By_Name to order on a customer's behalf;
-        /// for anyone else those fields are ignored.
+        /// That includes staff ordering for a table; the bill says who pays.
         /// The bill must be in 'Open' status to create an order.
         /// </remarks>
         [HttpPost]
@@ -343,27 +342,12 @@ namespace back_end.Controllers
                     return BadRequest(new { message = BillRequestedMessage });
                 }
 
-                int? userId = null;
-                string userName;
+                var userIdString = ClaimsHelpers.GetUserId(User);
+                var userName = ClaimsHelpers.GetUserDisplayName(User);
 
-                // Only staff may place an order on someone else's behalf
-                var isStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
-
-                if (isStaff && order_data.Request_By_User_Id.HasValue)
+                if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
                 {
-                    userId = order_data.Request_By_User_Id;
-                    userName = order_data.Request_By_Name ?? "Guest";
-                }
-                else
-                {
-                    var userIdString = ClaimsHelpers.GetUserId(User);
-                    userName = ClaimsHelpers.GetUserDisplayName(User);
-
-                    if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var parsedUserId))
-                    {
-                        return Unauthorized(new { message = "User ID not found in claims." });
-                    }
-                    userId = parsedUserId;
+                    return Unauthorized(new { message = "User ID not found in claims." });
                 }
 
                 // A new order has nothing ordered on it yet

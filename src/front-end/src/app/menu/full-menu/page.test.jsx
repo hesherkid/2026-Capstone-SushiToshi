@@ -13,6 +13,8 @@ jest.mock("next/navigation", () => ({
 let mockSearchTerm = "";
 jest.mock("@/components/menu/searchUtils", () => ({
   __esModule: true,
+  // The real matching, so the search tests check what guests get
+  matchesSearch: jest.requireActual("@/components/menu/searchUtils").matchesSearch,
   default: () => ({
     searchTerm: mockSearchTerm,
     setSearchTerm: jest.fn(),

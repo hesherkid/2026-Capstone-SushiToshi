@@ -7,6 +7,7 @@ import {
   getSessionMinutes,
   isLongSeating,
   parseUtcDate,
+  sessionGuestCount,
   LONG_SEATING_MINUTES,
 } from "../utils/sessionHelpers";
 
@@ -102,10 +103,11 @@ export const getSessionColumns = (actions) => [
     renderCell: ({ row }) => <SeatedFor startedAt={row.started_At} />,
   },
   {
-    field: "active_Participants",
-    // Used to be Guests but this actually counts the number of devices scanning the QR code in a session
+    field: "guests",
+    // People on the table's bills, not phones that scanned the QR code
     headerName: "Guests",
     type: "number",
+    valueGetter: (value, row) => sessionGuestCount(row),
     align: "left",
     headerAlign: "left",
     flex: 0.7,

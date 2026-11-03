@@ -176,9 +176,6 @@ namespace back_end.Migrations
                     b.Property<string>("image_url")
                         .HasColumnType("longtext");
 
-                    b.Property<DateTime>("last_viewed_at")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<int>("over_limit_behavior")
                         .HasColumnType("int");
 
@@ -189,13 +186,6 @@ namespace back_end.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("toddler_limit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("total_view_seconds")
-                        .HasColumnType("int");
-
-                    b.Property<int>("total_views")
-                        .HasMaxLength(255)
                         .HasColumnType("int");
 
                     b.HasKey("Category_id");
@@ -1194,7 +1184,7 @@ namespace back_end.Migrations
                     b.HasOne("back_end.domain.Entities.Category", "Category")
                         .WithMany("MenuItems")
                         .HasForeignKey("Category_id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Category");
@@ -1205,7 +1195,7 @@ namespace back_end.Migrations
                     b.HasOne("back_end.domain.Entities.Menu_Item", "MenuItem")
                         .WithMany("OrderItems")
                         .HasForeignKey("Item_Id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("back_end.domain.Entities.Menu", "Menu")

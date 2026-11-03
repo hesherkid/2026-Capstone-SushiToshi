@@ -56,7 +56,7 @@ const sessions = [
     session_Id: 8,
     table_Numbers: [1, 2],
     started_At: "2026-10-14T20:10:00Z",
-    active_Participants: 4,
+    active_Participants: 1, // one phone for a party of 4
     bills: [{ bill_Id: 80, bill_Name: "Lee", status: "Open", total_Guests: 4, started_By_Guest: true }],
     bill_Count: 1,
     is_Closable: false,
@@ -105,6 +105,7 @@ describe("Session dashboard", () => {
     const busy = rowFor("#8");
     expect(within(busy).getByText("Tables 1, 2")).toBeInTheDocument();
     expect(within(busy).getByText("1 of 1")).toBeInTheDocument();
+    expect(within(busy).getByText("4")).toBeInTheDocument(); // guests on the bills, not phones
 
     // Requests from other locations are ignored; one fetch each, not one per session
     expect(screen.getByText("Pending Requests").closest(".MuiCard-root")).toHaveTextContent("1Pending Requests");

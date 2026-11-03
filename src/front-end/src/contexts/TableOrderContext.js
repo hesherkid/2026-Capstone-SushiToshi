@@ -11,33 +11,23 @@ import {
 import api from "@/config/api";
 import { fetchMySessionId, NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import storage from "@/utils/storage";
+import {
+  buildCartLines,
+  changeCartQuantity,
+  groupItemsByCategory,
+  limitsById,
+  maxFor as cartMaxFor,
+  normalizeCategory,
+} from "@/components/menu/cartRules";
 
 // localStorage key for the items picked but not yet ordered
 const CART_STORAGE_KEY = "menuCart";
-
-// The server takes 1-99 of an item per order (OrderController.AddOrderItems)
-export const MAX_PER_ITEM = 99;
 
 export const MENU_PATH = "/menu/full-menu";
 export const REVIEW_ORDER_PATH = "/menu/review";
 
 export const BILL_REQUESTED_MESSAGE =
   "You've asked for your bill, so no more orders can be added.";
-
-// Clean up the field names so the item looks the same everywhere
-const normalizeItem = (it) => ({
-  item_id: it.item_id ?? it.itemId ?? it.Item_Id,
-  name: it.name,
-  description: it.description,
-  price: it.price,
-  is_add_on: it.is_add_on ?? it.isAddOn,
-  item_image_url: it.item_image_url ?? it.imageURL ?? it.imageUrl,
-  category_id: it.categoryID ?? it.categoryId ?? it.category_id,
-  category: it.category,
-  tags: it.tags ?? [],
-  categoryLimits: it.categoryLimits,
-  itemLimits: it.itemLimits,
-});
 
 const apiMessage = (err, fallback) =>
   err?.response?.data?.detail ??
@@ -191,17 +181,7 @@ export const TableOrderProvider = ({ children }) => {
   const loadLimits = useCallback(async (forSession) => {
     try {
       const { data } = await api.get(`/Order/session/${forSession}/limits`);
-      const byId = (rows, key) =>
-        Object.fromEntries(
-          (Array.isArray(rows) ? rows : []).map((row) => [
-            String(row[key]),
-            row,
-          ]),
-        );
-      setLimits({
-        items: byId(data?.items, "item_id"),
-        categories: byId(data?.categories, "category_id"),
-      });
+      setLimits(limitsById(data));
     } catch (err) {
       console.error("Error fetching order limits:", err);
       setLimits(null);
@@ -213,12 +193,7 @@ export const TableOrderProvider = ({ children }) => {
     try {
       const response = await api.get("/Category");
       const data = Array.isArray(response.data) ? response.data : [];
-      setCategories(
-        data.map((c) => ({
-          category_id: c.category_id ?? c.Category_id,
-          name: c.name ?? c.category_name ?? c.Category_name,
-        })),
-      );
+      setCategories(data.map(normalizeCategory));
       categoriesLoaded.current = true;
     } catch (err) {
       console.error("Error fetching categories:", err);
@@ -281,14 +256,7 @@ export const TableOrderProvider = ({ children }) => {
           params: locationId ? { locationId } : {},
         });
         const items = Array.isArray(response.data) ? response.data : [];
-
-        // Each category gets its own list
-        const grouped = items.map(normalizeItem).reduce((acc, item) => {
-          (acc[item.category_id] ||= []).push(item);
-          return acc;
-        }, {});
-
-        setMenuItems(grouped);
+        setMenuItems(groupItemsByCategory(items));
       } catch (err) {
         console.error(`Error fetching menu items for menu ${menuId}:`, err);
       } finally {
@@ -328,39 +296,10 @@ export const TableOrderProvider = ({ children }) => {
     );
   }, [sessionId, quantities]);
 
-  // Most of this item the cart can hold before a limit that blocks: the item's own caps, and
-  // whatever its category has left after the other items from that category already in the cart.
-  // Never more than the server takes in one order, even for items with no limit
-  const maxFor = useCallback(
-    (cart, categoryId, itemId) => {
-      if (!limits) return MAX_PER_ITEM;
-      const lowest = (row) => {
-        const caps = [row?.per_order, row?.session_left].filter(
-          (n) => n != null,
-        );
-        return caps.length ? Math.min(...caps) : null;
-      };
-
-      const itemCap = lowest(limits.items[String(itemId)]);
-      const categoryCap = lowest(limits.categories[String(categoryId)]);
-      const othersInCategory = Object.entries(cart[categoryId] || {})
-        .filter(([id]) => String(id) !== String(itemId))
-        .reduce((total, [, quantity]) => total + quantity, 0);
-      const categoryRoom =
-        categoryCap == null
-          ? null
-          : Math.max(0, categoryCap - othersInCategory);
-
-      const caps = [itemCap, categoryRoom].filter((n) => n != null);
-      return Math.min(MAX_PER_ITEM, ...caps);
-    },
-    [limits],
-  );
-
   // How the cart stands against the limit for one item
   const limitStatus = useCallback(
     (categoryId, itemId) => {
-      const max = maxFor(quantities, categoryId, itemId);
+      const max = cartMaxFor(limits, quantities, categoryId, itemId);
       const quantity = quantities[categoryId]?.[itemId] || 0;
       return {
         max,
@@ -368,68 +307,25 @@ export const TableOrderProvider = ({ children }) => {
         overLimit: max != null && quantity > max,
       };
     },
-    [maxFor, quantities],
+    [limits, quantities],
   );
 
   // Adding stops at the limit (the + button is hidden there too); removing works
   const changeQuantity = useCallback(
-    (categoryId, itemId, delta) => {
-      setQuantities((prev) => {
-        const current = prev[categoryId]?.[itemId] || 0;
-        const max = maxFor(prev, categoryId, itemId);
-        if (delta > 0 && max != null && current + delta > max) return prev;
-        return {
-          ...prev,
-          [categoryId]: {
-            ...prev[categoryId],
-            [itemId]: Math.max(0, current + delta),
-          },
-        };
-      });
-    },
-    [maxFor],
+    (categoryId, itemId, delta) =>
+      setQuantities((prev) =>
+        changeCartQuantity(limits, prev, categoryId, itemId, delta),
+      ),
+    [limits],
   );
 
   const clearCart = useCallback(() => setQuantities({}), []);
 
-  // Every item in the cart with its menu details, in menu order (the order it's sent in).
-  // extra: units past a Charge limit (e.g. Hot Stone past 1 per person), billed at extraPrice each.
-  // Worked out like the server does: each item uses up its category's free units in turn
-  const cartLines = useMemo(() => {
-    const categoryFree = {};
-    return categories.flatMap((category) =>
-      Object.entries(quantities[category.category_id] || {})
-        .filter(([, quantity]) => quantity > 0)
-        .map(([itemId, quantity]) => ({
-          category,
-          quantity,
-          item: menuItems[category.category_id]?.find(
-            (menuItem) => menuItem.item_id === Number(itemId),
-          ),
-        }))
-        .filter(({ item }) => item)
-        .map((line) => {
-          const itemRow = limits?.items[String(line.item.item_id)];
-          const key = String(category.category_id);
-          if (!(key in categoryFree))
-            categoryFree[key] = limits?.categories[key]?.free_left ?? null;
-
-          const frees = [itemRow?.free_left, categoryFree[key]].filter(
-            (n) => n != null,
-          );
-          const free = Math.min(line.quantity, ...frees);
-          if (categoryFree[key] != null)
-            categoryFree[key] = Math.max(0, categoryFree[key] - line.quantity);
-
-          const extra = line.item.is_add_on ? 0 : line.quantity - free;
-          return {
-            ...line,
-            extra,
-            extraPrice: extra > 0 ? Number(itemRow?.extra_price) || 0 : 0,
-          };
-        }),
-    );
-  }, [categories, quantities, menuItems, limits]);
+  // Every item in the cart with its menu details, in menu order (see buildCartLines)
+  const cartLines = useMemo(
+    () => buildCartLines({ categories, quantities, menuItems, limits }),
+    [categories, quantities, menuItems, limits],
+  );
 
   // Total units picked (2 Salmon + 1 Tuna = 3), counted from the saved cart so it's
   // right even before the menu has loaded

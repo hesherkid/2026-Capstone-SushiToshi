@@ -7,7 +7,9 @@ using Microsoft.Extensions.Logging;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
-using back_end.DTO.TagDTOs;
+using back_end.DTO.Category;
+using Microsoft.AspNetCore.Authorization;
+using back_end.domain.enums;
 
 namespace back_end.Tests.Controllers;
 
@@ -66,7 +68,7 @@ public class CategoryControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var categories = okResult!.Value as List<Category>;
+        var categories = okResult!.Value as List<CategoryResponse>;
 
         categories.Should().NotBeNull();
         categories!.Should().HaveCount(3);
@@ -81,11 +83,11 @@ public class CategoryControllerTests : IDisposable
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
-        var category = okResult!.Value as Category;
+        var category = okResult!.Value as CategoryResponse;
 
         category.Should().NotBeNull();
-        category!.Category_id.Should().Be(1);
-        category.Category_name.Should().Be("Appetizers");
+        category!.Category_Id.Should().Be(1);
+        category.Category_Name.Should().Be("Appetizers");
     }
 
     [Fact]
@@ -99,20 +101,69 @@ public class CategoryControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAllCategories_OrderedByDisplayOrder()
+    public async Task CreateCategory_ReturnsDtoWithLimits()
     {
-        // Act
-        var result = await _controller.GetAllCategories();
+        var request = new CreateCategory
+        {
+            Name = "Sashimi",
+            Description = "Raw fish",
+            Adult_Limit = 2,
+            Child_Limit = 1,
+            Senior_Limit = 2,
+            Toddler_Limit = 1,
+            Per_Order_Limit = 30,
+            Over_Limit_Behavior = OverLimitBehavior.Charge
+        };
 
-        // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-        var okResult = result.Result as OkObjectResult;
-        var categories = okResult!.Value as List<Category>;
+        var result = await _controller.CreateCategory(request);
 
-        categories.Should().NotBeNull();
-        // Note: Display_Order property removed from Category entity
-        // categories!.Should().BeInAscendingOrder(c => c.Display_Order);
-        categories!.Should().HaveCount(3);
+        result.Should().BeOfType<OkObjectResult>();
+        var dto = (result as OkObjectResult)!.Value as CategoryResponse;
+
+        dto.Should().NotBeNull();
+        dto!.Category_Id.Should().BePositive();
+        dto.Category_Name.Should().Be("Sashimi");
+        dto.Adult_Limit.Should().Be(2);
+        dto.Child_Limit.Should().Be(1);
+        dto.Senior_Limit.Should().Be(2);
+        dto.Toddler_Limit.Should().Be(1);
+        dto.Per_Order_Limit.Should().Be(30);
+        dto.Over_Limit_Behavior.Should().Be(OverLimitBehavior.Charge);
+    }
+
+    [Fact]
+    public async Task DeleteCategory_WithMenuItems_ReturnsConflict()
+    {
+        _context.MenuItems.Add(new Menu_Item
+        {
+            item_id = 100,
+            Name = "Miso Soup",
+            Description = "Classic miso broth",
+            Category_id = 1
+        });
+        _context.SaveChanges();
+
+        var result = await _controller.DeleteCategory(1);
+
+        result.Should().BeOfType<ConflictObjectResult>();
+        (await _context.Categories.AnyAsync(c => c.Category_id == 1)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeleteCategory_Empty_ReturnsOk()
+    {
+        var result = await _controller.DeleteCategory(3);
+
+        result.Should().BeOfType<OkObjectResult>();
+        (await _context.Categories.AnyAsync(c => c.Category_id == 3)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteCategory_InvalidId_ReturnsNotFound()
+    {
+        var result = await _controller.DeleteCategory(999);
+
+        result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     public void Dispose()

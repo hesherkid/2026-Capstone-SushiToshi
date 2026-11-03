@@ -83,7 +83,7 @@ namespace back_end.controllers
     /// </remarks>
     [HttpPost("Create_Dinning_Session")]
     // Staff seat tables; guests join an existing session through POST /api/DiningSession/join
-    [Authorize(Roles = "Admin,Staff")]
+    [Authorize(Roles = "staffOnly")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -193,7 +193,9 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error creating dining session at location {LocationId}",
+            sessionData.Location_Id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -256,14 +258,15 @@ namespace back_end.controllers
           Ended_at = session.Ended_At,
           First_Order_Time = session.First_Order_At,
           Table_Numbers = GetTableNumbers(session),
-          Active_Participants = session.Participants.Count()
+          Active_Participants = session.Participants.Count(p => p.Left_At == null)
         }).ToList();
 
         return Ok(Response);
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error listing dining sessions (ActiveOnly: {ActiveOnly})", act.ActiveOnly);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -329,9 +332,9 @@ namespace back_end.controllers
           return LocationResults.OtherLocation();
         }
 
-        int active_participants = await _context.SessionParticipants
-            .Where(sp => sp.Session_Id == session_id)
-            .CountAsync();
+        var participants = _context.SessionParticipants.Where(sp => sp.Session_Id == session_id);
+        int active_participants = await participants.CountAsync(sp => sp.Left_At == null);
+        int total_participants = await participants.CountAsync();
 
         foreach (var returnedBill in session.Bills)
         {
@@ -350,12 +353,13 @@ namespace back_end.controllers
           Orders_Count = session.Orders.Count(),
           Bills_Count = session.Bills.Count(),
           Active_Bill_Count = session.Bills.Count(b => b.Status == BillStatus.Open),
-          Total_participant = active_participants
+          Total_participant = total_participants
         });
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error retrieving dining session {SessionId}", session_id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -445,6 +449,16 @@ namespace back_end.controllers
           return BadRequest($"Table belongs to a different location. Session is for location {session.Location_Id}, table is for location {table.Location_Id}");
         }
 
+        // Busy if the table, or a table group it belongs to, already has an open session
+        bool tableBusy = await _context.DiningSessions
+             .AnyAsync(d => d.Ended_At == null &&
+                   d.Session_Id != session_id &&
+                   (d.Table_Id == table.Table_Id ||
+                    (table.TableGroup_Id != null && d.TableGroup_Id == table.TableGroup_Id)));
+
+        if (tableBusy)
+          return BadRequest($"Table {table.table_number} already has an active session");
+
         session.Table_Id = table.Table_Id;
         session.Table = table;
 
@@ -460,7 +474,8 @@ namespace back_end.controllers
           Ended_at = session.Ended_At,
           First_Order_Time = session.First_Order_At,
           Table_Numbers = new List<int> { table.table_number },
-          Active_Participants = await _context.SessionParticipants.CountAsync(s => s.Session_Id == session.Session_Id),
+          Active_Participants = await _context.SessionParticipants
+              .CountAsync(s => s.Session_Id == session.Session_Id && s.Left_At == null),
         });
       }
       catch (ValidationException vex)
@@ -469,7 +484,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error adding table {TableId} to dining session {SessionId}", tableData.Table_Id, session_id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -552,7 +568,8 @@ namespace back_end.controllers
           Ended_at = session.Ended_At,
           First_Order_Time = session.First_Order_At,
           Table_Numbers = tableGroup.Tables.Select(t => t.table_number).ToList(),
-          Active_Participants = await _context.SessionParticipants.CountAsync(s => s.Session_Id == session.Session_Id),
+          Active_Participants = await _context.SessionParticipants
+              .CountAsync(s => s.Session_Id == session.Session_Id && s.Left_At == null),
         });
       }
       catch (ValidationException vex)
@@ -561,7 +578,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error adding table group {TableGroupId} to dining session {SessionId}", tableGroupData.TableGroup_Id, session_id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -573,12 +591,12 @@ namespace back_end.controllers
     /// <returns>
     /// An <see cref="IActionResult"/> indicating the result of the operation.
     /// Returns HTTP 200 (OK) with a success message when the table is removed.
-    /// Returns HTTP 400 (Bad Request) if the session has open bills.
+    /// Returns HTTP 400 (Bad Request) if the session has ended / has open bills.
     /// Returns HTTP 404 (Not Found) if the session, table, or table-session association doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during removal.
     /// </returns>
     /// <response code="200">Returns a success message when the table is removed from the session</response>
-    /// <response code="400">If the session has open bills preventing table removal</response>
+    /// <response code="400">If the session has ended / has open bills preventing table removal</response>
     /// <response code="404">If the session, table, or table-session association is not found</response>
     /// <response code="500">If an internal error occurs while removing the table from the session</response>
     /// <remarks>
@@ -587,7 +605,8 @@ namespace back_end.controllers
     ///     DELETE /api/diningsession/123/Tables/456
     ///
     /// Removes the association between a table and a dining session.
-    /// Tables cannot be removed from sessions that have open bills.
+    /// Session must not have ended (ended sessions keep their table for history and analytics)
+    /// Session must not have any open bills
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpDelete("{session_id}/Tables/{table_id}")]
@@ -608,6 +627,12 @@ namespace back_end.controllers
         if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
         {
           return LocationResults.OtherLocation();
+        }
+
+        // Added for table turn over analytics, so we can't modify ended sessions
+        if (session.Ended_At != null)
+        {
+          return BadRequest($"Cannot modify an ended session: {session_id}");
         }
 
         // Only check the status of the Bill
@@ -639,7 +664,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error removing table {TableId} from dining session {SessionId}", table_id, session_id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -664,6 +690,11 @@ namespace back_end.controllers
           return LocationResults.OtherLocation();
         }
 
+        if (session.Ended_At != null)
+        {
+          return BadRequest($"Cannot modify an ended session: {session_id}");
+        }
+
         // Only check the status of the Bill
         if (session.Bills.Any(b => b.Status == BillStatus.Open))
         {
@@ -685,7 +716,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error removing table group {TableGroupId} from dining session {SessionId}", table_group_id, session_id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -752,7 +784,7 @@ namespace back_end.controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error retrieving active session");
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -813,8 +845,8 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error retrieving active Menu Session");
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error retrieving menu for dining session {SessionId}", session_id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -841,9 +873,11 @@ namespace back_end.controllers
     /// Closes an active dining session by setting the Ended_At timestamp to the current UTC time.
     /// Everyone still seated leaves with the table (Left_At is set to the same time), so no seat
     /// outlives its session.
+    /// Any service request still Pending is marked Completed at the same time.
     /// Requirements:
     /// - Staff or admin only
     /// - Session must not already be closed (Ended_At must be null)
+    /// - No order items may be Pending or Processing (items on cancelled orders are ignored)
     /// - Session must not have any open bills
     /// </remarks>
     [HttpPut("{session_id}/close")]
@@ -881,6 +915,18 @@ namespace back_end.controllers
           return BadRequest($"Session: {session_id} is already closed");
         }
 
+        var unfinishedItems = await _context.SessionOrders
+            .Where(o => o.session_id == session_id && o.Status != OrderStatus.Cancelled)
+            .SelectMany(o => o.OrderItems)
+            .Where(oi => oi.Order_Item_Status == OrderStatus.Pending ||
+                         oi.Order_Item_Status == OrderStatus.Processing)
+            .CountAsync();
+
+        if (unfinishedItems > 0)
+        {
+          return BadRequest($"Cannot close session with open order items. Please deliver or cancel all order items first.");
+        }
+
         // Check if there are any open bills
         if (session.Bills.Any(b => b.Status == BillStatus.Open))
         {
@@ -897,6 +943,18 @@ namespace back_end.controllers
           seat.Left_At = now;
         }
 
+        // The table is done, all requests still pending are done with it.
+        var openRequests = await _context.ServiceRequests
+            .Where(sr => sr.Session_Id == session_id && sr.Status == ServiceRequestStatus.Pending)
+            .ToListAsync();
+
+        foreach (var request in openRequests)
+        {
+          request.Status = ServiceRequestStatus.Completed;
+          request.Claimed_At ??= now;
+          request.Completed_At = now;
+        }
+
         await _context.SaveChangesAsync();
 
         return Ok(new DiningSessionResponseDTO
@@ -907,13 +965,13 @@ namespace back_end.controllers
           Ended_at = session.Ended_At,
           First_Order_Time = session.First_Order_At,
           Table_Numbers = GetTableNumbers(session),
-          Active_Participants = session.Participants.Count()
+          Active_Participants = session.Participants.Count(p => p.Left_At == null)
         });
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error closing dining session");
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error closing dining session {SessionId}", session_id);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 

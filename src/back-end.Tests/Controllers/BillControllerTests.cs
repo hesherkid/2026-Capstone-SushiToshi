@@ -470,4 +470,14 @@ public class BillControllerTests : IDisposable
 
         result.Should().BeOfType<ForbidResult>();
     }
+
+    [Fact]
+    public async Task CreateBill_NegativeGuestCount_ReturnsBadRequest()
+    {
+        // The old check let this through, negative counts should be rejected
+        var result = await Bills().Create_Bill(TableSession, Guests(adults: -1, children: 2));
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        _context.Bills.Count(b => b.Session_Id == TableSession).Should().Be(1);
+    }
 }
