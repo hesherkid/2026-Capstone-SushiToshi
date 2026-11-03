@@ -7,6 +7,7 @@ import {
   DialogContent,
   Divider,
   IconButton,
+  Paper,
   Stack,
   TextField,
   Typography,
@@ -20,7 +21,7 @@ const GUEST_TYPES = [
   { key: "adults", label: "Adults" },
   { key: "seniors", label: "Seniors" },
   { key: "children", label: "Children" },
-  { key: "toddlers", label: "Toddlers (6 & under)" },
+  { key: "toddlers", label: "Toddlers", hint: "6 & under" },
 ];
 
 const MAX_OF_EACH = 50;
@@ -28,26 +29,43 @@ const NEW_PARTY = { billName: "", adults: 1, seniors: 0, children: 0, toddlers: 
 
 const guests = (count) => `${count} guest${count === 1 ? "" : "s"}`;
 
+const BILL_STEPS = [
+  { icon: "group", text: "One person starts the bill for your party." },
+  { icon: "smartphone", text: "Everyone else in the party adds themselves to it from their phone." },
+  { icon: "call_split", text: "Paying separately? Start your own bill." },
+];
+
 // How a party shares a bill, shown above the choices
 const HowBillsWork = () => (
-  <Box component="ul" sx={{ m: 0, mb: 2.5, pl: 2.5, color: "text.secondary", "& li + li": { mt: 0.5 } }}>
-    <li>One person starts the bill for your party.</li>
-    <li>Everyone else in the party adds themselves to it from their phone.</li>
-    <li>Paying separately? Start your own bill.</li>
-  </Box>
+  <Stack component="ul" spacing={1} sx={{ m: 0, mb: 2.5, p: 1.5, listStyle: "none", bgcolor: "action.hover", borderRadius: 3 }}>
+    {BILL_STEPS.map(({ icon, text }) => (
+      <Box component="li" key={icon} sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        <MaterialSymbol name={icon} size={20} sx={{ color: "primary.main", flexShrink: 0 }} />
+        <Typography variant="body2" color="text.secondary">
+          {text}
+        </Typography>
+      </Box>
+    ))}
+  </Stack>
 );
 
-// − count + for one kind of guest
-const GuestCounter = ({ label, value, onChange, disabled }) => (
-  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
-    <Typography id={`count-${label}`}>{label}</Typography>
+// − count + for one kind of guest, one row of the party card
+const GuestCounter = ({ label, hint, value, onChange, disabled }) => (
+  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, px: 2, py: 1 }}>
+    <Box id={`count-${label}`}>
+      <Typography sx={{ fontWeight: 500 }}>{label}</Typography>
+      {hint && (
+        <Typography variant="caption" color="text.secondary">
+          {hint}
+        </Typography>
+      )}
+    </Box>
     <Box
       role="group"
       aria-labelledby={`count-${label}`}
       sx={{ display: "flex", alignItems: "center", border: 1, borderColor: "divider", borderRadius: 999 }}
     >
       <IconButton
-        size="small"
         aria-label={`Fewer ${label.toLowerCase()}`}
         onClick={() => onChange(value - 1)}
         disabled={disabled || value <= 0}
@@ -58,7 +76,6 @@ const GuestCounter = ({ label, value, onChange, disabled }) => (
         {value}
       </Typography>
       <IconButton
-        size="small"
         aria-label={`More ${label.toLowerCase()}`}
         onClick={() => onChange(value + 1)}
         disabled={disabled || value >= MAX_OF_EACH}
@@ -169,20 +186,39 @@ const BillChoiceDialog = ({ open, onClose }) => {
               autoFocus
               slotProps={{ htmlInput: { maxLength: 100 } }}
             />
-            <Stack spacing={1.5}>
-              {GUEST_TYPES.map(({ key, label }) => (
-                <GuestCounter
-                  key={key}
-                  label={label}
-                  value={party[key]}
-                  onChange={(value) => setParty((prev) => ({ ...prev, [key]: value }))}
-                  disabled={busy}
-                />
-              ))}
-            </Stack>
-            <Typography role="status" color="text.secondary">
-              {guests(totalGuests)} on this bill
-            </Typography>
+            <Box>
+              <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
+                Who&apos;s in your party?
+              </Typography>
+              <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+                <Stack divider={<Divider />}>
+                  {GUEST_TYPES.map(({ key, label, hint }) => (
+                    <GuestCounter
+                      key={key}
+                      label={label}
+                      hint={hint}
+                      value={party[key]}
+                      onChange={(value) => setParty((prev) => ({ ...prev, [key]: value }))}
+                      disabled={busy}
+                    />
+                  ))}
+                </Stack>
+                <Typography
+                  role="status"
+                  sx={{
+                    px: 2,
+                    py: 1.25,
+                    bgcolor: "action.hover",
+                    borderTop: 1,
+                    borderColor: "divider",
+                    fontWeight: 700,
+                    color: totalGuests > 0 ? "text.primary" : "error.main",
+                  }}
+                >
+                  {totalGuests > 0 ? `${guests(totalGuests)} on this bill` : "Add at least one guest"}
+                </Typography>
+              </Paper>
+            </Box>
           </Stack>
         ) : (
           <Stack spacing={1.5}>
@@ -229,7 +265,7 @@ const BillChoiceDialog = ({ open, onClose }) => {
       </DialogContent>
 
       {showForm && (
-        <DialogActions>
+        <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             type="submit"
             form="start-bill-form"
@@ -237,6 +273,7 @@ const BillChoiceDialog = ({ open, onClose }) => {
             size="large"
             fullWidth
             disabled={busy || !canStart}
+            sx={{ minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
           >
             {busy ? "Starting..." : "Start Bill"}
           </Button>
