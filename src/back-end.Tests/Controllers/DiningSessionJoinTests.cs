@@ -182,7 +182,7 @@ public class DiningSessionJoinTests : IDisposable
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
             .Single();
 
-        authorize.Roles.Should().Be("Admin,Staff");
+        authorize.Roles.Should().Be("staffOnly");
     }
 
     [Theory]
