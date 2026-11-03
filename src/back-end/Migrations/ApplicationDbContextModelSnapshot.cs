@@ -1186,7 +1186,7 @@ namespace back_end.Migrations
                     b.HasOne("back_end.domain.Entities.Category", "Category")
                         .WithMany("MenuItems")
                         .HasForeignKey("Category_id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Category");
@@ -1197,7 +1197,7 @@ namespace back_end.Migrations
                     b.HasOne("back_end.domain.Entities.Menu_Item", "MenuItem")
                         .WithMany("OrderItems")
                         .HasForeignKey("Item_Id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("back_end.domain.Entities.Menu", "Menu")

@@ -151,6 +151,20 @@ namespace back_end.domain.DbContexts
                 .HasForeignKey(oi => oi.Menu_Id)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Order history must survive changes
+            modelBuilder.Entity<OrderItems>()
+                .HasOne(oi => oi.MenuItem)
+                .WithMany(mi => mi.OrderItems)
+                .HasForeignKey(oi => oi.Item_Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Block deleting a category that still has menu items
+            modelBuilder.Entity<Menu_Item>()
+                .HasOne(mi => mi.Category)
+                .WithMany(c => c.MenuItems)
+                .HasForeignKey(mi => mi.Category_id)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<DiningSession>()
                 .HasOne(ds => ds.Location)
                 .WithMany(l => l.DiningSessions)
