@@ -16,6 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import CartLine from "@/components/menu/CartLine";
+import { cartSubtotal, orderItemsFor } from "@/components/menu/cartRules";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
@@ -115,13 +116,7 @@ const ReviewOrderPage = () => {
     0,
   );
   // Add-ons, plus anything past a limit that charges (e.g. extra Hot Stones)
-  const subtotal = cartLines.reduce(
-    (total, { item, quantity, extra, extraPrice }) =>
-      total +
-      (item.is_add_on ? (Number(item.price) || 0) * quantity : 0) +
-      extra * extraPrice,
-    0,
-  );
+  const subtotal = cartSubtotal(cartLines);
   const hasExtras = cartLines.some(({ extra }) => extra > 0);
 
   const handlePlaceOrder = async () => {
@@ -148,14 +143,7 @@ const ReviewOrderPage = () => {
     clearActionError();
     setPlacedExtras([]);
 
-    const orderItems = cartLines.map(({ item, quantity }) => ({
-      menu_id: Number(menuId),
-      item_id: Number(item.item_id),
-      quantity: Number(quantity),
-      price_at_time: item.is_add_on ? Number(item.price) || 0 : 0,
-      // Not stored; names the items in the "added to order" notification
-      name: item.name,
-    }));
+    const orderItems = orderItemsFor(cartLines, menuId);
     sending.current = orderItems.map(({ item_id, name, quantity }) => ({
       item_id,
       name,

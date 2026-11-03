@@ -33,6 +33,20 @@ const normalizeText = (text) => {
     .replace(/[^a-z0-9\s]/g, '') || '';
 };
 
+// Whether an item's name, description or a tag contains every word typed (blank matches all)
+export const matchesSearch = (item, searchTerm) =>
+  searchTerm
+    .toLowerCase()
+    .split(" ")
+    .map((term) => term.trim())
+    .filter((term) => term.length > 0)
+    .every(
+      (term) =>
+        item.name.toLowerCase().includes(term) ||
+        (item.description && item.description.toLowerCase().includes(term)) ||
+        (item.tags && item.tags.some((tag) => tag.name.toLowerCase().includes(term))),
+    );
+
 export const useMenuSearch = (items) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [maxDistance, setMaxDistance] = useState(3);

@@ -19,7 +19,7 @@ import ReviewOrderButton from "@/components/menu/ReviewOrderButton";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import TrackedItem from "@/components/menu/TrackedItem";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
-import useMenuSearch from "@/components/menu/searchUtils";
+import useMenuSearch, { matchesSearch } from "@/components/menu/searchUtils";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { NOT_SEATED_MESSAGE } from "@/services/tableSession";
 import {
@@ -133,26 +133,7 @@ const FullMenu = () => {
     return items.filter((item) => {
       if (quantities[categoryId]?.[item.item_id] > 0) return true;
 
-      if (!matchesFilters(item)) return false;
-
-      if (!searchTerm.trim()) return true;
-
-      const searchTerms = searchTerm
-        .toLowerCase()
-        .split(" ")
-        .map((term) => term.trim())
-        .filter((term) => term.length > 0);
-
-      if (searchTerms.length === 0) return true;
-
-      return searchTerms.every((term) => {
-        return (
-          item.name.toLowerCase().includes(term) ||
-          (item.description && item.description.toLowerCase().includes(term)) ||
-          (item.tags &&
-            item.tags.some((tag) => tag.name.toLowerCase().includes(term)))
-        );
-      });
+      return matchesFilters(item) && matchesSearch(item, searchTerm);
     });
   };
 

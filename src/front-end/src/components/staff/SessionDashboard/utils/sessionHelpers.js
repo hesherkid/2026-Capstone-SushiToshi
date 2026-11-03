@@ -310,6 +310,16 @@ export const formatGuestBreakdown = (bill) => {
 };
 
 /**
+ * People at the table: the guests entered on its bills, closed ones included
+ * (people who paid may still be seated). Not the phones that scanned the QR code.
+ */
+export const sessionGuestCount = (session) =>
+  (session?.bills || []).reduce(
+    (sum, bill) => sum + (Number(bill.total_Guests ?? bill.total_count) || 0),
+    0,
+  );
+
+/**
  * Validate bill data before creation
  */
 export const validateBillData = (billData) => {
