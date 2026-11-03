@@ -58,7 +58,19 @@ const sessions = [
     started_At: "2026-10-14T20:10:00Z",
     active_Participants: 1, // one phone for a party of 4
     bills: [
-      { bill_Id: 80, bill_Name: "Lee", status: "Open", total_Guests: 4, people_On_Bill: 1, started_By_Guest: true },
+      {
+        bill_Id: 80,
+        bill_Name: "Lee",
+        status: "Open",
+        total_Guests: 4,
+        adult_Count: 4,
+        people_On_Bill: 1,
+        started_By_Guest: true,
+      },
+    ],
+    people: [
+      { participant_Id: 5, user_Name: "Ana Lee", bill_Id: 80 },
+      { participant_Id: 6, user_Name: "Ben Park", bill_Id: null },
     ],
     bill_Count: 1,
     is_Closable: false,
@@ -173,6 +185,87 @@ describe("Session dashboard", () => {
     expect(within(dialog).getByText("Count changed by guest")).toBeInTheDocument();
     // Lee's 4 guests share one phone, which is fine
     expect(within(dialog).queryByText(/people on 4-guest bill/)).not.toBeInTheDocument();
+  });
+
+  it("lets staff fix a bill's guest counts", async () => {
+    await renderDashboard();
+
+    fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
+    const sessionDialog = await screen.findByRole("dialog");
+    fireEvent.click(within(sessionDialog).getByRole("button", { name: "Edit guests on Lee" }));
+
+    const dialog = await screen.findByRole("dialog", { name: /Edit Guests on Lee/ });
+    expect(within(dialog).getByRole("spinbutton", { name: "Adults" })).toHaveValue(4);
+    fireEvent.change(within(dialog).getByRole("spinbutton", { name: "Adults" }), { target: { value: "3" } });
+    fireEvent.change(within(dialog).getByRole("spinbutton", { name: "Children" }), { target: { value: "2" } });
+    expect(within(dialog).getByText("Total Guests: 5")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Guests" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith(
+        "/Bill/guest_counts/80",
+        { adult_count: 3, senior_count: 0, child_count: 2, tot_count: 0 },
+        { params: { _session_id: 8 } },
+      ),
+    );
+  });
+
+  it("fills in a bill's current guests when staff edit them", async () => {
+    const PARK = { bill_Id: 81, bill_Name: "Park", status: "Open", total_Guests: 5, adult_Count: 2, senior_Count: 1, child_Count: 2, tot_Count: 0 };
+    // Without the breakdown, the guests show as adults so the total still matches
+    const KIM = { bill_Id: 82, bill_Name: "Kim", status: "Open", total_Guests: 3 };
+    const withBills = sessions.map((s) => (s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK, KIM] } : s));
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url.startsWith("/Dashboard/sessions") ? Promise.resolve({ status: 200, data: withBills }) : defaultGet(url),
+    );
+    await renderDashboard();
+
+    fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
+    const sessionDialog = await screen.findByRole("dialog");
+    fireEvent.click(within(sessionDialog).getByRole("button", { name: "Edit guests on Park" }));
+    let dialog = await screen.findByRole("dialog", { name: /Edit Guests on Park/ });
+    expect(within(dialog).getByRole("spinbutton", { name: "Adults" })).toHaveValue(2);
+    expect(within(dialog).getByRole("spinbutton", { name: "Seniors" })).toHaveValue(1);
+    expect(within(dialog).getByRole("spinbutton", { name: "Children" })).toHaveValue(2);
+    expect(within(dialog).getByText("Total Guests: 5")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    // Back to the session dialog
+    const backToSession = await screen.findByRole("dialog", { name: /Dining Session #8/ });
+    fireEvent.click(within(backToSession).getByRole("button", { name: "Edit guests on Kim" }));
+    dialog = await screen.findByRole("dialog", { name: /Edit Guests on Kim/ });
+    expect(within(dialog).getByRole("spinbutton", { name: "Adults" })).toHaveValue(3);
+    expect(within(dialog).getByText("Total Guests: 3")).toBeInTheDocument();
+  });
+
+  it("lists who's on which bill, and lets staff move someone with their orders", async () => {
+    const PARK = { bill_Id: 81, bill_Name: "Park", status: "Open", total_Guests: 1, people_On_Bill: 0 };
+    const withPark = sessions.map((s) => (s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK] } : s));
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url.startsWith("/Dashboard/sessions") ? Promise.resolve({ status: 200, data: withPark }) : defaultGet(url),
+    );
+    await renderDashboard();
+
+    fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
+    const sessionDialog = await screen.findByRole("dialog");
+    expect(within(sessionDialog).getByText("People at the table (2)")).toBeInTheDocument();
+    expect(within(sessionDialog).getByText("Not on a bill yet")).toBeInTheDocument();
+    fireEvent.click(within(sessionDialog).getByRole("button", { name: "Move Ana Lee" }));
+
+    const dialog = await screen.findByRole("dialog", { name: /Move Ana Lee/ });
+    expect(within(dialog).getByText("Ana Lee is on Lee.")).toBeInTheDocument();
+    expect(within(dialog).getByRole("checkbox", { name: /Take Ana Lee's orders with them/ })).toBeChecked();
+    fireEvent.mouseDown(within(dialog).getByRole("combobox", { name: /Move to/ }));
+    fireEvent.click(await screen.findByRole("option", { name: "Park" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Move" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/SessionParticipant/8/participants/5/bill", {
+        bill_id: 81,
+        move_orders: true,
+      }),
+    );
   });
 
   it("closes a bill from its summary and blocks ending the session until then", async () => {

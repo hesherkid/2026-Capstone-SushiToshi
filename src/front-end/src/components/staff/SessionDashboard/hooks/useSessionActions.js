@@ -493,6 +493,61 @@ export const useSessionActions = (onSuccess) => {
     [apiWrapper]
   );
 
+  /**
+   * Change an open bill's guest counts (clears its "guest entered" flags)
+   */
+  const updateGuestCounts = useCallback(
+    async (sessionId, billId, counts) => {
+      return apiWrapper(
+        "updateGuestCounts",
+        async () => {
+          const sid = toInt(sessionId);
+          const bid = toInt(billId);
+          validateIds({ "session ID": sid, "bill ID": bid });
+
+          const res = await api.put(
+            `/Bill/guest_counts/${bid}`,
+            {
+              adult_count: toInt(counts.adultCount) || 0,
+              senior_count: toInt(counts.seniorCount) || 0,
+              child_count: toInt(counts.childCount) || 0,
+              tot_count: toInt(counts.totCount) || 0,
+            },
+            { params: { _session_id: sid } },
+          );
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: "Guest count updated" },
+      );
+    },
+    [apiWrapper],
+  );
+
+  /**
+   * Move someone at the table onto another open bill, with or without their orders
+   */
+  const moveGuest = useCallback(
+    async (sessionId, participantId, billId, moveOrders) => {
+      return apiWrapper(
+        "moveGuest",
+        async () => {
+          const sid = toInt(sessionId);
+          const pid = toInt(participantId);
+          const bid = toInt(billId);
+          validateIds({ "session ID": sid, "participant ID": pid, "bill ID": bid });
+
+          const res = await api.put(`/SessionParticipant/${sid}/participants/${pid}/bill`, {
+            bill_id: bid,
+            move_orders: moveOrders,
+          });
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: "Guest moved" },
+      );
+    },
+    [apiWrapper],
+  );
+
   return {
     // State
     actionError,
@@ -526,6 +581,8 @@ export const useSessionActions = (onSuccess) => {
     getBills,
     getBillSummary,
     closeBill,
+    updateGuestCounts,
+    moveGuest,
 
     // Utilities
     clearActionError,

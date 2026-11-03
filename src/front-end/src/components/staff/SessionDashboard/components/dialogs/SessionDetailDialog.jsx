@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import AppDialog from "@/components/common/AppDialog";
 import DialogHeader from "@/components/common/DialogHeader";
-import { Check, Receipt, ReceiptText, LogOut, Bell, Smartphone, Plus, Users, Pencil } from "lucide-react";
+import { Check, Receipt, ReceiptText, LogOut, Bell, Smartphone, Plus, Users, Pencil, ArrowRightLeft } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
 import {
@@ -50,6 +50,9 @@ const SessionDetailDialog = () => {
   const bills = sortBillsByStatus(session?.bills || []);
   const hasOpenBills = bills.some(isOpenBill);
   const guestCount = sessionGuestCount(session);
+  // Everyone still seated, and which bill they're on
+  const people = session?.people || [];
+  const billNameOf = (billId) => bills.find((b) => b.bill_Id === billId)?.bill_Name;
 
 
   return (
@@ -190,6 +193,15 @@ const SessionDetailDialog = () => {
                               Add Order
                             </Button>
                           )}
+                          {isOpenBill(bill) && (
+                            <Button
+                              aria-label={`Edit guests on ${bill.bill_Name}`}
+                              onClick={() => actions.editGuests(session, bill)}
+                              startIcon={<Pencil size={18} />}
+                            >
+                              Edit Guests
+                            </Button>
+                          )}
                           <Tooltip title="View bill summary">
                             <Button
                               aria-label={`View ${bill.bill_Name} summary`}
@@ -205,6 +217,41 @@ const SessionDetailDialog = () => {
                     </Box>
                   ))}
                 </List>
+              )}
+
+              {/* Who's on which bill; staff move people to fix a bill or split one by person */}
+              {people.length > 0 && (
+                <>
+                  <Divider />
+                  <SectionHeading icon={Users}>
+                    People at the table ({people.length})
+                  </SectionHeading>
+                  <List dense sx={{ py: 0, pb: 1 }}>
+                    {people.map((person) => (
+                      <ListItem
+                        key={person.participant_Id}
+                        sx={{ px: 3 }}
+                        secondaryAction={
+                          hasOpenBills && (
+                            <Button
+                              size="small"
+                              aria-label={`Move ${person.user_Name || "guest"}`}
+                              onClick={() => actions.moveGuest(session, person)}
+                              startIcon={<ArrowRightLeft size={16} />}
+                            >
+                              Move
+                            </Button>
+                          )
+                        }
+                      >
+                        <ListItemText
+                          primary={person.user_Name || "Guest"}
+                          secondary={billNameOf(person.bill_Id) ?? "Not on a bill yet"}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
               )}
             </DialogContent>
 
