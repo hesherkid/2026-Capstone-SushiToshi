@@ -313,11 +313,11 @@ export const formatGuestBreakdown = (bill) => {
  * People at the table: the guests entered on its bills, closed ones included
  * (people who paid may still be seated). Not the phones that scanned the QR code.
  */
+// Cancelled bills (e.g. one merged into another) don't count, or their guests would count twice
 export const sessionGuestCount = (session) =>
-  (session?.bills || []).reduce(
-    (sum, bill) => sum + (Number(bill.total_Guests ?? bill.total_count) || 0),
-    0,
-  );
+  (session?.bills || [])
+    .filter((bill) => String(bill.status).toUpperCase() !== "CANCELLED")
+    .reduce((sum, bill) => sum + (Number(bill.total_Guests ?? bill.total_count) || 0), 0);
 
 /**
  * Validate bill data before creation

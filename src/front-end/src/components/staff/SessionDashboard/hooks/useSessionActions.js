@@ -524,10 +524,38 @@ export const useSessionActions = (onSuccess) => {
   );
 
   /**
-   * Move someone at the table onto another open bill, with or without their orders
+   * Merge an open bill into another: its people, orders and guest counts move, then it's cancelled
+   */
+  const mergeBill = useCallback(
+    async (sessionId, billId, intoBillId) => {
+      return apiWrapper(
+        "mergeBill",
+        async () => {
+          const sid = toInt(sessionId);
+          const bid = toInt(billId);
+          const into = toInt(intoBillId);
+          validateIds({ "session ID": sid, "bill ID": bid, "bill to merge into": into });
+
+          const res = await api.put(
+            `/Bill/merge/${bid}`,
+            { into_bill_id: into },
+            { params: { _session_id: sid } },
+          );
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: "Bills merged" },
+      );
+    },
+    [apiWrapper],
+  );
+
+  /**
+   * Move someone at the table onto another open bill, with or without their orders.
+   * guestType ("adult", "senior", "child" or "toddler") also moves guestCount guests of that kind from
+   * the old bill's count to the new one's; null leaves both counts alone.
    */
   const moveGuest = useCallback(
-    async (sessionId, participantId, billId, moveOrders) => {
+    async (sessionId, participantId, billId, moveOrders, guestType = null, guestCount = 1) => {
       return apiWrapper(
         "moveGuest",
         async () => {
@@ -539,6 +567,8 @@ export const useSessionActions = (onSuccess) => {
           const res = await api.put(`/SessionParticipant/${sid}/participants/${pid}/bill`, {
             bill_id: bid,
             move_orders: moveOrders,
+            guest_type: guestType,
+            guest_count: guestCount,
           });
           return res.data;
         },
@@ -582,6 +612,7 @@ export const useSessionActions = (onSuccess) => {
     getBillSummary,
     closeBill,
     updateGuestCounts,
+    mergeBill,
     moveGuest,
 
     // Utilities

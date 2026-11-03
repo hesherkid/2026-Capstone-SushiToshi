@@ -6,6 +6,7 @@ import SessionDetailDialog from "./SessionDetailDialog";
 import StaffOrderDialog from "./StaffOrderDialog";
 import EditGuestsDialog from "./EditGuestsDialog";
 import MoveGuestDialog from "./MoveGuestDialog";
+import MergeBillDialog from "./MergeBillDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const DialogContainer = () => {
@@ -51,6 +52,14 @@ const DialogContainer = () => {
         open={type === "moveGuest"}
         sessionId={data?.sessionId}
         person={data?.person}
+        onClose={closeDialog}
+      />
+
+      {/* data: { sessionId, bill } */}
+      <MergeBillDialog
+        open={type === "mergeBill"}
+        sessionId={data?.sessionId}
+        bill={data?.bill}
         onClose={closeDialog}
       />
 
