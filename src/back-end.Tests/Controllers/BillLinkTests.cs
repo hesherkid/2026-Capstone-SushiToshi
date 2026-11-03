@@ -139,6 +139,29 @@ public class BillLinkTests : IDisposable
         SeatBill(Dee).Should().BeNull();
     }
 
+    [Theory]
+    [InlineData(BillStatus.Closed)]
+    [InlineData(BillStatus.Cancelled)]
+    public async Task Rejoining_AfterTheirBillEnded_AsksThemToChooseAgain(BillStatus status)
+    {
+        // Ana is still seated on Lee when it ends, then rescans the QR code
+        (await _context.Bills.FindAsync(Lee))!.Status = status;
+        _context.SaveChanges();
+
+        await Sessions(Ana).JoinTableSession(new JoinTableSessionDTO { Table_Number = 1, Location_Id = 1 });
+
+        SeatBill(Ana).Should().BeNull();
+        Body(await Seats(Ana).GetMyBill(Table)).My_Bill.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Rejoining_KeepsThemOnTheirOpenBill()
+    {
+        await Sessions(Ana).JoinTableSession(new JoinTableSessionDTO { Table_Number = 1, Location_Id = 1 });
+
+        SeatBill(Ana).Should().Be(Lee);
+    }
+
     // ---- Seeing and choosing a bill ----
 
     [Fact]
