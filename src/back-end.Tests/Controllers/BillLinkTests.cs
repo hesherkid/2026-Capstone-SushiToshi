@@ -434,6 +434,85 @@ public class BillLinkTests : IDisposable
         StaffPolicy(typeof(BillController), nameof(BillController.Update_Guest_Counts)).Should().Be("staffOnly");
         StaffPolicy(typeof(SessionParticipantController), nameof(SessionParticipantController.MoveGuest)).Should().Be("staffOnly");
         StaffPolicy(typeof(BillController), nameof(BillController.Merge_Bill)).Should().Be("staffOnly");
+        StaffPolicy(typeof(BillController), nameof(BillController.Lock_Guest_Counts)).Should().Be("staffOnly");
+    }
+
+    // ---- Staff locking guest counts ----
+
+    private async Task<IActionResult> LockCounts(int billId, bool locked) =>
+        await Bills(Server, "Staff").Lock_Guest_Counts(Table, billId, new LockGuestCountsDTO { Locked = locked });
+
+    [Fact]
+    public async Task LockedCounts_CantBeChangedByGuests_UntilStaffUnlockThem()
+    {
+        (await LockCounts(Lee, true)).Should().BeOfType<OkObjectResult>();
+
+        (await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 3))).Should().BeOfType<BadRequestObjectResult>();
+        (await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee)).Total_Count.Should().Be(2);
+
+        (await LockCounts(Lee, false)).Should().BeOfType<OkObjectResult>();
+        (await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 3))).Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task LockingCounts_MeansStaffCheckedThem_SoClearsTheGuestFlags()
+    {
+        await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 3));
+
+        await LockCounts(Lee, true);
+
+        var lee = await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee);
+        lee.Counts_Locked.Should().BeTrue();
+        lee.Counts_Changed_By_Guest.Should().BeFalse();
+        lee.Started_By_Guest.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LockedBill_KeepsItsGuests_UntilStaffMoveThem()
+    {
+        await LockCounts(Lee, true);
+
+        (await Seats(Ana).ChooseBill(Table, new ChooseBillDTO { Bill_Id = Park })).Should().BeOfType<BadRequestObjectResult>();
+        (await Bills(Ana).Create_Bill(Table, new CreateBill { Bill_Name = "Ana", Adult_Count = 1 })).Should().BeOfType<BadRequestObjectResult>();
+        Body(await Seats(Ana).GetMyBill(Table)).Change_Blocked_Reason.Should().Contain("confirmed your party");
+        SeatBill(Ana).Should().Be(Lee);
+
+        // Staying on it is fine, and staff can still move them
+        (await Seats(Ana).ChooseBill(Table, new ChooseBillDTO { Bill_Id = Lee })).Should().BeOfType<OkObjectResult>();
+        await LockCounts(Lee, false);
+        (await Seats(Ana).ChooseBill(Table, new ChooseBillDTO { Bill_Id = Park })).Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task LockedCounts_CanStillBeChangedByStaff_AndStayLocked()
+    {
+        await LockCounts(Lee, true);
+
+        (await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 4))).Should().BeOfType<OkObjectResult>();
+
+        var lee = await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee);
+        lee.Total_Count.Should().Be(4);
+        lee.Counts_Locked.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task LockedCounts_ShowToTheGuestAndOnTheDashboard()
+    {
+        await LockCounts(Lee, true);
+
+        Body(await Seats(Ana).GetMyBill(Table)).My_Bill!.Counts_Locked.Should().BeTrue();
+        (await DashboardBill(Lee)).Counts_Locked.Should().BeTrue();
+        (await DashboardBill(Park)).Counts_Locked.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LockingCounts_OnlyOnOpenBillsAtTheTable()
+    {
+        (await _context.Bills.FindAsync(Park))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+
+        (await LockCounts(Park, true)).Should().BeOfType<BadRequestObjectResult>();
+        (await LockCounts(OtherTableBill, true)).Should().BeOfType<NotFoundObjectResult>();
     }
 
     [Fact]

@@ -28,6 +28,8 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   Merge,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
@@ -120,7 +122,7 @@ const guestCheckChips = (bill) => {
 };
 
 const SessionDetailDialog = () => {
-  const { selectedSession: session, closeSession, requestsBySession } =
+  const { selectedSession: session, closeSession, requestsBySession, lockGuestCounts, isSaving } =
     useSession();
   const actions = useSessionDashboardActions();
   const [summaryBillId, setSummaryBillId] = useState(null);
@@ -240,6 +242,11 @@ const SessionDetailDialog = () => {
                                   {open && bill.requested_At && (
                                     <Chip icon={<Bell size={14} />} label="Asked for bill" color="warning" size="small" />
                                   )}
+                                  {open && bill.counts_Locked && (
+                                    <Tooltip title="Staff checked the number of guests. Guests can't change it on their phones.">
+                                      <Chip icon={<Lock size={14} />} label="Guests locked" size="small" variant="outlined" />
+                                    </Tooltip>
+                                  )}
                                 </Box>
                                 <Typography variant="body2" color="text.secondary">
                                   {formatGuestBreakdown(bill)}
@@ -265,6 +272,18 @@ const SessionDetailDialog = () => {
                                     startIcon={<Pencil size={18} />}
                                   >
                                     Edit Guests
+                                  </Button>
+                                )}
+                                {/* Once checked, lock the count so guests can't change it; unlock to let them again */}
+                                {open && (
+                                  <Button
+                                    variant="outlined"
+                                    aria-label={`${bill.counts_Locked ? "Unlock" : "Lock"} guests on ${bill.bill_Name}`}
+                                    onClick={() => lockGuestCounts(session.session_Id, bill.bill_Id, !bill.counts_Locked)}
+                                    disabled={isSaving}
+                                    startIcon={bill.counts_Locked ? <LockOpen size={18} /> : <Lock size={18} />}
+                                  >
+                                    {bill.counts_Locked ? "Unlock Guests" : "Lock Guests"}
                                   </Button>
                                 )}
                                 {/* Everything on this bill moves to another, e.g. when the table wants one bill */}

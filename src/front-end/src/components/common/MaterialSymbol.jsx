@@ -17,6 +17,7 @@ export const MATERIAL_SYMBOL_NAMES = [
   "group",
   "help",
   "history",
+  "lock",
   "logout",
   "menu_book_2",
   "qr_code_scanner",

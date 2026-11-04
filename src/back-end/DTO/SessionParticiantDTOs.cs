@@ -49,6 +49,9 @@ namespace back_end.DTO.SessionParticipantDTOs
         public int Child_Count { get; set; }
         [JsonPropertyName("tot_count")]
         public int Tot_Count { get; set; }
+        // Staff locked the counts after checking them; only staff can change them now
+        [JsonPropertyName("counts_locked")]
+        public bool Counts_Locked { get; set; }
     }
 
     public class MyBillResponseDTO
@@ -101,6 +104,13 @@ namespace back_end.DTO.SessionParticipantDTOs
         [Required]
         [JsonPropertyName("into_bill_id")]
         public int Into_Bill_Id { get; set; }
+    }
+
+    // Staff locking a bill's guest counts so guests can't change them, or unlocking them
+    public class LockGuestCountsDTO
+    {
+        [JsonPropertyName("locked")]
+        public bool Locked { get; set; }
     }
 
     // New guest counts for a bill

@@ -162,6 +162,8 @@ const BillChoiceDialog = ({ open, onClose, initialView = "choose" }) => {
   const totalGuests = totalOf(party);
   const canStart = party.billName.trim().length > 0 && totalGuests > 0;
   const countsChanged = Boolean(myBill) && GUEST_TYPES.some(({ key }) => party[key] !== countsOf(myBill)[key]);
+  // Staff checked this bill's guest count and locked it, so it's shown but can't be changed
+  const countsLocked = Boolean(myBill?.counts_locked);
 
   const showGuests = (bill) => {
     setParty({ ...NEW_PARTY, ...countsOf(bill) });
@@ -215,7 +217,7 @@ const BillChoiceDialog = ({ open, onClose, initialView = "choose" }) => {
     choose: "Add yourself to your party's bill so your orders go on it.",
     start: "Your server will check the number of guests.",
     guests: myBill
-      ? `You're on ${billLabel(myBill)}. Your server will check the number of guests.`
+      ? `You're on ${billLabel(myBill)}.${countsLocked ? "" : " Your server will check the number of guests."}`
       : "",
   };
 
@@ -280,12 +282,17 @@ const BillChoiceDialog = ({ open, onClose, initialView = "choose" }) => {
         {shown === "guests" && myBill && (
           <Stack component="form" id="guest-count-form" spacing={2.5} onSubmit={handleGuests}>
             {/* More phones on the bill than guests on it: someone probably isn't counted */}
-            {myBill.people_count > totalGuests && (
+            {countsLocked && (
+              <Alert severity="info" icon={<MaterialSymbol name="lock" size={22} />}>
+                Your server has confirmed your party. Ask your server if you need your party adjusted.
+              </Alert>
+            )}
+            {!countsLocked && myBill.people_count > totalGuests && (
               <Alert severity="warning">
                 {myBill.people_count} people have joined this bill. Make sure everyone is counted.
               </Alert>
             )}
-            <PartyCounts party={party} onChange={setParty} disabled={busy} />
+            <PartyCounts party={party} onChange={setParty} disabled={busy || countsLocked} />
           </Stack>
         )}
 

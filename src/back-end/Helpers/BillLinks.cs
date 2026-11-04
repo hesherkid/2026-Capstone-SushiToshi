@@ -12,13 +12,17 @@ namespace back_end.Helpers
     {
         // Why this person can't move off their current bill, or null if they can.
         // Once they've ordered on an open bill, only staff can move them, so nobody walks away
-        // from orders they placed
+        // from orders they placed. The same once staff have checked and locked the bill's guest count
         public static async Task<string?> CantLeaveReasonAsync(ApplicationDbContext context, SessionParticipant seat)
         {
             if (seat.Bill_Id == null) return null;
 
             var current = await context.Bills.AsNoTracking().FirstOrDefaultAsync(b => b.Bill_Id == seat.Bill_Id);
             if (current == null || current.Status != BillStatus.Open) return null;
+            if (current.Counts_Locked)
+            {
+                return "Your server has confirmed your party. Ask your server if you need to move to another bill.";
+            }
 
             var hasOrders = await context.SessionOrders.AnyAsync(o =>
                 o.Bill_Id == current.Bill_Id && o.User_Id == seat.User_Id && o.Status != OrderStatus.Cancelled);

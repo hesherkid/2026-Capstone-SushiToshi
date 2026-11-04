@@ -95,6 +95,8 @@ export const TableOrderProvider = ({ children }) => {
           senior_count: data.my_bill.senior_count ?? 0,
           child_count: data.my_bill.child_count ?? 0,
           tot_count: data.my_bill.tot_count ?? 0,
+          // Staff checked the counts and locked them; only staff can change them now
+          counts_locked: Boolean(data.my_bill.counts_locked),
         }
       : null;
     setOpenBills((data?.open_bills ?? []).map(toBill));

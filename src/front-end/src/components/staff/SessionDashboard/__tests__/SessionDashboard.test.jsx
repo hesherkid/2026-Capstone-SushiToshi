@@ -198,6 +198,40 @@ describe("Session dashboard", () => {
     expect(within(dialog).queryByText(/people on 4-guest bill/)).not.toBeInTheDocument();
   });
 
+  it("lets staff lock a bill's guest count so guests can't change it, and unlock it", async () => {
+    await renderDashboard();
+
+    fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
+    const sessionDialog = await screen.findByRole("dialog");
+    fireEvent.click(within(sessionDialog).getByRole("button", { name: "Lock guests on Lee" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/Bill/lock_guest_counts/80", { locked: true }, { params: { _session_id: 8 } }),
+    );
+  });
+
+  it("shows a locked bill, with a way to unlock it", async () => {
+    const locked = sessions.map((s) =>
+      s.session_Id === 8 ? { ...s, bills: [{ ...s.bills[0], started_By_Guest: false, counts_Locked: true }] } : s,
+    );
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url.startsWith("/Dashboard/sessions") ? Promise.resolve({ status: 200, data: locked }) : defaultGet(url),
+    );
+    await renderDashboard();
+
+    fireEvent.click(within(rowFor("#8")).getByRole("button", { name: "View session" }));
+    const sessionDialog = await screen.findByRole("dialog");
+    expect(within(sessionDialog).getByText("Guests locked")).toBeInTheDocument();
+    // Staff can still fix a locked count
+    expect(within(sessionDialog).getByRole("button", { name: "Edit guests on Lee" })).toBeEnabled();
+    fireEvent.click(within(sessionDialog).getByRole("button", { name: "Unlock guests on Lee" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/Bill/lock_guest_counts/80", { locked: false }, { params: { _session_id: 8 } }),
+    );
+  });
+
   it("lets staff fix a bill's guest counts", async () => {
     await renderDashboard();
 

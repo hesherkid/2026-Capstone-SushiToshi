@@ -487,6 +487,67 @@ namespace back_end.controllers
     }
 
     /// <summary>
+    /// Staff: locks an open bill's guest counts so guests can't change them from their phones, or unlocks them.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/lock_guest_counts/123?_session_id=456
+    ///     { "locked": true }
+    ///
+    /// Locking means staff have checked the counts, so it also clears the bill's Started_By_Guest
+    /// and Counts_Changed_By_Guest flags. Staff can still change locked counts with Edit Guests.
+    /// </remarks>
+    /// <response code="200">The bill is locked or unlocked.</response>
+    /// <response code="400">The bill isn't open.</response>
+    /// <response code="403">The table is at another location.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPut("lock_guest_counts/{_bill_id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Lock_Guest_Counts(int _session_id, int _bill_id, LockGuestCountsDTO request)
+    {
+      try
+      {
+        // So a guest's change can't save in between
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+        var bill = await _context.Bills
+            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+        if (bill == null)
+        {
+          return NotFound(new { message = "Bill or session was not found" });
+        }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, bill.Session_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+        if (bill.Status != BillStatus.Open)
+        {
+          return BadRequest(new { message = $"Only open bills can be changed (this bill is {bill.Status})." });
+        }
+
+        bill.Counts_Locked = request.Locked;
+        if (request.Locked)
+        {
+          bill.Started_By_Guest = false;
+          bill.Counts_Changed_By_Guest = false;
+        }
+        await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
+
+        return Ok(new { bill_id = bill.Bill_Id, counts_locked = bill.Counts_Locked });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error locking guest counts on bill {BillId}", _bill_id);
+        return StatusCode(500, new { message = "Error locking guest counts" });
+      }
+    }
+
+    /// <summary>
     /// Staff: merges an open bill into another open bill at the same table, e.g. when everyone wants one bill.
     /// </summary>
     /// <remarks>

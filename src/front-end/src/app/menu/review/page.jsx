@@ -372,13 +372,23 @@ const ReviewOrderPage = () => {
 
           {/* ---- Bill: first thing on the page so nobody orders onto the wrong one ---- */}
           {selectedBill && (
-            <Paper variant="outlined" sx={{ p: 2.5, mb: 4, borderRadius: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <MaterialSymbol
-                  name="receipt_long"
-                  size={32}
-                  sx={{ color: "primary.main" }}
-                />
+            <Paper variant="outlined" sx={{ p: 2, mb: 4, borderRadius: 3 }}>
+              {/* Which bill, with Change kept to the right however long the name is */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    flexShrink: 0,
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: "action.hover",
+                  }}
+                >
+                  <MaterialSymbol name="receipt_long" size={26} sx={{ color: "primary.main" }} />
+                </Box>
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography variant="body2" color="text.secondary">
                     Your bill
@@ -386,36 +396,61 @@ const ReviewOrderPage = () => {
                   <Typography
                     variant="h6"
                     component="p"
-                    sx={{ fontWeight: 700, lineHeight: 1.3 }}
+                    sx={{ fontWeight: 700, lineHeight: 1.3, overflowWrap: "anywhere" }}
                   >
                     {billName(selectedBill)}
                   </Typography>
-                  {/* Party size, which they can fix until they ask for the bill */}
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {guestCount(selectedBill.total_count ?? 0)}
-                    </Typography>
-                    {!billRequested && (
-                      <Button
-                        size="small"
-                        onClick={() => openBillDialog("guests")}
-                        aria-label={`Edit guests on ${billName(selectedBill)}`}
-                        sx={{ minWidth: 0, py: 0 }}
-                      >
-                        Edit
-                      </Button>
-                    )}
-                  </Box>
                 </Box>
                 {canChangeBill && (
                   <Button
+                    variant="outlined"
+                    size="small"
                     onClick={() => openBillDialog()}
                     aria-label={`Change bill from ${billName(selectedBill)}`}
+                    sx={{ flexShrink: 0, borderRadius: 999, px: 2 }}
                   >
                     Change
                   </Button>
                 )}
               </Box>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Party size, which they can fix until they ask for the bill or staff lock it */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, minHeight: 36 }}>
+                <MaterialSymbol
+                  name={selectedBill.counts_locked ? "lock" : "group"}
+                  size={20}
+                  sx={{ color: "text.secondary", flexShrink: 0 }}
+                />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
+                    {guestCount(selectedBill.total_count ?? 0)}
+                  </Typography>{" "}
+                  {selectedBill.counts_locked && (
+                    <Typography variant="body2" component="span" color="text.secondary">
+                      · confirmed by your server
+                    </Typography>
+                  )}
+                </Box>
+                {!selectedBill.counts_locked && !billRequested && (
+                  <Button
+                    size="small"
+                    onClick={() => openBillDialog("guests")}
+                    aria-label={`Edit guests on ${billName(selectedBill)}`}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    Edit
+                  </Button>
+                )}
+              </Box>
+
+              {/* Why there's no Change button: they ordered on it, or staff locked it */}
+              {billChangeBlocked && !billRequested && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {billChangeBlocked}
+                </Typography>
+              )}
             </Paper>
           )}
 

@@ -77,6 +77,9 @@ export const SessionProvider = ({ children, live = false }) => {
   const updateGuestCounts = async (sessionId, billId, counts) =>
     succeeded(await actions.updateGuestCounts(sessionId, billId, counts));
 
+  const lockGuestCounts = async (sessionId, billId, locked) =>
+    succeeded(await actions.lockGuestCounts(sessionId, billId, locked));
+
   const mergeBill = async (sessionId, billId, intoBillId) =>
     succeeded(await actions.mergeBill(sessionId, billId, intoBillId));
 
@@ -120,6 +123,7 @@ export const SessionProvider = ({ children, live = false }) => {
     createBill,
     closeBill,
     updateGuestCounts,
+    lockGuestCounts,
     mergeBill,
     moveGuest,
     endSession,

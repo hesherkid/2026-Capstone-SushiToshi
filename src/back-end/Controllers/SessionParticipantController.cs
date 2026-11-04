@@ -147,6 +147,7 @@ namespace back_end.Controllers
                 Senior_Count = myBill.Senior_Count,
                 Child_Count = myBill.Child_Count,
                 Tot_Count = myBill.Tot_Count,
+                Counts_Locked = myBill.Counts_Locked,
             },
             Change_Blocked_Reason = await BillLinks.CantLeaveReasonAsync(_context, seat),
             Open_Bills = bills.Where(b => b.Status == BillStatus.Open).Select(b => Choice(b, PeopleOn(b))).ToList(),
@@ -212,9 +213,10 @@ namespace back_end.Controllers
     /// The table's open bills together can't seat more guests than the table has seats,
     /// though they can always lower their count (staff may have gone past the seats).
     /// A change marks the bill Counts_Changed_By_Guest so staff check the counts.
+    /// Once staff lock the counts (Counts_Locked), only staff can change them.
     /// </remarks>
     /// <response code="200">The counts are saved; returns the same as GET.</response>
-    /// <response code="400">You aren't on a bill, it can't be changed, or the counts aren't valid.</response>
+    /// <response code="400">You aren't on a bill, it can't be changed or staff locked its counts, or the counts aren't valid.</response>
     /// <response code="403">You aren't seated at this table.</response>
     [Authorize]
     [HttpPut("{session_id:int}/bill/guests")]
@@ -246,6 +248,10 @@ namespace back_end.Controllers
         if (bill.Requested_At != null)
         {
             return BadRequest(new { message = $"{bill.Bill_Name} has already asked for the bill. Ask your server to change the guest count." });
+        }
+        if (bill.Counts_Locked)
+        {
+            return BadRequest(new { message = "Your server has confirmed your party. Ask your server if you need your party adjusted." });
         }
 
         int total = request.Adult_Count + request.Senior_Count + request.Child_Count + request.Tot_Count;

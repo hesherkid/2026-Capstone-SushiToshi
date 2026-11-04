@@ -254,6 +254,34 @@ describe("Review order page", () => {
     expect(screen.queryByRole("button", { name: /Edit guests/ })).not.toBeInTheDocument();
   });
 
+  it("can't change the guest count once staff have checked and locked it", async () => {
+    withCart();
+    api.get.mockImplementation(tableApi({ bills: [{ ...LEE, counts_locked: true }], myBillId: 8 }));
+    renderPage();
+
+    expect(await screen.findByText("2 guests")).toBeInTheDocument();
+    expect(screen.getByText("· confirmed by your server")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit guests/ })).not.toBeInTheDocument();
+  });
+
+  it("shows a locked guest count without letting the guest change it after joining the bill", async () => {
+    withCart();
+    const locked = { ...LEE, counts_locked: true };
+    api.get.mockImplementation(tableApi({ bills: [locked, PARK], myBillId: null }));
+    api.put.mockResolvedValue({ data: myBillResponse({ bills: [locked, PARK], myBillId: 8 }) });
+    renderPage();
+
+    const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+    fireEvent.click(within(dialog).getByRole("button", { name: /Lee/ }));
+
+    expect(await within(dialog).findByText(/Your server has confirmed your party/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "More children" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Looks right" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(api.put).not.toHaveBeenCalledWith("/SessionParticipant/42/bill/guests", expect.anything());
+  });
+
   it("once a guest has ordered on their bill, only staff can move them", async () => {
     withCart();
     api.get.mockImplementation(
@@ -263,6 +291,8 @@ describe("Review order page", () => {
 
     expect(await screen.findByText("Lee", { selector: "p" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Change bill/ })).not.toBeInTheDocument();
+    // Says why they can't change it
+    expect(screen.getByText("You've already ordered on Lee.")).toBeInTheDocument();
   });
 
   it("charges for what's past a limit that charges, with the category's free units shared", async () => {

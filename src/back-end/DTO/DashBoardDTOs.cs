@@ -19,6 +19,8 @@ namespace back_end.DTO.DashBoardDTOs
         public bool Started_By_Guest { get; set; }
         // A guest changed its guest counts on their phone: staff should check them
         public bool Counts_Changed_By_Guest { get; set; }
+        // Staff locked its guest counts, so guests can't change them
+        public bool Counts_Locked { get; set; }
         // People at the table on this bill; more than Total_Guests means the count looks short
         public int People_On_Bill { get; set; }
     }

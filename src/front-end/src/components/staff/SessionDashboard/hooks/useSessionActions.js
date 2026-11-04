@@ -524,6 +524,32 @@ export const useSessionActions = (onSuccess) => {
   );
 
   /**
+   * Lock an open bill's guest counts so guests can't change them on their phones, or unlock them.
+   * Locking clears its "guest entered" flags; staff can still change locked counts
+   */
+  const lockGuestCounts = useCallback(
+    async (sessionId, billId, locked) => {
+      return apiWrapper(
+        "lockGuestCounts",
+        async () => {
+          const sid = toInt(sessionId);
+          const bid = toInt(billId);
+          validateIds({ "session ID": sid, "bill ID": bid });
+
+          const res = await api.put(
+            `/Bill/lock_guest_counts/${bid}`,
+            { locked: Boolean(locked) },
+            { params: { _session_id: sid } },
+          );
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: locked ? "Guest count locked" : "Guest count unlocked" },
+      );
+    },
+    [apiWrapper],
+  );
+
+  /**
    * Merge an open bill into another: its people, orders and guest counts move, then it's cancelled
    */
   const mergeBill = useCallback(
@@ -612,6 +638,7 @@ export const useSessionActions = (onSuccess) => {
     getBillSummary,
     closeBill,
     updateGuestCounts,
+    lockGuestCounts,
     mergeBill,
     moveGuest,
 

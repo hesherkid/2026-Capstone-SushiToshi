@@ -93,6 +93,9 @@ namespace back_end.Migrations
                     b.Property<bool>("Counts_Changed_By_Guest")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("Counts_Locked")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime>("Created_At")
                         .HasColumnType("datetime(6)");
 
