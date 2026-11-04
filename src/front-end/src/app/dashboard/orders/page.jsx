@@ -72,6 +72,8 @@ const OrdersPage = () => {
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [view, setView] = useState(VIEWS.MINE);
+  // True when nobody else is on this guest's bill, so "All orders" would just be theirs again
+  const [aloneOnBill, setAloneOnBill] = useState(false);
   // Set when a background refresh fails; the orders on screen are from lastUpdated
   const [refreshFailed, setRefreshFailed] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -124,19 +126,32 @@ const OrdersPage = () => {
       }
 
       // All orders: every order on their bill (the server limits it). Mine: this person's own orders.
-      const response =
+      const [response, billResponse] = await Promise.all([
         view === VIEWS.TABLE
-          ? await api.get(`/Order/session/${sessionId.session_id}`)
-          : await api.get("/Order/active-session/orders");
+          ? api.get(`/Order/session/${sessionId.session_id}`)
+          : api.get("/Order/active-session/orders"),
+        // How many people share their bill; if this fails the tabs stay as they were
+        api.get(`/SessionParticipant/${sessionId.session_id}/bill`).catch(() => null),
+      ]);
       if (isStale()) return;
 
       const orders = response.data || [];
+
+      const myBill = billResponse?.data?.my_bill;
+      const alone = myBill ? myBill.people_count <= 1 : null;
+      if (alone !== null) setAloneOnBill(alone);
+      // Everyone else has left their bill, so only their own orders are left to show
+      if (alone && view === VIEWS.TABLE) {
+        switchingTab = true;
+        setView(VIEWS.MINE);
+        return;
+      }
 
       // Opens on My orders, but when someone else ordered for this person the table's
       // orders are what they want. Only on arrival, so it never flips the tab under them
       if (!openingTabChosen.current && !quiet) {
         openingTabChosen.current = true;
-        if (view === VIEWS.MINE && orders.length === 0) {
+        if (view === VIEWS.MINE && orders.length === 0 && !alone) {
           switchingTab = true;
           setView(VIEWS.TABLE);
           return;
@@ -372,26 +387,28 @@ const OrdersPage = () => {
       ) : (
         <>
           {/* Same underlined tabs as the Bill page might make a component in the future*/}
-          <Tabs
-            value={view}
-            onChange={(_, next) => setView(next)}
-            variant="scrollable"
-            scrollButtons={false}
-            aria-label="Which orders to show"
-            sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
-          >
-            {[
-              { value: VIEWS.MINE, label: "My orders" },
-              { value: VIEWS.TABLE, label: "All orders" },
-            ].map(({ value, label }) => (
-              <Tab
-                key={value}
-                value={value}
-                label={label}
-                sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.95rem" }}
-              />
-            ))}
-          </Tabs>
+          {!aloneOnBill && (
+            <Tabs
+              value={view}
+              onChange={(_, next) => setView(next)}
+              variant="scrollable"
+              scrollButtons={false}
+              aria-label="Which orders to show"
+              sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+            >
+              {[
+                { value: VIEWS.MINE, label: "My orders" },
+                { value: VIEWS.TABLE, label: "All orders" },
+              ].map(({ value, label }) => (
+                <Tab
+                  key={value}
+                  value={value}
+                  label={label}
+                  sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.95rem" }}
+                />
+              ))}
+            </Tabs>
+          )}
 
           {error && (
             <Alert
@@ -436,7 +453,7 @@ const OrdersPage = () => {
                       Browse the menu
                     </Button>
                     {/* Someone else on their bill may have ordered for them */}
-                    {view === VIEWS.MINE && (
+                    {view === VIEWS.MINE && !aloneOnBill && (
                       <Button onClick={() => setView(VIEWS.TABLE)}>
                         See your bill&apos;s orders
                       </Button>

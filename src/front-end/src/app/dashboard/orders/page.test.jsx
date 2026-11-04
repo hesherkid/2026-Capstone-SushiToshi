@@ -76,7 +76,7 @@ describe("Customer orders page", () => {
     fireEvent.click(screen.getByRole("tab", { name: "My orders" }));
 
     await waitFor(() => expect(screen.queryByText("Order #900")).not.toBeInTheDocument());
-    expect(screen.getByText("Order #901")).toBeInTheDocument();
+    expect(await screen.findByText("Order #901")).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith("/Order/active-session/orders");
   });
 
@@ -150,6 +150,58 @@ describe("Customer orders page", () => {
 
     expect(await screen.findByText("Order #900")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "All orders" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  describe("alone on their bill", () => {
+    const billWith = (people) => ({ data: { my_bill: { bill_id: 5, bill_name: "Lee", people_count: people }, open_bills: [] } });
+
+    it("shows just their orders, with no All orders tab", async () => {
+      api.get.mockImplementation((url) => {
+        if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+        if (url === "/SessionParticipant/269/bill") return Promise.resolve(billWith(1));
+        if (url === "/Order/active-session/orders") return Promise.resolve({ data: [tableOrders[1]] });
+        return Promise.resolve({ data: [] });
+      });
+      render(<OrdersPage />);
+
+      expect(await screen.findByText("Order #901")).toBeInTheDocument();
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+      expect(api.get).not.toHaveBeenCalledWith("/Order/session/269");
+    });
+
+    it("stays on their own orders when they haven't ordered yet", async () => {
+      api.get.mockImplementation((url) => {
+        if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+        if (url === "/SessionParticipant/269/bill") return Promise.resolve(billWith(1));
+        return Promise.resolve({ data: [] });
+      });
+      render(<OrdersPage />);
+
+      expect(await screen.findByText("You haven't ordered anything yet.")).toBeInTheDocument();
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "See your bill's orders" })).not.toBeInTheDocument();
+    });
+
+    it("goes back to their own orders once everyone else leaves the bill", async () => {
+      let people = 2;
+      api.get.mockImplementation((url) => {
+        if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+        if (url === "/SessionParticipant/269/bill") return Promise.resolve(billWith(people));
+        if (url === "/Order/session/269") return Promise.resolve({ data: tableOrders });
+        if (url === "/Order/active-session/orders") return Promise.resolve({ data: [tableOrders[1]] });
+        return Promise.resolve({ data: [] });
+      });
+      render(<OrdersPage />);
+      fireEvent.click(await screen.findByRole("tab", { name: "All orders" }));
+      await screen.findByText("Order #900");
+
+      people = 1;
+      fireEvent(document, new Event("visibilitychange"));
+
+      await waitFor(() => expect(screen.queryByRole("tab")).not.toBeInTheDocument());
+      expect(await screen.findByText("Order #901")).toBeInTheDocument();
+      expect(screen.queryByText("Order #900")).not.toBeInTheDocument();
+    });
   });
 
   it("shows each item's status without expanding anything", async () => {
