@@ -305,6 +305,27 @@ public class BillLinkTests : IDisposable
         SeatBill(Ben).Should().BeNull();
     }
 
+    [Fact]
+    public async Task GuestBills_OnlyCountOpenBillsAgainstTheSeats()
+    {
+        (await _context.Bills.FindAsync(Park))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+
+        // Lee's 2 + Ben's 5 fit the 8 seats once Park's bill is closed
+        var result = await Bills(Ben).Create_Bill(Table, new CreateBill { Bill_Name = "Ben", Adult_Count = 5 });
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task StaffBills_CanGoPastTheTablesSeats()
+    {
+        // 4 already on bills at an 8-seat table; the party pulled up extra chairs
+        var result = await Bills(Server, "Staff").Create_Bill(Table, new CreateBill { Bill_Name = "Kim", Adult_Count = 5 });
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
     // ---- Changing their bill's guest count ----
 
     private static UpdateGuestCountsDTO Counts(int adults, int seniors = 0, int children = 0, int toddlers = 0) =>
@@ -379,6 +400,16 @@ public class BillLinkTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateGuestCounts_CanLowerTheCount_WhenStaffWentPastTheSeats()
+    {
+        // Staff record 9 on Lee's bill at an 8-seat table (Park's has 2)
+        (await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 9))).Should().BeOfType<OkObjectResult>();
+
+        (await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 10))).Should().BeOfType<BadRequestObjectResult>();
+        (await Seats(Ana).UpdateGuestCounts(Table, Counts(adults: 8))).Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
     public async Task UpdateGuestCounts_RefusesBillsThatAskedForTheBillOrClosed()
     {
         (await _context.Bills.FindAsync(Lee))!.Requested_At = DateTime.UtcNow;
@@ -425,6 +456,16 @@ public class BillLinkTests : IDisposable
     }
 
     [Fact]
+    public async Task StaffEditingCounts_CanGoPastTheTablesSeats()
+    {
+        // Table 1 seats 8 and Park's bill has 2: the party pulled up extra chairs
+        var result = await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 7));
+
+        result.Should().BeOfType<OkObjectResult>();
+        (await _context.Bills.AsNoTracking().SingleAsync(b => b.Bill_Id == Lee)).Total_Count.Should().Be(7);
+    }
+
+    [Fact]
     public async Task StaffEditingCounts_WorksAfterTheGuestsAskedForTheBill()
     {
         (await _context.Bills.FindAsync(Lee))!.Requested_At = DateTime.UtcNow;
@@ -434,10 +475,9 @@ public class BillLinkTests : IDisposable
     }
 
     [Fact]
-    public async Task StaffEditingCounts_KeepsTheSameRulesAsStartingABill()
+    public async Task StaffEditingCounts_NeedsAtLeastOneGuestAndAnOpenBill()
     {
         (await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 0))).Should().BeOfType<BadRequestObjectResult>();
-        (await Bills(Server, "Staff").Update_Guest_Counts(Table, Lee, Counts(adults: 7))).Should().BeOfType<BadRequestObjectResult>();
 
         (await _context.Bills.FindAsync(Park))!.Status = BillStatus.Closed;
         _context.SaveChanges();
@@ -691,6 +731,17 @@ public class BillLinkTests : IDisposable
         people.Should().HaveCount(2);
         people.Single(p => p.User_Name == "Ana").Bill_Id.Should().Be(Lee);
         people.Single(p => p.User_Name == "Ben").Bill_Id.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Dashboard_ShowsTheTablesSeats_SoStaffCanBeWarnedBeforeGoingPastThem()
+    {
+        var dashboard = new DashBoardController(_context, new Mock<IConfiguration>().Object,
+            new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        { ControllerContext = As(Server, "Staff") };
+        var sessions = ((await dashboard.GetDashBoardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
+
+        sessions!.Single(s => s.Session_Id == Table).Seat_Count.Should().Be(8);
     }
 
     // ---- Only their own bill ----

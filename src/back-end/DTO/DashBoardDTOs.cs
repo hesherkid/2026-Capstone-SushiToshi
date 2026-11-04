@@ -41,6 +41,8 @@ namespace back_end.DTO.DashBoardDTOs
         public DateTime? Ended_At { get; set; }
         public DateTime? First_Order_At { get; set; }
         public List<int> Table_Numbers { get; set; } = new List<int>();
+        // Seats at the table, or across its group's tables; staff are warned before going past them
+        public int Seat_Count { get; set; }
         public int Active_Participants { get; set; }
 
         public List<DashBoardBillDTO> Bills { get; set; } = new List<DashBoardBillDTO>();

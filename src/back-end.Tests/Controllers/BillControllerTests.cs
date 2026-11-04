@@ -213,24 +213,13 @@ public class BillControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateBill_OverTableCapacity_Returns400()
+    public async Task CreateBill_StaffCanGoOverTableCapacity()
     {
-        // Table 6 seats 4 and bill already has 2
+        // Table 6 seats 4 and bill already has 2: the party pulled up extra chairs
         var result = await Bills().Create_Bill(TableSession, Guests(adults: 3));
 
-        result.Should().BeOfType<BadRequestObjectResult>();
-        _context.Bills.Count(b => b.Session_Id == TableSession).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task CreateBill_OnlyOpenBillsCountTowardCapacity()
-    {
-        Bill(LeeBill).Status = BillStatus.Closed;
-        _context.SaveChanges();
-
-        var result = await Bills().Create_Bill(TableSession, Guests(adults: 4));
-
         result.Should().BeOfType<OkObjectResult>();
+        _context.Bills.Count(b => b.Session_Id == TableSession).Should().Be(2);
     }
 
     [Fact]

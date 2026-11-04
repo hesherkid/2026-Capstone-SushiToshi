@@ -41,10 +41,13 @@ namespace back_end.Helpers
             session.Table?.seat_count ?? session.TableGroup?.Tables.Sum(t => t.seat_count) ?? 0;
 
         // Why an open bill can't have this many guests, or null if it can.
+        // Staff can go past the table's seats, e.g. for a party that pulled up extra chairs.
+        // Guests can't, but can always lower their count, even when staff put the table over.
         // The bill's DiningSession and its tables must be loaded
-        public static async Task<string?> GuestCountProblemAsync(ApplicationDbContext context, Billing bill, int total)
+        public static async Task<string?> GuestCountProblemAsync(ApplicationDbContext context, Billing bill, int total, bool byStaff = false)
         {
             if (total == 0) return "A bill needs at least one guest.";
+            if (byStaff || total <= bill.Total_Count) return null;
 
             int capacity = TableCapacity(bill.DiningSession);
             int otherGuests = await context.Bills

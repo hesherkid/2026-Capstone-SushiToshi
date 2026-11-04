@@ -142,6 +142,7 @@ namespace back_end.controllers
             Ended_At = session.Ended_At,
             First_Order_At = session.First_Order_At,
             Table_Numbers = GetTableNumbers(session),
+            Seat_Count = BillLinks.TableCapacity(session),
             Active_Participants = active_participants,
             Bills = session.Bills.Select(b => new DashBoardBillDTO
             {

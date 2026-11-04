@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Box, TextField, Typography } from "@mui/material";
+import { Alert, Box, TextField, Typography } from "@mui/material";
 import FormDialog from "@/components/common/FormDialog";
 import { useSession } from "../../context/SessionContext";
+import { overSeatsWarning } from "../../utils/sessionHelpers";
 
 const GUEST_FIELDS = [
   { name: "adultCount", key: "adult_Count", label: "Adults" },
@@ -28,9 +29,8 @@ const countsOf = (bill) => {
 const EditGuestsDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
   const { sessions, updateGuestCounts, isSaving } = useSession();
   // The live bill, so a guest's change since the session dialog opened shows up
-  const bill =
-    sessions.find((s) => s.session_Id === sessionId)?.bills?.find((b) => b.bill_Id === openedBill?.bill_Id) ??
-    openedBill;
+  const session = sessions.find((s) => s.session_Id === sessionId);
+  const bill = session?.bills?.find((b) => b.bill_Id === openedBill?.bill_Id) ?? openedBill;
   const [counts, setCounts] = useState(countsOf(bill));
 
   useEffect(() => {
@@ -39,6 +39,8 @@ const EditGuestsDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
   }, [open]);
 
   const total = GUEST_FIELDS.reduce((sum, { name }) => sum + (Number(counts[name]) || 0), 0);
+  // Allowed (extra chairs), but staff confirm it by saving anyway
+  const seatWarning = total > 0 ? overSeatsWarning(session, total, bill?.bill_Id) : null;
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -57,7 +59,7 @@ const EditGuestsDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
       title={bill ? `Edit Guests on ${bill.bill_Name}` : "Edit Guests"}
       subtitle="The bill charges for each guest, so check this matches the party."
       onSubmit={handleSubmit}
-      submitLabel="Save Guests"
+      submitLabel={seatWarning ? "Save Anyway" : "Save Guests"}
       busyLabel="Saving..."
       busy={isSaving}
       submitDisabled={total === 0}
@@ -85,6 +87,8 @@ const EditGuestsDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
           {total === 0 ? "At least one guest is required" : `Total Guests: ${total}`}
         </Typography>
       </Box>
+
+      {seatWarning && <Alert severity="warning">{seatWarning}</Alert>}
     </FormDialog>
   );
 };

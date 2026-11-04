@@ -76,6 +76,8 @@ namespace back_end.controllers
     /// - Session must be active (not ended)
     /// - Session must have at least one table assigned
     /// - At least one guest (adult, senior, or child) must be specified
+    /// - A guest's bill can't take the table's open bills past its seats; staff's can,
+    ///   for a party that pulled up extra chairs
     /// 
     /// The bill is automatically created with 'Open' status.
     ///
@@ -156,24 +158,27 @@ namespace back_end.controllers
           return BadRequest(new { message = "Bill must have at least one guest in the session" });
         }
 
-        // Validate against table capacity
-        int tableCapacity = BillLinks.TableCapacity(session);
-
-        // Check total guest count across open bills in this session
-        var existingBillsGuestCount = await _context.Bills
-            .Where(b =>
-                b.Session_Id == _session_id &&
-                b.Status == BillStatus.Open
-            )
-            .SumAsync(b => b.Total_Count);
-
-        if (existingBillsGuestCount + totalCount > tableCapacity)
+        // Guests can't seat more than the table has; staff can, for a party that pulled up extra chairs
+        if (seat != null)
         {
-          return BadRequest(new
+          int tableCapacity = BillLinks.TableCapacity(session);
+
+          // Check total guest count across open bills in this session
+          var existingBillsGuestCount = await _context.Bills
+              .Where(b =>
+                  b.Session_Id == _session_id &&
+                  b.Status == BillStatus.Open
+              )
+              .SumAsync(b => b.Total_Count);
+
+          if (existingBillsGuestCount + totalCount > tableCapacity)
           {
-            message = $"Total guest count ({existingBillsGuestCount + totalCount}) exceeds table capacity ({tableCapacity}). " +
-                      $"Current open bills: {existingBillsGuestCount} guests, New bill: {totalCount} guests."
-          });
+            return BadRequest(new
+            {
+              message = $"Total guest count ({existingBillsGuestCount + totalCount}) exceeds table capacity ({tableCapacity}). " +
+                        $"Current open bills: {existingBillsGuestCount} guests, New bill: {totalCount} guests."
+            });
+          }
         }
 
         var NewBill = new Billing
@@ -407,8 +412,8 @@ namespace back_end.controllers
     ///     PUT /api/bill/guest_counts/123?_session_id=456
     ///     { "adult_count": 3, "senior_count": 0, "child_count": 1, "tot_count": 0 }
     ///
-    /// The same rules as starting a bill: at least one guest, and the table's open bills together
-    /// can't have more guests than it has seats. Works after the guests have asked for the bill.
+    /// At least one guest. Can go past the table's seats, for a party that pulled up extra chairs.
+    /// Works after the guests have asked for the bill.
     /// Staff have now checked the counts, so the bill's Started_By_Guest and
     /// Counts_Changed_By_Guest flags are cleared.
     /// </remarks>
@@ -446,7 +451,7 @@ namespace back_end.controllers
         }
 
         int total = counts.Adult_Count + counts.Senior_Count + counts.Child_Count + counts.Tot_Count;
-        var problem = await BillLinks.GuestCountProblemAsync(_context, bill, total);
+        var problem = await BillLinks.GuestCountProblemAsync(_context, bill, total, byStaff: true);
         if (problem != null)
         {
           return BadRequest(new { message = problem });

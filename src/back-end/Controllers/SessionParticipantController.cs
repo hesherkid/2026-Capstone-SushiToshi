@@ -209,7 +209,8 @@ namespace back_end.Controllers
     ///     { "adult_count": 3, "senior_count": 0, "child_count": 1, "tot_count": 0 }
     ///
     /// Anyone on the bill can change it while it's open and nobody has asked for the bill.
-    /// The table's open bills together can't seat more guests than the table has seats.
+    /// The table's open bills together can't seat more guests than the table has seats,
+    /// though they can always lower their count (staff may have gone past the seats).
     /// A change marks the bill Counts_Changed_By_Guest so staff check the counts.
     /// </remarks>
     /// <response code="200">The counts are saved; returns the same as GET.</response>
