@@ -40,6 +40,8 @@ public class EmailLoginTests : IDisposable
                 ["Jwt:Issuer"] = "test",
                 ["Jwt:Audience"] = "test",
                 ["Jwt:ExpiresInMinutes"] = "60",
+                ["Jwt:StaffExpiresInMinutes"] = "600",
+                ["Jwt:AdminExpiresInMinutes"] = "90",
             })
             .Build();
 
@@ -97,5 +99,30 @@ public class EmailLoginTests : IDisposable
         var token = new JwtSecurityTokenHandler().ReadJwtToken(json.GetProperty("access_token").GetString());
         token.Claims.Should().Contain(c => c.Type == "sub" && c.Value == user.User_id.ToString());
         token.Claims.Should().Contain(c => c.Type == ClaimTypes.NameIdentifier && c.Value == user.User_id.ToString());
+    }
+
+    // Staff stay signed in for a shift; admins, who can change prices and users, for less
+    [Theory]
+    [InlineData(UserRoles.Staff, 600)]
+    [InlineData(UserRoles.Admin, 90)]
+    [InlineData(UserRoles.Customer, 60)]
+    public async Task Login_LastsAsLongAsTheirRolesSetting(UserRoles role, int minutes)
+    {
+        _context.Users.Add(new User
+        {
+            Email = "sam@example.com",
+            Password_hash = BCryptNet.HashPassword("Password1!"),
+            Role = role,
+            Status = UserStatus.Active,
+            Is_email_confirmed = true,
+        });
+        await _context.SaveChangesAsync();
+
+        var result = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = "Password1!" });
+
+        var json = JsonSerializer.SerializeToElement((result as OkObjectResult)!.Value);
+        json.GetProperty("expires_in").GetInt32().Should().Be(minutes * 60);
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(json.GetProperty("access_token").GetString());
+        token.ValidTo.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(minutes), TimeSpan.FromMinutes(1));
     }
 }
