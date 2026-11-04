@@ -46,11 +46,11 @@ Each row shows:
 | Column | What it shows |
 | --- | --- |
 | Session | The session number |
-| Table | The table or table group the party is seated at |
+| Table | The table or table group the party is seated at. A **Check guests** chip means a bill's guest count needs checking (see [Checking guest counts](#checking-guest-counts)); select it to open the session |
 | Requests | How many service requests ("call server") are waiting |
 | Started | When the party was seated |
 | Seated For | How long they have been seated. Turns orange after 90 minutes |
-| Guests | The number of guests across all bills |
+| Guests | The number of guests across the session's bills. Cancelled bills aren't counted |
 | Open Bills | Open bills out of total bills, e.g. "1 of 2" |
 
 Rows with waiting service requests are highlighted and sorted to the top. Press **Refresh** to reload the list.
@@ -58,13 +58,50 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
 ### What you can do
 
 - **New Session**: seat a new party. Choose the location and menu, then pick a table (**Assign Individual Table**) or a table group (**Assign Table Group**). Only tables and groups that are active and free are listed.
-- **View session** (eye icon): opens the session's details: its service requests and its bills.
+- **View session** (eye icon): opens the session's details: its service requests, its bills, and the people at the table.
   - **Mark done** (tick icon) clears a service request once it's handled.
   - **View Bill Summary** shows a bill's breakdown: guests by age, add-ons, over-limit charges, leftover fee, tax and total.
-- **New bill** (receipt icon): adds a bill to the session. Enter a bill name and the number of adults, seniors, children and toddlers (6 and under) on it. Use more than one bill when guests pay separately. Only available once the session has a table.
+- **New bill** (receipt icon): adds a bill to the session. Enter a bill name and the number of adults, seniors, children and toddlers (6 and under) on it. Use more than one bill when guests pay separately. Only available once the session has a table. If the table's bills would have more guests than the table has seats, a warning shows and the button changes to **Create Anyway**, for a party that pulled up extra chairs.
 - **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can.
 - **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
 - **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed.
+
+### How guests use bills
+
+Each person who scans the table's QR code is put on one bill. They only see and order on that bill, never other parties' bills.
+
+- When they open the menu, guests are asked **Which bill are you on?** They either add themselves to one of the table's open bills or start a new bill for their party with its guest count. After joining, they're asked to check the bill's guest count.
+- From **Review order**, guests can switch to another bill or change their party size. They can switch bills only until they've ordered on their current one, and can't join a bill that has asked for the bill. After that, a staff member has to [move them](#moving-people-between-bills).
+- Guests can change their bill's guest count until they ask for the bill or staff [lock it](#checking-guest-counts). They can't take the table past its seats, but they can always lower their count.
+- A guest who scans again after their bill was closed or cancelled is asked to choose a bill again.
+
+### Checking guest counts
+
+Every bill charges per guest, so check the count whenever guests set it themselves. In the session details, a bill shows a chip when it needs checking:
+
+- **Started by guest**: a guest started this bill on their phone.
+- **Count changed by guest**: a guest changed its guest count on their phone.
+- **3 people on 2-guest bill** (for example): more people joined this bill on their phones than it has guests.
+
+On each open bill:
+
+- **Edit Guests**: change the number of adults, seniors, children and toddlers. Works even after the guests have asked for the bill. Going past the table's seats shows a warning and **Save Anyway**. Saving clears the **Started by guest** and **Count changed by guest** chips.
+- **Lock Guests**: once you've checked the count, lock it so guests can't change it, or switch bills, from their phones. The bill shows **Guests locked**, and locking also clears the two chips above. You can still use **Edit Guests**. Select **Unlock Guests** to let guests change it again.
+
+### Moving people between bills
+
+**People at the table** in the session details lists everyone who joined on a phone and which bill they're on (or **Not on a bill yet**). Select **Move** next to a person to put them on another open bill, even if they've already ordered or that bill has asked for the bill:
+
+- **Take their orders with them**: their orders move to the new bill, so any extras are charged there. Only possible while their current bill is open.
+- **Change both bills' guest counts**: also move guests from the old bill's count to the new one. Choose the **Kind of guest** and **How many**, for example when a couple moves together. The old bill always keeps at least one guest.
+
+To split a bill by person, start a new bill and move each person onto it with their orders.
+
+### Merging bills
+
+When a table wants one bill instead of several, select **Merge** on a bill (shown when the table has more than one open bill) and choose the bill to merge it into. Everything moves: its people, its orders, its leftover fee and its guest count, including guests who never joined on a phone. The merged bill is then cancelled. If either bill has asked for the bill, a warning reminds you to show them the new bill summary, because the total changes.
+
+A bill can't be cancelled once any of its orders are being made or have been served, since those still have to be paid for. Merge it or close it instead.
 
 ---
 
