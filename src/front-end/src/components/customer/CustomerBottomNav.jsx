@@ -1,9 +1,15 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { BottomNavigation, BottomNavigationAction, Box, Paper } from "@mui/material";
+import {
+  BottomNavigation,
+  BottomNavigationAction,
+  Box,
+  Paper,
+} from "@mui/material";
 import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import useCustomerNav from "@/components/customer/useCustomerNav";
+import NextLink from "next/link";
 
 export const NAV_HEIGHT = 64;
 export const INACTIVE_COLOR = "#6b6f73";
@@ -18,7 +24,9 @@ const CustomerBottomNav = () => {
   return (
     <Box sx={{ display: { xs: "block", md: "none" } }}>
       {/* Keeps the end of the page (and the footer) from hiding under the bar */}
-      <Box sx={{ height: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom))` }} />
+      <Box
+        sx={{ height: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom))` }}
+      />
 
       <Paper
         component="nav"
@@ -52,24 +60,40 @@ const CustomerBottomNav = () => {
               color: INACTIVE_COLOR,
               transition: "color 150ms ease",
               "&.Mui-selected": { color: "primary.main" },
+              "&.Mui-focusVisible": {
+                outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+                outlineOffset: "-2px",
+              },
             },
             // Same size selected or not, so labels don't jump; only the weight changes
-            "& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected": {
-              fontSize: "0.72rem",
-              fontWeight: 500,
-              letterSpacing: "0.01em",
-              whiteSpace: "nowrap",
+            "& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected":
+              {
+                fontSize: "0.72rem",
+                fontWeight: 500,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+              },
+            "& .MuiBottomNavigationAction-label.Mui-selected": {
+              fontWeight: 700,
             },
-            "& .MuiBottomNavigationAction-label.Mui-selected": { fontWeight: 700 },
           }}
         >
           {CUSTOMER_NAV_ITEMS.map(({ label, path, symbol }) => (
             <BottomNavigationAction
               key={path}
+              component={NextLink}
+              href={path}
+              aria-current={current === path ? "page" : undefined}
               disableRipple
               value={path}
               label={label}
-              icon={<MaterialSymbol name={symbol} filled={current === path} size={30} />}
+              icon={
+                <MaterialSymbol
+                  name={symbol}
+                  filled={current === path}
+                  size={30}
+                />
+              }
             />
           ))}
         </BottomNavigation>

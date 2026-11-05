@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Box, ButtonBase, Paper, Typography } from "@mui/material";
 import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import useCustomerNav from "@/components/customer/useCustomerNav";
 import { INACTIVE_COLOR } from "@/components/customer/CustomerBottomNav";
+import NextLink from "next/link";
 
 export const SIDE_NAV_WIDTH = 96;
 export const SIDE_NAV_ATTR = "data-customer-side-nav";
@@ -31,7 +31,6 @@ const useAppBarHeight = () => {
 
 // Desktop version of the phone tab bar: the customer pages down the left side, always in view
 const CustomerSideNav = () => {
-  const router = useRouter();
   const { show, current } = useCustomerNav();
   const appBarHeight = useAppBarHeight();
 
@@ -65,6 +64,8 @@ const CustomerSideNav = () => {
         return (
           <ButtonBase
             key={path}
+            component={NextLink}
+            href={path}
             aria-current={selected ? "page" : undefined}
             onClick={() => router.push(path)}
             sx={{
@@ -74,8 +75,13 @@ const CustomerSideNav = () => {
               color: selected ? "primary.main" : INACTIVE_COLOR,
               transition: "color 150ms ease",
               "&:hover": { color: "primary.main" },
-              "&:hover .side-nav-icon": { bgcolor: selected ? "rgba(192, 30, 46, 0.14)" : "grey.100" },
-              "&.Mui-focusVisible .side-nav-icon": { outline: "2px solid", outlineColor: "primary.main" },
+              "&:hover .side-nav-icon": {
+                bgcolor: selected ? "rgba(192, 30, 46, 0.14)" : "grey.100",
+              },
+              "&.Mui-focusVisible .side-nav-icon": {
+                outline: "2px solid",
+                outlineColor: "primary.main",
+              },
             }}
           >
             {/* The pill behind the icon marks the page you're on */}
@@ -96,7 +102,11 @@ const CustomerSideNav = () => {
             </Box>
             <Typography
               component="span"
-              sx={{ fontSize: "0.75rem", fontWeight: selected ? 700 : 500, letterSpacing: "0.01em" }}
+              sx={{
+                fontSize: "0.75rem",
+                fontWeight: selected ? 700 : 500,
+                letterSpacing: "0.01em",
+              }}
             >
               {label}
             </Typography>
