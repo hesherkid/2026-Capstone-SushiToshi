@@ -14,7 +14,8 @@ public interface IAuthTokenService
         AuthTokenPurpose purpose,
         CancellationToken ct = default);
 
-    Task ConsumeAsync(
+    // False when another request already used the token or it expired
+    Task<bool> TryConsumeAsync(
         AuthActionToken token,
         CancellationToken ct = default);
 }

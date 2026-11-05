@@ -49,6 +49,9 @@ public class PasswordRuleTests : IDisposable
         _tokens
             .Setup(t => t.CreateAsync(It.IsAny<int>(), It.IsAny<AuthTokenPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("token");
+        _tokens
+            .Setup(t => t.TryConsumeAsync(It.IsAny<AuthActionToken>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         _auth = new AuthController(
             _context,

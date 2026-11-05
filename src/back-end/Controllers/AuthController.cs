@@ -321,9 +321,15 @@ namespace back_end.controllers
                 });
             }
 
-            // Perform consumption and confirmation atomically
-            // in production.
-            await _tokenService.ConsumeAsync(token);
+            // A link submitted twice at once passes the check above in both
+            // requests; only the one that consumes the token goes on
+            if (!await _tokenService.TryConsumeAsync(token))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid or expired verification token"
+                });
+            }
 
             user.Is_email_confirmed = true;
 
@@ -400,8 +406,15 @@ namespace back_end.controllers
                 });
             }
 
-            // These operations must be atomic in production.
-            await _tokenService.ConsumeAsync(token);
+            // A link submitted twice at once passes the check above in both
+            // requests; only the one that consumes the token goes on
+            if (!await _tokenService.TryConsumeAsync(token))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid or expired reset token"
+                });
+            }
 
             user.Password_hash =
                 BCryptNet.HashPassword(request.NewPassword);
