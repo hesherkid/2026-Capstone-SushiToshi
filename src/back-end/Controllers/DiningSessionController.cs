@@ -1022,6 +1022,10 @@ namespace back_end.controllers
         return NotFound(new { message = $"Table {request.Table_Number} doesn't have an active session yet. Please ask staff to start your table." });
       }
 
+      // Waits for another join by this person in progress, so the seats read below are current
+      // and the same person is never seated twice
+      await using var seatLock = await SeatLock.LockAsync(_context, userId);
+
       // Someone is seated at one table at a time: scanning a new table (e.g. after moving)
       // leaves any other table they're still in, so their active session is never ambiguous
       var otherSeats = await _context.SessionParticipants
@@ -1062,6 +1066,7 @@ namespace back_end.controllers
       }
 
       await _context.SaveChangesAsync();
+      if (seatLock != null) await seatLock.CommitAsync();
 
       return Ok(new JoinTableSessionResponseDTO
       {
