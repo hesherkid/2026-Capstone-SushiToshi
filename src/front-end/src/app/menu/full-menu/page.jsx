@@ -113,10 +113,7 @@ const FullMenu = () => {
 
   const allItems = Object.values(menuItems).flat().filter(Boolean);
 
-  const {
-    searchTerm,
-    setSearchTerm,
-  } = useMenuSearch(allItems);
+  const { searchTerm, setSearchTerm } = useMenuSearch(allItems);
 
   // Favourites and past orders, for customers with an account
   const { canSave, favourites, orderedBefore, toggleFavourite } = useMyItems({
@@ -125,14 +122,27 @@ const FullMenu = () => {
 
   // Pills picked in the filter row; an item has to match all of them
   const [selectedFilters, setSelectedFilters] = useState([]);
-  const onThisMenu = (itemIds) => allItems.some((item) => itemIds.has(item.item_id));
+  const onThisMenu = (itemIds) =>
+    allItems.some((item) => itemIds.has(item.item_id));
   const filterPills = [
-    canSave && onThisMenu(favourites) && { key: FAVOURITES_FILTER, name: "Favourites", symbol: "favorite" },
-    canSave && onThisMenu(orderedBefore) && { key: ORDER_AGAIN_FILTER, name: "Order again", symbol: "history" },
+    canSave &&
+      onThisMenu(favourites) && {
+        key: FAVOURITES_FILTER,
+        name: "Favourites",
+        symbol: "favorite",
+      },
+    canSave &&
+      onThisMenu(orderedBefore) && {
+        key: ORDER_AGAIN_FILTER,
+        name: "Order again",
+        symbol: "history",
+      },
     ...menuTags(allItems),
   ].filter(Boolean);
   // A pill that's gone since it was picked (e.g. the last favourite un-hearted) no longer filters
-  const activeFilters = selectedFilters.filter((key) => filterPills.some((pill) => pill.key === key));
+  const activeFilters = selectedFilters.filter((key) =>
+    filterPills.some((pill) => pill.key === key),
+  );
 
   const matchesFilters = (item) =>
     activeFilters.every((key) => {
@@ -167,7 +177,9 @@ const FullMenu = () => {
     .filter(({ items }) => items.length > 0);
 
   // ---- Category bar: pinned under the app bar, jumps to sections, follows the scroll ----
-  const visibleIds = filteredMenuGroups.map(({ category }) => category.category_id);
+  const visibleIds = filteredMenuGroups.map(
+    ({ category }) => category.category_id,
+  );
   const visibleIdsRef = useRef(visibleIds);
   useEffect(() => {
     visibleIdsRef.current = visibleIds;
@@ -191,7 +203,8 @@ const FullMenu = () => {
   }, []);
 
   // Space taken at the top by the app bar and the pinned category bar
-  const pinnedHeight = () => appBarHeight + (chipBarRef.current?.offsetHeight ?? 0);
+  const pinnedHeight = () =>
+    appBarHeight + (chipBarRef.current?.offsetHeight ?? 0);
 
   // Light up the section whose heading has reached the category bar
   const visibleKey = visibleIds.join(",");
@@ -202,7 +215,8 @@ const FullMenu = () => {
       let current = visibleIdsRef.current[0] ?? null;
       for (const id of visibleIdsRef.current) {
         const section = sectionRefs.current[id];
-        if (section && section.getBoundingClientRect().top <= line) current = id;
+        if (section && section.getBoundingClientRect().top <= line)
+          current = id;
       }
       setActiveCategory(current);
     };
@@ -224,32 +238,39 @@ const FullMenu = () => {
       clearTimeout(jumping.current);
       jumping.current = null;
     };
-    // "scrollend" where the browser has it; the timer covers the rest
     window.addEventListener("scrollend", done, { once: true });
     jumping.current = setTimeout(done, 1000);
 
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     window.scrollTo({
-      top: section.getBoundingClientRect().top + window.scrollY - pinnedHeight() - 8,
-      behavior: "smooth",
+      top:
+        section.getBoundingClientRect().top +
+        window.scrollY -
+        pinnedHeight() -
+        8,
+      behavior: reduceMotion ? "auto" : "smooth",
     });
+    section.querySelector("h2")?.focus({ preventScroll: true });
   };
 
   return (
     <CustomerPageContainer>
       {/* Not seated: only the info message below shows, without a menu title */}
       {sessionId && (
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}
+        >
           All You Can Eat Menu
         </Typography>
       )}
 
       {/* Error Alert */}
       {displayError && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          onClose={() => setError(null)}
-        >
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {displayError}
         </Alert>
       )}
@@ -268,7 +289,11 @@ const FullMenu = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <MaterialSymbol name="search" size={22} sx={{ color: "text.secondary" }} />
+                      <MaterialSymbol
+                        name="search"
+                        size={22}
+                        sx={{ color: "text.secondary" }}
+                      />
                     </InputAdornment>
                   ),
                   endAdornment: searchTerm ? (
@@ -293,7 +318,8 @@ const FullMenu = () => {
                   bgcolor: "grey.100",
                   pl: 1.5,
                   pr: 1.5,
-                  transition: "background-color 150ms ease, box-shadow 150ms ease",
+                  transition:
+                    "background-color 150ms ease, box-shadow 150ms ease",
                   "& fieldset": { border: "none" },
                   "&:hover": { bgcolor: "grey.200" },
                   "&.Mui-focused": {
@@ -309,7 +335,11 @@ const FullMenu = () => {
             />
 
             {itemsLoaded && (
-              <TagFilter tags={filterPills} selected={activeFilters} onChange={setSelectedFilters} />
+              <TagFilter
+                tags={filterPills}
+                selected={activeFilters}
+                onChange={setSelectedFilters}
+              />
             )}
           </>
         ) : (
@@ -355,7 +385,6 @@ const FullMenu = () => {
 
       {sessionId && menuId && itemsLoaded && (
         <Box sx={{ width: "100%", mb: 4 }}>
-
           {selectedBillId && billRequested && (
             <Alert severity="info" sx={{ mb: 2 }}>
               {BILL_REQUESTED_MESSAGE}
@@ -367,7 +396,11 @@ const FullMenu = () => {
               severity="warning"
               sx={{ mb: 2 }}
               action={
-                <Button color="inherit" size="small" onClick={() => setBillDialogOpen(true)}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => setBillDialogOpen(true)}
+                >
                   Choose bill
                 </Button>
               }
@@ -378,8 +411,9 @@ const FullMenu = () => {
 
           {myBill && !selectedBillId && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              {myBill.bill_name} is {String(myBill.status).toLowerCase()}, so no more
-              orders can be added. Ask your server if you&apos;d like anything else.
+              {myBill.bill_name} is {String(myBill.status).toLowerCase()}, so no
+              more orders can be added. Ask your server if you&apos;d like
+              anything else.
             </Alert>
           )}
 
@@ -402,11 +436,13 @@ const FullMenu = () => {
                 <Typography
                   variant="h5"
                   component="h2"
+                  tabIndex={-1}
                   sx={{
                     fontWeight: 600,
                     mb: 1.5,
                     color: "#1f2937",
                     textAlign: "left",
+                    scrollMarginTop: `${appBarHeight + 64}px`,
                   }}
                 >
                   {category.name || `Category ${category.category_id}`}{" "}
@@ -441,17 +477,19 @@ const FullMenu = () => {
                         item={item}
                         categoryId={category.category_id}
                         quantity={
-                          quantities[category.category_id]?.[item.item_id] ||
-                          0
+                          quantities[category.category_id]?.[item.item_id] || 0
                         }
                         onQuantityChange={changeQuantity}
                         atLimit={
-                          limitStatus(category.category_id, item.item_id).atLimit
+                          limitStatus(category.category_id, item.item_id)
+                            .atLimit
                         }
                         // The bill's been asked for, so nothing more can be ordered onto it
                         showQuantityControls={!billRequested}
                         favourite={favourites.has(item.item_id)}
-                        onToggleFavourite={canSave ? toggleFavourite : undefined}
+                        onToggleFavourite={
+                          canSave ? toggleFavourite : undefined
+                        }
                       />
                     </TrackedItem>
                   ))}
@@ -463,9 +501,14 @@ const FullMenu = () => {
       )}
 
       {/* Ordering is over once the bill's been asked for */}
-      {!billRequested && <ReviewOrderButton count={cartCount} onClick={reviewOrder} />}
+      {!billRequested && (
+        <ReviewOrderButton count={cartCount} onClick={reviewOrder} />
+      )}
 
-      <BillChoiceDialog open={billDialogOpen} onClose={() => setBillDialogOpen(false)} />
+      <BillChoiceDialog
+        open={billDialogOpen}
+        onClose={() => setBillDialogOpen(false)}
+      />
     </CustomerPageContainer>
   );
 };
