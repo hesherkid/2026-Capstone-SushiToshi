@@ -123,18 +123,14 @@ describe("Bill page", () => {
     summaries[8] = { ...summaries[8], status: "Open" };
   });
 
-  it("puts several bills in tabs, starting on the one this phone orders on", async () => {
-    localStorage.setItem("currentBillId", "9");
-    mockTable({ bills: [LEE, PARK] });
+  it("shows only the guest's own bill, with no tabs for other parties", async () => {
+    // The server only sends the bill this guest is on
+    mockTable({ bills: [PARK] });
     render(<BillsPage />);
 
-    expect(await screen.findByRole("heading", { name: "Your table's bills" })).toBeInTheDocument();
-    expect(await screen.findByRole("tab", { name: "Park (yours)", selected: true })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Your bill" })).toBeInTheDocument();
     expect(await screen.findAllByText("$90.20")).toHaveLength(2);
-
-    fireEvent.click(screen.getByRole("tab", { name: "Lee" }));
-
-    expect(await screen.findAllByText("$139.49")).toHaveLength(2);
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
   });
 
   it("leaves out cancelled bills", async () => {
@@ -153,7 +149,7 @@ describe("Bill page", () => {
     expect(await screen.findByText(/You're not seated at a table yet/)).toBeInTheDocument();
   });
 
-  it("tells guests their server opens the bill, then shows it without a reload", async () => {
+  it("sends guests who aren't on a bill to the menu to choose one, then shows it without a reload", async () => {
     jest.useFakeTimers();
     let bills = [];
     api.get.mockImplementation((url) => {
@@ -165,10 +161,10 @@ describe("Bill page", () => {
 
     render(<BillsPage />);
 
-    expect(await screen.findByText(/Your server will open a bill for your table/)).toBeInTheDocument();
-    expect(screen.queryByText(/Create your first bill/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/You're not on a bill yet/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to the menu" })).toHaveAttribute("href", "/menu/full-menu");
 
-    // Staff open a bill; the next refresh picks it up
+    // They pick their bill on the menu; the next refresh picks it up
     bills = [LEE];
     await act(async () => jest.advanceTimersByTime(AUTO_REFRESH_MS));
 

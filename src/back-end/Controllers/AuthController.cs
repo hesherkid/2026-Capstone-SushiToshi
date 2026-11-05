@@ -173,8 +173,7 @@ namespace back_end.controllers
             {
                 access_token = GenerateJwtToken(user),
                 token_type = "Bearer",
-                expires_in = int.Parse(
-                    _config["Jwt:ExpiresInMinutes"] ?? "60") * 60,
+                expires_in = TokenMinutes(user) * 60,
                 // The token carries no name, so the home page greets the customer from this
                 user = new
                 {
@@ -547,6 +546,7 @@ namespace back_end.controllers
                 return Ok(new
                 {
                     access_token = accessToken,
+                    expires_in = TokenMinutes(user) * 60,
                     message = existingUser != null ? "Login successful" : "Account created successfully",
                     user = new
                     {
@@ -577,7 +577,7 @@ namespace back_end.controllers
         /// - Sub: Subject identifier (email)
         /// - Jti: Unique token identifier
         /// 
-        /// Token expiration is configurable via Jwt:ExpiresInMinutes setting (default: 60 minutes).
+        /// Token expiration depends on the role; see <see cref="TokenMinutes"/>.
         /// The token is signed using HMAC-SHA256 algorithm.
         /// </remarks>
         private string GenerateJwtToken(domain.Entities.User user, int? expiresInMinutes = null)
@@ -614,12 +614,21 @@ namespace back_end.controllers
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(
-                    expiresInMinutes ?? int.Parse(_config["Jwt:ExpiresInMinutes"] ?? "60")),
+                expires: DateTime.UtcNow.AddMinutes(expiresInMinutes ?? TokenMinutes(user)),
                 signingCredentials: credentials
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        // How long a login lasts. Staff stay signed in for a shift, so the dashboard doesn't log them out
+        // mid-service; admins can change prices, menus and users, so their logins are short.
+        // Everyone else uses Jwt:ExpiresInMinutes.
+        private int TokenMinutes(domain.Entities.User user) => user.Role switch
+        {
+            UserRoles.Staff => int.Parse(_config["Jwt:StaffExpiresInMinutes"] ?? "720"),
+            UserRoles.Admin => int.Parse(_config["Jwt:AdminExpiresInMinutes"] ?? "120"),
+            _ => int.Parse(_config["Jwt:ExpiresInMinutes"] ?? "60"),
+        };
     }
 }

@@ -493,6 +493,117 @@ export const useSessionActions = (onSuccess) => {
     [apiWrapper]
   );
 
+  /**
+   * Change an open bill's guest counts (clears its "guest entered" flags)
+   */
+  const updateGuestCounts = useCallback(
+    async (sessionId, billId, counts) => {
+      return apiWrapper(
+        "updateGuestCounts",
+        async () => {
+          const sid = toInt(sessionId);
+          const bid = toInt(billId);
+          validateIds({ "session ID": sid, "bill ID": bid });
+
+          const res = await api.put(
+            `/Bill/guest_counts/${bid}`,
+            {
+              adult_count: toInt(counts.adultCount) || 0,
+              senior_count: toInt(counts.seniorCount) || 0,
+              child_count: toInt(counts.childCount) || 0,
+              tot_count: toInt(counts.totCount) || 0,
+            },
+            { params: { _session_id: sid } },
+          );
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: "Guest count updated" },
+      );
+    },
+    [apiWrapper],
+  );
+
+  /**
+   * Lock an open bill's guest counts so guests can't change them on their phones, or unlock them.
+   * Locking clears its "guest entered" flags; staff can still change locked counts
+   */
+  const lockGuestCounts = useCallback(
+    async (sessionId, billId, locked) => {
+      return apiWrapper(
+        "lockGuestCounts",
+        async () => {
+          const sid = toInt(sessionId);
+          const bid = toInt(billId);
+          validateIds({ "session ID": sid, "bill ID": bid });
+
+          const res = await api.put(
+            `/Bill/lock_guest_counts/${bid}`,
+            { locked: Boolean(locked) },
+            { params: { _session_id: sid } },
+          );
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: locked ? "Guest count locked" : "Guest count unlocked" },
+      );
+    },
+    [apiWrapper],
+  );
+
+  /**
+   * Merge an open bill into another: its people, orders and guest counts move, then it's cancelled
+   */
+  const mergeBill = useCallback(
+    async (sessionId, billId, intoBillId) => {
+      return apiWrapper(
+        "mergeBill",
+        async () => {
+          const sid = toInt(sessionId);
+          const bid = toInt(billId);
+          const into = toInt(intoBillId);
+          validateIds({ "session ID": sid, "bill ID": bid, "bill to merge into": into });
+
+          const res = await api.put(
+            `/Bill/merge/${bid}`,
+            { into_bill_id: into },
+            { params: { _session_id: sid } },
+          );
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: "Bills merged" },
+      );
+    },
+    [apiWrapper],
+  );
+
+  /**
+   * Move someone at the table onto another open bill, with or without their orders.
+   * guestType ("adult", "senior", "child" or "toddler") also moves guestCount guests of that kind from
+   * the old bill's count to the new one's; null leaves both counts alone.
+   */
+  const moveGuest = useCallback(
+    async (sessionId, participantId, billId, moveOrders, guestType = null, guestCount = 1) => {
+      return apiWrapper(
+        "moveGuest",
+        async () => {
+          const sid = toInt(sessionId);
+          const pid = toInt(participantId);
+          const bid = toInt(billId);
+          validateIds({ "session ID": sid, "participant ID": pid, "bill ID": bid });
+
+          const res = await api.put(`/SessionParticipant/${sid}/participants/${pid}/bill`, {
+            bill_id: bid,
+            move_orders: moveOrders,
+            guest_type: guestType,
+            guest_count: guestCount,
+          });
+          return res.data;
+        },
+        { triggerSuccess: true, successMessage: "Guest moved" },
+      );
+    },
+    [apiWrapper],
+  );
+
   return {
     // State
     actionError,
@@ -526,6 +637,10 @@ export const useSessionActions = (onSuccess) => {
     getBills,
     getBillSummary,
     closeBill,
+    updateGuestCounts,
+    lockGuestCounts,
+    mergeBill,
+    moveGuest,
 
     // Utilities
     clearActionError,

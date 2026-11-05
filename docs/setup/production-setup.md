@@ -57,7 +57,7 @@ openssl rand -base64 48
 - It must be at least 32 bytes, or the backend refuses to start. Tokens are signed with HMAC-SHA256.
 - Never reuse the old key that used to be in `appsettings.json` (`ThisIsAVerySecure...`). It is still in the git history.
 - Changing the key signs everyone out, because existing tokens stop being valid.
-- Optional: `Jwt__ExpiresInMinutes` (default `120`) and `Jwt__GuestExpiresInMinutes` (default `360`) control how long logins last.
+- Optional: these control how long logins last, in minutes. `Jwt__StaffExpiresInMinutes` (default `720`, about a shift) is for staff, `Jwt__AdminExpiresInMinutes` (default `120`) for admins, `Jwt__ExpiresInMinutes` (default `120`) for customers, and `Jwt__GuestExpiresInMinutes` (default `360`) for guests.
 
 ### Allowed origins (CORS)
 

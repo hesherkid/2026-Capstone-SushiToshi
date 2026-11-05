@@ -83,7 +83,7 @@ namespace back_end.controllers
     /// </remarks>
     [HttpPost("Create_Dinning_Session")]
     // Staff seat tables; guests join an existing session through POST /api/DiningSession/join
-    [Authorize(Roles = "staffOnly")]
+    [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -1034,6 +1034,14 @@ namespace back_end.controllers
                                      sp.User_Id == userId &&
                                      sp.Left_At == null);
       bool alreadyJoined = participant != null;
+
+      // Rescanning after their bill was closed or cancelled: they pick or start a bill again,
+      // instead of staying on one that can't take orders
+      if (participant?.Bill_Id is int billId &&
+          !await _context.Bills.AnyAsync(b => b.Bill_Id == billId && b.Status == BillStatus.Open))
+      {
+        participant.Bill_Id = null;
+      }
 
       if (participant == null)
       {

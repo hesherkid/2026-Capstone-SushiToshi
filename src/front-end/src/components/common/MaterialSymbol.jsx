@@ -5,6 +5,7 @@ import { Box } from "@mui/material";
 export const MATERIAL_SYMBOL_NAMES = [
   "add",
   "arrow_back",
+  "call_split",
   "check",
   "check_circle",
   "chevron_right",
@@ -13,8 +14,10 @@ export const MATERIAL_SYMBOL_NAMES = [
   "expand_more",
   "favorite",
   "filter_list",
+  "group",
   "help",
   "history",
+  "lock",
   "logout",
   "menu_book_2",
   "qr_code_scanner",
@@ -25,6 +28,7 @@ export const MATERIAL_SYMBOL_NAMES = [
   "search",
   "send",
   "shopping_bag",
+  "smartphone",
 ];
 
 // Google wants the icon names in alphabetical order

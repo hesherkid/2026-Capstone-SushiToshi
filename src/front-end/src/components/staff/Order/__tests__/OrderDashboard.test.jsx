@@ -271,7 +271,7 @@ describe("Past orders", () => {
     expect(rowFor("#43")).toBeInTheDocument();
   });
 
-  it("opens a table's orders split by bill, read only", async () => {
+  it("opens a table's orders, with details above a grid of its items", async () => {
     const form = await openPastOrders();
     searchPastOrders(form);
     const row = await waitFor(() => rowFor("#42"));
@@ -281,14 +281,33 @@ describe("Past orders", () => {
     );
     const dialog = await screen.findByRole("dialog");
 
-    const lee = within(dialog).getByRole("region", { name: "Bill Lee" });
-    expect(within(lee).getByText("Order #601")).toBeInTheDocument();
-    expect(within(lee).getByText("Order #603")).toBeInTheDocument();
-    expect(within(lee).getAllByText("Cancelled").length).toBeGreaterThan(0);
+    const sections = within(dialog).getAllByRole("region");
+    expect(
+      sections.map((s) => within(s).getByRole("heading").textContent),
+    ).toEqual(["Order #601", "Order #603", "Order #602"]);
 
-    const park = within(dialog).getByRole("region", { name: "Bill Park" });
-    expect(within(park).getByText("Order #602")).toBeInTheDocument();
-    expect(within(park).queryByText("Order #601")).not.toBeInTheDocument();
+    const order601 = within(dialog).getByRole("region", { name: "Order #601" });
+    expect(within(order601).getByText(/Bill: Lee/)).toBeInTheDocument();
+    const grid601 = within(order601).getByRole("grid", {
+      name: "Order #601 items",
+    });
+    const itemRow = within(grid601)
+      .getByText("Item 601")
+      .closest('[role="row"]');
+    expect(within(itemRow).getByText("2")).toBeInTheDocument();
+    expect(within(itemRow).getByText("$10.00")).toBeInTheDocument();
+
+    const order603 = within(dialog).getByRole("region", { name: "Order #603" });
+    expect(within(order603).getAllByText("Cancelled").length).toBeGreaterThan(
+      0,
+    );
+
+    const order602 = within(dialog).getByRole("region", { name: "Order #602" });
+    expect(within(order602).getByText(/Bill: Park/)).toBeInTheDocument();
+
+    expect(within(dialog).getByText("Lee: $15.00")).toBeInTheDocument();
+    expect(within(dialog).getByText("Park: $5.00")).toBeInTheDocument();
+    expect(within(dialog).getByText("Total: $20.00")).toBeInTheDocument();
 
     expect(
       within(dialog).queryByRole("button", {

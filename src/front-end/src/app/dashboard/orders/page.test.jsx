@@ -48,18 +48,18 @@ describe("Customer orders page", () => {
     expect(api.get).toHaveBeenCalledWith("/Order/active-session/orders");
 
     const tabs = screen.getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["My orders", "Whole table"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["My orders", "All orders"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
   });
 
-  it("shows the whole table's orders, including ones someone else placed", async () => {
+  it("shows the orders on the guest's bill, including ones someone else placed", async () => {
     render(<OrdersPage />);
     await screen.findByText("Order #901");
-    fireEvent.click(screen.getByRole("tab", { name: "Whole table" }));
+    fireEvent.click(screen.getByRole("tab", { name: "All orders" }));
 
     expect(await screen.findByText("Order #900")).toBeInTheDocument();
     expect(screen.getByText("Order #901")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Your table's orders" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your bill's orders" })).toBeInTheDocument();
     // Someone else's order shows its bill but not who placed it
     expect(screen.getByText("Lee")).toBeInTheDocument();
     expect(screen.queryByText(/guest\.sushitoshi\.invalid/)).not.toBeInTheDocument();
@@ -70,13 +70,13 @@ describe("Customer orders page", () => {
   it("can switch back to just the orders this person placed", async () => {
     render(<OrdersPage />);
     await screen.findByText("Order #901");
-    fireEvent.click(screen.getByRole("tab", { name: "Whole table" }));
+    fireEvent.click(screen.getByRole("tab", { name: "All orders" }));
     await screen.findByText("Order #900");
 
     fireEvent.click(screen.getByRole("tab", { name: "My orders" }));
 
     await waitFor(() => expect(screen.queryByText("Order #900")).not.toBeInTheDocument());
-    expect(screen.getByText("Order #901")).toBeInTheDocument();
+    expect(await screen.findByText("Order #901")).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith("/Order/active-session/orders");
   });
 
@@ -110,8 +110,8 @@ describe("Customer orders page", () => {
     render(<OrdersPage />);
 
     // Nothing of their own, so it opens on the table, which has nothing either
-    expect(await screen.findByText("No one at your table has ordered yet.")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Whole table" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("No one on your bill has ordered yet.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "All orders" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: "Browse the menu" })).toBeInTheDocument();
     expect(screen.queryByText("You haven't ordered anything yet.")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
@@ -127,7 +127,7 @@ describe("Customer orders page", () => {
     render(<OrdersPage />);
 
     expect(await screen.findByText("Order #900")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Whole table" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "All orders" })).toHaveAttribute("aria-selected", "true");
     // No "you haven't ordered" flash on the way
     expect(screen.queryByText("You haven't ordered anything yet.")).not.toBeInTheDocument();
   });
@@ -146,15 +146,67 @@ describe("Customer orders page", () => {
     expect(await screen.findByText("You haven't ordered anything yet.")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "My orders" })).toHaveAttribute("aria-selected", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "See the whole table's orders" }));
+    fireEvent.click(screen.getByRole("button", { name: "See your bill's orders" }));
 
     expect(await screen.findByText("Order #900")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Whole table" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "All orders" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  describe("alone on their bill", () => {
+    const billWith = (people) => ({ data: { my_bill: { bill_id: 5, bill_name: "Lee", people_count: people }, open_bills: [] } });
+
+    it("shows just their orders, with no All orders tab", async () => {
+      api.get.mockImplementation((url) => {
+        if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+        if (url === "/SessionParticipant/269/bill") return Promise.resolve(billWith(1));
+        if (url === "/Order/active-session/orders") return Promise.resolve({ data: [tableOrders[1]] });
+        return Promise.resolve({ data: [] });
+      });
+      render(<OrdersPage />);
+
+      expect(await screen.findByText("Order #901")).toBeInTheDocument();
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+      expect(api.get).not.toHaveBeenCalledWith("/Order/session/269");
+    });
+
+    it("stays on their own orders when they haven't ordered yet", async () => {
+      api.get.mockImplementation((url) => {
+        if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+        if (url === "/SessionParticipant/269/bill") return Promise.resolve(billWith(1));
+        return Promise.resolve({ data: [] });
+      });
+      render(<OrdersPage />);
+
+      expect(await screen.findByText("You haven't ordered anything yet.")).toBeInTheDocument();
+      expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "See your bill's orders" })).not.toBeInTheDocument();
+    });
+
+    it("goes back to their own orders once everyone else leaves the bill", async () => {
+      let people = 2;
+      api.get.mockImplementation((url) => {
+        if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 269 } });
+        if (url === "/SessionParticipant/269/bill") return Promise.resolve(billWith(people));
+        if (url === "/Order/session/269") return Promise.resolve({ data: tableOrders });
+        if (url === "/Order/active-session/orders") return Promise.resolve({ data: [tableOrders[1]] });
+        return Promise.resolve({ data: [] });
+      });
+      render(<OrdersPage />);
+      fireEvent.click(await screen.findByRole("tab", { name: "All orders" }));
+      await screen.findByText("Order #900");
+
+      people = 1;
+      fireEvent(document, new Event("visibilitychange"));
+
+      await waitFor(() => expect(screen.queryByRole("tab")).not.toBeInTheDocument());
+      expect(await screen.findByText("Order #901")).toBeInTheDocument();
+      expect(screen.queryByText("Order #900")).not.toBeInTheDocument();
+    });
   });
 
   it("shows each item's status without expanding anything", async () => {
     render(<OrdersPage />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Whole table" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "All orders" }));
 
     const pending = await screen.findByRole("region", { name: "Order #900" });
     expect(within(pending).getByText("Salmon Nigiri")).toBeVisible();
@@ -197,7 +249,7 @@ describe("Customer orders page", () => {
     expect(await screen.findByText(/Couldn't refresh/)).toBeInTheDocument();
     expect(screen.getByText("Order #901")).toBeInTheDocument();
     expect(screen.getByText("Miso Soup")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Whole table" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "All orders" })).toBeInTheDocument();
     expect(screen.queryByText("Server error")).not.toBeInTheDocument();
   });
 
@@ -231,7 +283,7 @@ describe("Customer orders page", () => {
 
     expect(await screen.findByText("Server error")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Your orders" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Whole table" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "All orders" })).toBeInTheDocument();
     expect(screen.queryByText(/haven't ordered/)).not.toBeInTheDocument();
 
     api.get.mockResolvedValue({ data: [tableOrders[1]] });
@@ -299,7 +351,7 @@ describe("Customer orders page", () => {
       // Served
       expect(cancelButtonIn(901)).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("tab", { name: "Whole table" }));
+      fireEvent.click(screen.getByRole("tab", { name: "All orders" }));
       await screen.findByText("Order #900");
       // Someone else's
       expect(cancelButtonIn(900)).not.toBeInTheDocument();

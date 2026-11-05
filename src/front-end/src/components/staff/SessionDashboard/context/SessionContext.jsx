@@ -74,6 +74,18 @@ export const SessionProvider = ({ children, live = false }) => {
   const closeBill = async (sessionId, billId) =>
     succeeded(await actions.closeBill(sessionId, billId));
 
+  const updateGuestCounts = async (sessionId, billId, counts) =>
+    succeeded(await actions.updateGuestCounts(sessionId, billId, counts));
+
+  const lockGuestCounts = async (sessionId, billId, locked) =>
+    succeeded(await actions.lockGuestCounts(sessionId, billId, locked));
+
+  const mergeBill = async (sessionId, billId, intoBillId) =>
+    succeeded(await actions.mergeBill(sessionId, billId, intoBillId));
+
+  const moveGuest = async (sessionId, participantId, billId, moveOrders, guestType, guestCount) =>
+    succeeded(await actions.moveGuest(sessionId, participantId, billId, moveOrders, guestType, guestCount));
+
   const endSession = async (sessionId) =>
     succeeded(await actions.closeDiningSession(sessionId));
 
@@ -110,6 +122,10 @@ export const SessionProvider = ({ children, live = false }) => {
     removeTableGroup,
     createBill,
     closeBill,
+    updateGuestCounts,
+    lockGuestCounts,
+    mergeBill,
+    moveGuest,
     endSession,
   };
 

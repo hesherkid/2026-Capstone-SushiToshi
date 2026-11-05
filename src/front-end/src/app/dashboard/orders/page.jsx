@@ -15,7 +15,8 @@ import { formatCurrency, formatTime } from "@/components/staff/SessionDashboard/
 
 const MENU_PATH = "/menu/full-menu";
 
-// "table": every order at the table, so when one person orders for everyone the rest can see it.
+// "table": every order on this guest's bill, so when one person orders for their party the rest
+// can see it. The server only returns their own bill's orders.
 // "mine": only orders this person placed.
 const VIEWS = { TABLE: "table", MINE: "mine" };
 
@@ -62,7 +63,7 @@ const OrdersSkeleton = () => (
 );
 
 // The guest's orders as the kitchen works through them, with every item's status in view.
-// Grouped by where each order is at; "Whole table" also shows orders others placed
+// Grouped by where each order is at; "All orders" also shows orders others on the bill placed
 const OrdersPage = () => {
   const router = useRouter();
   const { notifySuccess } = useNotification();
@@ -71,6 +72,8 @@ const OrdersPage = () => {
   const [error, setError] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [view, setView] = useState(VIEWS.MINE);
+  // True when nobody else is on this guest's bill, so "All orders" would just be theirs again
+  const [aloneOnBill, setAloneOnBill] = useState(false);
   // Set when a background refresh fails; the orders on screen are from lastUpdated
   const [refreshFailed, setRefreshFailed] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -122,20 +125,33 @@ const OrdersPage = () => {
         setError(null);
       }
 
-      // Whole table: every order in the session. Mine: the server finds this person's own orders.
-      const response =
+      // All orders: every order on their bill (the server limits it). Mine: this person's own orders.
+      const [response, billResponse] = await Promise.all([
         view === VIEWS.TABLE
-          ? await api.get(`/Order/session/${sessionId.session_id}`)
-          : await api.get("/Order/active-session/orders");
+          ? api.get(`/Order/session/${sessionId.session_id}`)
+          : api.get("/Order/active-session/orders"),
+        // How many people share their bill; if this fails the tabs stay as they were
+        api.get(`/SessionParticipant/${sessionId.session_id}/bill`).catch(() => null),
+      ]);
       if (isStale()) return;
 
       const orders = response.data || [];
+
+      const myBill = billResponse?.data?.my_bill;
+      const alone = myBill ? myBill.people_count <= 1 : null;
+      if (alone !== null) setAloneOnBill(alone);
+      // Everyone else has left their bill, so only their own orders are left to show
+      if (alone && view === VIEWS.TABLE) {
+        switchingTab = true;
+        setView(VIEWS.MINE);
+        return;
+      }
 
       // Opens on My orders, but when someone else ordered for this person the table's
       // orders are what they want. Only on arrival, so it never flips the tab under them
       if (!openingTabChosen.current && !quiet) {
         openingTabChosen.current = true;
-        if (view === VIEWS.MINE && orders.length === 0) {
+        if (view === VIEWS.MINE && orders.length === 0 && !alone) {
           switchingTab = true;
           setView(VIEWS.TABLE);
           return;
@@ -361,7 +377,7 @@ const OrdersPage = () => {
   return (
     <CustomerPageContainer sx={{ maxWidth: 720 }}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
-        {view === VIEWS.TABLE ? "Your table's orders" : "Your orders"}
+        {view === VIEWS.TABLE ? "Your bill's orders" : "Your orders"}
       </Typography>
 
       {sessionProblem ? (
@@ -371,26 +387,28 @@ const OrdersPage = () => {
       ) : (
         <>
           {/* Same underlined tabs as the Bill page might make a component in the future*/}
-          <Tabs
-            value={view}
-            onChange={(_, next) => setView(next)}
-            variant="scrollable"
-            scrollButtons={false}
-            aria-label="Which orders to show"
-            sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
-          >
-            {[
-              { value: VIEWS.MINE, label: "My orders" },
-              { value: VIEWS.TABLE, label: "Whole table" },
-            ].map(({ value, label }) => (
-              <Tab
-                key={value}
-                value={value}
-                label={label}
-                sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.95rem" }}
-              />
-            ))}
-          </Tabs>
+          {!aloneOnBill && (
+            <Tabs
+              value={view}
+              onChange={(_, next) => setView(next)}
+              variant="scrollable"
+              scrollButtons={false}
+              aria-label="Which orders to show"
+              sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+            >
+              {[
+                { value: VIEWS.MINE, label: "My orders" },
+                { value: VIEWS.TABLE, label: "All orders" },
+              ].map(({ value, label }) => (
+                <Tab
+                  key={value}
+                  value={value}
+                  label={label}
+                  sx={{ textTransform: "none", fontWeight: 600, fontSize: "0.95rem" }}
+                />
+              ))}
+            </Tabs>
+          )}
 
           {error && (
             <Alert
@@ -428,16 +446,16 @@ const OrdersPage = () => {
                   <Typography color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
                     {view === VIEWS.MINE
                       ? "You haven't ordered anything yet."
-                      : "No one at your table has ordered yet."}
+                      : "No one on your bill has ordered yet."}
                   </Typography>
                   <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                     <Button variant="contained" onClick={() => router.push(MENU_PATH)}>
                       Browse the menu
                     </Button>
-                    {/* Someone else at the table may have ordered for them */}
-                    {view === VIEWS.MINE && (
+                    {/* Someone else on their bill may have ordered for them */}
+                    {view === VIEWS.MINE && !aloneOnBill && (
                       <Button onClick={() => setView(VIEWS.TABLE)}>
-                        See the whole table&apos;s orders
+                        See your bill&apos;s orders
                       </Button>
                     )}
                   </Box>

@@ -7,15 +7,12 @@ import {
   Button,
   CircularProgress,
   Divider,
-  FormControl,
   IconButton,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Typography,
 } from "@mui/material";
 import CartLine from "@/components/menu/CartLine";
+import BillChoiceDialog from "@/components/menu/BillChoiceDialog";
 import { cartSubtotal, orderItemsFor } from "@/components/menu/cartRules";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
@@ -36,6 +33,7 @@ const ACTION_BAR_HEIGHT = 112;
 
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
 const billName = (bill) => bill.bill_name || `Bill #${bill.bill_id}`;
+const guestCount = (count) => `${count} guest${count === 1 ? "" : "s"}`;
 
 // The guest's cart as a full page: check the items, pick the bill, place the order,
 // then a confirmation with where to go next
@@ -48,9 +46,10 @@ const ReviewOrderPage = () => {
     refresh,
     itemsLoaded,
     menuId,
-    openBills,
+    myBill,
     selectedBillId,
-    chooseBill,
+    needsBill,
+    billChangeBlocked,
     billRequested,
     changeQuantity,
     limitStatus,
@@ -99,6 +98,22 @@ const ReviewOrderPage = () => {
   // Picks up a bill staff just opened, or limits used up by others at the table.
   // Paused while the order is being sent, and on the confirmation screen
   useAutoRefresh(refresh, { enabled: !isLoading && !placedItems });
+
+  // Guests not on a bill yet pick or start one before they can order
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
+  // Which step it opens on: choosing a bill, or the guest count on theirs
+  const [billDialogView, setBillDialogView] = useState("choose");
+  const openBillDialog = (view = "choose") => {
+    setBillDialogView(view);
+    setBillDialogOpen(true);
+  };
+  const askedForBill = useRef(false);
+  useEffect(() => {
+    if (needsBill && !askedForBill.current) {
+      askedForBill.current = true;
+      setBillDialogOpen(true);
+    }
+  }, [needsBill]);
 
   // A changed cart may fix the last error (e.g. over a limit), so clear it
   const handleQuantityChange = useCallback(
@@ -276,10 +291,9 @@ const ReviewOrderPage = () => {
     (overLimit.length > 0
       ? `Too many ${overLimit.map(({ item }) => item.name).join(", ")} for your table's limit. Remove some to place your order.`
       : null);
-  const multipleBills = openBills.length > 1;
-  const selectedBill = openBills.find(
-    (bill) => bill.bill_id === selectedBillId,
-  );
+  const selectedBill = selectedBillId ? myBill : null;
+  // Another bill to move to, or a new one to start, while they haven't ordered on this one
+  const canChangeBill = !billChangeBlocked && !billRequested;
   // Cart items need the menu to show; the saved cart may arrive before it
   const menuLoading = !!sessionId && !itemsLoaded && cartCount > 0;
 
@@ -335,83 +349,107 @@ const ReviewOrderPage = () => {
               {BILL_REQUESTED_MESSAGE}
             </Alert>
           )}
-          {!selectedBillId && (
+          {needsBill && (
             <Alert
               severity="warning"
               sx={{ mb: 3 }}
               action={
-                <Button color="inherit" size="small" onClick={refresh}>
-                  Check again
+                <Button color="inherit" size="small" onClick={() => openBillDialog()}>
+                  Choose bill
                 </Button>
               }
             >
-              Your table doesn&apos;t have an open bill yet. Ask your server to
-              open one, then check again.
+              Choose your bill to place this order.
+            </Alert>
+          )}
+          {myBill && !selectedBillId && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              {billName(myBill)} is {String(myBill.status).toLowerCase()}, so no
+              more orders can be added. Ask your server if you&apos;d like
+              anything else.
             </Alert>
           )}
 
           {/* ---- Bill: first thing on the page so nobody orders onto the wrong one ---- */}
-          {openBills.length > 0 && (
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2.5,
-                mb: 4,
-                borderRadius: 3,
-                ...(multipleBills && {
-                  borderColor: "primary.main",
-                  borderWidth: 2,
-                }),
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {selectedBill && (
+            <Paper variant="outlined" sx={{ p: 2, mb: 4, borderRadius: 3 }}>
+              {/* Which bill, with Change kept to the right however long the name is */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    flexShrink: 0,
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: "action.hover",
+                  }}
+                >
+                  <MaterialSymbol name="receipt_long" size={26} sx={{ color: "primary.main" }} />
+                </Box>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Your bill
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    component="p"
+                    sx={{ fontWeight: 700, lineHeight: 1.3, overflowWrap: "anywhere" }}
+                  >
+                    {billName(selectedBill)}
+                  </Typography>
+                </Box>
+                {canChangeBill && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => openBillDialog()}
+                    aria-label={`Change bill from ${billName(selectedBill)}`}
+                    sx={{ flexShrink: 0, borderRadius: 999, px: 2 }}
+                  >
+                    Change
+                  </Button>
+                )}
+              </Box>
+
+              <Divider sx={{ my: 1.5 }} />
+
+              {/* Party size, which they can fix until they ask for the bill or staff lock it */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, minHeight: 36 }}>
                 <MaterialSymbol
-                  name="receipt_long"
-                  size={32}
-                  sx={{ color: "primary.main" }}
+                  name={selectedBill.counts_locked ? "lock" : "group"}
+                  size={20}
+                  sx={{ color: "text.secondary", flexShrink: 0 }}
                 />
-                <Box sx={{ minWidth: 0 }}>
-                  {multipleBills ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Your table has {openBills.length} bills. Select your bill.
-                    </Typography>
-                  ) : (
-                    <Typography
-                      variant="h6"
-                      component="p"
-                      sx={{ fontWeight: 700, lineHeight: 1.3 }}
-                    >
-                      {billName(openBills[0])}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
+                    {guestCount(selectedBill.total_count ?? 0)}
+                  </Typography>{" "}
+                  {selectedBill.counts_locked && (
+                    <Typography variant="body2" component="span" color="text.secondary">
+                      · confirmed by your server
                     </Typography>
                   )}
                 </Box>
+                {!selectedBill.counts_locked && !billRequested && (
+                  <Button
+                    size="small"
+                    onClick={() => openBillDialog("guests")}
+                    aria-label={`Edit guests on ${billName(selectedBill)}`}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    Edit
+                  </Button>
+                )}
               </Box>
 
-              {multipleBills && (
-                <FormControl fullWidth sx={{ mt: 2.5 }}>
-                  <InputLabel id="order-bill-label">
-                    Put this order on
-                  </InputLabel>
-                  <Select
-                    labelId="order-bill-label"
-                    label="Put this order on"
-                    value={selectedBillId || ""}
-                    onChange={(event) => chooseBill(Number(event.target.value))}
-                    sx={{ fontWeight: 600 }}
-                  >
-                    {openBills.map((bill) => (
-                      // Bills the guests have asked for can't take more orders
-                      <MenuItem
-                        key={bill.bill_id}
-                        value={bill.bill_id}
-                        disabled={!!bill.requested_at}
-                      >
-                        {billName(bill)}
-                        {bill.requested_at ? " (bill requested)" : ""}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              {/* Why there's no Change button: they ordered on it, or staff locked it */}
+              {billChangeBlocked && !billRequested && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {billChangeBlocked}
+                </Typography>
               )}
             </Paper>
           )}
@@ -559,6 +597,11 @@ const ReviewOrderPage = () => {
           </Paper>
         </>
       )}
+      <BillChoiceDialog
+        open={billDialogOpen}
+        initialView={billDialogView}
+        onClose={() => setBillDialogOpen(false)}
+      />
     </CustomerPageContainer>
   );
 };

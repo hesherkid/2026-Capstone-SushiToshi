@@ -189,6 +189,22 @@ export const hasOpenBills = (session) => {
 };
 
 /**
+ * Staff can record more guests than the table seats (a party that pulled up extra chairs),
+ * but are warned first. Returns the warning, or null if the guests fit or the seats aren't known.
+ * exceptBillId: the bill being edited, whose current guests are being replaced by `total`
+ */
+export const overSeatsWarning = (session, total, exceptBillId) => {
+  const seats = session?.seat_Count;
+  if (!seats) return null;
+  const otherGuests = (session.bills ?? [])
+    .filter((bill) => String(bill.status).toUpperCase() === "OPEN" && bill.bill_Id !== exceptBillId)
+    .reduce((sum, bill) => sum + (bill.total_Guests || 0), 0);
+  if (otherGuests + total <= seats) return null;
+  const others = otherGuests ? `, and the other bills have ${otherGuests}` : "";
+  return `This table seats ${seats}${others}. That makes ${otherGuests + total} guests at the table.`;
+};
+
+/**
  * Check if a session has reached maximum capacity
  */
 export const isAtCapacity = (session, maxCapacity = 20) => {
@@ -313,11 +329,11 @@ export const formatGuestBreakdown = (bill) => {
  * People at the table: the guests entered on its bills, closed ones included
  * (people who paid may still be seated). Not the phones that scanned the QR code.
  */
+// Cancelled bills (e.g. one merged into another) don't count, or their guests would count twice
 export const sessionGuestCount = (session) =>
-  (session?.bills || []).reduce(
-    (sum, bill) => sum + (Number(bill.total_Guests ?? bill.total_count) || 0),
-    0,
-  );
+  (session?.bills || [])
+    .filter((bill) => String(bill.status).toUpperCase() !== "CANCELLED")
+    .reduce((sum, bill) => sum + (Number(bill.total_Guests ?? bill.total_count) || 0), 0);
 
 /**
  * Validate bill data before creation

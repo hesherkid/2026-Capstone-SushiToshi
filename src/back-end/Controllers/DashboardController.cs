@@ -142,6 +142,7 @@ namespace back_end.controllers
             Ended_At = session.Ended_At,
             First_Order_At = session.First_Order_At,
             Table_Numbers = GetTableNumbers(session),
+            Seat_Count = BillLinks.TableCapacity(session),
             Active_Participants = active_participants,
             Bills = session.Bills.Select(b => new DashBoardBillDTO
             {
@@ -150,8 +151,21 @@ namespace back_end.controllers
               Status = b.Status,
               Created_At = b.Created_At,
               Total_Guests = b.Total_Count,
-              Requested_At = b.Requested_At
+              Adult_Count = b.Adult_Count,
+              Senior_Count = b.Senior_Count,
+              Child_Count = b.Child_Count,
+              Tot_Count = b.Tot_Count,
+              Requested_At = b.Requested_At,
+              Started_By_Guest = b.Started_By_Guest,
+              Counts_Changed_By_Guest = b.Counts_Changed_By_Guest,
+              Counts_Locked = b.Counts_Locked,
+              People_On_Bill = session.Participants.Count(p => p.Left_At == null && p.Bill_Id == b.Bill_Id)
             }).ToList(),
+            People = session.Participants
+                .Where(p => p.Left_At == null)
+                .OrderBy(p => p.Joined_At)
+                .Select(p => new DashBoardPersonDTO { Participant_Id = p.Participant_Id, User_Name = p.User_Name, Bill_Id = p.Bill_Id })
+                .ToList(),
             Bill_Count = session.Bills.Count(),
             Is_Closable = Is_Closable
           };

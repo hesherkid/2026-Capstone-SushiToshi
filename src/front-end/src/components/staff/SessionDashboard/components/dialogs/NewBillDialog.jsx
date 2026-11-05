@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { Box, TextField, Alert, Typography } from "@mui/material";
 import FormDialog from "@/components/common/FormDialog";
 import { useSession } from "../../context/SessionContext";
-import { validateBillData } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import { overSeatsWarning, validateBillData } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import { tableLabel } from "../SessionColumns";
 import storage from "@/utils/storage";
 
@@ -52,6 +52,10 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
     formData.seniorCount,
     formData.totCount,
   ]);
+
+  // Staff can seat more than the table has (extra chairs), but confirm it by creating anyway
+  const seatWarning =
+    totalGuests > 0 ? overSeatsWarning(sessions?.find((s) => s.session_Id === Number(sessionId)), totalGuests) : null;
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -128,7 +132,7 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
       error={error?.submit}
       onErrorClose={() => setError(({ submit, ...rest }) => rest)}
       onSubmit={handleSubmit}
-      submitLabel="Create Bill"
+      submitLabel={seatWarning ? "Create Anyway" : "Create Bill"}
       busyLabel="Creating..."
       busy={submitting}
     >
@@ -176,6 +180,8 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
           Total Guests: {totalGuests}
         </Typography>
       </Box>
+
+      {seatWarning && <Alert severity="warning">{seatWarning}</Alert>}
     </FormDialog>
   );
 };

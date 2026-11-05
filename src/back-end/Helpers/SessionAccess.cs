@@ -38,6 +38,28 @@ namespace back_end.Helpers
                     sp.Session_Id == sessionId && sp.User_Id == userId && sp.Left_At == null);
         }
 
+        // Who may see, order onto or ask for one bill. Staff: any bill they can see the table of.
+        // Customers: only the bill their seat is linked to, so other parties' bills stay private
+        public static async Task<bool> CanUseBillAsync(ApplicationDbContext context, ClaimsPrincipal? user, int sessionId, int billId)
+        {
+            if (IsStaff(user)) return await CanViewSessionAsync(context, user, sessionId);
+            var myBill = await MyBillIdAsync(context, user, sessionId);
+            return myBill == billId;
+        }
+
+        // The bill a seated customer is linked to at this table, or null
+        public static async Task<int?> MyBillIdAsync(ApplicationDbContext context, ClaimsPrincipal? user, int sessionId)
+        {
+            if (user == null || !int.TryParse(ClaimsHelpers.GetUserId(user), out var userId)) return null;
+            return await context.SessionParticipants
+                .Where(sp => sp.Session_Id == sessionId && sp.User_Id == userId && sp.Left_At == null)
+                .Select(sp => sp.Bill_Id)
+                .FirstOrDefaultAsync();
+        }
+
+        public static bool IsStaff(ClaimsPrincipal? user) =>
+            user != null && (user.IsInRole("Admin") || user.IsInRole("Staff"));
+
         // Seated = the user hasn't left the table (Left_At == null) and the table's dining session 
         // is still open. Every active-session lookup uses this so the menu, orders, bill and 
         // service-request pages agree on where someone is sitting.

@@ -2,6 +2,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.DTO.bill;
+using back_end.DTO.SessionParticipantDTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -75,10 +76,16 @@ namespace back_end.controllers
     /// - Session must be active (not ended)
     /// - Session must have at least one table assigned
     /// - At least one guest (adult, senior, or child) must be specified
+    /// - A guest's bill can't take the table's open bills past its seats; staff's can,
+    ///   for a party that pulled up extra chairs
     /// 
     /// The bill is automatically created with 'Open' status.
+    ///
+    /// Guests seated at the table can start their own bill from their phone: they're put on it,
+    /// and it's marked Started_By_Guest so staff check the guest counts. A guest who has already
+    /// ordered on another open bill can't start a new one (staff can move them).
     /// </remarks>
-    [Authorize(Policy = "staffOnly")]
+    [Authorize]
     [HttpPost("create_Bill/{_session_id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -109,6 +116,24 @@ namespace back_end.controllers
           return BadRequest(new { message = $"Cannot create bill for session that ended {session.Ended_At}" });
         }
 
+        // A guest starting their own bill is put on it
+        SessionParticipant? seat = null;
+        if (!SessionAccess.IsStaff(User))
+        {
+          var userId = int.TryParse(ClaimsHelpers.GetUserId(User), out var parsed) ? parsed : 0;
+          seat = await _context.SessionParticipants.FirstOrDefaultAsync(sp =>
+              sp.Session_Id == _session_id && sp.User_Id == userId && sp.Left_At == null);
+          if (seat == null)
+          {
+            return Forbid();
+          }
+          var cantLeave = await BillLinks.CantLeaveReasonAsync(_context, seat);
+          if (cantLeave != null)
+          {
+            return BadRequest(new { message = cantLeave });
+          }
+        }
+
         // Check if session has either a table or table group assigned
         if (!session.Table_Id.HasValue && !session.TableGroup_Id.HasValue)
         {
@@ -133,32 +158,27 @@ namespace back_end.controllers
           return BadRequest(new { message = "Bill must have at least one guest in the session" });
         }
 
-        // Validate against table capacity
-        int tableCapacity = 0;
-        if (session.Table_Id.HasValue && session.Table != null)
+        // Guests can't seat more than the table has; staff can, for a party that pulled up extra chairs
+        if (seat != null)
         {
-          tableCapacity = session.Table.seat_count;
-        }
-        else if (session.TableGroup_Id.HasValue && session.TableGroup?.Tables != null)
-        {
-          tableCapacity = session.TableGroup.Tables.Sum(t => t.seat_count);
-        }
+          int tableCapacity = BillLinks.TableCapacity(session);
 
-        // Check total guest count across open bills in this session
-        var existingBillsGuestCount = await _context.Bills
-            .Where(b =>
-                b.Session_Id == _session_id &&
-                b.Status == BillStatus.Open
-            )
-            .SumAsync(b => b.Total_Count);
+          // Check total guest count across open bills in this session
+          var existingBillsGuestCount = await _context.Bills
+              .Where(b =>
+                  b.Session_Id == _session_id &&
+                  b.Status == BillStatus.Open
+              )
+              .SumAsync(b => b.Total_Count);
 
-        if (existingBillsGuestCount + totalCount > tableCapacity)
-        {
-          return BadRequest(new
+          if (existingBillsGuestCount + totalCount > tableCapacity)
           {
-            message = $"Total guest count ({existingBillsGuestCount + totalCount}) exceeds table capacity ({tableCapacity}). " +
-                      $"Current open bills: {existingBillsGuestCount} guests, New bill: {totalCount} guests."
-          });
+            return BadRequest(new
+            {
+              message = $"Total guest count ({existingBillsGuestCount + totalCount}) exceeds table capacity ({tableCapacity}). " +
+                        $"Current open bills: {existingBillsGuestCount} guests, New bill: {totalCount} guests."
+            });
+          }
         }
 
         var NewBill = new Billing
@@ -170,10 +190,15 @@ namespace back_end.controllers
           Child_Count = bill_data.Child_Count,
           Tot_Count = bill_data.Tot_Count,
           Total_Count = totalCount,
-          Status = BillStatus.Open
+          Status = BillStatus.Open,
+          Started_By_Guest = seat != null
         };
 
         _context.Bills.Add(NewBill);
+        if (seat != null)
+        {
+          seat.Bill = NewBill;
+        }
         await _context.SaveChangesAsync();
         await _context.Entry(NewBill).ReloadAsync();
 
@@ -250,6 +275,13 @@ namespace back_end.controllers
         }
 
         var billQuery = _context.Bills.Where(b => b.Session_Id == _session_id);
+
+        // Customers only see their own bill; other parties' bills are private
+        if (!SessionAccess.IsStaff(User))
+        {
+          var myBillId = await SessionAccess.MyBillIdAsync(_context, User, _session_id);
+          billQuery = billQuery.Where(b => b.Bill_Id == myBillId);
+        }
 
         // If table_id is specified, validate it belongs to the session
         if (_table_id.HasValue)
@@ -329,7 +361,7 @@ namespace back_end.controllers
     {
       try
       {
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
         {
           return Forbid();
         }
@@ -368,6 +400,261 @@ namespace back_end.controllers
       {
         _logger.LogError(ex, "Error getting bill for session {SessionId}", _session_id);
         return StatusCode(500, new { message = "Error getting bill" });
+      }
+    }
+
+    /// <summary>
+    /// Staff: changes an open bill's guest counts.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/guest_counts/123?_session_id=456
+    ///     { "adult_count": 3, "senior_count": 0, "child_count": 1, "tot_count": 0 }
+    ///
+    /// At least one guest. Can go past the table's seats, for a party that pulled up extra chairs.
+    /// Works after the guests have asked for the bill.
+    /// Staff have now checked the counts, so the bill's Started_By_Guest and
+    /// Counts_Changed_By_Guest flags are cleared.
+    /// </remarks>
+    /// <response code="200">The bill with its new counts.</response>
+    /// <response code="400">The bill isn't open, or the counts aren't valid.</response>
+    /// <response code="403">The table is at another location.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPut("guest_counts/{_bill_id}")]
+    [ProducesResponseType(typeof(BillResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update_Guest_Counts(int _session_id, int _bill_id, UpdateGuestCountsDTO counts)
+    {
+      try
+      {
+        // So nobody can close the bill, or change its count, while this saves
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+        var bill = await _context.Bills
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+        if (bill == null)
+        {
+          return NotFound(new { message = "Bill or session was not found" });
+        }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, bill.Session_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+        if (bill.Status != BillStatus.Open)
+        {
+          return BadRequest(new { message = $"Only open bills can be changed (this bill is {bill.Status})." });
+        }
+
+        int total = counts.Adult_Count + counts.Senior_Count + counts.Child_Count + counts.Tot_Count;
+        var problem = await BillLinks.GuestCountProblemAsync(_context, bill, total, byStaff: true);
+        if (problem != null)
+        {
+          return BadRequest(new { message = problem });
+        }
+
+        BillLinks.SetCounts(bill, counts.Adult_Count, counts.Senior_Count, counts.Child_Count, counts.Tot_Count);
+        bill.Started_By_Guest = false;
+        bill.Counts_Changed_By_Guest = false;
+        await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
+
+        return Ok(new BillResponse
+        {
+          Bill_Id = bill.Bill_Id,
+          Session_Id = bill.Session_Id,
+          Bill_Name = bill.Bill_Name,
+          Senior_Count = bill.Senior_Count,
+          Adult_Count = bill.Adult_Count,
+          Child_Count = bill.Child_Count,
+          Tot_Count = bill.Tot_Count,
+          Total_Count = bill.Total_Count,
+          Status = bill.Status.ToString(),
+          Created_At = bill.Created_At,
+          Closed_At = bill.Closed_At,
+          Table_Numbers = GetTableNumbers(bill.DiningSession)
+        });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error changing guest counts on bill {BillId}", _bill_id);
+        return StatusCode(500, new { message = "Error changing guest counts" });
+      }
+    }
+
+    /// <summary>
+    /// Staff: locks an open bill's guest counts so guests can't change them from their phones, or unlocks them.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/lock_guest_counts/123?_session_id=456
+    ///     { "locked": true }
+    ///
+    /// Locking means staff have checked the counts, so it also clears the bill's Started_By_Guest
+    /// and Counts_Changed_By_Guest flags. Staff can still change locked counts with Edit Guests.
+    /// </remarks>
+    /// <response code="200">The bill is locked or unlocked.</response>
+    /// <response code="400">The bill isn't open.</response>
+    /// <response code="403">The table is at another location.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPut("lock_guest_counts/{_bill_id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Lock_Guest_Counts(int _session_id, int _bill_id, LockGuestCountsDTO request)
+    {
+      try
+      {
+        // So a guest's change can't save in between
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+        var bill = await _context.Bills
+            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+        if (bill == null)
+        {
+          return NotFound(new { message = "Bill or session was not found" });
+        }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, bill.Session_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+        if (bill.Status != BillStatus.Open)
+        {
+          return BadRequest(new { message = $"Only open bills can be changed (this bill is {bill.Status})." });
+        }
+
+        bill.Counts_Locked = request.Locked;
+        if (request.Locked)
+        {
+          bill.Started_By_Guest = false;
+          bill.Counts_Changed_By_Guest = false;
+        }
+        await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
+
+        return Ok(new { bill_id = bill.Bill_Id, counts_locked = bill.Counts_Locked });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error locking guest counts on bill {BillId}", _bill_id);
+        return StatusCode(500, new { message = "Error locking guest counts" });
+      }
+    }
+
+    /// <summary>
+    /// Staff: merges an open bill into another open bill at the same table, e.g. when everyone wants one bill.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/bill/merge/123?_session_id=456
+    ///     { "into_bill_id": 124 }
+    ///
+    /// Everything on bill 123 moves to bill 124: everyone on it, all of its orders that aren't
+    /// cancelled (including ones staff placed and ones from people who have left), its leftover
+    /// fee, and its guest counts, so guests who never joined on a phone move too. The table's total
+    /// doesn't change, so the seat limit still holds. Bill 123 is then cancelled, with nothing on it.
+    /// </remarks>
+    /// <response code="200">The bill everything moved to, with its new counts.</response>
+    /// <response code="400">Either bill isn't open, they're the same bill, or the other bill isn't at this table.</response>
+    /// <response code="403">The table is at another location.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPut("merge/{_bill_id}")]
+    [ProducesResponseType(typeof(BillResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Merge_Bill(int _session_id, int _bill_id, MergeBillDTO request)
+    {
+      try
+      {
+        if (request.Into_Bill_Id == _bill_id)
+        {
+          return BadRequest(new { message = "Pick another bill to merge into." });
+        }
+
+        // Nobody can order onto, close or change either bill while everything moves
+        await using var billLock = await BillLock.LockAsync(_context, _bill_id, request.Into_Bill_Id);
+        var from = await _context.Bills
+            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+        if (from == null)
+        {
+          return NotFound(new { message = "Bill or session was not found" });
+        }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, from.Session_Id))
+        {
+          return LocationResults.OtherLocation();
+        }
+
+        var into = await _context.Bills
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
+            .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
+            .FirstOrDefaultAsync(b => b.Bill_Id == request.Into_Bill_Id);
+        if (into == null || into.Session_Id != _session_id)
+        {
+          return BadRequest(new { message = "That bill isn't at this table." });
+        }
+        foreach (var bill in new[] { from, into })
+        {
+          if (bill.Status != BillStatus.Open)
+          {
+            return BadRequest(new { message = $"{bill.Bill_Name} is already {bill.Status.ToString().ToLower()}." });
+          }
+        }
+
+        var orders = await _context.SessionOrders
+            .Where(o => o.Bill_Id == from.Bill_Id && o.Status != OrderStatus.Cancelled)
+            .ToListAsync();
+        orders.ForEach(o => o.Bill_Id = into.Bill_Id);
+
+        // Everyone who was on it, including people who have left, so nothing points at the cancelled bill
+        var seats = await _context.SessionParticipants
+            .Where(sp => sp.Session_Id == _session_id && sp.Bill_Id == from.Bill_Id)
+            .ToListAsync();
+        seats.ForEach(sp => sp.Bill_Id = into.Bill_Id);
+
+        BillLinks.SetCounts(into,
+            into.Adult_Count + from.Adult_Count,
+            into.Senior_Count + from.Senior_Count,
+            into.Child_Count + from.Child_Count,
+            into.Tot_Count + from.Tot_Count);
+        into.Leftover_Charge += from.Leftover_Charge;
+        from.Leftover_Charge = 0m;
+
+        // Cancelled bills don't count towards guests or turnover, so its counts can stay as a record
+        from.Status = BillStatus.Cancelled;
+        from.Closed_At = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
+
+        return Ok(new BillResponse
+        {
+          Bill_Id = into.Bill_Id,
+          Session_Id = into.Session_Id,
+          Bill_Name = into.Bill_Name,
+          Senior_Count = into.Senior_Count,
+          Adult_Count = into.Adult_Count,
+          Child_Count = into.Child_Count,
+          Tot_Count = into.Tot_Count,
+          Total_Count = into.Total_Count,
+          Status = into.Status.ToString(),
+          Created_At = into.Created_At,
+          Closed_At = into.Closed_At,
+          Requested_At = into.Requested_At,
+          Table_Numbers = GetTableNumbers(into.DiningSession)
+        });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error merging bill {BillId} into {IntoBillId}", _bill_id, request.Into_Bill_Id);
+        return StatusCode(500, new { message = "Error merging bills" });
       }
     }
 
@@ -630,11 +917,11 @@ namespace back_end.controllers
     /// <remarks>
     /// Marks the bill as requested, which stops any more orders being placed on it, and sends staff a
     /// "Ready for bill" service request. Asking again is safe: it returns the original request time.
-    /// Only guests seated at the table (or staff) can ask.
+    /// Only guests on this bill (or staff) can ask.
     /// </remarks>
     /// <response code="200">The bill is requested; returns when it was first requested.</response>
     /// <response code="400">The bill isn't open.</response>
-    /// <response code="403">The caller isn't seated at this table.</response>
+    /// <response code="403">The caller isn't on this bill.</response>
     /// <response code="404">The bill or session was not found.</response>
     [HttpPost("request_bill/{_bill_id}")]
     [Authorize]
@@ -642,7 +929,7 @@ namespace back_end.controllers
     {
       try
       {
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
         {
           return Forbid();
         }
@@ -704,12 +991,12 @@ namespace back_end.controllers
     /// <returns>
     /// An <see cref="IActionResult"/> containing the cancelled <see cref="BillResponse"/> object.
     /// Returns HTTP 200 (OK) with the cancelled bill details on success.
-    /// Returns HTTP 400 (Bad Request) if the bill is not in Open status.
+    /// Returns HTTP 400 (Bad Request) if the bill is not in Open status, or has orders being made or served.
     /// Returns HTTP 404 (Not Found) if the bill or session doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during cancellation.
     /// </returns>
     /// <response code="200">Returns the cancelled bill details</response>
-    /// <response code="400">If the bill cannot be cancelled (not in Open status)</response>
+    /// <response code="400">If the bill cannot be cancelled (not in Open status, or has orders being made or served)</response>
     /// <response code="404">If the bill or session is not found</response>
     /// <response code="500">If an internal error occurs while cancelling the bill</response>
     /// <remarks>
@@ -718,7 +1005,8 @@ namespace back_end.controllers
     ///     POST /api/bill/cancel_bill/123?_session_id=456
     ///
     /// Cancels the specified bill and automatically cancels all pending orders associated with it.
-    /// Only bills with 'Open' status can be cancelled.
+    /// Only bills with 'Open' status can be cancelled, and only if none of their orders are being made
+    /// or have been served: those still have to be paid for, so merge or close the bill instead.
     /// The bill's closed_at timestamp is set to the current UTC time.
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
@@ -749,6 +1037,18 @@ namespace back_end.controllers
         if (bill.Status != BillStatus.Open)
         {
           return BadRequest(new { message = $"Cannot cancel bill with status {bill.Status}" });
+        }
+
+        // Food that's being made or has gone out still has to be paid for, and a cancelled bill is never charged
+        var madeOrders = await _context.SessionOrders
+            .CountAsync(o => o.Bill_Id == _bill_id && (o.Status == OrderStatus.Processing || o.Status == OrderStatus.Delivered));
+        if (madeOrders > 0)
+        {
+          return BadRequest(new
+          {
+            message = $"{bill.Bill_Name} has {madeOrders} order{(madeOrders == 1 ? "" : "s")} being made or served. " +
+              "Merge it into another bill, or close it, instead of cancelling it."
+          });
         }
 
         var pendingOrders = await _context.SessionOrders
@@ -844,6 +1144,7 @@ namespace back_end.controllers
             )
             .Where(x =>
                 x.participant.User_Id == userId &&
+                x.participant.Bill_Id == x.bill.Bill_Id && // Only the bill they're on
                 x.participant.Left_At == null &&  // User hasn't left
                 x.bill.DiningSession.Ended_At == null        // Session is active
             )
@@ -897,8 +1198,8 @@ namespace back_end.controllers
     {
       try
       {
-        // Staff, or customers seated at this table (see SessionAccess)
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        // Staff, or customers on this bill (see SessionAccess)
+        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
         {
           return Forbid();
         }
