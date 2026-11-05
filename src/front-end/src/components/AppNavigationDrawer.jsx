@@ -87,7 +87,7 @@ const isCurrentPath = (pathname, path) =>
     : pathname === path || pathname.startsWith(`${path}/`);
 
 const AppNavigationDrawer = ({ id, open, role, onClose, onLogout }) => {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
 
   return (
     <Drawer

@@ -414,7 +414,7 @@ describe("Removing a tag from the grid", () => {
 
   const clickTagX = async (tagName) => {
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
-    const chip = within(row).getByRole("button", { name: tagName });
+    const chip = within(row).getByRole("button", { name: `Remove ${tagName}` });
     fireEvent.click(chip.querySelector(".MuiChip-deleteIcon"));
   };
 
