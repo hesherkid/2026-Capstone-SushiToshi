@@ -159,7 +159,7 @@ The frontend is Next.js with the App Router, React 19 and MUI. All pages are cli
 | Area      | Routes                                                                                                    |
 | --------- | --------------------------------------------------------------------------------------------------------- |
 | Everyone  | `/` (home, different for each role), `/auth/*` (login, register, verify email, forgot/reset password)    |
-| Customers | `/menu/full-menu`, `/menu/review`, `/dashboard/orders`, `/dashboard/bills`, `/dashboard/call-server`, `/thank-you` |
+| Customers | `/menu/full-menu`, `/menu/review`, `/dashboard/orders`, `/dashboard/bills`, `/dashboard/call-server`, `/thank-you`; with an account only: `/menu/browse` (the menu before being seated, no ordering), `/visits` |
 | Staff     | `/staff/dashboard/sessions`, `/staff/dashboard/tables`, `/staff/dashboard/orders`                         |
 | Admins    | `/admin/*` (staff, customers, menu items, categories, pricing, holidays, QR codes), `/location/menu-location`, `/tags/tag-management`, `/analytics/*` |
 

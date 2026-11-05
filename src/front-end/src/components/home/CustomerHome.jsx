@@ -16,6 +16,7 @@ import storage from "@/utils/storage";
 const MENU_PATH = "/menu/full-menu";
 const LOGIN_PATH = "/auth/login";
 const VISITS_PATH = "/visits";
+const BROWSE_PATH = "/menu/browse";
 // Log out waits on the visit ending, so this page checks sooner than the 15 s watcher
 const SEATED_CHECK_MS = 5000;
 
@@ -42,6 +43,33 @@ const savedFirstName = () => {
     return "";
   }
 };
+
+// One tappable row in a card, e.g. Past visits
+const LinkRow = ({ symbol, title, text, onClick, divided = false }) => (
+  <ButtonBase
+    onClick={onClick}
+    sx={{
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      gap: 2,
+      px: 2.5,
+      py: 2,
+      textAlign: "left",
+      borderTop: divided ? "1px solid" : "none",
+      borderColor: "divider",
+    }}
+  >
+    <MaterialSymbol name={symbol} size={26} sx={{ color: "primary.main", flexShrink: 0 }} />
+    <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Typography sx={{ fontWeight: 600, lineHeight: 1.3 }}>{title}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+        {text}
+      </Typography>
+    </Box>
+    <MaterialSymbol name="chevron_right" size={24} sx={{ color: "text.secondary" }} />
+  </ButtonBase>
+);
 
 /**
  * Home page for registered customers: how to get started (scan the QR code). Guests go
@@ -140,21 +168,24 @@ const CustomerHome = () => {
         </Box>
       </Paper>
 
-      {/* ---- Past visits ---- */}
+      {/* ---- Your account: the menu before you visit, and past visits ---- */}
       <Paper variant="outlined" sx={{ mt: 2, borderRadius: 3, overflow: "hidden" }}>
-        <ButtonBase
+        {/* Seated customers use their table's menu, from the button below */}
+        {!seated && (
+          <LinkRow
+            symbol="menu_book_2"
+            title="View the menu"
+            text="See what's on before you visit"
+            onClick={() => router.push(BROWSE_PATH)}
+          />
+        )}
+        <LinkRow
+          symbol="history"
+          title="Past visits"
+          text="What you ordered and what you paid"
           onClick={() => router.push(VISITS_PATH)}
-          sx={{ width: "100%", display: "flex", alignItems: "center", gap: 2, px: 2.5, py: 2, textAlign: "left" }}
-        >
-          <MaterialSymbol name="history" size={26} sx={{ color: "primary.main", flexShrink: 0 }} />
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 600, lineHeight: 1.3 }}>Past visits</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-              What you ordered and what you paid
-            </Typography>
-          </Box>
-          <MaterialSymbol name="chevron_right" size={24} sx={{ color: "text.secondary" }} />
-        </ButtonBase>
+          divided={!seated}
+        />
       </Paper>
 
       {/* ---- Account: log out only between visits ---- */}

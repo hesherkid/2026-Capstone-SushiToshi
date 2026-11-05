@@ -247,6 +247,24 @@ describe("FullMenu guest flow", () => {
     ).toHaveLength(1);
     expect(screen.getByRole("alert")).toHaveClass("MuiAlert-standardInfo");
     expect(screen.queryByText("All You Can Eat Menu")).not.toBeInTheDocument();
+    // Browsing before being seated is for customers with an account
+    expect(screen.queryByRole("button", { name: "Browse the menu" })).not.toBeInTheDocument();
+  });
+
+  it("lets customers with an account who aren't seated browse the menu", async () => {
+    localStorage.clear();
+    const claims = { role: "Customer", exp: Math.floor(Date.now() / 1000) + 3600 };
+    localStorage.setItem("authToken", `x.${btoa(JSON.stringify(claims))}.x`);
+    const seatedMock = api.get.getMockImplementation();
+    api.get.mockImplementation((url, config) =>
+      url === "/DiningSession/participants/active-session-id"
+        ? Promise.reject({ response: { status: 404 } })
+        : seatedMock(url, config),
+    );
+    render(<FullMenu />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Browse the menu" }));
+    expect(mockPush).toHaveBeenCalledWith("/menu/browse");
   });
 
   it("ignores a stale session_id left in the browser", async () => {
