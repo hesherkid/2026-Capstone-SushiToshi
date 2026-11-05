@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -503,6 +504,21 @@ describe("LoginForm", () => {
           { headers: { Authorization: `Bearer ${token}` } },
         );
         expect(loginUser).not.toHaveBeenCalled();
+      });
+
+      // Strict Mode runs effects twice; two joins at once used to seat the customer twice
+      it("joins only once when the page mounts twice", async () => {
+        getAuthToken.mockReturnValue(tokenFor({ [ROLE]: "Customer" }));
+        api.post.mockResolvedValue({ data: { session_Id: 55 } });
+
+        render(
+          <StrictMode>
+            <LoginForm />
+          </StrictMode>,
+        );
+
+        await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu"));
+        expect(api.post).toHaveBeenCalledTimes(1);
       });
 
       it("offers Try again when the table hasn't been started yet", async () => {
