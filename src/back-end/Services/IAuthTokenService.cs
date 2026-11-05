@@ -18,4 +18,9 @@ public interface IAuthTokenService
     Task<bool> TryConsumeAsync(
         AuthActionToken token,
         CancellationToken ct = default);
+
+    // Makes every unused link already sent to the user stop working
+    Task RevokeAllAsync(
+        int userId,
+        CancellationToken ct = default);
 }

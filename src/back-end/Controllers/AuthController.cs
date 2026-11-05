@@ -531,6 +531,14 @@ namespace back_end.controllers
                     // Existing user - update info if needed
                     user = existingUser;
 
+                    // Anyone could have registered this email and set its password before it was
+                    // verified. Google just proved who owns it, so drop that password and any links
+                    // already sent, or the old verify link would let that password log in.
+                    if (GoogleAccounts.ClaimUnverified(user))
+                    {
+                        await _tokenService.RevokeAllAsync(user.User_id);
+                    }
+
                     // Fill in only the parts the account is missing and Google has
                     if (string.IsNullOrEmpty(user.First_name) && firstName.Length > 0)
                     {

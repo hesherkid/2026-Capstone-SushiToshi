@@ -109,6 +109,20 @@ public sealed class AuthTokenService : IAuthTokenService
         return updated == 1;
     }
 
+    public async Task RevokeAllAsync(
+        int userId,
+        CancellationToken ct = default)
+    {
+        await _db.AuthActionTokens
+            .Where(x =>
+                x.UserId == userId &&
+                x.UsedAt == null)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(
+                    x => x.UsedAt, DateTime.UtcNow),
+                ct);
+    }
+
     private static string Hash(string token)
     {
         return Convert.ToHexString(
