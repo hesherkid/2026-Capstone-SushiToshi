@@ -498,7 +498,7 @@ namespace back_end.controllers
 
                 // Extract user info from verified token
                 string userEmail = payload.Email.ToLower().Trim();
-                string userName = payload.Name;
+                var (firstName, lastName) = GoogleNames.FromPayload(payload);
                 string userPicture = payload.Picture;
                 string googleId = payload.Subject;
                 bool emailVerified = payload.EmailVerified;
@@ -531,9 +531,15 @@ namespace back_end.controllers
                     // Existing user - update info if needed
                     user = existingUser;
 
-                    if (string.IsNullOrEmpty(user.First_name))
+                    // Fill in only the parts the account is missing and Google has
+                    if (string.IsNullOrEmpty(user.First_name) && firstName.Length > 0)
                     {
-                        user.First_name = userName;
+                        user.First_name = firstName;
+                    }
+
+                    if (string.IsNullOrEmpty(user.Last_name) && lastName.Length > 0)
+                    {
+                        user.Last_name = lastName;
                     }
 
                     if (string.IsNullOrEmpty(user.GoogleSocial))
@@ -549,7 +555,8 @@ namespace back_end.controllers
                     user = new domain.Entities.User
                     {
                         Email = userEmail,
-                        First_name = userName,
+                        First_name = firstName,
+                        Last_name = lastName,
                         GoogleSocial = googleId,
                         Is_email_confirmed = emailVerified,
                         Created_at = DateTime.UtcNow
