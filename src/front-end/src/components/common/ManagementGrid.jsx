@@ -33,10 +33,15 @@ export const ManagementGrid = ({
       {...props}
       sx={{
         bgcolor: "background.paper",
-        "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within":
-          {
+        "& .MuiDataGrid-cell, & .MuiDataGrid-columnHeader": {
+          "&:focus, &:focus-within": {
             outline: "none",
           },
+          "&:focus-visible, &:has(:focus-visible)": {
+            outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "-2px",
+          },
+        },
         ...sx,
       }}
     />
