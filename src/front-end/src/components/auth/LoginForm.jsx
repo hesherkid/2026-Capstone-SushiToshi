@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import {
   Box,
   Button,
@@ -58,6 +58,8 @@ const LoginFormContent = () => {
   const [joinFailed, setJoinFailed] = useState(false);
   // A signed-in customer scanned a table's QR code and is being joined to it
   const [joiningTable, setJoiningTable] = useState(false);
+  // The table the signed-in customer was already joined to automatically ("locationId:tableNumber")
+  const autoJoinedTable = useRef(null);
 
   // Keep the context from the restaurant QR code.
   const locationId = searchParams.get("locationId");
@@ -303,6 +305,11 @@ const LoginFormContent = () => {
   // Continue as Guest, and staff accounts never join a table this way
   useEffect(() => {
     if (!locationId || !tableNumber) return;
+
+    // Effects run twice on mount in development; join each scanned table only once
+    const table = `${locationId}:${tableNumber}`;
+    if (autoJoinedTable.current === table) return;
+    autoJoinedTable.current = table;
 
     const token = getAuthToken();
     if (!token || isTokenExpired(token) || storage.get("guest") === "true") return;
