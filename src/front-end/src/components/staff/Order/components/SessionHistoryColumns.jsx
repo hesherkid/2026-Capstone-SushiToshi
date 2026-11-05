@@ -1,7 +1,7 @@
 import { Eye } from "lucide-react";
 import { actionsColumn } from "@/components/common/RowActions";
 import { parseUtcDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
-import { tableLabel } from "./OrderColumns";
+import { StatusChip, tableLabel } from "./OrderColumns";
 
 export const currency = new Intl.NumberFormat("en-CA", {
   style: "currency",
@@ -14,7 +14,8 @@ export const dateTime = new Intl.DateTimeFormat("en-CA", {
   timeStyle: "short",
 });
 
-// One row per dining session in the History tab. Read-only: the only action is View
+export const billLabel = (bill) => bill.billName || `Bill #${bill.billId}`;
+
 export const getSessionHistoryColumns = ({ view }) => [
   {
     field: "tableNumbers",
@@ -85,4 +86,44 @@ export const getSessionHistoryColumns = ({ view }) => [
     ],
     { width: 80 },
   ),
+];
+
+export const toOrderItemRows = (order) =>
+  order.items.map((item, index) => ({
+    id: item.orderItemId ?? item.itemId ?? index,
+    item: item.name,
+    quantity: item.quantity,
+    price: item.price > 0 ? item.price * item.quantity : null,
+    status: item.status,
+  }));
+
+export const getOrderItemColumns = () => [
+  { field: "item", headerName: "Item", flex: 2, minWidth: 160 },
+  {
+    field: "quantity",
+    headerName: "Qty",
+    type: "number",
+    align: "left",
+    headerAlign: "left",
+    flex: 0.5,
+    minWidth: 70,
+  },
+  {
+    field: "price",
+    headerName: "Price",
+    type: "number",
+    align: "left",
+    headerAlign: "left",
+    flex: 0.7,
+    minWidth: 90,
+    valueFormatter: (value) =>
+      value == null ? "Included" : currency.format(value),
+  },
+  {
+    field: "status",
+    headerName: "Status",
+    flex: 0.8,
+    minWidth: 120,
+    renderCell: ({ value }) => <StatusChip status={value} />,
+  },
 ];
