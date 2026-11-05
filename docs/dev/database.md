@@ -7,7 +7,7 @@ The app uses MariaDB, run locally in Docker, with Entity Framework Core (Pomelo 
 - **Schema** lives in C# entity classes in `src/back-end/domain/Entities/`, configured in `src/back-end/domain/Dbcontexts/ApplicationContext.cs` (`ApplicationDbContext`).
 - **Migrations** live in `src/back-end/Migrations/`.
 - **Seed data** comes from the seeders in `src/back-end/domain/Seeders/`, run by `DatabaseSeeder`.
-- **ERD**: [architecture/erd.drawio](architecture/erd.drawio). It doesn't yet include the tables added in October 2026 (menu item views, pricing, holidays, staff locations), so check the entity classes for the current schema.
+- **ERD**: [architecture/erd.drawio](architecture/erd.drawio). It doesn't yet include the tables added in October 2026 (menu item views, pricing, holidays, staff locations) or the November 2026 bill links (`session_participant.Bill_Id` and the guest-count flags on `bills`), so check the entity classes for the current schema.
 
 ## The local database
 

@@ -29,9 +29,9 @@ MariaDB (Docker)            :3307   sushi_toshi_db
 | Location                     | A restaurant branch. Almost everything belongs to one                                                        | `Location`                                     |
 | Table / table group          | A physical table, or tables pushed together for one party                                                    | `TableEntity`, `TableGroup`                    |
 | Dining session               | One party's visit at a table or table group, from when staff seat them until they close the bill             | `DiningSession`                                |
-| Session participant          | A person at that table. Each customer and each guest is their own participant                                | `SessionParticipant`                           |
+| Session participant          | A person at that table. Each customer and each guest is their own participant, linked to the one bill they order on (`Bill_Id`) | `SessionParticipant`                           |
 | Session order / order item   | One round of ordering and the items in it                                                                    | `SessionOrder`, `OrderItem`                    |
-| Bill                         | What a party pays, priced from the location's pricing profile                                                | `Bill`                                         |
+| Bill                         | What one party at the table pays, priced per guest from the location's pricing profile. A session can have several | `Billing` (`bills` table)                      |
 | Service request              | "Call server" requests from the table                                                                        | `ServiceRequest`                               |
 | Menu / menu item / assignment | Items are grouped into menus. An assignment puts an item on a menu, optionally with a location-specific override | `Menu`, `MenuItem`, `MenuItemAssignment`      |
 | Pricing profile / rate       | All-you-can-eat prices per day type (weekday, weekend, holiday), GST, gratuity and leftover fee. A default profile, with optional per-location overrides | `PricingProfile`, `PricingRate` |
@@ -53,7 +53,7 @@ All sign-in endpoints are in `AuthController` under `/api/auth`. Each one return
 
 There are also endpoints for verifying email, resending verification, and forgot/reset password. All of these are rate limited per IP address (see **Rate limits** below).
 
-**The token** contains the user's ID, email and role. Regular tokens last `Jwt:ExpiresInMinutes` (120). Guest tokens last 6 hours (`Jwt:GuestExpiresInMinutes`) and carry a `guest` claim. The signing key is `Jwt:Key`. Only `appsettings.Development.json` has one; production sets its own with the `Jwt__Key` environment variable (see [production setup](../../setup/production-setup.md)).
+**The token** contains the user's ID, email and role. How long a token lasts depends on the role: staff 12 hours (`Jwt:StaffExpiresInMinutes`, about a shift, so the dashboard doesn't log them out mid-service), admins 2 hours (`Jwt:AdminExpiresInMinutes`), and customers 2 hours (`Jwt:ExpiresInMinutes`). Guest tokens last 6 hours (`Jwt:GuestExpiresInMinutes`) and carry a `guest` claim. The signing key is `Jwt:Key`. Only `appsettings.Development.json` has one; production sets its own with the `Jwt__Key` environment variable (see [production setup](../../setup/production-setup.md)).
 
 **In the browser**, the token is stored in `localStorage` (`authToken`). The shared axios instance in `src/front-end/src/config/api.js` adds it to every request as `Authorization: Bearer ...`. On a 401 it clears the token and sends the user to `/auth/login`. Calls that must not send a token, such as before sign-in, use `config/publicApi.js`.
 
@@ -92,9 +92,17 @@ Staff work at one location at a time. Admins can work at any location.
 
 Return the standard 403 responses from `Helpers/LocationResults.cs` so the frontend shows consistent messages. `StaffLocationLockTests.cs` shows the expected behaviour for each controller.
 
-### Customers are limited to their table
+### Customers are limited to their table and their bill
 
-Customers aren't limited by location. Instead, they can only see the session they're seated in. `Helpers/SessionAccess.cs` checks this for bills and service requests, so changing an ID in the URL can't show another table's bill.
+Customers aren't limited by location. Instead, they can only see the session they're seated in, and within it only the bill they're on. `Helpers/SessionAccess.cs` has the checks, so changing an ID in the URL can't show another table's bill or another party's:
+
+| Method                | Use it when                                                                                              |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `CanViewSessionAsync` | The endpoint is about the whole table, e.g. service requests. Staff pass if they can see the location   |
+| `CanUseBillAsync`     | The endpoint reads, orders onto or requests one bill. Staff pass for any bill at a table they can see; customers only for their own bill |
+| `MyBillIdAsync`       | You need the bill a seated customer is on (null until they pick one), e.g. to filter a list to it        |
+
+Other parties' bills only ever show a customer their name and party size (`GET /api/sessionparticipant/{session_id}/bill`), so they can pick which one to join.
 
 ## The customer flow: from QR code to ordering
 
@@ -104,8 +112,46 @@ Customers aren't limited by location. Instead, they can only see the session the
 4. **The customer signs in, registers, or continues as a guest.**
 5. **The frontend joins them to the table** with `POST /api/DiningSession/join`. If the table is in a group, they join the group's session. If staff haven't started the table yet, they're asked to get staff to start it. Joining a new table leaves any table they were at before.
 6. **They're sent to the menu** (`/menu/full-menu`). Orders, service requests and the bill all use that session.
+7. **They pick their bill.** A guest who isn't on a bill yet sees `components/menu/BillChoiceDialog.jsx` and either joins one of the table's open bills or starts one for their party, then checks its guest count. They can't order until they're on a bill. If they rescan after their bill was closed or cancelled, `join` takes them off it so they pick again.
 
 Old QR codes that link to `/join` or `/start-session` still work. Those pages forward to `/auth/login` (`components/auth/QrLoginRedirect.jsx`).
+
+## Bills and who's on them
+
+A table can have several bills, one per party paying separately. Each `SessionParticipant` has a nullable `Bill_Id` for the bill they order on and can see. Deleting a bill sets it back to null.
+
+**Guests** manage their own link through `SessionParticipantController`. `TableOrderContext` loads it on the menu pages and the orders page.
+
+| Endpoint                                              | What it does                                                                                         |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `GET /api/sessionparticipant/{session_id}/bill`       | Their bill (with counts by guest type) and the table's open bills (name and party size only)         |
+| `PUT /api/sessionparticipant/{session_id}/bill`       | Join an open bill                                                                                    |
+| `PUT /api/sessionparticipant/{session_id}/bill/guests` | Change their own bill's guest counts                                                                 |
+| `POST /api/bill/create_Bill/{session_id}`             | Start a bill. A guest is put on it, and it's marked `Started_By_Guest`                               |
+
+**Staff** manage everyone's from the Dining Session dialog (`components/staff/SessionDashboard`):
+
+| Endpoint                                                                   | What it does                                                                      |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `PUT /api/bill/guest_counts/{bill_id}`                                     | Edit Guests. Clears both "by guest" flags                                         |
+| `PUT /api/bill/lock_guest_counts/{bill_id}`                                | Lock or unlock the counts (`Counts_Locked`). Locking clears both "by guest" flags |
+| `PUT /api/bill/merge/{bill_id}`                                            | Move people, non-cancelled orders, leftover fee and counts to another open bill, then cancel this one |
+| `PUT /api/sessionparticipant/{session_id}/participants/{participant_id}/bill` | Move someone, optionally with their orders (`move_orders`) and guests from the old bill's count (`guest_type`, `guest_count`) |
+
+`GET /api/dashboard/sessions` sends each bill's counts, flags and `People_On_Bill`, the table's `Seat_Count`, and the `People` at the table, so the dashboard can show who's on which bill and which counts need checking.
+
+The rules live in `Helpers/BillLinks.cs`:
+
+- **Leaving a bill** (`CantLeaveReasonAsync`): a guest can switch bills until they've ordered on their current open bill, or staff have locked its counts. After that only staff can move them.
+- **Joining a bill** (`CantJoinReason`): only open bills at their table that haven't asked for the bill.
+- **Guest counts** (`GuestCountProblemAsync`): every bill needs at least one guest. A guest can't take the table's open bills past its seats (`TableCapacity`, summed across a table group), but can always lower their count. Staff can go past the seats; the frontend warns them first.
+- **Flags staff should check:** `Started_By_Guest` and `Counts_Changed_By_Guest` on `Billing`, plus more people on a bill than its guest count. The sessions table shows a **Check guests** chip for any of these (`billNeedsGuestCheck` in `SessionColumns.jsx`).
+
+**Customer orders are per bill.** `OrderController` only lets a customer place, add to or view orders on their own bill, and `GET /api/order/session/{sessionId}` returns only their bill's orders. On `/dashboard/orders`, "All orders" means everyone on their bill. The My orders / All orders tabs are hidden when nobody else is on it.
+
+**Concurrent changes:** anything that changes a bill's orders or counts takes a row lock first with `Helpers/BillLock.cs` (`SELECT ... FOR UPDATE` in a transaction), so an order can't land on a bill while staff close, merge or recount it. Lock several bills with the `params` overload, which locks in ID order to avoid deadlocks. Call it before reading anything. The in-memory test database has no locks, so it returns null there.
+
+**Cancelling a bill** (`POST /api/bill/cancel_bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
 
 ## Where things live
 
@@ -116,7 +162,7 @@ Old QR codes that link to `/join` or `/start-session` still work. Those pages fo
 | `Program.cs`           | Startup: services, JWT, policies, rate limits, CORS, Swagger, and database migration and seeding on start |
 | `Controllers/`         | API endpoints, one controller per area. `Analytics/` has the four analytics report controllers             |
 | `Services/`            | Logic shared between controllers: pricing, holidays, location access, auth emails, QR codes (`QrCode/`), analytics queries (`Analytics/`) |
-| `Helpers/`             | Small pure rules, mostly static: bill calculation, order limits, leftover fees, guest accounts, claims, session access |
+| `Helpers/`             | Small pure rules, mostly static: bill calculation, order limits, leftover fees, guest accounts, claims, session access, bill links and bill locks |
 | `DTO/`                 | Request and response shapes                                                                                |
 | `domain/Entities/`     | EF Core entity classes (the database tables)                                                               |
 | `domain/Dbcontexts/`   | `ApplicationDbContext`                                                                                     |

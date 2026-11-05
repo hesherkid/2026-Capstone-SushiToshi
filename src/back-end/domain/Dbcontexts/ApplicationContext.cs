@@ -209,6 +209,13 @@ namespace back_end.domain.DbContexts
                     "CK_DiningSession_TableAssignment",
                     "(Table_Id IS NOT NULL AND TableGroup_Id IS NULL) OR (Table_Id IS NULL AND TableGroup_Id IS NOT NULL) OR (Table_Id IS NULL AND TableGroup_Id IS NULL)"));
 
+            // Deleting a bill unlinks the people on it rather than blocking the delete
+            modelBuilder.Entity<SessionParticipant>()
+                .HasOne(sp => sp.Bill)
+                .WithMany()
+                .HasForeignKey(sp => sp.Bill_Id)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // ServiceRequest relationships
             modelBuilder.Entity<ServiceRequest>()
                 .HasOne(sr => sr.RequestedByUser)

@@ -9,6 +9,7 @@ import {
   InputAdornment,
   IconButton,
   Divider,
+  Button,
 } from "@mui/material";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import CategoryChips from "@/components/menu/CategoryChips";
@@ -16,6 +17,7 @@ import TagFilter, { menuTags, hasAllTags } from "@/components/menu/TagFilter";
 import useMyItems from "@/components/menu/useMyItems";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import ReviewOrderButton from "@/components/menu/ReviewOrderButton";
+import BillChoiceDialog from "@/components/menu/BillChoiceDialog";
 import { MenuListSkeleton } from "@/components/menu/MenuItemCardSkeleton";
 import TrackedItem from "@/components/menu/TrackedItem";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
@@ -47,6 +49,8 @@ const FullMenu = () => {
     itemsLoaded,
     menuId,
     selectedBillId,
+    myBill,
+    needsBill,
     billRequested,
     quantities,
     changeQuantity,
@@ -63,6 +67,16 @@ const FullMenu = () => {
 
   // Keep bills and limits current while the guest browses (others at the table order too)
   useAutoRefresh(refresh);
+
+  // Guests not on a bill yet are asked which one is theirs as soon as the menu opens
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
+  const askedForBill = useRef(false);
+  useEffect(() => {
+    if (needsBill && !askedForBill.current) {
+      askedForBill.current = true;
+      setBillDialogOpen(true);
+    }
+  }, [needsBill]);
 
   // Put the guest back where they were on the menu after Review order.
   // Read once on arrival, before scrolling to the top of this page can overwrite it
@@ -348,11 +362,24 @@ const FullMenu = () => {
             </Alert>
           )}
 
-          {!selectedBillId && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              Your menu is available, but there is no open bill for this
-              session yet. Ask a staff member to open a bill before placing an
-              order.
+          {needsBill && (
+            <Alert
+              severity="warning"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={() => setBillDialogOpen(true)}>
+                  Choose bill
+                </Button>
+              }
+            >
+              Choose your bill before placing an order.
+            </Alert>
+          )}
+
+          {myBill && !selectedBillId && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {myBill.bill_name} is {String(myBill.status).toLowerCase()}, so no more
+              orders can be added. Ask your server if you&apos;d like anything else.
             </Alert>
           )}
 
@@ -437,6 +464,8 @@ const FullMenu = () => {
 
       {/* Ordering is over once the bill's been asked for */}
       {!billRequested && <ReviewOrderButton count={cartCount} onClick={reviewOrder} />}
+
+      <BillChoiceDialog open={billDialogOpen} onClose={() => setBillDialogOpen(false)} />
     </CustomerPageContainer>
   );
 };

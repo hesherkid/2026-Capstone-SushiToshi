@@ -1,5 +1,5 @@
 import { Box, Chip, Tooltip } from "@mui/material";
-import { Eye, ReceiptText, LogOut, Bell, AlertTriangle } from "lucide-react";
+import { Eye, ReceiptText, LogOut, Bell, AlertTriangle, Users } from "lucide-react";
 import { actionsColumn } from "@/components/common/RowActions";
 import {
   formatTime,
@@ -40,6 +40,11 @@ export const tableLabel = (tableNumbers = []) => {
 };
 
 export const isOpenBill = (bill) => String(bill.status).toUpperCase() === "OPEN";
+
+// An open bill whose guest count staff should check: a guest started or changed it, or more people joined than it's for
+export const billNeedsGuestCheck = (bill) =>
+  isOpenBill(bill) &&
+  Boolean(bill.started_By_Guest || bill.counts_Changed_By_Guest || bill.people_On_Bill > bill.total_Guests);
 
 // Rows are sessions from /Dashboard/sessions plus a `requestCount` from the pending service requests
 export const getSessionColumns = (actions) => [
@@ -116,12 +121,34 @@ export const getSessionColumns = (actions) => [
   {
     field: "bills",
     headerName: "Open Bills",
-    flex: 0.8,
-    minWidth: 100,
+    flex: 1.2,
+    minWidth: 180,
     sortable: false,
     valueGetter: (value) => {
       const bills = value || [];
       return `${bills.filter(isOpenBill).length} of ${bills.length}`;
+    },
+    renderCell: ({ value, row }) => {
+      const toCheck = (row.bills || []).filter(billNeedsGuestCheck).length;
+      if (toCheck === 0) return value;
+      return (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, height: "100%" }}>
+          {value}
+          <Tooltip title={toCheck === 1 ? "A bill's guest count needs checking" : `${toCheck} bills' guest counts need checking`}>
+            <Chip
+              icon={<Users size={14} />}
+              label="Check guests"
+              color="warning"
+              size="small"
+              variant="outlined"
+              onClick={(event) => {
+                event.stopPropagation();
+                actions.viewSession(row);
+              }}
+            />
+          </Tooltip>
+        </Box>
+      );
     },
   },
   actionsColumn(

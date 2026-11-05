@@ -23,6 +23,8 @@ public class BillRequestTests : IDisposable
 {
     private const int Guest = 21;
     private const int OtherTableGuest = 22;
+    private const int ParkGuest = 23;     // same table, on the Park bill
+    private const int ClosedBillGuest = 24;
     private const int Server = 30;
 
     private readonly ApplicationDbContext _context;
@@ -41,7 +43,9 @@ public class BillRequestTests : IDisposable
             new DiningSession { Session_Id = 269, Menu_Id = 1, Location_Id = 1, Table_Id = 6, Started_At = DateTime.UtcNow },
             new DiningSession { Session_Id = 143, Menu_Id = 1, Location_Id = 1, Table_Id = 19, Started_At = DateTime.UtcNow });
         _context.SessionParticipants.AddRange(
-            new SessionParticipant { Session_Id = 269, User_Id = Guest, User_Name = "Guest K7P2" },
+            new SessionParticipant { Session_Id = 269, User_Id = Guest, User_Name = "Guest K7P2", Bill_Id = 332 },
+            new SessionParticipant { Session_Id = 269, User_Id = ParkGuest, User_Name = "Guest P4RK", Bill_Id = 333 },
+            new SessionParticipant { Session_Id = 269, User_Id = ClosedBillGuest, User_Name = "Guest C1SD", Bill_Id = 334 },
             new SessionParticipant { Session_Id = 143, User_Id = OtherTableGuest, User_Name = "Guest 4MXA" });
         _context.Bills.AddRange(
             new Billing { Bill_Id = 332, Session_Id = 269, Bill_Name = "Lee", Adult_Count = 2, Total_Count = 2 },
@@ -107,9 +111,10 @@ public class BillRequestTests : IDisposable
     }
 
     [Fact]
-    public async Task RequestBill_RefusesClosedBillsAndOtherTables()
+    public async Task RequestBill_RefusesClosedBillsOtherBillsAndOtherTables()
     {
-        (await Bills(Guest).Request_Bill(269, 334)).Should().BeOfType<BadRequestObjectResult>();
+        (await Bills(ClosedBillGuest).Request_Bill(269, 334)).Should().BeOfType<BadRequestObjectResult>();
+        (await Bills(ParkGuest).Request_Bill(269, 332)).Should().BeOfType<ForbidResult>();
         (await Bills(OtherTableGuest).Request_Bill(269, 332)).Should().BeOfType<ForbidResult>();
         (await _context.Bills.FindAsync(332))!.Requested_At.Should().BeNull();
     }
@@ -143,7 +148,7 @@ public class BillRequestTests : IDisposable
     {
         await Bills(Guest).Request_Bill(269, 332);
 
-        var result = await Orders(Guest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 333, Items = OneItem() });
+        var result = await Orders(ParkGuest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 333, Items = OneItem() });
 
         result.Result.Should().NotBeOfType<BadRequestObjectResult>();
         (await _context.SessionOrders.AnyAsync(o => o.Bill_Id == 333)).Should().BeTrue();

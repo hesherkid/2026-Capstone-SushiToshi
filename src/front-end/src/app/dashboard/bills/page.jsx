@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Alert, Box, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Button, Typography } from "@mui/material";
+import Link from "next/link";
 import api from "@/config/api";
 import {
   fetchMySessionId,
@@ -13,21 +14,10 @@ import BillDetails from "@/components/customer/BillDetails";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { useNotification } from "@/contexts/NotificationContext";
-import { sortBillsByStatus } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
-import storage from "@/utils/storage";
-
-const billName = (bill) => bill.bill_name || `Bill #${bill.bill_id}`;
-
-// The bill this phone orders on (set on the menu and Review order), if it's still at the table
-const myBillId = (bills) => {
-  // Also runs while rendering, which happens on the server too
-  if (typeof window === "undefined") return null;
-  const saved = Number(storage.get("currentBillId"));
-  return bills.some((bill) => bill.bill_id === saved) ? saved : null;
-};
+import { MENU_PATH } from "@/contexts/TableOrderContext";
 
 // The guest's bill, right on the page: the total, where it's at and Ready for bill, then the
-// receipt. A table with several bills gets tabs, starting on the one this phone orders on
+// receipt. The server only returns the bill this guest is on, never other parties' bills
 const BillsPage = () => {
   const { notifyError } = useNotification();
   const [bills, setBills] = useState([]);
@@ -77,23 +67,14 @@ const BillsPage = () => {
       const res = await api.get(`/Bill/get_bills/${sid}`);
       if (res.status !== 200) throw new Error("Failed to fetch bills");
 
-      // Cancelled bills are nothing to pay; open ones first
-      const list = sortBillsByStatus(
-        (Array.isArray(res.data) ? res.data : []).filter(
-          (bill) =>
-            bill?.bill_id &&
-            String(bill.status ?? "").toUpperCase() !== "CANCELLED",
-        ),
+      // Cancelled bills are nothing to pay
+      const list = (Array.isArray(res.data) ? res.data : []).filter(
+        (bill) =>
+          bill?.bill_id &&
+          String(bill.status ?? "").toUpperCase() !== "CANCELLED",
       );
       setBills(list);
-
-      // Keep the bill being looked at; otherwise this phone's bill, otherwise the first.
-      // If the seat is gone show thank you screen
-      setSelectedBillId((current) =>
-        list.some((bill) => bill.bill_id === current)
-          ? current
-          : (myBillId(list) ?? list[0]?.bill_id ?? null),
-      );
+      setSelectedBillId(list[0]?.bill_id ?? null);
     } catch (err) {
       if (isSeatGone(err)) {
         const stillSeatedAt = await recheckSeat();
@@ -131,8 +112,6 @@ const BillsPage = () => {
     enabled: !!sessionId,
   });
 
-  const ordersGoOn = myBillId(bills);
-
   return (
     <CustomerPageContainer sx={{ maxWidth: 720 }}>
       <Typography
@@ -140,7 +119,7 @@ const BillsPage = () => {
         component="h1"
         sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}
       >
-        {bills.length > 1 ? "Your table's bills" : "Your bill"}
+        Your bill
       </Typography>
 
       {error && (
@@ -156,44 +135,18 @@ const BillsPage = () => {
         !error && (
           <Box sx={{ textAlign: "center", py: 6 }}>
             <Typography variant="h6" component="h2">
-              No bills yet
+              You&apos;re not on a bill yet
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-              Your server will open a bill for your table, and it will show up
-              here.
+            <Typography color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
+              Choose your party&apos;s bill, or start one, from the menu.
             </Typography>
+            <Button component={Link} href={MENU_PATH} variant="contained">
+              Go to the menu
+            </Button>
           </Box>
         )
       ) : (
         <>
-          {bills.length > 1 && (
-            <Tabs
-              value={selectedBillId ?? false}
-              onChange={(_, billId) => setSelectedBillId(billId)}
-              variant="scrollable"
-              scrollButtons={false}
-              aria-label="Bills at your table"
-              sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
-            >
-              {bills.map((bill) => (
-                <Tab
-                  key={bill.bill_id}
-                  value={bill.bill_id}
-                  label={
-                    bill.bill_id === ordersGoOn
-                      ? `${billName(bill)} (yours)`
-                      : billName(bill)
-                  }
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    fontSize: "0.95rem",
-                  }}
-                />
-              ))}
-            </Tabs>
-          )}
-
           {selectedBillId && (
             <BillDetails
               key={selectedBillId}

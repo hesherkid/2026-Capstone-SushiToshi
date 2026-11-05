@@ -89,7 +89,7 @@ public class BillControllerTests : IDisposable
             new User { User_id = StaffElsewhere, Email = "staff2@example.com", Role = UserRoles.Staff, Location_id = 2 });
 
         _context.SessionParticipants.AddRange(
-            new SessionParticipant { Session_Id = TableSession, User_Id = SeatedGuest, User_Name = "Guest K7P2" },
+            new SessionParticipant { Session_Id = TableSession, User_Id = SeatedGuest, User_Name = "Guest K7P2", Bill_Id = LeeBill },
             new SessionParticipant { Session_Id = TableSession, User_Id = GuestWhoLeft, User_Name = "Guest 4MXA", Left_At = DateTime.UtcNow });
 
         _context.Bills.AddRange(
@@ -213,24 +213,13 @@ public class BillControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateBill_OverTableCapacity_Returns400()
+    public async Task CreateBill_StaffCanGoOverTableCapacity()
     {
-        // Table 6 seats 4 and bill already has 2
+        // Table 6 seats 4 and bill already has 2: the party pulled up extra chairs
         var result = await Bills().Create_Bill(TableSession, Guests(adults: 3));
 
-        result.Should().BeOfType<BadRequestObjectResult>();
-        _context.Bills.Count(b => b.Session_Id == TableSession).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task CreateBill_OnlyOpenBillsCountTowardCapacity()
-    {
-        Bill(LeeBill).Status = BillStatus.Closed;
-        _context.SaveChanges();
-
-        var result = await Bills().Create_Bill(TableSession, Guests(adults: 4));
-
         result.Should().BeOfType<OkObjectResult>();
+        _context.Bills.Count(b => b.Session_Id == TableSession).Should().Be(2);
     }
 
     [Fact]
@@ -350,7 +339,6 @@ public class BillControllerTests : IDisposable
         _context.Bills.Add(new Billing { Bill_Id = 902, Session_Id = TableSession, Bill_Name = "Choi", Adult_Count = 1, Total_Count = 1 });
         _context.SaveChanges();
         AddOrder(811, LeeBill, TableSession, OrderStatus.Pending);
-        AddOrder(812, LeeBill, TableSession, OrderStatus.Delivered);
         AddOrder(813, 902, TableSession, OrderStatus.Pending);
 
         var bill = OkValue<BillResponse>(await Bills().Cancel_Bill(TableSession, LeeBill));
@@ -358,8 +346,23 @@ public class BillControllerTests : IDisposable
         bill.Status.Should().Be("Cancelled");
         bill.Closed_At.Should().NotBeNull();
         _context.SessionOrders.Single(o => o.Order_Id == 811).Status.Should().Be(OrderStatus.Cancelled);
-        _context.SessionOrders.Single(o => o.Order_Id == 812).Status.Should().Be(OrderStatus.Delivered);
         _context.SessionOrders.Single(o => o.Order_Id == 813).Status.Should().Be(OrderStatus.Pending);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Processing)]
+    [InlineData(OrderStatus.Delivered)]
+    public async Task CancelBill_WithOrdersBeingMadeOrServed_Returns400(OrderStatus status)
+    {
+        // Cancelling would leave this food unpaid, since a cancelled bill is never charged
+        AddOrder(811, LeeBill, TableSession, OrderStatus.Pending);
+        AddOrder(812, LeeBill, TableSession, status);
+
+        var result = await Bills().Cancel_Bill(TableSession, LeeBill);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        Bill(LeeBill).Status.Should().Be(BillStatus.Open);
+        _context.SessionOrders.Single(o => o.Order_Id == 811).Status.Should().Be(OrderStatus.Pending);
     }
 
     [Theory]

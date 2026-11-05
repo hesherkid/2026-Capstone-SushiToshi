@@ -72,6 +72,16 @@ describe("sessionGuestCount", () => {
     expect(sessionGuestCount(session)).toBe(5);
   });
 
+  it("leaves out cancelled bills, so a merged bill's guests aren't counted twice", () => {
+    const session = {
+      bills: [
+        { status: "Open", total_Guests: 5 },
+        { status: "Cancelled", total_Guests: 2 },
+      ],
+    };
+    expect(sessionGuestCount(session)).toBe(5);
+  });
+
   it("is 0 before any bill is made", () => {
     expect(sessionGuestCount({ active_Participants: 2, bills: [] })).toBe(0);
     expect(sessionGuestCount({})).toBe(0);
