@@ -213,7 +213,7 @@ namespace back_end.controllers
         /// Requirements:
         /// - All fields are required
         /// - Email must be unique
-        /// - Password must be at least 6 characters long
+        /// - Password must be 8 to 200 characters long, not only whitespace, and is not trimmed
         /// 
         /// Password is automatically hashed using BCrypt before storage.
         /// Email addresses are converted to lowercase and trimmed.
@@ -228,16 +228,18 @@ namespace back_end.controllers
         public async Task<IActionResult> CreateUser([FromBody] RegisterDTO request)
         {
             var SendNewTokenUser = new domain.Entities.User();
-            int passwordMinLength = 6;
+            int passwordMinLength = 8;
+            int passwordMaxLength = 200;
             if (request == null || request.UserEmail == null || request.UserPassword == null || request.FirstName == null || request.LastName == null)
             {
                 return BadRequest(new { message = "Invalid request" });
             }
             string UserEmail = request.UserEmail.ToLower().Trim() ?? string.Empty;
-            string UserPassword = request.UserPassword.Trim() ?? string.Empty;
+            // Passwords are never trimmed; whitespace is part of the password
+            string UserPassword = request.UserPassword;
             string FirstName = request.FirstName.Trim() ?? string.Empty;
             string LastName = request.LastName.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(UserEmail) || string.IsNullOrEmpty(UserPassword) || string.IsNullOrEmpty(FirstName) || string.IsNullOrEmpty(LastName))
+            if (string.IsNullOrEmpty(UserEmail) || string.IsNullOrWhiteSpace(UserPassword) || string.IsNullOrEmpty(FirstName) || string.IsNullOrEmpty(LastName))
             {
                 return BadRequest(new { message = "All fields are required" });
             }
@@ -248,6 +250,10 @@ namespace back_end.controllers
             if (UserPassword.Length < passwordMinLength)
             {
                 return BadRequest(new { message = $"Password must be at least {passwordMinLength} characters long" });
+            }
+            if (UserPassword.Length > passwordMaxLength)
+            {
+                return BadRequest(new { message = $"Password must be at most {passwordMaxLength} characters long" });
             }
             UserPassword = BCryptNet.HashPassword(UserPassword);
             try
