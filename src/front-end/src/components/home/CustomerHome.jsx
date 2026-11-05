@@ -63,9 +63,11 @@ const LinkRow = ({ symbol, title, text, onClick, divided = false }) => (
     <MaterialSymbol name={symbol} size={26} sx={{ color: "primary.main", flexShrink: 0 }} />
     <Box sx={{ flex: 1, minWidth: 0 }}>
       <Typography sx={{ fontWeight: 600, lineHeight: 1.3 }}>{title}</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-        {text}
-      </Typography>
+      {text && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+          {text}
+        </Typography>
+      )}
     </Box>
     <MaterialSymbol name="chevron_right" size={24} sx={{ color: "text.secondary" }} />
   </ButtonBase>
@@ -182,7 +184,6 @@ const CustomerHome = () => {
         <LinkRow
           symbol="history"
           title="Past visits"
-          text="What you ordered and what you paid"
           onClick={() => router.push(VISITS_PATH)}
           divided={!seated}
         />

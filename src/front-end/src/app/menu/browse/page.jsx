@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Box, Button, MenuItem, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, ButtonBase, InputAdornment, MenuItem, TextField, Typography } from "@mui/material";
 import api from "@/config/api";
 import useAuth from "@/hooks/useAuth";
 import { decodeToken } from "@/config/auth";
@@ -33,20 +33,38 @@ const servedAt = (menu, time) => {
   return start < end ? time >= start && time < end : time >= start || time < end;
 };
 
-// "11:00:00" as "11:00 AM"
+// "11:00:00" as "11 a.m.", "17:30:00" as "5:30 p.m."
 const clockText = (value) => {
   const [hours, minutes] = String(value ?? "").split(":").map(Number);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return "";
   return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString("en-CA", {
     hour: "numeric",
-    minute: "2-digit",
+    ...(minutes ? { minute: "2-digit" } : {}),
   });
 };
 
-const menuLabel = (menu) => {
-  const hours = menu.start_time === menu.end_time ? "" : `${clockText(menu.start_time)} – ${clockText(menu.end_time)}`;
-  return hours ? `${menu.name} · ${hours}` : menu.name;
-};
+// "11 a.m.–3 p.m."; a menu served all day has no hours
+const menuHours = (menu) =>
+  menu.start_time === menu.end_time ? "" : `${clockText(menu.start_time)}–${clockText(menu.end_time)}`;
+
+// "Lunch · 11 a.m.–3 p.m."
+const menuLabel = (menu) => [menu.name, menuHours(menu)].filter(Boolean).join(" · ");
+
+// Same pills as the menu's tag filter
+const pill = (selected) => ({
+  flexShrink: 0,
+  height: 32,
+  px: 1.5,
+  borderRadius: 999,
+  fontSize: "0.85rem",
+  whiteSpace: "nowrap",
+  fontWeight: selected ? 700 : 500,
+  bgcolor: selected ? "primary.main" : "grey.100",
+  color: selected ? "common.white" : "grey.800",
+  transition: "background-color 150ms ease, color 150ms ease",
+  "&:hover": { bgcolor: selected ? "primary.dark" : "grey.200" },
+  "&.Mui-focusVisible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 },
+});
 
 const firstLocation = (locations) => {
   const ids = locations.map((location) => location.location_Id);
@@ -175,10 +193,11 @@ const BrowseMenuPage = () => {
   if (!ready) return null;
 
   const noMenus = menus?.length === 0 && !error;
+  const locationName = locations.find((location) => location.location_Id === locationId)?.name ?? "";
 
   return (
     <CustomerPageContainer>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: { xs: 3, sm: 2 }, mb: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: { xs: 3, sm: 2 } }}>
         <Button
           onClick={() => router.push("/")}
           aria-label="Back to home"
@@ -191,52 +210,104 @@ const BrowseMenuPage = () => {
         </Typography>
       </Box>
 
-      <Alert severity="info" icon={<MaterialSymbol name="qr_code_scanner" size={22} />} sx={{ mb: 2 }}>
-        Have a look before you visit. To order, scan the QR code on your table.
-      </Alert>
+      {/* The location is only a choice when there's more than one */}
+      {locations.length > 1 ? (
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label="Location"
+          value={locationId}
+          onChange={(event) => chooseLocation(event.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MaterialSymbol name="location_on" filled size={20} sx={{ color: "primary.main" }} />
+                </InputAdornment>
+              ),
+            },
+            select: {
+              // Just the name in the field; the list's check marks stay in the list
+              renderValue: () => locationName,
+              MenuProps: {
+                slotProps: {
+                  paper: {
+                    variant: "outlined",
+                    elevation: 0,
+                    sx: { mt: 0.5, borderRadius: 2, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" },
+                  },
+                  list: { dense: true, sx: { py: 0.5 } },
+                },
+              },
+            },
+          }}
+          sx={{ mt: 1, mb: 2, textAlign: "left", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+        >
+          {locations.map((location) => (
+            <MenuItem
+              key={location.location_Id}
+              value={location.location_Id}
+              sx={{
+                gap: 1,
+                py: 1,
+                fontSize: "0.95rem",
+                justifyContent: "space-between",
+                // A check marks the current one, rather than a highlight
+                "&.Mui-selected, &.Mui-selected:hover": { bgcolor: "transparent" },
+                "&.Mui-selected:hover, &:hover": { bgcolor: "grey.100" },
+              }}
+            >
+              {location.name}
+              {location.location_Id === locationId && (
+                <MaterialSymbol name="check" size={18} sx={{ color: "primary.main" }} />
+              )}
+            </MenuItem>
+          ))}
+        </TextField>
+      ) : (
+        locationName && (
+          // Lined up with the title, past the back arrow
+          <Typography
+            sx={{ display: "flex", alignItems: "center", gap: 0.5, pl: 6, mb: 2.5, fontWeight: 600, fontSize: "0.95rem" }}
+          >
+            <MaterialSymbol name="location_on" filled size={18} sx={{ color: "primary.main" }} />
+            {locationName}
+          </Typography>
+        )
+      )}
+
+      {/* One menu needs no picking */}
+      {menus?.length > 1 && (
+        <Box
+          role="group"
+          aria-label="Menus"
+          sx={{
+            display: "flex",
+            gap: 1,
+            mb: 2.5,
+            overflowX: "auto",
+            scrollbarWidth: "none",
+            "&::-webkit-scrollbar": { display: "none" },
+          }}
+        >
+          {menus.map((menu) => (
+            <ButtonBase
+              key={menu.menu_id}
+              aria-pressed={menu.menu_id === menuId}
+              onClick={() => setMenuId(menu.menu_id)}
+              sx={pill(menu.menu_id === menuId)}
+            >
+              {menuLabel(menu)}
+            </ButtonBase>
+          ))}
+        </Box>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
-      )}
-
-      {/* One location or one menu needs no picking */}
-      {(locations.length > 1 || menus?.length > 1) && (
-        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 1.5, mb: 2.5 }}>
-          {locations.length > 1 && (
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label="Location"
-              value={locationId}
-              onChange={(event) => chooseLocation(event.target.value)}
-            >
-              {locations.map((location) => (
-                <MenuItem key={location.location_Id} value={location.location_Id}>
-                  {location.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-          {menus?.length > 1 && (
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label="Menu"
-              value={menuId}
-              onChange={(event) => setMenuId(event.target.value)}
-            >
-              {menus.map((menu) => (
-                <MenuItem key={menu.menu_id} value={menu.menu_id}>
-                  {menuLabel(menu)}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-        </Box>
       )}
 
       {noMenus ? (

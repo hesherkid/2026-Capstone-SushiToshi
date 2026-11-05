@@ -86,7 +86,6 @@ describe("Browse menu page", () => {
 
     expect(await screen.findByText("Miso Soup")).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith("/Menu/7/item", { params: { locationId: 3 } });
-    expect(screen.getByText(/To order, scan the QR code on your table/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
   });
 
@@ -97,14 +96,14 @@ describe("Browse menu page", () => {
 
     expect(await screen.findByText("Unagi Roll")).toBeInTheDocument();
 
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Menu" }));
-    // Menus are listed by the time they start
-    const options = within(screen.getByRole("listbox")).getAllByRole("option");
-    expect(options.map((option) => option.textContent)).toEqual([
-      expect.stringMatching(/^Lunch · 11:00/),
-      expect.stringMatching(/^Dinner · 3:00/),
+    // Menus are listed by the time they start, the one served now picked
+    const pills = within(screen.getByRole("group", { name: "Menus" })).getAllByRole("button");
+    expect(pills.map((pill) => pill.textContent)).toEqual([
+      expect.stringMatching(/^Lunch · 11 a\.m\.–3 p\.m\.$/),
+      expect.stringMatching(/^Dinner · 3 p\.m\.–10 p\.m\.$/),
     ]);
-    fireEvent.click(options[0]);
+    expect(pills[1]).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(pills[0]);
 
     expect(await screen.findByText("Miso Soup")).toBeInTheDocument();
     expect(screen.queryByText("Unagi Roll")).not.toBeInTheDocument();
@@ -114,13 +113,14 @@ describe("Browse menu page", () => {
     render(<BrowseMenuPage />);
     await screen.findByText("Miso Soup");
 
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Location" }));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: /Location/ }));
     fireEvent.click(screen.getByRole("option", { name: "Sushi Toshi North" }));
 
     expect(await screen.findByText("Unagi Roll")).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith("/Menu/8/item", { params: { locationId: 4 } });
     // Only one menu there, so there's nothing to pick
-    expect(screen.queryByRole("combobox", { name: "Menu" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Menus" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Location/ })).toHaveTextContent("Sushi Toshi North");
     expect(localStorage.getItem("browseLocationId")).toBe("4");
   });
 
