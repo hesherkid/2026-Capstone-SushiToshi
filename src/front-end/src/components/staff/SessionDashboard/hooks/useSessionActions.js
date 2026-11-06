@@ -273,7 +273,7 @@ export const useSessionActions = (onSuccess) => {
         validateIds({ "session ID": sid });
 
         const res = await api.get(`/DiningSession/session-menu/${sid}`);
-        return res.data?.Menu_Id || res.data?.menu_id || null;
+        return res.data?.menu_Id || null;
       });
     },
     [apiWrapper]

@@ -4,15 +4,15 @@
 // The server takes 1-99 of an item per order (OrderController.AddOrderItems)
 export const MAX_PER_ITEM = 99;
 
-// Clean up the field names so the item looks the same everywhere
+// Rename the fields from /Menu/{id}/item so the item looks the same everywhere
 export const normalizeItem = (it) => ({
-  item_id: it.item_id ?? it.itemId ?? it.Item_Id,
+  item_id: it.itemId,
   name: it.name,
   description: it.description,
   price: it.price,
-  is_add_on: it.is_add_on ?? it.isAddOn,
-  item_image_url: it.item_image_url ?? it.imageURL ?? it.imageUrl,
-  category_id: it.categoryID ?? it.categoryId ?? it.category_id,
+  is_add_on: it.isAddOn,
+  item_image_url: it.imageURL,
+  category_id: it.categoryID,
   category: it.category,
   tags: it.tags ?? [],
   categoryLimits: it.categoryLimits,
@@ -21,8 +21,8 @@ export const normalizeItem = (it) => ({
 
 // A row from /Category
 export const normalizeCategory = (c) => ({
-  category_id: c.category_id ?? c.Category_id,
-  name: c.name ?? c.category_name ?? c.Category_name,
+  category_id: c.category_id,
+  name: c.category_name,
 });
 
 // Menu items from /Menu/{id}/item, one list per category
