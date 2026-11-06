@@ -121,6 +121,18 @@ const theme = createTheme({
         },
       },
     },
+    MuiChip: {
+      styleOverrides: {
+        // Outlined warning text sits on tinted panels so need to use use the darker shade
+        root: ({ ownerState, theme }) =>
+          ownerState.variant === "outlined" && ownerState.color === "warning"
+            ? {
+                color: theme.palette.warning.dark,
+                borderColor: theme.palette.warning.dark,
+              }
+            : {},
+      },
+    },
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Button,
@@ -32,12 +32,12 @@ const MenuItemForm = ({
     category_id: selectedItem?.category_Id ?? selectedItem?.category_id ?? "",
   });
 
-
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) onImageChange(file);
     e.target.value = "";
   };
+  const fileInputRef = useRef(null);
 
   return (
     <FormDialog
@@ -52,101 +52,97 @@ const MenuItemForm = ({
       busyLabel="Saving..."
       busy={submitting}
     >
-        <Card
+      <Card
+        sx={{
+          aspectRatio: "16/9",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {imagePreview ? (
+          <CardMedia
+            component="img"
+            image={imagePreview}
+            alt="Item preview"
+            sx={{ height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <Box
+            sx={{
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "grey.100",
+            }}
+          >
+            <ImageIcon size={48} color="grey" />
+          </Box>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          hidden
+        />
+        <Button
+          variant="contained"
+          onClick={() => fileInputRef.current?.click()}
           sx={{
-            aspectRatio: "16/9",
-            overflow: "hidden",
-            position: "relative",
+            position: "absolute",
+            bottom: 16,
+            right: 16,
+            // Dark enough for white text over any photo
+            bgcolor: "rgba(0, 0, 0, 0.75)",
+            "&:hover": { bgcolor: "rgba(0, 0, 0, 0.85)" },
           }}
         >
-          {imagePreview ? (
-            <CardMedia
-              component="img"
-              image={imagePreview}
-              alt="Item preview"
-              sx={{ height: "100%", objectFit: "cover" }}
-            />
-          ) : (
-            <Box
-              sx={{
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                bgcolor: "grey.100",
-              }}
-            >
-              <ImageIcon size={48} color="grey" />
-            </Box>
-          )}
-          <Input
-            type="file"
-            inputProps={{ accept: "image/*" }}
-            onChange={handleFileChange}
-            sx={{ display: "none" }}
-            id="menu-item-image-input"
-          />
-          <label htmlFor="menu-item-image-input">
-            <Button
-              component="span"
-              variant="contained"
-              sx={{
-                position: "absolute",
-                bottom: 16,
-                right: 16,
-                bgcolor: "rgba(0, 0, 0, 0.5)",
-                "&:hover": { bgcolor: "rgba(0, 0, 0, 0.7)" },
-              }}
-            >
-              Change Image
-            </Button>
-          </label>
-        </Card>
+          {imagePreview ? "Change image" : "Add image"}
+        </Button>
+      </Card>
 
-        <TextField
-          label="Name"
-          value={formData.name}
+      <TextField
+        label="Name"
+        value={formData.name}
+        onChange={(e) =>
+          setFormData((prev) => ({ ...prev, name: e.target.value }))
+        }
+        required
+        fullWidth
+      />
+
+      <TextField
+        label="Description"
+        value={formData.description}
+        onChange={(e) =>
+          setFormData((prev) => ({ ...prev, description: e.target.value }))
+        }
+        multiline
+        rows={3}
+        fullWidth
+      />
+
+      <FormControl fullWidth required>
+        <InputLabel id="menu-item-category-label">Category</InputLabel>
+        <Select
+          labelId="menu-item-category-label"
+          value={formData.category_id}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, name: e.target.value }))
+            setFormData((prev) => ({
+              ...prev,
+              category_id: e.target.value,
+            }))
           }
-          required
-          fullWidth
-        />
-
-        <TextField
-          label="Description"
-          value={formData.description}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, description: e.target.value }))
-          }
-          multiline
-          rows={3}
-          fullWidth
-        />
-
-        <FormControl fullWidth required>
-          <InputLabel id="menu-item-category-label">Category</InputLabel>
-          <Select
-            labelId="menu-item-category-label"
-            value={formData.category_id}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                category_id: e.target.value,
-              }))
-            }
-            label="Category"
-          >
-            {categories.map((category) => (
-              <MenuItem
-                key={category.category_id}
-                value={category.category_id}
-              >
-                {category.category_name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+          label="Category"
+        >
+          {categories.map((category) => (
+            <MenuItem key={category.category_id} value={category.category_id}>
+              {category.category_name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
     </FormDialog>
   );
 };
