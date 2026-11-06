@@ -56,25 +56,11 @@ describe('HomePage', () => {
     namedUseAuth.mockReturnValue({ isAuthenticated: false, userEmail: null });
   });
 
-  it('redirects guests flagged in localStorage to the menu page', async () => {
-    localStorage.setItem('guest', 'true');
-
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/menu/full-menu');
-    });
-  });
-
   it('redirects a signed-in guest account to the menu page', async () => {
-    const { getAuthToken } = require('@/utils/auth');
-    const { decodeToken } = require('@/config/auth');
     const { default: defaultUseAuth, useAuth: namedUseAuth } = require('@/hooks/useAuth');
-
-    getAuthToken.mockReturnValue('token');
-    decodeToken.mockReturnValue({ email: 'guest-3f9c2a@guest.sushitoshi.invalid' });
-    defaultUseAuth.mockReturnValue({ isAuthenticated: true, userEmail: 'guest-3f9c2a@guest.sushitoshi.invalid' });
-    namedUseAuth.mockReturnValue({ isAuthenticated: true, userEmail: 'guest-3f9c2a@guest.sushitoshi.invalid' });
+    const auth = { isAuthenticated: true, userRole: 'customer', isGuest: true, loading: false };
+    defaultUseAuth.mockReturnValue(auth);
+    namedUseAuth.mockReturnValue(auth);
 
     render(<HomePage />);
 

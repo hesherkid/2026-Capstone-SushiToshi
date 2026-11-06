@@ -47,3 +47,18 @@ export const endTableVisit = () => {
   window.dispatchEvent(new Event(TABLE_VISIT_EVENT));
   window.dispatchEvent(new Event(TABLE_VISIT_ENDED_EVENT));
 };
+
+/**
+ * Where to send someone whose sign-in expired. A seated customer gets their table back in the
+ * link, so a guest can "Continue as Guest" again and a signed-in customer rejoins after
+ * signing in. "resume" tells the login page this isn't a new scan, so the cart and bill are kept.
+ */
+export const getExpiredLoginPath = () => {
+  const locationId = storage.get("locationId");
+  const tableNumber = storage.get("tableNumber");
+
+  if (!hasTableVisit() || !locationId || !tableNumber) return "/auth/login";
+
+  const params = new URLSearchParams({ locationId, tableNumber, resume: "1" });
+  return `/auth/login?${params}`;
+};

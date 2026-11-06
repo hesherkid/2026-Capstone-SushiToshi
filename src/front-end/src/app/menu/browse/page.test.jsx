@@ -149,7 +149,6 @@ describe("Browse menu page", () => {
 
     mockReplace.mockReset();
     localStorage.clear();
-    localStorage.setItem("guest", "true");
     localStorage.setItem("authToken", tokenFor({ role: "Customer", exp: IN_AN_HOUR, guest: "true" }));
     render(<BrowseMenuPage />);
     expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu");

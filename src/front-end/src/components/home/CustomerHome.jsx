@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, ButtonBase, Paper, Typography } from "@mui/material";
-import { decodeToken, isTokenExpired } from "@/config/auth";
-import { getAuthToken, isGuestClaims, logoutCustomer } from "@/utils/auth";
+import { logoutCustomer } from "@/utils/auth";
 import { hasTableVisit } from "@/utils/tableVisit";
 import useAuth from "@/hooks/useAuth";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
@@ -25,15 +24,6 @@ const STEPS = [
   { symbol: "menu_book_2", title: "Order from the menu", text: "Order as many rounds as you like. We'll bring them to your table." },
   { symbol: "receipt_long", title: "Ask for your bill", text: "Tap Ready for bill when you're done, and your server will bring it." },
 ];
-
-const isGuestAccount = () => {
-  if (typeof window === "undefined") return false;
-  if (storage.get("guest") === "true") return true;
-
-  const token = getAuthToken();
-  if (!token || isTokenExpired(token)) return false;
-  return isGuestClaims(decodeToken(token));
-};
 
 // Saved from the sign-in response; the token itself carries no name
 const savedFirstName = () => {
@@ -80,7 +70,7 @@ const LinkRow = ({ symbol, title, text, onClick, divided = false }) => (
 const CustomerHome = () => {
   const router = useRouter();
   // Every useAuth call starts signed out and loading; only its answer after loading counts
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, isGuest, loading: authLoading } = useAuth();
   // Whether to show the page yet: guests and signed-out visitors are sent elsewhere
   const [ready, setReady] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -93,7 +83,7 @@ const CustomerHome = () => {
   // signing in comes first
   useEffect(() => {
     if (authLoading) return;
-    if (isGuestAccount()) {
+    if (isGuest) {
       router.replace(MENU_PATH);
       return;
     }
@@ -105,7 +95,7 @@ const CustomerHome = () => {
     setSeated(hasTableVisit());
     setTableNumber(storage.get("tableNumber") || "");
     setReady(true);
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, isGuest, router]);
 
   // fetchMySessionId ends the visit (and shows the thank-you screen, with Log out) once staff
   // have closed the table. Checked on arrival too, in case it closed while they were away

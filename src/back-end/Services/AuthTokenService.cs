@@ -92,7 +92,7 @@ public sealed class AuthTokenService : IAuthTokenService
                 ct);
     }
 
-    public async Task ConsumeAsync(
+    public async Task<bool> TryConsumeAsync(
         AuthActionToken token,
         CancellationToken ct = default)
     {
@@ -106,11 +106,21 @@ public sealed class AuthTokenService : IAuthTokenService
                     x => x.UsedAt, DateTime.UtcNow),
                 ct);
 
-        if (updated != 1)
-        {
-            throw new InvalidOperationException(
-                "Token already used or expired.");
-        }
+        return updated == 1;
+    }
+
+    public async Task RevokeAllAsync(
+        int userId,
+        CancellationToken ct = default)
+    {
+        await _db.AuthActionTokens
+            .Where(x =>
+                x.UserId == userId &&
+                x.UsedAt == null)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(
+                    x => x.UsedAt, DateTime.UtcNow),
+                ct);
     }
 
     private static string Hash(string token)

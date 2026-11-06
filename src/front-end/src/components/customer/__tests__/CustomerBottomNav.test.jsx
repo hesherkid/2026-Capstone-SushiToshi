@@ -22,7 +22,7 @@ describe("Customer bottom nav", () => {
   });
 
   it("shows the four customer pages to a guest and highlights the current one", () => {
-    localStorage.setItem("guest", "true");
+    useAuth.mockReturnValue({ userRole: "customer", isGuest: true });
     mockPathname = "/dashboard/bills";
 
     render(<CustomerBottomNav />);
@@ -43,7 +43,7 @@ describe("Customer bottom nav", () => {
   });
 
   it("steps aside on Review order, which has its own bar at the bottom", () => {
-    localStorage.setItem("guest", "true");
+    useAuth.mockReturnValue({ userRole: "customer", isGuest: true });
     mockPathname = "/menu/review";
 
     render(<CustomerBottomNav />);
@@ -57,7 +57,7 @@ describe("Customer bottom nav", () => {
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
     unmount();
 
-    localStorage.setItem("guest", "true");
+    useAuth.mockReturnValue({ userRole: "customer", isGuest: true });
     mockPathname = "/auth/login";
     render(<CustomerBottomNav />);
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();

@@ -7,6 +7,6 @@ public sealed class ResetPasswordDTO
     [Required]
     public string Token { get; set; } = "";
 
-    [Required, MinLength(8)]
+    [Required, MinLength(8), MaxLength(200)]
     public string NewPassword { get; set; } = "";
 }
