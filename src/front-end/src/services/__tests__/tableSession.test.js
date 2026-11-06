@@ -37,7 +37,7 @@ describe("fetchMySessionId", () => {
     localStorage.setItem("locationId", "1");
     localStorage.setItem("currentBillId", "8");
     localStorage.setItem("menuCart", "{}");
-    localStorage.setItem("guest", "true");
+    localStorage.setItem("authToken", "guest-token");
     api.get.mockImplementation(notFound);
 
     await expect(fetchMySessionId()).resolves.toBeNull();
@@ -47,7 +47,7 @@ describe("fetchMySessionId", () => {
       expect(localStorage.getItem(key)).toBeNull(),
     );
     // Kept so the next scan reuses the same guest
-    expect(localStorage.getItem("guest")).toBe("true");
+    expect(localStorage.getItem("authToken")).toBe("guest-token");
   });
 
   it("doesn't thank someone who was never seated", async () => {

@@ -7,15 +7,13 @@ import {
   fetchOrderedBefore,
   removeFavourite,
 } from "@/services/myItems";
-import storage from "@/utils/storage";
 
 // Favourites and "Order again" are for customers with an account, not guests
 const isAccountCustomer = () => {
   const token = getAuthToken();
   if (!token || isTokenExpired(token)) return false;
   const claims = decodeToken(token);
-  const isGuest = storage.get("guest") === "true" || isGuestClaims(claims);
-  return !isGuest && extractRoles(claims).includes("Customer");
+  return !isGuestClaims(claims) && extractRoles(claims).includes("Customer");
 };
 
 /**

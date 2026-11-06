@@ -120,7 +120,6 @@ const LoginFormContent = () => {
     storage.remove("access_token");
     storage.remove("tokenExpiresAt");
     storage.remove("user");
-    storage.remove("guest");
   };
 
   const getAuthRoute = (path, extraParams = {}) => {
@@ -211,7 +210,6 @@ const LoginFormContent = () => {
         throw new Error("Login succeeded but no access token was returned.");
       }
 
-      clearGuestSession();
       saveRestaurantContext();
       const sessionId = await startQrDiningSession(response.access_token);
 
@@ -228,10 +226,6 @@ const LoginFormContent = () => {
   // GUEST SESSION
   // --------------------------------------------------
 
-  const clearGuestSession = () => {
-    storage.remove("guest");
-  };
-
   const handleContinueAsGuest = async () => {
     if (!hasTable) return;
     setLoading(true);
@@ -246,7 +240,6 @@ const LoginFormContent = () => {
         throw new Error("Guest login succeeded but no token was returned.");
       }
 
-      storage.set("guest", "true");
       return response.access_token;
     };
 
@@ -316,7 +309,7 @@ const LoginFormContent = () => {
     autoJoinedTable.current = table;
 
     const token = getAuthToken();
-    if (!token || isTokenExpired(token) || storage.get("guest") === "true") return;
+    if (!token || isTokenExpired(token)) return;
 
     const claims = decodeToken(token);
     const isCustomer = extractRoles(claims).some((role) => String(role).toLowerCase() === "customer");

@@ -4,7 +4,7 @@ import {
   getUserRoles,
   isTokenExpired,
 } from "@/config/auth";
-import { getAuthToken } from "@/utils/auth";
+import { getAuthToken, isGuestClaims } from "@/utils/auth";
 import storage from "@/utils/storage";
 
 // Custom event for auth changes
@@ -24,8 +24,7 @@ export const clearAuthTokens = () => {
   storage.remove("authToken");
   storage.remove("tokenExpiresAt");
   storage.remove("user");
-  storage.remove("guest");
-  
+
   dispatchAuthChange();
 };
 
@@ -35,6 +34,8 @@ export const useAuth = () => {
   const [userRoles, setUserRoles] = useState([]);
   const [userId, setUserId] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
+  // A "Continue as Guest" account; its role is still Customer
+  const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export const useAuth = () => {
         setUserRoles([]);
         setUserId(null);
         setUserEmail(null);
+        setIsGuest(false);
         setLoading(false);
         return;
       }
@@ -59,6 +61,7 @@ export const useAuth = () => {
         setUserRoles([]);
         setUserId(null);
         setUserEmail(null);
+        setIsGuest(false);
         setLoading(false);
         return;
       }
@@ -89,6 +92,7 @@ export const useAuth = () => {
         setUserRole(primaryRole);
         setUserId(id);
         setUserEmail(email);
+        setIsGuest(isGuestClaims(claims));
         setIsAuthenticated(true);
       } catch (error) {
         console.error("Error decoding token:", error);
@@ -98,6 +102,7 @@ export const useAuth = () => {
         setUserRoles([]);
         setUserId(null);
         setUserEmail(null);
+        setIsGuest(false);
       } finally {
         setLoading(false);
       }
@@ -146,6 +151,7 @@ export const useAuth = () => {
     userRoles, // All roles array
     userId,
     userEmail,
+    isGuest,
     loading,
     hasRole,
     hasAnyRole,

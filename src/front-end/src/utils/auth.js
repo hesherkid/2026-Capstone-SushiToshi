@@ -192,9 +192,8 @@ export const logoutUser = () => {
   window.location.href = "/auth/login";
 };
 
-// Everything saved for a table visit, plus the guest flag
+// Everything saved for a table visit
 const CUSTOMER_VISIT_KEYS = [
-  "guest",
   "session_id",
   "tableNumber",
   "locationId",
