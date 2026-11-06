@@ -44,8 +44,9 @@ export const ManagementPage = ({
         width: "100%",
         maxWidth: 1200,
         mx: "auto",
-        px: { xs: 0, sm: 3 },
-        py: 3,
+        px: { xs: 0, sm: 2 },
+        pt: 5,
+        pb: 3,
         ...sx,
       }}
     >

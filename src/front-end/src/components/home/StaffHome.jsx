@@ -25,7 +25,7 @@ export const StaffHome = ({ userEmail }) => {
   ];
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", textAlign: "left", display: "flex", flexDirection: "column", gap: 3, pt: 7 }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", textAlign: "left", display: "flex", flexDirection: "column", gap: 3, pt: 5 }}>
       <Box>
         <Typography variant="h4" component="h1">
           Welcome{firstName ? `, ${firstName}` : ""}
