@@ -243,7 +243,9 @@ describe("Menu item create and edit", () => {
     render(<MenuItemManagement />);
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
 
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Edit Salmon Nigiri" }),
+    );
     await screen.findByText("Edit Menu Item");
 
     expect(nameInput()).toHaveValue("Salmon Nigiri");
@@ -275,7 +277,9 @@ describe("Menu item create and edit", () => {
     );
 
     const row = screen.getByText("Salmon Nigiri").closest("tr");
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Edit Salmon Nigiri" }),
+    );
     await screen.findByText("Edit Menu Item");
     submit();
 
@@ -286,7 +290,9 @@ describe("Menu item create and edit", () => {
   it("starts a new item empty after editing one", async () => {
     render(<MenuItemManagement />);
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Edit Salmon Nigiri" }),
+    );
     await screen.findByText("Edit Menu Item");
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
@@ -310,7 +316,9 @@ describe("Menu item delete", () => {
   const clickRowDelete = async () => {
     render(<MenuItemManagement />);
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
-    fireEvent.click(within(row).getByRole("button", { name: "Delete" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Delete Salmon Nigiri" }),
+    );
   };
 
   const confirmDelete = async () => {

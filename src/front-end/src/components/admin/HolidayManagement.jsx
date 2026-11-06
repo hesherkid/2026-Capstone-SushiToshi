@@ -98,9 +98,9 @@ export const getHolidayColumns = ({ onEdit, onDelete }) => [
   },
   actionsColumn(
     (row) => [
-      { label: `Edit ${row.name}`, icon: Edit, onClick: () => onEdit(row) },
+      { label: "Edit", icon: Edit, onClick: () => onEdit(row) },
       {
-        label: `Delete ${row.name}`,
+        label: "Delete",
         icon: Trash2,
         color: "error",
         onClick: () => onDelete(row),

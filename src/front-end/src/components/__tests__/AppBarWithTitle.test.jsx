@@ -9,10 +9,12 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/menu/full-menu",
 }));
 
-// eslint-disable-next-line @next/next/no-img-element
 jest.mock("next/image", () => ({
   __esModule: true,
-  default: (props) => <img alt={props.alt} />,
+  default: (props) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt={props.alt} />
+  ),
 }));
 
 jest.mock("@/hooks/useAuth", () => ({
@@ -67,7 +69,7 @@ describe("App bar account icon", () => {
     render(<AppBarWithTitle />);
 
     expect(
-      screen.queryByRole("button", { name: "Account" }),
+      screen.queryByRole("button", { name: /^Account\b/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -78,7 +80,7 @@ describe("App bar account icon", () => {
       render(<AppBarWithTitle />);
 
       expect(
-        screen.queryByRole("button", { name: "Account" }),
+        screen.queryByRole("button", { name: /^Account\b/ }),
       ).not.toBeInTheDocument();
     },
   );
@@ -89,7 +91,7 @@ describe("App bar account icon", () => {
     render(<AppBarWithTitle />);
 
     expect(
-      screen.queryByRole("button", { name: "menu" }),
+      screen.queryByRole("button", { name: /^menu\b/ }),
     ).not.toBeInTheDocument();
   });
 

@@ -1,4 +1,10 @@
-import { render, screen, within, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  within,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import StaffManagementPage from "@/components/admin/StaffManagementPage";
 import api from "@/config/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,7 +22,13 @@ jest.mock("@/components/admin/StaffManagementForm", () => ({
   default: ({ error, onSubmit, onClose }) => (
     <div data-testid="staff-form">
       {error && <p data-testid="staff-form-error">{error}</p>}
-      <button onClick={() => onSubmit({ email: "new@example.com", role: "staff" }).catch(() => {})}>Submit form</button>
+      <button
+        onClick={() =>
+          onSubmit({ email: "new@example.com", role: "staff" }).catch(() => {})
+        }
+      >
+        Submit form
+      </button>
       <button onClick={onClose}>Cancel form</button>
     </div>
   ),
@@ -57,9 +69,30 @@ if (typeof window.ResizeObserver === "undefined") {
 }
 
 const staff = [
-  { user_id: 1, email: "admin@example.com", first_name: "Ada", last_name: "Admin", role: "Admin", status: "Active" },
-  { user_id: 2, email: "sue@example.com", first_name: "Sue", last_name: "Staff", role: "Staff", status: "Active" },
-  { user_id: 3, email: "tom@example.com", first_name: "Tom", last_name: "Staff", role: "Staff", status: "Inactive" },
+  {
+    user_id: 1,
+    email: "admin@example.com",
+    first_name: "Ada",
+    last_name: "Admin",
+    role: "Admin",
+    status: "Active",
+  },
+  {
+    user_id: 2,
+    email: "sue@example.com",
+    first_name: "Sue",
+    last_name: "Staff",
+    role: "Staff",
+    status: "Active",
+  },
+  {
+    user_id: 3,
+    email: "tom@example.com",
+    first_name: "Tom",
+    last_name: "Staff",
+    role: "Staff",
+    status: "Inactive",
+  },
 ];
 
 const rowFor = (email) => screen.getByText(email).closest('[role="row"]');
@@ -67,7 +100,10 @@ const rowFor = (email) => screen.getByText(email).closest('[role="row"]');
 describe("Staff management account status", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useAuth.mockReturnValue({ userRole: "admin", userEmail: "admin@example.com" });
+    useAuth.mockReturnValue({
+      userRole: "admin",
+      userEmail: "admin@example.com",
+    });
     api.get.mockResolvedValue({ status: 200, data: staff });
     api.put.mockResolvedValue({ status: 200, data: {} });
   });
@@ -77,20 +113,30 @@ describe("Staff management account status", () => {
     await screen.findByText("sue@example.com");
 
     expect(api.get).toHaveBeenCalledWith("/staff");
-    expect(api.get.mock.calls.some(([url]) => url.includes("customers"))).toBe(false);
+    expect(api.get.mock.calls.some(([url]) => url.includes("customers"))).toBe(
+      false,
+    );
   });
 
   it("asks before deactivating a staff member", async () => {
     render(<StaffManagementPage />);
     await screen.findByText("sue@example.com");
 
-    fireEvent.click(within(rowFor("sue@example.com")).getByRole("button", { name: "Deactivate Account" }));
+    fireEvent.click(
+      within(rowFor("sue@example.com")).getByRole("button", {
+        name: "Deactivate Account Sue Staff",
+      }),
+    );
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/Deactivate Sue Staff\?/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Deactivate Sue Staff\?/),
+    ).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Deactivate" }));
 
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith("/staff/2/status", { status: "Inactive" })
+      expect(api.put).toHaveBeenCalledWith("/staff/2/status", {
+        status: "Inactive",
+      }),
     );
   });
 
@@ -98,10 +144,16 @@ describe("Staff management account status", () => {
     render(<StaffManagementPage />);
     await screen.findByText("tom@example.com");
 
-    fireEvent.click(within(rowFor("tom@example.com")).getByRole("button", { name: "Reactivate Account" }));
+    fireEvent.click(
+      within(rowFor("tom@example.com")).getByRole("button", {
+        name: "Reactivate Account Tom Staff",
+      }),
+    );
 
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith("/staff/3/status", { status: "Active" })
+      expect(api.put).toHaveBeenCalledWith("/staff/3/status", {
+        status: "Active",
+      }),
     );
   });
 
@@ -110,44 +162,75 @@ describe("Staff management account status", () => {
     await screen.findByText("admin@example.com");
 
     const ownRow = rowFor("admin@example.com");
-    expect(within(ownRow).queryByRole("button", { name: "Deactivate Account" })).not.toBeInTheDocument();
-    expect(within(ownRow).getByRole("button", { name: "Edit User" })).toBeInTheDocument();
+    expect(
+      within(ownRow).queryByRole("button", { name: /^Deactivate Account\b/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(ownRow).getByRole("button", { name: "Edit User Ada Admin" }),
+    ).toBeInTheDocument();
   });
 
   it("hides status actions from anyone who isn't an admin", async () => {
-    useAuth.mockReturnValue({ userRole: "staff", userEmail: "sue@example.com" });
+    useAuth.mockReturnValue({
+      userRole: "staff",
+      userEmail: "sue@example.com",
+    });
     render(<StaffManagementPage />);
     await screen.findByText("tom@example.com");
 
-    expect(screen.queryByRole("button", { name: "Deactivate Account" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reactivate Account" })).not.toBeInTheDocument();
+    // Prefix matches: no row should have either button, whatever its name
+    expect(
+      screen.queryByRole("button", { name: /^Deactivate Account\b/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Reactivate Account\b/ }),
+    ).not.toBeInTheDocument();
   });
 });
 
 describe("Staff management dialogs", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useAuth.mockReturnValue({ userRole: "admin", userEmail: "admin@example.com" });
+    useAuth.mockReturnValue({
+      userRole: "admin",
+      userEmail: "admin@example.com",
+    });
     api.get.mockResolvedValue({ status: 200, data: staff });
   });
 
   it("doesn't carry a failed save's error into the next dialog", async () => {
-    api.post.mockRejectedValue({ response: { status: 400, data: { detail: "Email already exists" } } });
+    api.post.mockRejectedValue({
+      response: { status: 400, data: { detail: "Email already exists" } },
+    });
     render(<StaffManagementPage />);
     await screen.findByText("sue@example.com");
 
-    fireEvent.click(screen.getByRole("button", { name: "Create New Staff Account" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create New Staff Account" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Submit form" }));
-    expect(await screen.findByTestId("staff-form-error")).toHaveTextContent("Email already exists");
+    expect(await screen.findByTestId("staff-form-error")).toHaveTextContent(
+      "Email already exists",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cancel form" }));
 
     // Another dialog opens clean
-    fireEvent.click(within(rowFor("sue@example.com")).getByRole("button", { name: "Reset Password" }));
+    fireEvent.click(
+      within(rowFor("sue@example.com")).getByRole("button", {
+        name: "Reset Password Sue Staff",
+      }),
+    );
     expect(screen.getByTestId("password-dialog")).toBeInTheDocument();
-    expect(screen.queryByTestId("password-dialog-error")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("password-dialog-error"),
+    ).not.toBeInTheDocument();
 
     // And so does the form when it's opened again
-    fireEvent.click(within(rowFor("sue@example.com")).getByRole("button", { name: "Edit User" }));
+    fireEvent.click(
+      within(rowFor("sue@example.com")).getByRole("button", {
+        name: "Edit User Sue Staff",
+      }),
+    );
     expect(screen.getByTestId("staff-form")).toBeInTheDocument();
     expect(screen.queryByTestId("staff-form-error")).not.toBeInTheDocument();
   });

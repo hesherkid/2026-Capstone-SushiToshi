@@ -163,7 +163,7 @@ describe("Customer actions", () => {
     ).not.toBeInTheDocument();
     fireEvent.click(
       within(rowFor("guest1@example.com")).getByRole("button", {
-        name: "Deactivate customer",
+        name: "Deactivate customer Mia Chen",
       }),
     );
     expect(
@@ -187,7 +187,7 @@ describe("Customer actions", () => {
 
     fireEvent.click(
       within(rowFor("guest2@example.com")).getByRole("button", {
-        name: "Reactivate customer",
+        name: "Reactivate customer Sam Lee",
       }),
     );
 
@@ -222,7 +222,7 @@ describe("Customer actions", () => {
 
     fireEvent.click(
       within(rowFor("guest1@example.com")).getByRole("button", {
-        name: "Delete customer",
+        name: "Delete customer Mia Chen",
       }),
     );
     expect(await screen.findByText(/This can't be undone/)).toBeInTheDocument();
@@ -243,7 +243,7 @@ describe("Customer actions", () => {
 
     fireEvent.click(
       within(rowFor("guest1@example.com")).getByRole("button", {
-        name: "Delete customer",
+        name: "Delete customer Mia Chen",
       }),
     );
     await confirmIn("Delete");
