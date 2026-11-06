@@ -49,6 +49,7 @@ import {
   printReport,
 } from "@/components/analytics/ReportExport";
 import { isHtmlPage } from "@/utils/serverMessage";
+import ChartDataTable from "@/components/analytics/ChartDataTable";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -160,7 +161,7 @@ const ITEM_TIMING_COLUMNS = [
   nullableNumberColumn("average_minutes", "Average (min)", mins),
 ];
 
-// ---------- Export ----------
+// Export
 
 const durationRow = (label, duration, counted) => [
   label,
@@ -256,15 +257,30 @@ const OrdersByHourChart = ({ hours, peakHour, chartRef }) => {
   };
 
   return (
-    <Box sx={{ position: "relative", height: 300 }}>
-      <Bar
-        ref={chartRef}
-        data={chartData}
-        options={options}
-        role="img"
-        aria-label={`Orders by hour. Busiest hour ${formatHour(peakHour.hour)} with ${peakHour.orders} orders.`}
+    <>
+      <Box sx={{ position: "relative", height: 300 }}>
+        <Bar
+          ref={chartRef}
+          data={chartData}
+          options={options}
+          role="img"
+          aria-label={`Orders by hour. Busiest hour ${formatHour(peakHour.hour)} with ${peakHour.orders} orders. Data table below.`}
+        />
+      </Box>
+      <ChartDataTable
+        title="Orders by hour"
+        rows={shown}
+        getRowKey={(h) => h.hour}
+        columns={[
+          { header: "Hour", value: (h) => formatHour(h.hour) },
+          { header: "Orders", value: (h) => h.orders, align: "right" },
+          {
+            header: "Busiest",
+            value: (h) => (h.hour === peakHour?.hour ? "Busiest hour" : ""),
+          },
+        ]}
       />
-    </Box>
+    </>
   );
 };
 

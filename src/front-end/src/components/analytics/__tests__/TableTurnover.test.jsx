@@ -160,7 +160,11 @@ const renderLoaded = async () => {
   return user;
 };
 
-const card = (label) => screen.getByText(label).closest(".MuiCard-root");
+const card = (label) =>
+  screen
+    .getAllByText(label)
+    .map((el) => el.closest(".MuiCard-root"))
+    .find(Boolean);
 
 const chartData = (id, attribute) =>
   JSON.parse(screen.getByTestId(id).getAttribute(attribute));
@@ -339,7 +343,7 @@ describe("TableTurnover", () => {
       expect(colors.filter((c) => c === peakColor)).toHaveLength(1);
       expect(
         screen.getByRole("img", {
-          name: "Guests seated by hour. Busiest hour 6 PM with 14 guests seated.",
+          name: "Guests seated by hour. Busiest hour 6 PM with 14 guests seated. Data table below.",
         }),
       ).toBeInTheDocument();
     });
@@ -383,7 +387,7 @@ describe("TableTurnover", () => {
 
       expect(
         screen.getByRole("img", {
-          name: "Average visit length by party size. 2 guests: 75.5 min, 4 guests: 88 min, Unknown size: 60 min.",
+          name: "Average visit length by party size. 2 guests: 75.5 min, 4 guests: 88 min, Unknown size: 60 min. Data table below.",
         }),
       ).toBeInTheDocument();
     });
