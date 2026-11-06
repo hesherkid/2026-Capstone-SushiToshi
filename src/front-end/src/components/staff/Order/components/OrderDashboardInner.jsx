@@ -45,7 +45,7 @@ const OrderDashboardInner = () => {
   const rows = orders.filter((order) => order.status === activeTab);
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3 }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 0, sm: 3 }, py: 3 }}>
       <ManagementHeader
         title="Orders"
         actions={

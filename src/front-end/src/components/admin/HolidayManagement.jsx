@@ -290,7 +290,7 @@ const HolidayManagement = () => {
   }
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, textAlign: "left" }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 0, sm: 3 }, py: 3, textAlign: "left" }}>
       <ManagementHeader title="Holidays" addLabel="Add Holiday" onAdd={() => setEditing(null)} />
       <Typography color="text.secondary" sx={{ mb: 2 }}>
         Holiday pricing applies on approved holidays in each location&apos;s province. Loaded holidays

@@ -39,7 +39,16 @@ export const ManagementPage = ({
   }, [success, successAutoHideMs]);
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, ...sx }}>
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 1200,
+        mx: "auto",
+        px: { xs: 0, sm: 3 },
+        py: 3,
+        ...sx,
+      }}
+    >
       <ManagementHeader
         title={title}
         addLabel={addLabel}

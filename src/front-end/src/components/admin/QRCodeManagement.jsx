@@ -353,7 +353,7 @@ export default function QRCodeManagement() {
   )?.name || '';
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3 }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 0, sm: 3 }, py: 3 }}>
       <ManagementHeader title="QR Code Management" />
 
       <Alert severity="info" sx={{ mb: 3 }}>
