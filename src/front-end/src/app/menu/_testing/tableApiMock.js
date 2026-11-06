@@ -1,25 +1,25 @@
 // Shared by the menu and Review order page tests: a guest seated at session 42,
 // on menu 7 at location 3, with two items. The underscore keeps this folder out of the routes.
 export const MISO_SOUP = {
-  item_id: 11,
+  itemId: 11,
   name: "Miso Soup",
   description: "Classic miso broth",
   price: 6,
-  category_id: 1,
+  categoryID: 1,
   category: "Appetizers",
-  tags: [{ tag_id: 3, name: "Popular", color_code: "#C01E2E" }],
-  item_image_url: "",
+  tags: [{ name: "Popular", color: "#C01E2E" }],
+  imageURL: "",
 };
 
 export const SALMON_ROLL = {
-  item_id: 12,
+  itemId: 12,
   name: "Salmon Roll",
   description: "Salmon and rice",
   price: 8,
-  category_id: 2,
+  categoryID: 2,
   category: "Sushi Rolls",
   tags: [],
-  item_image_url: "",
+  imageURL: "",
 };
 
 // What GET /SessionParticipant/42/bill returns: the guest's bill and the table's open bills
@@ -63,7 +63,7 @@ export const tableApi =
       return Promise.resolve({ status: 200, data: myBillResponse({ bills, myBillId, blocked }) });
     }
     if (url.includes("/DiningSession/session-menu/42")) {
-      return Promise.resolve({ status: 200, data: { menu_id: 7, location_Id: 3 } });
+      return Promise.resolve({ status: 200, data: { menu_Id: 7, location_Id: 3 } });
     }
     if (url.includes("/Category")) {
       return Promise.resolve({

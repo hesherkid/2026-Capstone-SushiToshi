@@ -45,7 +45,7 @@ const SessionDashboardInner = () => {
     );
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3 }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 0, sm: 2 }, pt: 5, pb: 3 }}>
       <ManagementHeader
         title="Dining Sessions"
         addLabel="New Session"

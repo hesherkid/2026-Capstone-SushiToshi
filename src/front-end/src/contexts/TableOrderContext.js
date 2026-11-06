@@ -184,15 +184,7 @@ export const TableOrderProvider = ({ children }) => {
       }
 
       const raw = response.data;
-      const id =
-        raw.menu_id ??
-        raw.menuId ??
-        raw.Menu_Id ??
-        raw.menu_Id ??
-        raw.MenuID ??
-        raw;
-      const foundMenuId =
-        typeof id === "number" ? id : parseInt(String(id), 10);
+      const foundMenuId = Number(raw.menu_Id);
 
       if (Number.isNaN(foundMenuId) || foundMenuId < 1) {
         console.warn("Menu ID is invalid:", raw);
@@ -201,9 +193,7 @@ export const TableOrderProvider = ({ children }) => {
       }
 
       // Location decides which prices this table sees
-      const loc = Number(
-        raw.location_Id ?? raw.location_id ?? raw.locationId ?? raw.Location_Id,
-      );
+      const loc = Number(raw.location_Id);
       setLocationId(Number.isNaN(loc) || loc < 1 ? null : loc);
       setMenuId(foundMenuId);
     } catch (err) {

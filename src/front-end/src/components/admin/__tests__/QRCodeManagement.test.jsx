@@ -140,7 +140,7 @@ describe('QRCodeManagement Component', () => {
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/admin/qr/wifi', {
-        params: { locationId: 1, table: '5' },
+        params: { locationId: 1, table: '5', refresh: true },
         responseType: 'blob',
       });
     });
@@ -188,7 +188,7 @@ describe('QRCodeManagement Component', () => {
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/admin/qr/wifi', expect.objectContaining({
-        params: { locationId: 1, table: '5' },
+        params: { locationId: 1, table: '5', refresh: true },
         responseType: 'blob',
       }));
     });
@@ -282,7 +282,7 @@ describe('QRCodeManagement Component', () => {
     // Wait for API call to be made
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/admin/qr/wifi', {
-        params: { locationId: 1, table: '5' },
+        params: { locationId: 1, table: '5', refresh: true },
         responseType: 'blob',
       });
     });

@@ -97,9 +97,9 @@ const getSizeStyles = (size = "l") => {
 
 const TagChip = ({
   tag,
-  isActionChip,
+  isActionChip = false,
   isUsedFor,
-  isSelected,
+  isSelected = false,
   onToggle,
   size = "l",
 }) => {
@@ -182,12 +182,6 @@ TagChip.propTypes = {
   isSelected: PropTypes.bool,
   onToggle: PropTypes.func,
   size: PropTypes.oneOf(["s", "m", "l", "xl"]),
-};
-
-TagChip.defaultProps = {
-  isActionChip: false,
-  isSelected: false,
-  size: "l",
 };
 
 export default TagChip;

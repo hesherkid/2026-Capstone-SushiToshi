@@ -540,7 +540,7 @@ const LoginFormContent = () => {
           defaultValue={defaultEmail}
           inputRef={emailInputRef}
           autoComplete="username"
-          inputProps={{ autoCapitalize: "none", autoCorrect: "off", spellCheck: false }}
+          slotProps={{ htmlInput: { autoCapitalize: "none", autoCorrect: "off", spellCheck: false } }}
           required
           fullWidth
           disabled={loading}

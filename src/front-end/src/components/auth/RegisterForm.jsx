@@ -306,7 +306,7 @@ const RegisterFormContent = () => {
             onChange={handleChange}
             autoComplete="new-password"
             helperText="Minimum 8 characters"
-            inputProps={{ minLength: 8 }}
+            slotProps={{ htmlInput: { minLength: 8 } }}
             required
             fullWidth
             disabled={loading}

@@ -1,9 +1,9 @@
 import { Box, ButtonBase } from "@mui/material";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 
-// Same keys as components/Tags, so a tag reads the same however the API spelled it
-export const tagKey = (tag) => String(tag.tag_id ?? tag.Tag_Id ?? tag.name ?? tag.tag_name);
-const tagName = (tag) => tag.name ?? tag.tag_name ?? "";
+// /Menu/{id}/item sends each tag as just { name, color }, so the name is its key
+export const tagKey = (tag) => tag.name;
+const tagName = (tag) => tag.name ?? "";
 
 // Every tag used on the menu, once each, A to Z
 export const menuTags = (items) => {

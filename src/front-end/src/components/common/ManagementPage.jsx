@@ -18,6 +18,8 @@ export const ManagementPage = ({
   successAction = null,
   successAutoHideMs = SUCCESS_AUTO_HIDE_MS,
   gridProps,
+  // Content shown between the alerts and the grid, e.g. summary stat cards
+  beforeGrid = null,
   children,
   sx = {},
 }) => {
@@ -37,7 +39,17 @@ export const ManagementPage = ({
   }, [success, successAutoHideMs]);
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, ...sx }}>
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 1200,
+        mx: "auto",
+        px: { xs: 0, sm: 2 },
+        pt: 5,
+        pb: 3,
+        ...sx,
+      }}
+    >
       <ManagementHeader
         title={title}
         addLabel={addLabel}
@@ -75,6 +87,8 @@ export const ManagementPage = ({
           {success}
         </Alert>
       )}
+
+      {beforeGrid}
 
       <ManagementGrid {...gridProps} />
 

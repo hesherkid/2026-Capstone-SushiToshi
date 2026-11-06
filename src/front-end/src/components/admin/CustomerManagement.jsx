@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, Alert, Chip } from "@mui/material";
+import { Box, Chip } from "@mui/material";
 import {
   MailCheck,
   MailWarning,
@@ -10,8 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import api from "@/config/api";
-import ManagementHeader from "@/components/common/ManagementHeader";
-import ManagementGrid from "@/components/common/ManagementGrid";
+import ManagementPage from "@/components/common/ManagementPage";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { actionsColumn } from "@/components/common/RowActions";
 import StatCard from "@/components/home/StatCard";
@@ -19,6 +18,7 @@ import { statsGrid } from "@/components/home/homeLayout";
 import { formatDate, parseUtcDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import { isActiveAccount, AccountStatusChip } from "@/components/admin/StaffList";
 import { useAuth } from "@/hooks/useAuth";
+import { serverMessage } from "@/utils/serverMessage";
 
 // /customers returns at most 100 per call
 const PAGE_LIMIT = 100;
@@ -157,8 +157,7 @@ const CustomerManagement = () => {
       await fetchCustomers();
     } catch (err) {
       console.error(failureMessage, err);
-      const detail = err.response?.data;
-      setError(typeof detail === "string" && detail ? detail : failureMessage);
+      setError(serverMessage(err, failureMessage));
     }
   };
 
@@ -209,37 +208,27 @@ const CustomerManagement = () => {
   ).length;
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3 }}>
-      <ManagementHeader
-        title="Customer Management"
-      />
-
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
-
-      <Box sx={{ ...statsGrid, mb: 3 }}>
-        <StatCard label="Total Customers" value={customers.length} icon={Users} loading={loading} />
-        <StatCard label="Active Customers" value={activeCount} icon={UserCheck} loading={loading} />
-        <StatCard
-          label={`New in ${NEW_CUSTOMER_DAYS} Days`}
-          value={newCount}
-          icon={UserPlus}
-          loading={loading}
-        />
-      </Box>
-
-      <ManagementGrid
-        rows={customers}
-        columns={getCustomerColumns(
+    <ManagementPage
+      title="Customer Management"
+      error={error}
+      onErrorClose={() => setError(null)}
+      success={success}
+      onSuccessClose={() => setSuccess(null)}
+      beforeGrid={
+        <Box sx={{ ...statsGrid, mb: 3 }}>
+          <StatCard label="Total Customers" value={customers.length} icon={Users} loading={loading} />
+          <StatCard label="Active Customers" value={activeCount} icon={UserCheck} loading={loading} />
+          <StatCard
+            label={`New in ${NEW_CUSTOMER_DAYS} Days`}
+            value={newCount}
+            icon={UserPlus}
+            loading={loading}
+          />
+        </Box>
+      }
+      gridProps={{
+        rows: customers,
+        columns: getCustomerColumns(
           isAdmin
             ? {
                 onDeactivate: (customer) => setPendingAction({ action: "deactivate", customer }),
@@ -247,16 +236,16 @@ const CustomerManagement = () => {
                 onDelete: (customer) => setPendingAction({ action: "delete", customer }),
               }
             : {}
-        )}
-        loading={loading}
-        getRowId={(row) => row.user_id}
-        initialState={{
+        ),
+        loading,
+        getRowId: (row) => row.user_id,
+        initialState: {
           sorting: { sortModel: [{ field: "created_at", sort: "desc" }] },
           pagination: { paginationModel: { pageSize: 25 } },
-        }}
-        localeText={{ noRowsLabel: "No customers yet" }}
-      />
-
+        },
+        localeText: { noRowsLabel: "No customers yet" },
+      }}
+    >
       <ConfirmDialog
         open={!!pendingAction}
         title={confirmText?.title}
@@ -265,7 +254,7 @@ const CustomerManagement = () => {
         onConfirm={confirmPendingAction}
         onClose={() => setPendingAction(null)}
       />
-    </Box>
+    </ManagementPage>
   );
 };
 

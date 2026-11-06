@@ -1,17 +1,9 @@
-import { useMemo } from "react";
 import { Box } from "@mui/material";
 
 // Tags on the customer menu cards: plain grey pills, the same for every tag.
 // (Admin screens use TagChip, which shows each tag's own colour.)
 const Tags = ({ tags = [] }) => {
-  const normalized = useMemo(() => {
-    return (Array.isArray(tags) ? tags : []).map((t, idx) => ({
-      tag_id: t.tag_id ?? t.Tag_Id ?? t.id ?? `${t.name ?? t.tag_name ?? idx}`,
-      name: t.name ?? t.tag_name ?? "",
-    }));
-  }, [tags]);
-
-  if (!normalized.length) return null;
+  if (!Array.isArray(tags) || !tags.length) return null;
 
   return (
     <Box
@@ -23,9 +15,9 @@ const Tags = ({ tags = [] }) => {
         maxWidth: "100%",
       }}
     >
-      {normalized.map((tag) => (
+      {tags.map((tag) => (
         <Box
-          key={tag.tag_id}
+          key={tag.name}
           component="span"
           sx={{
             px: 1.25,

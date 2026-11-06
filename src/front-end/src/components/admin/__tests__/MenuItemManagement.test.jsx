@@ -238,6 +238,41 @@ describe("Menu item create and edit", () => {
     );
   });
 
+  it("updates the new item instead of creating it again when retrying a failed image upload", async () => {
+    api.post.mockImplementation((url) =>
+      url === "/menuItem"
+        ? Promise.resolve({ data: { ...SALMON, item_id: 12 } })
+        : Promise.reject({ response: { status: 400, data: "File too large" } }),
+    );
+    api.put.mockResolvedValue({ data: { ...SALMON, item_id: 12 } });
+    await openCreate();
+    typeNameAndDescription();
+    choose(/^Category/, "Rolls");
+    await chooseImage();
+
+    submit();
+
+    expect(
+      await within(screen.getByRole("dialog")).findByText(
+        "Menu item saved, but the image upload failed: File too large",
+      ),
+    ).toBeInTheDocument();
+    expectTypedValuesKept();
+
+    submit();
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/menuItem/12", {
+        name: "Spicy Tuna Roll",
+        description: "Eight pieces",
+        category_id: 1,
+      }),
+    );
+    expect(
+      api.post.mock.calls.filter(([url]) => url === "/menuItem"),
+    ).toHaveLength(1);
+  });
+
   it("opens an existing item with its values and category, and saves changes to it", async () => {
     api.put.mockResolvedValue({ data: SALMON });
     render(<MenuItemManagement />);
