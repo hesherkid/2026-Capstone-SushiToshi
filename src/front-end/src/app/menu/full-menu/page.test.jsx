@@ -40,7 +40,6 @@ const render = (ui) => rtlRender(<TableOrderProvider>{ui}</TableOrderProvider>);
 describe("FullMenu guest flow", () => {
   beforeEach(() => {
     localStorage.clear();
-    localStorage.setItem("guest", "true");
     localStorage.setItem("session_id", "42");
     mockSearchTerm = "";
     mockPush.mockReset();
@@ -622,7 +621,6 @@ describe("FullMenu guest flow", () => {
 
     // A customer with an account, with these favourites and past orders saved
     const signInCustomer = ({ favourites = [], orderedBefore = [] } = {}) => {
-      localStorage.removeItem("guest");
       localStorage.setItem("authToken", tokenFor({ [ROLE]: "Customer" }));
       const menu = tableApi();
       api.get.mockImplementation((url, config) => {

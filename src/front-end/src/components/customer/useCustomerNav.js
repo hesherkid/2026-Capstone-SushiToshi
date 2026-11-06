@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { TABLE_VISIT_EVENT, THANK_YOU_PATH, hasTableVisit } from "@/utils/tableVisit";
 import { CUSTOMER_NAV_ITEMS } from "@/components/customer/customerNavItems";
 import { REVIEW_ORDER_PATH } from "@/contexts/TableOrderContext";
-import storage from "@/utils/storage";
 
 /**
  * When the customer pages' navigation shows (bottom tabs on phones, side rail on desktop),
@@ -13,22 +12,19 @@ import storage from "@/utils/storage";
 const useCustomerNav = () => {
   const pathname = usePathname();
   const { userRole } = useAuth();
-  const [isGuest, setIsGuest] = useState(false);
   const [atTable, setAtTable] = useState(false);
 
-  // Same signal the app bar uses: the guest flag is saved at QR login, and so is the session
-  // when the table is joined. Read again on each page, since joining happens on the way in
+  // The session is saved when the table is joined. Read again on each page, since joining
+  // happens on the way in
   useEffect(() => {
-    const readVisit = () => {
-      setIsGuest(storage.get("guest") === "true");
-      setAtTable(hasTableVisit());
-    };
+    const readVisit = () => setAtTable(hasTableVisit());
     readVisit();
     window.addEventListener(TABLE_VISIT_EVENT, readVisit);
     return () => window.removeEventListener(TABLE_VISIT_EVENT, readVisit);
   }, [pathname]);
 
-  const isCustomer = isGuest || userRole === "customer";
+  // Guests' accounts are customers too
+  const isCustomer = userRole === "customer";
   // Without a table (not joined yet, or the visit ended) there's nothing to go to.
   // Review order has its own Place order bar at the bottom, so the tabs step aside there
   const show =

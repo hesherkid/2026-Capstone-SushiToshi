@@ -1,4 +1,8 @@
-import { startTableVisit, TABLE_VISIT_EVENT } from "@/utils/tableVisit";
+import {
+  getExpiredLoginPath,
+  startTableVisit,
+  TABLE_VISIT_EVENT,
+} from "@/utils/tableVisit";
 
 describe("startTableVisit", () => {
   beforeEach(() => localStorage.clear());
@@ -26,5 +30,24 @@ describe("startTableVisit", () => {
     startTableVisit({ locationId: "1", tableNumber: null });
 
     expect(localStorage.getItem("session_id")).toBe("3");
+  });
+});
+
+describe("getExpiredLoginPath", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("brings a seated customer back to their table", () => {
+    localStorage.setItem("locationId", "1");
+    localStorage.setItem("tableNumber", "4");
+    localStorage.setItem("session_id", "3");
+
+    expect(getExpiredLoginPath()).toBe("/auth/login?locationId=1&tableNumber=4&resume=1");
+  });
+
+  it("is the plain login page when the visit is over", () => {
+    localStorage.setItem("locationId", "1");
+    localStorage.setItem("tableNumber", "4");
+
+    expect(getExpiredLoginPath()).toBe("/auth/login");
   });
 });

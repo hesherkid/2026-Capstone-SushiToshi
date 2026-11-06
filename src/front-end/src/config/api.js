@@ -1,5 +1,6 @@
 import axios from "axios";
 import storage from "@/utils/storage";
+import { getExpiredLoginPath } from "@/utils/tableVisit";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -47,8 +48,7 @@ api.interceptors.response.use(
       if (typeof window !== "undefined") {
         storage.remove("authToken");
         // A full reload, so no signed-in state is left in memory
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.href = "/auth/login";
+        window.location.href = getExpiredLoginPath();
       }
     }
     return Promise.reject(error);

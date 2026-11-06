@@ -43,8 +43,7 @@ describe("Customer side nav (desktop)", () => {
   });
 
   it("shows for guests at a table too", () => {
-    useAuth.mockReturnValue({ userRole: null });
-    localStorage.setItem("guest", "true");
+    useAuth.mockReturnValue({ userRole: "customer", isGuest: true });
 
     render(<CustomerSideNav />);
 

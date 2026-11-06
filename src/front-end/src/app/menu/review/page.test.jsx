@@ -73,7 +73,6 @@ describe("Review order page", () => {
     // jsdom doesn't scroll; the confirmation screen scrolls to the top
     window.scrollTo = jest.fn();
     localStorage.clear();
-    localStorage.setItem("guest", "true");
     api.get.mockImplementation(tableApi({ bills: [LEE] }));
   });
 

@@ -47,34 +47,6 @@ namespace back_end.controllers
         }
 
         /// <summary>
-        /// Authenticates a user and returns a JWT access token.
-        /// </summary>
-        /// <param name="request">The login credentials containing email and password</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the JWT token and authentication details.
-        /// Returns HTTP 200 (OK) with the access token on successful authentication.
-        /// Returns HTTP 401 (Unauthorized) if the credentials are invalid.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during authentication.
-        /// </returns>
-        /// <response code="200">Returns the JWT access token and token metadata</response>
-        /// <response code="401">If the email or password is invalid</response>
-        /// <response code="500">If an internal error occurs during authentication</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     POST /api/auth/login
-        ///     {
-        ///         "userEmail": "user@example.com",
-        ///         "userPassword": "SecurePassword123!"
-        ///     }
-        ///
-        /// Returns a JWT bearer token that expires in 2 hours.
-        /// The token should be included in subsequent requests in the Authorization header:
-        /// Authorization: Bearer {access_token}
-        /// 
-        /// Updates the user's last interaction timestamp upon successful login.
-        /// </remarks>
-        /// <summary>
         /// Signs in a new anonymous guest for "Continue as Guest".
         /// </summary>
         /// <remarks>
@@ -123,6 +95,38 @@ namespace back_end.controllers
             });
         }
 
+        /// <summary>
+        /// Authenticates a user and returns a JWT access token.
+        /// </summary>
+        /// <param name="request">The login credentials containing email and password</param>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing the JWT token and authentication details.
+        /// Returns HTTP 200 (OK) with the access token on successful authentication.
+        /// Returns HTTP 401 (Unauthorized) if the credentials are invalid.
+        /// Returns HTTP 403 (Forbidden) if the account is inactive or its email isn't verified yet.
+        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during authentication.
+        /// </returns>
+        /// <response code="200">Returns the JWT access token and token metadata</response>
+        /// <response code="401">If the email or password is invalid</response>
+        /// <response code="403">If the account is inactive, or its email isn't verified (requires_email_verification is true)</response>
+        /// <response code="429">Too many sign-in attempts from this network in the last minute</response>
+        /// <response code="500">If an internal error occurs during authentication</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/auth/login
+        ///     {
+        ///         "userEmail": "user@example.com",
+        ///         "userPassword": "SecurePassword123!"
+        ///     }
+        ///
+        /// Returns a JWT bearer token whose lifetime depends on the role (see <see cref="TokenMinutes"/>);
+        /// expires_in gives it in seconds.
+        /// The token should be included in subsequent requests in the Authorization header:
+        /// Authorization: Bearer {access_token}
+        /// 
+        /// Updates the user's last interaction timestamp upon successful login.
+        /// </remarks>
         [HttpPost("login")]
         [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -213,7 +217,7 @@ namespace back_end.controllers
         /// Requirements:
         /// - All fields are required
         /// - Email must be unique
-        /// - Password must be at least 6 characters long
+        /// - Password must be 8 to 200 characters long, not only whitespace, and is not trimmed
         /// 
         /// Password is automatically hashed using BCrypt before storage.
         /// Email addresses are converted to lowercase and trimmed.
@@ -228,16 +232,18 @@ namespace back_end.controllers
         public async Task<IActionResult> CreateUser([FromBody] RegisterDTO request)
         {
             var SendNewTokenUser = new domain.Entities.User();
-            int passwordMinLength = 6;
+            int passwordMinLength = 8;
+            int passwordMaxLength = 200;
             if (request == null || request.UserEmail == null || request.UserPassword == null || request.FirstName == null || request.LastName == null)
             {
                 return BadRequest(new { message = "Invalid request" });
             }
             string UserEmail = request.UserEmail.ToLower().Trim() ?? string.Empty;
-            string UserPassword = request.UserPassword.Trim() ?? string.Empty;
+            // Passwords are never trimmed; whitespace is part of the password
+            string UserPassword = request.UserPassword;
             string FirstName = request.FirstName.Trim() ?? string.Empty;
             string LastName = request.LastName.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(UserEmail) || string.IsNullOrEmpty(UserPassword) || string.IsNullOrEmpty(FirstName) || string.IsNullOrEmpty(LastName))
+            if (string.IsNullOrEmpty(UserEmail) || string.IsNullOrWhiteSpace(UserPassword) || string.IsNullOrEmpty(FirstName) || string.IsNullOrEmpty(LastName))
             {
                 return BadRequest(new { message = "All fields are required" });
             }
@@ -248,6 +254,10 @@ namespace back_end.controllers
             if (UserPassword.Length < passwordMinLength)
             {
                 return BadRequest(new { message = $"Password must be at least {passwordMinLength} characters long" });
+            }
+            if (UserPassword.Length > passwordMaxLength)
+            {
+                return BadRequest(new { message = $"Password must be at most {passwordMaxLength} characters long" });
             }
             UserPassword = BCryptNet.HashPassword(UserPassword);
             try
@@ -315,9 +325,15 @@ namespace back_end.controllers
                 });
             }
 
-            // Perform consumption and confirmation atomically
-            // in production.
-            await _tokenService.ConsumeAsync(token);
+            // A link submitted twice at once passes the check above in both
+            // requests; only the one that consumes the token goes on
+            if (!await _tokenService.TryConsumeAsync(token))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid or expired verification token"
+                });
+            }
 
             user.Is_email_confirmed = true;
 
@@ -394,8 +410,15 @@ namespace back_end.controllers
                 });
             }
 
-            // These operations must be atomic in production.
-            await _tokenService.ConsumeAsync(token);
+            // A link submitted twice at once passes the check above in both
+            // requests; only the one that consumes the token goes on
+            if (!await _tokenService.TryConsumeAsync(token))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid or expired reset token"
+                });
+            }
 
             user.Password_hash =
                 BCryptNet.HashPassword(request.NewPassword);
@@ -479,7 +502,7 @@ namespace back_end.controllers
 
                 // Extract user info from verified token
                 string userEmail = payload.Email.ToLower().Trim();
-                string userName = payload.Name;
+                var (firstName, lastName) = GoogleNames.FromPayload(payload);
                 string userPicture = payload.Picture;
                 string googleId = payload.Subject;
                 bool emailVerified = payload.EmailVerified;
@@ -512,9 +535,23 @@ namespace back_end.controllers
                     // Existing user - update info if needed
                     user = existingUser;
 
-                    if (string.IsNullOrEmpty(user.First_name))
+                    // Anyone could have registered this email and set its password before it was
+                    // verified. Google just proved who owns it, so drop that password and any links
+                    // already sent, or the old verify link would let that password log in.
+                    if (GoogleAccounts.ClaimUnverified(user))
                     {
-                        user.First_name = userName;
+                        await _tokenService.RevokeAllAsync(user.User_id);
+                    }
+
+                    // Fill in only the parts the account is missing and Google has
+                    if (string.IsNullOrEmpty(user.First_name) && firstName.Length > 0)
+                    {
+                        user.First_name = firstName;
+                    }
+
+                    if (string.IsNullOrEmpty(user.Last_name) && lastName.Length > 0)
+                    {
+                        user.Last_name = lastName;
                     }
 
                     if (string.IsNullOrEmpty(user.GoogleSocial))
@@ -530,7 +567,8 @@ namespace back_end.controllers
                     user = new domain.Entities.User
                     {
                         Email = userEmail,
-                        First_name = userName,
+                        First_name = firstName,
+                        Last_name = lastName,
                         GoogleSocial = googleId,
                         Is_email_confirmed = emailVerified,
                         Created_at = DateTime.UtcNow
@@ -574,9 +612,10 @@ namespace back_end.controllers
         /// - Name: User's email
         /// - Email: User's email address
         /// - Role: User's role (Customer, Staff, or Admin)
-        /// - Sub: Subject identifier (email)
+        /// - Sub: User's unique ID (same as NameIdentifier)
         /// - Jti: Unique token identifier
-        /// 
+        /// - Guests only: given_name, family_name ("Guest K7P2") and guest = "true"
+        ///
         /// Token expiration depends on the role; see <see cref="TokenMinutes"/>.
         /// The token is signed using HMAC-SHA256 algorithm.
         /// </remarks>
