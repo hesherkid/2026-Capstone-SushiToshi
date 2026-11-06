@@ -8,7 +8,7 @@ jest.mock("@/components/common/ManagementHeader", () => ({
 }));
 jest.mock("@/components/common/ManagementGrid", () => ({
   __esModule: true,
-  default: () => null,
+  default: () => <div data-testid="grid" />,
 }));
 
 const renderPage = (props) =>
@@ -63,5 +63,23 @@ describe("Management page success alert", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onSuccessClose).toHaveBeenCalled();
+  });
+});
+
+describe("Management page layout", () => {
+  it("shows beforeGrid content above the grid and children below it", () => {
+    renderPage({
+      beforeGrid: <p>Stats</p>,
+      children: <p>Dialog</p>,
+    });
+
+    const grid = screen.getByTestId("grid");
+    const follows = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(
+      screen.getByText("Stats").compareDocumentPosition(grid) & follows,
+    ).toBeTruthy();
+    expect(
+      grid.compareDocumentPosition(screen.getByText("Dialog")) & follows,
+    ).toBeTruthy();
   });
 });
