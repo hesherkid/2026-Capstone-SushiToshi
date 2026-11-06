@@ -137,16 +137,36 @@ const getAssignmentColumns = ({ locationName, onEdit, onDelete }) => [
     valueGetter: (value) => (value ? "Yes" : "No"),
   },
   actionsColumn(
-    (row) => [
-      { label: "Edit assignment", icon: Edit, onClick: () => onEdit(row) },
-      {
-        label: row.location_Id == null ? "Remove from menu" : "Reset to default price",
-        icon: Trash2,
-        color: "error",
-        onClick: () => onDelete(row),
-      },
-    ],
-    { width: 110 },
+    (row) => {
+      const menu = row.menu?.name || "Unknown Menu";
+      return [
+        {
+          label: "Edit assignment",
+          icon: Edit,
+          onClick: () => onEdit(row),
+        },
+        row.location_Id == null
+          ? {
+              label: "Remove from menu",
+              ariaLabel: `Remove from menu ${menu}`,
+              icon: Trash2,
+              color: "error",
+              onClick: () => onDelete(row),
+            }
+          : {
+              label: "Reset to default price",
+              ariaLabel: `Reset to default price: ${menu}, ${locationName(row.location_Id)}`,
+              icon: Trash2,
+              color: "error",
+              onClick: () => onDelete(row),
+            },
+      ];
+    },
+    {
+      width: 110,
+      getRowName: (row) =>
+        `${row.menu?.name || "Unknown Menu"}, ${locationName(row.location_Id)}`,
+    },
   ),
 ];
 
@@ -354,7 +374,11 @@ const MenuAssignmentDialog = ({
     // md: wide enough for every table column without scrolling sideways
     <AppDialog open={open} onClose={onClose} maxWidth="md">
       {/* Outside the scrolling content, so the title and close button stay in view */}
-      <DialogHeader title="Menu Assignments" subtitle={selectedItem?.name} onClose={onClose} />
+      <DialogHeader
+        title="Menu Assignments"
+        subtitle={selectedItem?.name}
+        onClose={onClose}
+      />
       <DialogContent dividers>
         <form onSubmit={handleSubmit}>
           <Box>
@@ -385,7 +409,11 @@ const MenuAssignmentDialog = ({
                   // The row being edited stays highlighted
                   rowSelectionModel={{
                     type: "include",
-                    ids: new Set(editingAssignment ? [editingAssignment.assignment_Id] : []),
+                    ids: new Set(
+                      editingAssignment
+                        ? [editingAssignment.assignment_Id]
+                        : [],
+                    ),
                   }}
                   showToolbar={false}
                   hideFooter={assignments.length <= 10}
@@ -533,7 +561,9 @@ const MenuAssignmentDialog = ({
                     onChange={setField("over_limit_behavior")}
                   >
                     <MenuItem value="Block">Block</MenuItem>
-                    <MenuItem value="Charge">Charge the item&apos;s price</MenuItem>
+                    <MenuItem value="Charge">
+                      Charge the item&apos;s price
+                    </MenuItem>
                   </Select>
                   <FormHelperText>
                     Charge bills the price for each extra over the limits above

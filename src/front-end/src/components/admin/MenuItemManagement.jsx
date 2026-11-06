@@ -250,13 +250,13 @@ const MenuItemManagement = () => {
             ))}
             <IconButton
               size="small"
-              aria-label="Manage Tags"
+              aria-label={`Manage tags for ${params.row.name}`}
               onClick={() => {
                 setSelectedItem(params.row);
                 setTagDialogOpen(true);
               }}
             >
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
             </IconButton>
           </Box>
         </Box>

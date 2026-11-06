@@ -69,8 +69,14 @@ export const getTableColumns = (actions, { canDelete = false } = {}) => [
   actionsColumn(
     (row) => {
       const inSession = row.status === TABLE_STATUS.IN_SESSION;
+      const table = `Table ${row.table_number}`;
       return [
-        { label: "Edit table", icon: Edit, onClick: () => actions.editTable(row) },
+        {
+          label: "Edit table",
+          ariaLabel: `Edit table ${row.table_number}`,
+          icon: Edit,
+          onClick: () => actions.editTable(row),
+        },
         {
           label: row.is_active ? "Deactivate" : "Activate",
           icon: row.is_active ? PowerOff : Power,
@@ -79,6 +85,7 @@ export const getTableColumns = (actions, { canDelete = false } = {}) => [
         },
         {
           label: "Remove from group",
+          ariaLabel: `Remove from group ${row.group_Name}: ${table}`,
           icon: Unlink,
           onClick: () => actions.removeTableFromGroup(row),
           color: "warning",
@@ -86,6 +93,7 @@ export const getTableColumns = (actions, { canDelete = false } = {}) => [
         },
         {
           label: "Delete table",
+          ariaLabel: `Delete table ${row.table_number}`,
           icon: Trash2,
           onClick: () => actions.deleteTable(row),
           color: "error",
@@ -94,7 +102,7 @@ export const getTableColumns = (actions, { canDelete = false } = {}) => [
         },
       ];
     },
-    { width: 180 }
+    { width: 180, getRowName: (row) => `Table ${row.table_number}` },
   ),
 ];
 
@@ -131,9 +139,14 @@ export const getGroupColumns = (actions) => [
     (row) => {
       const inSession = row.status === TABLE_STATUS.IN_SESSION;
       return [
-        { label: "Edit group", icon: Edit, onClick: () => actions.editGroup(row) },
+        {
+          label: "Edit group",
+          icon: Edit,
+          onClick: () => actions.editGroup(row),
+        },
         {
           label: "Add table",
+          ariaLabel: `Add table to group ${row.group_Name}`,
           icon: Plus,
           onClick: () => actions.addTableToGroup(row),
         },
@@ -145,6 +158,7 @@ export const getGroupColumns = (actions) => [
         },
         {
           label: "Delete group",
+          ariaLabel: `Delete group ${row.group_Name}`,
           icon: Trash2,
           onClick: () => actions.deleteGroup(row),
           color: "error",
@@ -152,6 +166,11 @@ export const getGroupColumns = (actions) => [
         },
       ];
     },
-    { width: 180 }
+    {
+      width: 180,
+      getRowName: (row) => {
+        row.group_Name;
+      },
+    },
   ),
 ];

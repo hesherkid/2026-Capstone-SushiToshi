@@ -162,8 +162,9 @@ export const getSessionColumns = (actions) => [
             }
           >
             <Chip
-              icon={<Users size={14} />}
+              icon={<Users size={14} aria-hidden="true" />}
               label="Check guests"
+              aria-label={`Check guests, ${tableLabel(row.table_Numbers)}`}
               color="warning"
               size="small"
               variant="outlined"
@@ -199,6 +200,10 @@ export const getSessionColumns = (actions) => [
         hidden: !row.is_Closable,
       },
     ],
-    { width: 140 },
+    {
+      width: 140,
+      getRowName: (row) =>
+        `#${row.session_Id}, ${tableLabel(row.table_Numbers)}`,
+    },
   ),
 ];
