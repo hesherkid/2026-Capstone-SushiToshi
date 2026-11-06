@@ -432,8 +432,10 @@ const MenuAssignmentDialog = ({
 
             <Stack spacing={2}>
               <FormControl fullWidth>
-                <InputLabel>Location</InputLabel>
+                <InputLabel id="assignment-location-label">Location</InputLabel>
                 <Select
+                  labelId="assignment-location-label"
+                  label="Location"
                   value={formData.location_id}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -442,7 +444,6 @@ const MenuAssignmentDialog = ({
                       menu_id: "", // menu choices depend on the location
                     }))
                   }
-                  label="Location"
                   disabled={Boolean(editingAssignment)}
                 >
                   <MenuItem value={ALL_LOCATIONS}>
@@ -456,11 +457,12 @@ const MenuAssignmentDialog = ({
                 </Select>
               </FormControl>
               <FormControl fullWidth required>
-                <InputLabel>Menu</InputLabel>
+                <InputLabel id="assignment-menu-label">Menu</InputLabel>
                 <Select
+                  labelId="assignment-menu-label"
+                  label="Menu"
                   value={formData.menu_id}
                   onChange={setField("menu_id")}
-                  label="Menu"
                   disabled={Boolean(editingAssignment)}
                 >
                   {availableMenus.map((menu) => (
@@ -488,11 +490,12 @@ const MenuAssignmentDialog = ({
                 />
 
                 <FormControl sx={{ flex: 1 }}>
-                  <InputLabel>Status</InputLabel>
+                  <InputLabel id="assignment-status-label">Status</InputLabel>
                   <Select
+                    labelId="assignment-status-label"
+                    label="Status"
                     value={formData.status}
                     onChange={setField("status")}
-                    label="Status"
                   >
                     <MenuItem value="available">Available</MenuItem>
                     <MenuItem value="unavailable">Unavailable</MenuItem>
