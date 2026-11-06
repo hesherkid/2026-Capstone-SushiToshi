@@ -45,7 +45,6 @@ const Layout = ({ children }) => {
           px: { xs: 1.5, sm: 2 },
           py: { xs: 2, sm: 4 },
           "&:focus": { outline: "none" },
-          scrollMarginTop: { xs: "56px", sm: "64px" },
           ...besideSideNav,
         }}
       >

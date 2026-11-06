@@ -3,6 +3,19 @@ body {
   margin: 0;
 }
 
+html {
+  scroll-padding-top: calc(
+    var(--app-bar-height, 64px) + var(--sticky-bar-height, 0px) + 8px
+  );
+  scroll-padding-bottom: calc(var(--bottom-bar-height, 0px) + 8px);
+}
+
+@media (max-width: 899.95px) {
+  html:has([data-customer-bottom-nav]) {
+    --bottom-bar-height: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
 h1,
 h2,
 h3,

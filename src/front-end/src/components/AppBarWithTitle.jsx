@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   AppBar,
   Toolbar,
@@ -48,6 +48,21 @@ const AppBarWithTitle = ({ title }) => {
   // A page loading its data (see utils/pageLoading); shown with the same spinner as sign-in
   const [pageLoading, setPageLoadingState] = useState(false);
   const canShowDrawer = !isLoginPage && (isAuthenticated || isGuest);
+  const appBarRef = useRef(null);
+
+  // logo sets the bars height, measure it for scroll-padding-top
+  useEffect(() => {
+    const bar = appBarRef.current;
+    if (!bar) return;
+    const root = document.documentElement;
+    const update = () =>
+      root.style.setProperty("--app-bar-height", `${bar.offsetHeight}px`);
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const handlePageLoading = (event) =>
@@ -186,8 +201,11 @@ const AppBarWithTitle = ({ title }) => {
     (loc) => loc.location_id === Number(selectedLocation),
   )?.name;
 
+  const NAV_DRAWER_ID = "app-navigation-drawer";
+
   return (
     <AppBar
+      ref={appBarRef}
       position="fixed"
       sx={{ zIndex: theme.zIndex.drawer + 1, overflow: "visible" }}
     >
@@ -213,15 +231,16 @@ const AppBarWithTitle = ({ title }) => {
           {canShowDrawer && effectiveRole !== "customer" && (
             <IconButton
               color="inherit"
-              aria-label="menu"
+              aria-label="Main menu"
               aria-expanded={drawerOpen}
+              aria-controls={drawerOpen ? NAV_DRAWER_ID : undefined}
               onClick={() => setDrawerOpen(true)}
               sx={{
                 p: { xs: 1, sm: 1.5 },
                 flexShrink: 0,
               }}
             >
-              <MenuIcon />
+              <MenuIcon aria-hidden="true" />
             </IconButton>
           )}
         </Box>
@@ -419,10 +438,10 @@ const AppBarWithTitle = ({ title }) => {
 
         {canShowDrawer && effectiveRole !== "customer" && (
           <AppNavigationDrawer
+            id={NAV_DRAWER_ID}
             open={drawerOpen}
             role={effectiveRole}
             onClose={() => setDrawerOpen(false)}
-            onNavigate={handleNavigation}
             onLogout={handleLogout}
           />
         )}

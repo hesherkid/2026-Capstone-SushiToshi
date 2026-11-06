@@ -168,9 +168,9 @@ const MenuBrowser = ({
     window.addEventListener("scrollend", done, { once: true });
     jumping.current = setTimeout(done, 1000);
 
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    const reduceMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+
     window.scrollTo({
       top:
         section.getBoundingClientRect().top +
@@ -182,6 +182,24 @@ const MenuBrowser = ({
 
     section.querySelector("h2")?.focus({ preventScroll: true });
   };
+
+  // Add the pinned category bar to scroll-padding-top while it's on screen
+  const chipBarShown = ready && visibleIds.length > 0;
+  useEffect(() => {
+    const bar = chipBarRef.current;
+    if (!chipBarShown || !bar) return;
+    const root = document.documentElement;
+    const update = () =>
+      root.style.setProperty("--sticky-bar-height", `${bar.offsetHeight}px`);
+    update();
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    observer?.observe(bar);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty("--sticky-bar-height");
+    };
+  }, [chipBarShown]);
 
   return (
     <>

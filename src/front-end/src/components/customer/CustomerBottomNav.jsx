@@ -1,5 +1,4 @@
 "use client";
-import { useRouter } from "next/navigation";
 import {
   BottomNavigation,
   BottomNavigationAction,
@@ -16,7 +15,6 @@ export const INACTIVE_COLOR = "#6b6f73";
 
 // Phone tab bar for guests: every customer page is one tap away.
 const CustomerBottomNav = () => {
-  const router = useRouter();
   const { show, current } = useCustomerNav();
 
   if (!show) return null;
@@ -31,6 +29,7 @@ const CustomerBottomNav = () => {
       <Paper
         component="nav"
         aria-label="Customer navigation"
+        data-customer-bottom-nav=""
         elevation={0}
         square
         sx={{
@@ -48,7 +47,6 @@ const CustomerBottomNav = () => {
         <BottomNavigation
           showLabels
           value={current}
-          onChange={(_, path) => router.push(path)}
           sx={{
             height: NAV_HEIGHT,
             backgroundColor: "transparent",
