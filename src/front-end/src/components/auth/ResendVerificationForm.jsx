@@ -1,0 +1,125 @@
+"use client";
+import React, { useState } from "react";
+import NextLink from "next/link";
+import { useSearchParams } from "next/navigation";
+import { resendVerificationEmail } from "@/utils/auth";
+import {
+  Box,
+  Button,
+  Link,
+  TextField,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import { Mail } from "lucide-react";
+import AuthCard from "@/components/auth/AuthCard";
+
+export const ResendVerificationForm = () => {
+  const searchParams = useSearchParams();
+
+  // The login page passes along the email the user just tried to sign in with
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      const response = await resendVerificationEmail(
+        email.trim().toLowerCase()
+      );
+
+      setSuccess(
+        response?.message ||
+        "If this account needs verification, a new email will be sent. Please check your inbox."
+      );
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        "An error occurred. Please try again later."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthCard
+      title="Verify Your Email"
+      icon={<Mail size={40} color="#dc2626" />}
+      maxWidth={500}
+      gap={3}
+    >
+      {error && (
+        <Alert severity="error" sx={{ width: "100%", marginBottom: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert severity="success" sx={{ width: "100%", marginBottom: 2 }}>
+          {success}
+        </Alert>
+      )}
+
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        <TextField
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          fullWidth
+          autoComplete="email"
+          autoFocus
+          sx={{ marginBottom: 3 }}
+        />
+
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          disabled={loading}
+        >
+          {loading ? (
+            <CircularProgress size={24} sx={{ color: "white" }} />
+          ) : (
+            "Send Verification Email"
+          )}
+        </Button>
+
+        <Box sx={{ textAlign: "center", marginTop: 2 }}>
+          <Link
+            component={NextLink}
+            href="/auth/login"
+            underline="hover"
+            sx={{
+              display: "inline-block",
+              fontSize: "0.875rem",
+              padding: "0.5rem 1rem",
+            }}
+          >
+            Back to Login
+          </Link>
+        </Box>
+      </Box>
+    </AuthCard>
+  );
+};
+
+export default ResendVerificationForm;

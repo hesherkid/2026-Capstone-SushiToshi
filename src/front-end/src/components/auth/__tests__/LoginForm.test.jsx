@@ -681,7 +681,9 @@ describe("LoginForm", () => {
       await user.click(
         screen.getByRole("button", { name: /Resend Verification Email/i }),
       );
-      expect(mockPush).toHaveBeenCalledWith("/auth/resend-verification");
+      expect(mockPush).toHaveBeenCalledWith(
+        "/auth/resend-verification?email=test%40example.com",
+      );
     });
   });
 

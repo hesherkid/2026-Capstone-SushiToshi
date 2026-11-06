@@ -60,6 +60,7 @@ const LoginFormContent = () => {
   const [joiningTable, setJoiningTable] = useState(false);
   // The table the signed-in customer was already joined to automatically ("locationId:tableNumber")
   const autoJoinedTable = useRef(null);
+  const emailInputRef = useRef(null);
 
   // Keep the context from the restaurant QR code.
   const locationId = searchParams.get("locationId");
@@ -119,8 +120,8 @@ const LoginFormContent = () => {
     storage.remove("guest");
   };
 
-  const getAuthRoute = (path) => {
-    const params = new URLSearchParams();
+  const getAuthRoute = (path, extraParams = {}) => {
+    const params = new URLSearchParams(extraParams);
 
     if (locationId) {
       params.set("locationId", locationId);
@@ -381,7 +382,12 @@ const LoginFormContent = () => {
   // --------------------------------------------------
 
   const handleResendVerification = () => {
-    const url = getAuthRoute("/auth/resend-verification");
+    // Pre-fill the resend page with the email the user just tried to sign in with
+    const email = emailInputRef.current?.value.trim();
+    const url = getAuthRoute(
+      "/auth/resend-verification",
+      email ? { email } : {},
+    );
 
     router.push(url);
   };
@@ -536,6 +542,7 @@ const LoginFormContent = () => {
           name="email"
           type="email"
           defaultValue={defaultEmail}
+          inputRef={emailInputRef}
           autoComplete="username"
           inputProps={{ autoCapitalize: "none", autoCorrect: "off", spellCheck: false }}
           required
