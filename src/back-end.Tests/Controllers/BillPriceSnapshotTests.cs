@@ -87,7 +87,7 @@ namespace back_end.Tests.Controllers
 
         private async Task Close(int billId = 1)
         {
-            (await Bills().Close_Bill(SessionId, billId)).Should().BeOfType<OkObjectResult>();
+            (await Bills().CloseBill(SessionId, billId)).Should().BeOfType<OkObjectResult>();
             _context.ChangeTracker.Clear();
         }
 
@@ -200,7 +200,7 @@ namespace back_end.Tests.Controllers
             await _context.SaveChangesAsync();
             _context.ChangeTracker.Clear();
 
-            var result = await Bills().Close_Bill(SessionId, 1);
+            var result = await Bills().CloseBill(SessionId, 1);
 
             result.Should().BeOfType<BadRequestObjectResult>();
             _context.ChangeTracker.Clear();

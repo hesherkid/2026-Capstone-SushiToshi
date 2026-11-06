@@ -227,56 +227,56 @@ namespace back_end.controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateUser([FromBody] RegisterDTO request)
         {
-            var SendNewTokenUser = new domain.Entities.User();
+            var sendNewTokenUser = new domain.Entities.User();
             int passwordMinLength = 6;
             if (request == null || request.UserEmail == null || request.UserPassword == null || request.FirstName == null || request.LastName == null)
             {
                 return BadRequest(new { message = "Invalid request" });
             }
-            string UserEmail = request.UserEmail.ToLower().Trim() ?? string.Empty;
-            string UserPassword = request.UserPassword.Trim() ?? string.Empty;
-            string FirstName = request.FirstName.Trim() ?? string.Empty;
-            string LastName = request.LastName.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(UserEmail) || string.IsNullOrEmpty(UserPassword) || string.IsNullOrEmpty(FirstName) || string.IsNullOrEmpty(LastName))
+            string userEmail = request.UserEmail.ToLower().Trim() ?? string.Empty;
+            string userPassword = request.UserPassword.Trim() ?? string.Empty;
+            string firstName = request.FirstName.Trim() ?? string.Empty;
+            string lastName = request.LastName.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(userEmail) || string.IsNullOrEmpty(userPassword) || string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
             {
                 return BadRequest(new { message = "All fields are required" });
             }
-            if (await _context.Users.AnyAsync(u => u.Email == UserEmail))
+            if (await _context.Users.AnyAsync(u => u.Email == userEmail))
             {
                 return Conflict(new { message = "Email already in use" });
             }
-            if (UserPassword.Length < passwordMinLength)
+            if (userPassword.Length < passwordMinLength)
             {
                 return BadRequest(new { message = $"Password must be at least {passwordMinLength} characters long" });
             }
-            UserPassword = BCryptNet.HashPassword(UserPassword);
+            userPassword = BCryptNet.HashPassword(userPassword);
             try
             {
-                var NewUser = new domain.Entities.User
+                var newUser = new domain.Entities.User
                 {
-                    Email = UserEmail,
-                    Password_hash = UserPassword,
-                    First_name = FirstName,
-                    Last_name = LastName,
+                    Email = userEmail,
+                    Password_hash = userPassword,
+                    First_name = firstName,
+                    Last_name = lastName,
                     Is_email_confirmed = false
                 };
-                _context.Users.Add(NewUser);
+                _context.Users.Add(newUser);
                 await _context.SaveChangesAsync();
-                SendNewTokenUser = NewUser;
+                sendNewTokenUser = newUser;
             }
             catch (Exception ex)
             {
                 return BadRequest(new { message = $"Error creating user: {ex.Message}" });
             }
 
-            var token = await _tokenService.CreateAsync(SendNewTokenUser.User_id, AuthTokenPurpose.EmailVerification);
+            var token = await _tokenService.CreateAsync(sendNewTokenUser.User_id, AuthTokenPurpose.EmailVerification);
             var verificationUrl =
                 $"{_emailSettings.FrontendBaseUrl.TrimEnd('/')}" +
                 "/auth/verify-email?token=" +
                 Uri.EscapeDataString(token);
 
             await _emailService.SendEmailVerificationAsync(
-                SendNewTokenUser.Email,
+                sendNewTokenUser.Email,
                 verificationUrl);
 
             return Ok(new

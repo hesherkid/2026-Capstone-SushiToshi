@@ -65,7 +65,7 @@ public class BillAccessTests : IDisposable
     [Fact]
     public async Task Customers_CanSeeTheirOwnTablesBills()
     {
-        var result = await ControllerFor(SeatedAtTable6).Get_Bills(269);
+        var result = await ControllerFor(SeatedAtTable6).GetBills(269);
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -76,7 +76,7 @@ public class BillAccessTests : IDisposable
         _context.Bills.RemoveRange(_context.Bills.Where(b => b.Session_Id == 269));
         _context.SaveChanges();
 
-        var result = await ControllerFor(SeatedAtTable6).Get_Bills(269);
+        var result = await ControllerFor(SeatedAtTable6).GetBills(269);
 
         result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeAssignableTo<IEnumerable<object>>()
@@ -88,8 +88,8 @@ public class BillAccessTests : IDisposable
     {
         var controller = ControllerFor(SeatedAtTable6);
 
-        (await controller.Get_Bills(143)).Should().BeOfType<ForbidResult>();
-        (await controller.Get_Bill(143, 140)).Should().BeOfType<ForbidResult>();
+        (await controller.GetBills(143)).Should().BeOfType<ForbidResult>();
+        (await controller.GetBill(143, 140)).Should().BeOfType<ForbidResult>();
         (await controller.GetBillSummary(143, 140)).Should().BeOfType<ForbidResult>();
     }
 }

@@ -70,7 +70,7 @@ namespace back_end.Controllers
         _context.Tags.Add(tag);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetTagById), new { tag_id = tag.tag_id }, new TagBaseDTO
+        return CreatedAtAction(nameof(GetTagById), new { tagId = tag.tag_id }, new TagBaseDTO
         {
           Tag_Id = tag.tag_id,
           Tag_Name = tag.tag_name,
@@ -131,7 +131,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves a tag by its unique identifier.
     /// </summary>
-    /// <param name="tag_id">The unique identifier of the tag to retrieve.</param>
+    /// <param name="tagId">The unique identifier of the tag to retrieve.</param>
     /// <remarks>
     /// This endpoint returns a single tag with its ID, name, and color.
     /// Authorization is required.  
@@ -139,10 +139,10 @@ namespace back_end.Controllers
     /// </remarks>
     /// <response code="200">The tag was found and returned successfully.</response>
     /// <response code="403">The user is not authorized to access this resource.</response>
-    /// <response code="404">No tag exists with the specified <paramref name="tag_id"/>.</response>
+    /// <response code="404">No tag exists with the specified <paramref name="tagId"/>.</response>
     /// <response code="500">An internal server error occurred while retrieving the tag.</response>
 
-    [HttpGet("{tag_id:int}")]
+    [HttpGet("{tagId:int}")]
     [Produces("application/json")]
     [SwaggerOperation(
         OperationId = "GetTagById",
@@ -151,12 +151,12 @@ namespace back_end.Controllers
     )]
     [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status200OK)]
     [SwaggerResponse(StatusCodes.Status200OK, "Tag retrieved successfully", typeof(TagBaseDTO))]
-    public async Task<IActionResult> GetTagById(int tag_id)
+    public async Task<IActionResult> GetTagById(int tagId)
     {
       try
       {
         var tag = await _context.Tags
-          .FirstOrDefaultAsync(t => t.tag_id == tag_id);
+          .FirstOrDefaultAsync(t => t.tag_id == tagId);
 
         if (tag == null)
         {
@@ -172,8 +172,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error retrieving tag with ID {TagId}", tag_id);
-        return StatusCode(500, new { detail = $"Error retrieving tag {tag_id}" });
+        _logger.LogError(ex, "Error retrieving tag with ID {TagId}", tagId);
+        return StatusCode(500, new { detail = $"Error retrieving tag {tagId}" });
       }
     }
 
@@ -181,7 +181,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Updates an existing tag.
     /// </summary>
-    /// <param name="tag_id">The unique identifier of the tag to update.</param>
+    /// <param name="tagId">The unique identifier of the tag to update.</param>
     /// <param name="tagData">The fields to update for the tag.</param>
     /// <remarks>
     /// Requires <c>Admin</c> role.  
@@ -191,11 +191,11 @@ namespace back_end.Controllers
     /// <response code="200">The tag was updated successfully and the updated tag is returned.</response>
     /// <response code="400">The request body is invalid, or no updatable fields were provided.</response>
     /// <response code="403">The user does not have permission to update tags.</response>
-    /// <response code="404">A tag with the specified <paramref name="tag_id"/> does not exist.</response>
+    /// <response code="404">A tag with the specified <paramref name="tagId"/> does not exist.</response>
     /// <response code="409">Another tag already uses the new name.</response>
     /// <response code="500">An unexpected error occurred while updating the tag.</response>
     [Authorize(Policy = "adminOnly")]
-    [HttpPut("{tag_id:int}")]
+    [HttpPut("{tagId:int}")]
     [Consumes("application/json")]
     [Produces("application/json")]
     [SwaggerOperation(
@@ -206,12 +206,12 @@ namespace back_end.Controllers
     [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status200OK)]
     [SwaggerResponse(StatusCodes.Status200OK, "Tag updated", typeof(TagBaseDTO))]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> UpdateTag(int tag_id, [FromBody] TagUpdateDTO tagData)
+    public async Task<IActionResult> UpdateTag(int tagId, [FromBody] TagUpdateDTO tagData)
     {
       try
       {
         var tag = await _context.Tags
-          .FirstOrDefaultAsync(t => t.tag_id == tag_id);
+          .FirstOrDefaultAsync(t => t.tag_id == tagId);
 
         if (tag is null)
         {
@@ -222,7 +222,7 @@ namespace back_end.Controllers
         if (tagData.Tag_Name != null)
         {
           var nameTaken = await _context.Tags
-            .AnyAsync(t => t.tag_name == tagData.Tag_Name && t.tag_id != tag_id);
+            .AnyAsync(t => t.tag_name == tagData.Tag_Name && t.tag_id != tagId);
 
           if (nameTaken)
           {
@@ -251,15 +251,15 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error updating tag {TagId}", tag_id);
-        return StatusCode(500, new { detail = $"Error updating tag {tag_id}" });
+        _logger.LogError(ex, "Error updating tag {TagId}", tagId);
+        return StatusCode(500, new { detail = $"Error updating tag {tagId}" });
       }
     }
 
     /// <summary>
     /// Retrieves all menu items associated with a specific tag.
     /// </summary>
-    /// <param name="tag_id">The unique identifier of the tag.</param>
+    /// <param name="tagId">The unique identifier of the tag.</param>
     /// <remarks>
     /// This endpoint returns a list of all menu items linked to the specified tag.  
     /// Only users with the <c>Admin</c> role are permitted to access this resource.
@@ -269,7 +269,7 @@ namespace back_end.Controllers
     /// <response code="404">The specified tag was not found.</response>
     /// <response code="500">An unexpected server error occurred while retrieving data.</response>
     [Authorize(Policy = "adminOnly")]
-    [HttpGet("{tag_id:int}/menu_items")]
+    [HttpGet("{tagId:int}/menu_items")]
     [Produces("application/json")]
 
     [SwaggerOperation(
@@ -281,14 +281,14 @@ namespace back_end.Controllers
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Permission denied", typeof(ProblemDetails))]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Tag not found", typeof(ProblemDetails))]
     [SwaggerResponse(StatusCodes.Status500InternalServerError, "Server error", typeof(ProblemDetails))]
-    public async Task<IActionResult> GetMenuItemsByTag(int tag_id)
+    public async Task<IActionResult> GetMenuItemsByTag(int tagId)
     {
       try
       {
         var tag = await _context.Tags
           .Include(t => t.MenuItemTags)
             .ThenInclude(mit => mit.MenuItem)
-          .FirstOrDefaultAsync(t => t.tag_id == tag_id);
+          .FirstOrDefaultAsync(t => t.tag_id == tagId);
 
         if (tag is null)
         {
@@ -301,37 +301,37 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error retrieving menu items by tag {TagId}", tag_id);
+        _logger.LogError(ex, "Error retrieving menu items by tag {TagId}", tagId);
         return StatusCode(500, new { detail = "Error retrieving menu items" });
       }
     }
     /// <summary>
     /// Deletes a tag by its identifier.
     /// </summary>
-    /// <param name="tag_id">The unique identifier of the tag to delete.</param>
+    /// <param name="tagId">The unique identifier of the tag to delete.</param>
     /// <remarks>
     /// Requires the user to be in the <c>Admin</c> role.  
     /// This operation clears all related <c>MenuItemTags</c> associations before removing the tag.
     /// </remarks>
     /// <response code="200">Tag was deleted successfully.</response>
     /// <response code="403">The current user does not have permission to delete tags.</response>
-    /// <response code="404">No tag exists with the supplied <paramref name="tag_id"/>.</response>
+    /// <response code="404">No tag exists with the supplied <paramref name="tagId"/>.</response>
     /// <response code="500">An unexpected error occurred while deleting the tag.</response>
     [Authorize(Policy = "adminOnly")]
-    [HttpDelete("{tag_id:int}")]
+    [HttpDelete("{tagId:int}")]
     [Produces("application/json")]
     [SwaggerOperation(
         Summary = "Delete a tag",              // Short summary (shows in list)
         Description = "Deletes a tag by ID and removes all related MenuItemTags. Requires Admin role.", // Full description
         OperationId = "DeleteTag"              // Internal name in Swagger/OpenAPI
     )]
-    public async Task<IActionResult> DeleteTag(int tag_id)
+    public async Task<IActionResult> DeleteTag(int tagId)
     {
       try
       {
         var tag = await _context.Tags
           .Include(t => t.MenuItemTags)
-          .FirstOrDefaultAsync(t => t.tag_id == tag_id);
+          .FirstOrDefaultAsync(t => t.tag_id == tagId);
 
         if (tag == null)
         {

@@ -37,8 +37,8 @@ namespace back_end.Controllers
     /// <summary>
     /// Creates a new service request for an active dining session.
     /// </summary>
-    /// <param name="session_id">The unique identifier of the dining session</param>
-    /// <param name="request_data">The service request data containing notes and other details</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
+    /// <param name="requestData">The service request data containing notes and other details</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the created <see cref="ServiceRequestResponseDTO"/> object.
     /// Returns HTTP 200 (OK) with the created service request on success.
@@ -66,10 +66,10 @@ namespace back_end.Controllers
     /// </remarks>
 
     [Authorize]
-    [HttpPost("{session_id}")]
+    [HttpPost("{sessionId}")]
     public async Task<IActionResult> CreateServiceRequest(
-        int session_id,
-        ServiceRequestCreateDTO request_data
+        int sessionId,
+        ServiceRequestCreateDTO requestData
     )
     {
       try
@@ -78,7 +78,7 @@ namespace back_end.Controllers
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
               .ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(ds => ds.Session_Id == session_id && ds.Ended_At == null);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId && ds.Ended_At == null);
 
         if (session is null)
         {
@@ -97,7 +97,7 @@ namespace back_end.Controllers
         }
 
         var participant = await _context.SessionParticipants
-            .FirstOrDefaultAsync(sp => sp.Session_Id == session_id &&
+            .FirstOrDefaultAsync(sp => sp.Session_Id == sessionId &&
                                       sp.User_Id == user.User_id &&
                                       sp.Left_At == null);
         if (participant is null)
@@ -125,7 +125,7 @@ namespace back_end.Controllers
         // One cooldown per table, so guests on different phones can't take turns sending.
         // Asking for the bill has its own once-only check and doesn't count here.
         var lastRequestAt = await _context.ServiceRequests
-            .Where(sr => sr.Session_Id == session_id && !sr.Notes.StartsWith(BillRequestNotePrefix))
+            .Where(sr => sr.Session_Id == sessionId && !sr.Notes.StartsWith(BillRequestNotePrefix))
             .OrderByDescending(sr => sr.Created_At)
             .Select(sr => (DateTime?)sr.Created_At)
             .FirstOrDefaultAsync();
@@ -149,7 +149,7 @@ namespace back_end.Controllers
           Session_Id = session.Session_Id,
           Table_Id = tableId.Value,
           Request_By = user.User_id,
-          Notes = request_data.Notes ?? string.Empty,
+          Notes = requestData.Notes ?? string.Empty,
           Status = ServiceRequestStatus.Pending
         };
 
@@ -181,7 +181,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Marks a service request as completed and assigns it to the current user.
     /// </summary>
-    /// <param name="request_id">The unique identifier of the service request to complete</param>
+    /// <param name="requestId">The unique identifier of the service request to complete</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the updated <see cref="ServiceRequest"/> object.
     /// Returns HTTP 200 (OK) with the completed service request on success.
@@ -201,14 +201,14 @@ namespace back_end.Controllers
     /// The current authenticated user will be assigned as the user who completed the request.
     /// </remarks>
     [Authorize(Roles = "Admin,Staff")]
-    [HttpPost("{request_id}/complete")]
-    public async Task<IActionResult> CompleteServiceRequest(int request_id)
+    [HttpPost("{requestId}/complete")]
+    public async Task<IActionResult> CompleteServiceRequest(int requestId)
     {
       try
       {
         var serviceRequest = await _context.ServiceRequests
             .Include(sr => sr.Table)
-            .FirstOrDefaultAsync(sr => sr.request_id == request_id);
+            .FirstOrDefaultAsync(sr => sr.request_id == requestId);
 
         if (serviceRequest is null)
         {
@@ -263,7 +263,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves all pending service requests for a specific session.
     /// </summary>
-    /// <param name="session_id">The unique identifier of the session</param>
+    /// <param name="sessionId">The unique identifier of the session</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a collection of <see cref="ServiceRequestResponseDTO"/> objects.
     /// Returns HTTP 200 (OK) with the list of pending service requests on success.
@@ -284,27 +284,27 @@ namespace back_end.Controllers
     /// </remarks>
     /// <response code="403">A customer asked about a session they aren't seated in</response>
     [Authorize]
-    [HttpGet("by-session/{session_id}")]
-    public async Task<IActionResult> GetSessionServiceRequest(int session_id)
+    [HttpGet("by-session/{sessionId}")]
+    public async Task<IActionResult> GetSessionServiceRequest(int sessionId)
     {
       try
       {
         var session = await _context.DiningSessions
-            .FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
 
         if (session is null)
         {
           return NotFound(new { message = "The session was not found" });
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return Forbid();
         }
 
         var sessionRequestList = await _context.ServiceRequests
             .Include(sr => sr.Table)
-            .Where(sr => sr.Session_Id == session_id && sr.Status == ServiceRequestStatus.Pending)
+            .Where(sr => sr.Session_Id == sessionId && sr.Status == ServiceRequestStatus.Pending)
             .ToListAsync();
 
         var response = sessionRequestList.Select(sr => new ServiceRequestResponseDTO

@@ -34,7 +34,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Leaves the specified dining session.
         /// </summary>
-        /// <param name="session_id">The session identifier to leave.</param>
+        /// <param name="sessionId">The session identifier to leave.</param>
         /// <remarks>
         /// - You must currently be an active participant.  
         /// - You cannot leave if you have any non-delivered orders in the session.  
@@ -46,7 +46,7 @@ namespace back_end.Controllers
         /// <response code="400">The user is not an active participant, or has active orders.</response>
         /// <response code="500">An unexpected error occurred while leaving the session.</response>
         [Authorize]
-        [HttpPost("{session_id:int}/leave")]
+        [HttpPost("{sessionId:int}/leave")]
         [Produces("application/json")]
         [SwaggerOperation(
             OperationId = "LeaveSession",
@@ -54,13 +54,13 @@ namespace back_end.Controllers
             Description = "Marks the current user as having left the specified session, provided there are no active orders."
         )]
         public async Task<IActionResult> LeaveSession(
-                int session_id
+                int sessionId
             )
         {
             try
             {
 
-                var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
+                var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
                 if (session is null)
                 {
                     return NotFound("Dining Session was not found");
@@ -75,13 +75,13 @@ namespace back_end.Controllers
                 }
 
                 var existingParticipant = await _context.SessionParticipants
-                    .FirstOrDefaultAsync(sp => sp.Session_Id == session_id && sp.User_Id == userId && !sp.Left_At.HasValue);
+                    .FirstOrDefaultAsync(sp => sp.Session_Id == sessionId && sp.User_Id == userId && !sp.Left_At.HasValue);
                 if (existingParticipant is null)
                 {
                     return BadRequest("You are not a active participant to the session");
                 }
                 var activeOrders = await _context.SessionOrders
-                    .FirstOrDefaultAsync(so => so.session_id == session_id && so.User_Id == userId && so.Status != OrderStatus.Delivered);
+                    .FirstOrDefaultAsync(so => so.session_id == sessionId && so.User_Id == userId && so.Status != OrderStatus.Delivered);
                 if (activeOrders != null)
                 {
                     return BadRequest("You can not leave a active session with active orders");
@@ -93,7 +93,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error leaving session {SessionId}", session_id);
+                _logger.LogError(ex, "Error leaving session {SessionId}", sessionId);
                 return StatusCode(500, "Error leaving session");
             }
         }
@@ -108,25 +108,25 @@ namespace back_end.Controllers
     /// <response code="200">Your bill (null if you haven't picked one) and the open bills.</response>
     /// <response code="403">You aren't seated at this table.</response>
     [Authorize]
-    [HttpGet("{session_id:int}/bill")]
+    [HttpGet("{sessionId:int}/bill")]
     [ProducesResponseType(typeof(MyBillResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetMyBill(int session_id)
+    public async Task<IActionResult> GetMyBill(int sessionId)
     {
-        var seat = await MySeatAsync(session_id);
+        var seat = await MySeatAsync(sessionId);
         if (seat is null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "You aren't seated at this table." });
         }
 
         var bills = await _context.Bills
-            .Where(b => b.Session_Id == session_id && (b.Status == BillStatus.Open || b.Bill_Id == seat.Bill_Id))
+            .Where(b => b.Session_Id == sessionId && (b.Status == BillStatus.Open || b.Bill_Id == seat.Bill_Id))
             .OrderBy(b => b.Created_At)
             .ToListAsync();
 
         // People still seated on each bill
         var people = await _context.SessionParticipants
-            .Where(sp => sp.Session_Id == session_id && sp.Left_At == null && sp.Bill_Id != null)
+            .Where(sp => sp.Session_Id == sessionId && sp.Left_At == null && sp.Bill_Id != null)
             .GroupBy(sp => sp.Bill_Id!.Value)
             .Select(g => new { Bill_Id = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.Bill_Id, g => g.Count);
@@ -170,13 +170,13 @@ namespace back_end.Controllers
     /// <response code="400">The bill can't be joined, or you've already ordered on another bill.</response>
     /// <response code="403">You aren't seated at this table.</response>
     [Authorize]
-    [HttpPut("{session_id:int}/bill")]
+    [HttpPut("{sessionId:int}/bill")]
     [ProducesResponseType(typeof(MyBillResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> ChooseBill(int session_id, ChooseBillDTO request)
+    public async Task<IActionResult> ChooseBill(int sessionId, ChooseBillDTO request)
     {
-        var seat = await MySeatAsync(session_id);
+        var seat = await MySeatAsync(sessionId);
         if (seat is null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "You aren't seated at this table." });
@@ -184,11 +184,11 @@ namespace back_end.Controllers
 
         if (seat.Bill_Id == request.Bill_Id)
         {
-            return await GetMyBill(session_id);
+            return await GetMyBill(sessionId);
         }
 
         var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == request.Bill_Id);
-        var cantJoin = BillLinks.CantJoinReason(bill, session_id)
+        var cantJoin = BillLinks.CantJoinReason(bill, sessionId)
             ?? await BillLinks.CantLeaveReasonAsync(_context, seat);
         if (cantJoin != null)
         {
@@ -197,7 +197,7 @@ namespace back_end.Controllers
 
         seat.Bill_Id = request.Bill_Id;
         await _context.SaveChangesAsync();
-        return await GetMyBill(session_id);
+        return await GetMyBill(sessionId);
     }
 
     /// <summary>
@@ -219,13 +219,13 @@ namespace back_end.Controllers
     /// <response code="400">You aren't on a bill, it can't be changed or staff locked its counts, or the counts aren't valid.</response>
     /// <response code="403">You aren't seated at this table.</response>
     [Authorize]
-    [HttpPut("{session_id:int}/bill/guests")]
+    [HttpPut("{sessionId:int}/bill/guests")]
     [ProducesResponseType(typeof(MyBillResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> UpdateGuestCounts(int session_id, UpdateGuestCountsDTO request)
+    public async Task<IActionResult> UpdateGuestCounts(int sessionId, UpdateGuestCountsDTO request)
     {
-        var seat = await MySeatAsync(session_id);
+        var seat = await MySeatAsync(sessionId);
         if (seat is null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "You aren't seated at this table." });
@@ -267,7 +267,7 @@ namespace back_end.Controllers
             await _context.SaveChangesAsync();
         }
         if (billLock != null) await billLock.CommitAsync();
-        return await GetMyBill(session_id);
+        return await GetMyBill(sessionId);
     }
 
     /// <summary>
@@ -291,20 +291,20 @@ namespace back_end.Controllers
     /// <response code="403">The table is at another location.</response>
     /// <response code="404">Nobody with that seat is at the table.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("{session_id:int}/participants/{participant_id:int}/bill")]
+    [HttpPut("{sessionId:int}/participants/{participantId:int}/bill")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> MoveGuest(int session_id, int participant_id, MoveGuestDTO request)
+    public async Task<IActionResult> MoveGuest(int sessionId, int participantId, MoveGuestDTO request)
     {
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
             return LocationResults.OtherLocation();
         }
 
         var seat = await _context.SessionParticipants.FirstOrDefaultAsync(sp =>
-            sp.Participant_Id == participant_id && sp.Session_Id == session_id && sp.Left_At == null);
+            sp.Participant_Id == participantId && sp.Session_Id == sessionId && sp.Left_At == null);
         if (seat is null)
         {
             return NotFound(new { message = "That person isn't at this table." });
@@ -319,7 +319,7 @@ namespace back_end.Controllers
         await using var billLock = await BillLock.LockAsync(_context, fromBillId is int fromId ? new[] { fromId, request.Bill_Id } : new[] { request.Bill_Id });
 
         var to = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == request.Bill_Id);
-        if (to == null || to.Session_Id != session_id)
+        if (to == null || to.Session_Id != sessionId)
         {
             return BadRequest(new { message = "That bill isn't at this table." });
         }

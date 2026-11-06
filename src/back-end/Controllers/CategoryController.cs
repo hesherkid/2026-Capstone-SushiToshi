@@ -160,7 +160,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Retrieves a specific category by its ID.
         /// </summary>
-        /// <param name="_categoryId">The unique identifier of the category</param>
+        /// <param name="categoryId">The unique identifier of the category</param>
         /// <returns>
         /// An <see cref="IActionResult"/> containing the <see cref="Category"/> object.
         /// Returns HTTP 200 (OK) with the category details on success.
@@ -177,16 +177,16 @@ namespace back_end.Controllers
         ///
         /// Returns the complete category details for the specified ID.
         /// </remarks>
-        [HttpGet("get_category/{_categoryId}")]
+        [HttpGet("get_category/{categoryId}")]
         [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetCategoryById(int _categoryId)
+        public async Task<IActionResult> GetCategoryById(int categoryId)
         {
             try
             {
                 var category = await _context.Categories
-                    .FirstOrDefaultAsync(c => c.Category_id == _categoryId);
+                    .FirstOrDefaultAsync(c => c.Category_id == categoryId);
 
                 if (category == null)
                 {
@@ -205,7 +205,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Updates an existing category's information and limits.
         /// </summary>
-        /// <param name="_categoryId">The unique identifier of the category to update</param>
+        /// <param name="categoryId">The unique identifier of the category to update</param>
         /// <param name="updatedCategory">The updated category data</param>
         /// <returns>
         /// An <see cref="IActionResult"/> containing the updated category object.
@@ -239,19 +239,19 @@ namespace back_end.Controllers
         /// Over limit behavior determines how the system handles situations where the specified limits are exceeded. Accepts Block or Charge.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
-        [HttpPut("update_category/{_categoryId}")]
+        [HttpPut("update_category/{categoryId}")]
         [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> UpdateCategory(int _categoryId, UpdateCategory updatedCategory)
+        public async Task<IActionResult> UpdateCategory(int categoryId, UpdateCategory updatedCategory)
         {
             try
             {
                 var existingCategory = await _context.Categories
-                    .FirstOrDefaultAsync(c => c.Category_id == _categoryId);
+                    .FirstOrDefaultAsync(c => c.Category_id == categoryId);
 
                 if (existingCategory == null)
                 {
@@ -291,7 +291,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Deletes a category from the system.
         /// </summary>
-        /// <param name="_categoryId">The unique identifier of the category to delete</param>
+        /// <param name="categoryId">The unique identifier of the category to delete</param>
         /// <returns>
         /// An <see cref="IActionResult"/> indicating the result of the operation.
         /// Returns HTTP 200 (OK) with a success message when the category is deleted.
@@ -310,26 +310,26 @@ namespace back_end.Controllers
         /// If the category has associated menu items, deletion will be blocked and a conflict response will be returned.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
-        [HttpDelete("delete_category/{_categoryId}")]
+        [HttpDelete("delete_category/{categoryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> DeleteCategory(int _categoryId)
+        public async Task<IActionResult> DeleteCategory(int categoryId)
         {
             try
             {
                 var category = await _context.Categories
-                    .FirstOrDefaultAsync(c => c.Category_id == _categoryId);
+                    .FirstOrDefaultAsync(c => c.Category_id == categoryId);
 
                 if (category == null)
                 {
                     return NotFound("Category not found.");
                 }
 
-                if (await _context.MenuItems.AnyAsync(m => m.Category_id == _categoryId))
+                if (await _context.MenuItems.AnyAsync(m => m.Category_id == categoryId))
                     return Conflict("Cannot delete category, it has associated menu items. Remove or move them first.");
 
                 _context.Categories.Remove(category);
@@ -347,7 +347,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Retrieves menu items for a specific category with pagination support.
         /// </summary>
-        /// <param name="_categoryId">The unique identifier of the category</param>
+        /// <param name="categoryId">The unique identifier of the category</param>
         /// <param name="skip">The number of items to skip for pagination (default: 0)</param>
         /// <param name="limit">The maximum number of items to return (default: 10)</param>
         /// <returns>
@@ -371,19 +371,19 @@ namespace back_end.Controllers
         /// Supports pagination through skip and limit parameters.
         /// Default pagination: skip=0, limit=10
         /// </remarks>
-        [HttpGet("get_menu_by_category/{_categoryId}")]
+        [HttpGet("get_menu_by_category/{categoryId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(IEnumerable<Menu_Item>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetMenuItemsByCategory(int _categoryId, int skip = 0, int limit = 10)
+        public async Task<IActionResult> GetMenuItemsByCategory(int categoryId, int skip = 0, int limit = 10)
         {
             try
             {
                 var menuItems = await _context.MenuItems
-                    .Where(m => m.Category_id == _categoryId)
+                    .Where(m => m.Category_id == categoryId)
                     .Skip(skip)
                     .Take(limit)
                     .ToListAsync();

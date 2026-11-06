@@ -147,7 +147,7 @@ public class LocationControllerTests : IDisposable
             new StaffLocation { User_Id = 11, Location_Id = 1 });
         _context.SaveChanges();
 
-        var result = await _controller.Delete_Location(1);
+        var result = await _controller.DeleteLocation(1);
 
         result.Should().BeOfType<OkObjectResult>();
         (await _context.Users.FindAsync(10))!.Location_id.Should().Be(2);

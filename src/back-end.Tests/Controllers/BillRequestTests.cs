@@ -90,7 +90,7 @@ public class BillRequestTests : IDisposable
     [Fact]
     public async Task RequestBill_MarksTheBillAndNotifiesStaff()
     {
-        var result = await Bills(Guest).Request_Bill(269, 332);
+        var result = await Bills(Guest).RequestBill(269, 332);
 
         Body(result).GetProperty("already_requested").GetBoolean().Should().BeFalse();
         (await _context.Bills.FindAsync(332))!.Requested_At.Should().NotBeNull();
@@ -103,8 +103,8 @@ public class BillRequestTests : IDisposable
     [Fact]
     public async Task RequestBill_IsSafeToRepeat()
     {
-        await Bills(Guest).Request_Bill(269, 332);
-        var again = await Bills(Guest).Request_Bill(269, 332);
+        await Bills(Guest).RequestBill(269, 332);
+        var again = await Bills(Guest).RequestBill(269, 332);
 
         Body(again).GetProperty("already_requested").GetBoolean().Should().BeTrue();
         (await _context.ServiceRequests.CountAsync()).Should().Be(1);
@@ -113,16 +113,16 @@ public class BillRequestTests : IDisposable
     [Fact]
     public async Task RequestBill_RefusesClosedBillsOtherBillsAndOtherTables()
     {
-        (await Bills(ClosedBillGuest).Request_Bill(269, 334)).Should().BeOfType<BadRequestObjectResult>();
-        (await Bills(ParkGuest).Request_Bill(269, 332)).Should().BeOfType<ForbidResult>();
-        (await Bills(OtherTableGuest).Request_Bill(269, 332)).Should().BeOfType<ForbidResult>();
+        (await Bills(ClosedBillGuest).RequestBill(269, 334)).Should().BeOfType<BadRequestObjectResult>();
+        (await Bills(ParkGuest).RequestBill(269, 332)).Should().BeOfType<ForbidResult>();
+        (await Bills(OtherTableGuest).RequestBill(269, 332)).Should().BeOfType<ForbidResult>();
         (await _context.Bills.FindAsync(332))!.Requested_At.Should().BeNull();
     }
 
     [Fact]
     public async Task GuestsCantStartANewOrderOnARequestedBill()
     {
-        await Bills(Guest).Request_Bill(269, 332);
+        await Bills(Guest).RequestBill(269, 332);
 
         var result = await Orders(Guest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 332, Items = OneItem() });
 
@@ -132,7 +132,7 @@ public class BillRequestTests : IDisposable
     [Fact]
     public async Task GuestsCantAddItemsToAnOrderOnARequestedBill()
     {
-        await Bills(Guest).Request_Bill(269, 332);
+        await Bills(Guest).RequestBill(269, 332);
 
         var result = await Orders(Guest).AddOrderItems(900, new List<OrderItemCreateDTO>
         {
@@ -146,7 +146,7 @@ public class BillRequestTests : IDisposable
     [Fact]
     public async Task OtherBillsAtTheTable_CanStillOrder()
     {
-        await Bills(Guest).Request_Bill(269, 332);
+        await Bills(Guest).RequestBill(269, 332);
 
         var result = await Orders(ParkGuest).CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 333, Items = OneItem() });
 
@@ -157,7 +157,7 @@ public class BillRequestTests : IDisposable
     [Fact]
     public async Task StaffCanStillAddToARequestedBill()
     {
-        await Bills(Guest).Request_Bill(269, 332);
+        await Bills(Guest).RequestBill(269, 332);
 
         var result = await Orders(Server, "Staff").CreateOrder(new OrderCreateDTO { Session_Id = 269, Bill_Id = 332, Items = OneItem() });
 

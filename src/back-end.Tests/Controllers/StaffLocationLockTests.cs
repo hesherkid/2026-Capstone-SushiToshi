@@ -219,7 +219,7 @@ public class StaffLocationLockTests : IDisposable
     [Fact]
     public async Task CloseSession_ForbidsStaffAtAnotherLocation()
     {
-        var result = await Sessions(StaffId, UserRoles.Staff).close_dining_session(SouthSession);
+        var result = await Sessions(StaffId, UserRoles.Staff).CloseDiningSession(SouthSession);
 
         ShouldBeForbidden(result);
         (await _context.DiningSessions.FindAsync(SouthSession))!.Ended_At.Should().BeNull();
@@ -266,7 +266,7 @@ public class StaffLocationLockTests : IDisposable
     public async Task UpdateMenuAssignment_ForbidsStaffChangingEveryLocation()
     {
         var result = await MenuAssignments(StaffId, UserRoles.Staff)
-            .Update_Menu_Item_Assignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: null);
+            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: null);
 
         ShouldBeForbidden(result);
     }
@@ -275,7 +275,7 @@ public class StaffLocationLockTests : IDisposable
     public async Task UpdateMenuAssignment_ForbidsStaffAtAnotherLocation()
     {
         var result = await MenuAssignments(StaffId, UserRoles.Staff)
-            .Update_Menu_Item_Assignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: Southside);
+            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: Southside);
 
         ShouldBeForbidden(result);
     }

@@ -83,7 +83,7 @@ public class SessionMenuAccessTests : IDisposable
     {
         SeatMia(7);
 
-        var result = await ControllerAs(MiaUserId, "Customer").get_session_menu_id(7);
+        var result = await ControllerAs(MiaUserId, "Customer").GetSessionMenuId(7);
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeEquivalentTo(new SessionMenuResponseDTO { Menu_Id = 1, Location_Id = LocationId });
@@ -94,7 +94,7 @@ public class SessionMenuAccessTests : IDisposable
     {
         SeatMia(7);
 
-        var result = await ControllerAs(MiaUserId, "Customer").get_session_menu_id(8);
+        var result = await ControllerAs(MiaUserId, "Customer").GetSessionMenuId(8);
 
         result.Result.Should().BeOfType<ForbidResult>();
     }
@@ -104,7 +104,7 @@ public class SessionMenuAccessTests : IDisposable
     {
         SeatMia(7, leftAt: DateTime.UtcNow.AddMinutes(-5));
 
-        var result = await ControllerAs(MiaUserId, "Customer").get_session_menu_id(7);
+        var result = await ControllerAs(MiaUserId, "Customer").GetSessionMenuId(7);
 
         result.Result.Should().BeOfType<ForbidResult>();
     }
@@ -114,7 +114,7 @@ public class SessionMenuAccessTests : IDisposable
     {
         SeatMia(7);
 
-        var result = await ControllerAs(MiaUserId, "Customer").get_session_menu_id(999);
+        var result = await ControllerAs(MiaUserId, "Customer").GetSessionMenuId(999);
 
         result.Result.Should().BeOfType<ForbidResult>();
     }
@@ -122,7 +122,7 @@ public class SessionMenuAccessTests : IDisposable
     [Fact]
     public async Task Staff_CanReadAnyTablesMenu()
     {
-        var result = await ControllerAs(StaffUserId, "Staff").get_session_menu_id(8);
+        var result = await ControllerAs(StaffUserId, "Staff").GetSessionMenuId(8);
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeEquivalentTo(new SessionMenuResponseDTO { Menu_Id = 2, Location_Id = LocationId });
@@ -131,7 +131,7 @@ public class SessionMenuAccessTests : IDisposable
     [Fact]
     public async Task Staff_GetNotFoundForAMissingSession()
     {
-        var result = await ControllerAs(StaffUserId, "Staff").get_session_menu_id(999);
+        var result = await ControllerAs(StaffUserId, "Staff").GetSessionMenuId(999);
 
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }

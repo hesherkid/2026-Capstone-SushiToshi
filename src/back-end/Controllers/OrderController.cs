@@ -258,7 +258,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Creates a new order for a dining session, with its items.
         /// </summary>
-        /// <param name="order_data">The order creation data including session ID, bill ID and items</param>
+        /// <param name="orderData">The order creation data including session ID, bill ID and items</param>
         /// <returns>
         /// An <see cref="ActionResult"/> containing the created <see cref="OrderResponseDTO"/> object.
         /// Returns HTTP 200 (OK) with the created order on success.
@@ -296,20 +296,20 @@ namespace back_end.Controllers
         [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<SessionOrder>>> CreateOrder(OrderCreateDTO order_data)
+        public async Task<ActionResult<IEnumerable<SessionOrder>>> CreateOrder(OrderCreateDTO orderData)
         {
             try
             {
-                var payloadError = ItemsPayloadError(order_data.Items);
+                var payloadError = ItemsPayloadError(orderData.Items);
                 if (payloadError != null)
                 {
                     return BadRequest(new { message = payloadError });
                 }
 
                 // Waits for a close of this bill in progress, so the bill read below is current
-                await using var billLock = await BillLock.LockAsync(_context, order_data.Bill_Id);
+                await using var billLock = await BillLock.LockAsync(_context, orderData.Bill_Id);
 
-                var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == order_data.Session_Id);
+                var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == orderData.Session_Id);
                 if (session is null)
                 {
                     return NotFound("Dinning Session was not found in the current context");
@@ -321,7 +321,7 @@ namespace back_end.Controllers
                     return Forbid();
                 }
 
-                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == order_data.Bill_Id && b.Session_Id == session.Session_Id);
+                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == orderData.Bill_Id && b.Session_Id == session.Session_Id);
                 if (bill is null)
                 {
                     return NotFound("Bill Was not found for the current session order Create Bill");
@@ -351,7 +351,7 @@ namespace back_end.Controllers
                 }
 
                 // A new order has nothing ordered on it yet
-                var plan = await PlanOrderLinesAsync(session, null, order_data.Items);
+                var plan = await PlanOrderLinesAsync(session, null, orderData.Items);
                 if (plan.Errors.Any())
                 {
                     return BadRequest(new { message = $"Nothing was added. {string.Join(" ", plan.Errors)}", errors = plan.Errors });
@@ -364,8 +364,8 @@ namespace back_end.Controllers
 
                 var newOrder = new SessionOrder
                 {
-                    session_id = order_data.Session_Id,
-                    Bill_Id = order_data.Bill_Id,
+                    session_id = orderData.Session_Id,
+                    Bill_Id = orderData.Bill_Id,
                     User_Id = userId,
                     User_Name = userName,
                     Status = OrderStatus.Pending,
@@ -410,19 +410,19 @@ namespace back_end.Controllers
         /// <summary>
         /// Approves a pending order and transitions to Approved/Processing status.
         /// </summary>
-        [HttpPatch("{order_id}/approve")]
+        [HttpPatch("{orderId}/approve")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> ApproveOrder(int order_id)
+        public async Task<IActionResult> ApproveOrder(int orderId)
         {
             try
             {
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.MenuItem)
-                    .FirstOrDefaultAsync(o => o.Order_Id == order_id);
+                    .FirstOrDefaultAsync(o => o.Order_Id == orderId);
 
                 if (order is null)
                 {
@@ -503,8 +503,8 @@ namespace back_end.Controllers
         /// <summary>
         /// Deletes a specific item from an order.
         /// </summary>
-        /// <param name="order_id">The unique identifier of the order</param>
-        /// <param name="item_id">The unique identifier of the item to delete</param>
+        /// <param name="orderId">The unique identifier of the order</param>
+        /// <param name="orderItemId">The unique identifier of the order item to delete</param>
         /// <returns>
         /// An <see cref="IActionResult"/> indicating the result of the operation.
         /// Returns HTTP 200 (OK) with a success message when the item is deleted.
@@ -528,7 +528,7 @@ namespace back_end.Controllers
         /// Staff and Admin users can delete items from approved orders.
         /// Deleting the last item that isn't cancelled cancels the order.
         /// </remarks>
-        [HttpDelete("{order_id}/items/{order_item_id}")]
+        [HttpDelete("{orderId}/items/{orderItemId}")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -536,13 +536,13 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> RemoveOrderItem(
-            int order_id,
-            int order_item_id
+            int orderId,
+            int orderItemId
         )
         {
             try
             {
-                var order = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync(so => so.Order_Id == order_id);
+                var order = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync(so => so.Order_Id == orderId);
                 if (order is null)
                 {
                     return NotFound("Order Data was not found");
@@ -572,7 +572,7 @@ namespace back_end.Controllers
                         return Conflict("Can not Modify a Approved Order");
                     }
                 }
-                var item = order.OrderItems.FirstOrDefault(oi => oi.Order_Item_Id == order_item_id);
+                var item = order.OrderItems.FirstOrDefault(oi => oi.Order_Item_Id == orderItemId);
                 if (item is null)
                 {
                     return BadRequest("Order Item was not found");
@@ -594,7 +594,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting item {ItemId} from order {OrderId}", order_item_id, order_id);
+                _logger.LogError(ex, "Error deleting item {ItemId} from order {OrderId}", orderItemId, orderId);
                 return StatusCode(500, new { message = "An error occurred while deleting the order item", error = ex.Message });
             }
         }
@@ -603,7 +603,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Marks an order item as completed/delivered.
         /// </summary>
-        /// <param name="item_id">The unique identifier of the order item to complete</param>
+        /// <param name="itemId">The unique identifier of the order item to complete</param>
         /// <returns>
         /// An <see cref="IActionResult"/> containing the updated <see cref="OrderItemResponseDTO"/> object.
         /// Returns HTTP 200 (OK) with the completed order item on success.
@@ -621,18 +621,18 @@ namespace back_end.Controllers
         /// This endpoint requires Admin or Staff role authorization.
         /// The order item status will be updated to 'Delivered' and the completion timestamp will be set.
         /// </remarks>
-        [HttpPatch("{order_id}/items/{item_id}/complete")]
+        [HttpPatch("{orderId}/items/{itemId}/complete")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CompleteOrderItem(int order_id, int item_id)
+        public async Task<IActionResult> CompleteOrderItem(int orderId, int itemId)
         {
             try
             {
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
-                    .FirstOrDefaultAsync(o => o.Order_Id == order_id);
+                    .FirstOrDefaultAsync(o => o.Order_Id == orderId);
                 if (order is null) return NotFound("Order not found");
 
                 if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
@@ -640,7 +640,7 @@ namespace back_end.Controllers
                     return LocationResults.OtherLocation();
                 }
 
-                var item = order.OrderItems.FirstOrDefault(oi => oi.Order_Item_Id == item_id);
+                var item = order.OrderItems.FirstOrDefault(oi => oi.Order_Item_Id == itemId);
                 if (item is null) return NotFound("Item not found in this order");
 
                 if (item.Order_Item_Status != OrderStatus.Processing)
@@ -673,7 +673,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error completing order item {ItemId}", item_id);
+                _logger.LogError(ex, "Error completing order item {ItemId}", itemId);
                 return StatusCode(500, "Internal Server Error");
             }
         }
@@ -681,19 +681,19 @@ namespace back_end.Controllers
         /// <summary>
         /// Marks the whole order as delivered/completed.
         /// </summary>
-        [HttpPatch("{order_id}/complete")]
+        [HttpPatch("{orderId}/complete")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> CompleteOrder(int order_id)
+        public async Task<IActionResult> CompleteOrder(int orderId)
         {
             try
             {
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.MenuItem)
-                    .FirstOrDefaultAsync(o => o.Order_Id == order_id);
+                    .FirstOrDefaultAsync(o => o.Order_Id == orderId);
 
                 if (order is null)
                 {
@@ -758,7 +758,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Cancels a pending order.
         /// </summary>
-        /// <param name="order_id">The unique identifier of the order to cancel</param>
+        /// <param name="orderId">The unique identifier of the order to cancel</param>
         /// <returns>
         /// An <see cref="IActionResult"/> containing the updated <see cref="OrderResponseDTO"/> object.
         /// Returns HTTP 200 (OK) with the cancelled order on success.
@@ -783,7 +783,7 @@ namespace back_end.Controllers
         /// Staff can cancel any order at their location. Customers (guests included) can cancel
         /// orders they placed, while they're seated at that table.
         /// </remarks>
-        [HttpPatch("{order_id}/cancel")]
+        [HttpPatch("{orderId}/cancel")]
         [Authorize]
         [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -792,12 +792,12 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CancelOrder(
-            int order_id
+            int orderId
         )
         {
             try
             {
-                var order = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync(so => so.Order_Id == order_id);
+                var order = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync(so => so.Order_Id == orderId);
                 if (order is null)
                 {
                     return NotFound("Order was not found to cancel");
@@ -1006,21 +1006,21 @@ namespace back_end.Controllers
         /// <summary>
         /// Updates order items before approval (pending orders only).
         /// </summary>
-        [HttpPatch("{order_id}/items/{item_id}")]
+        [HttpPatch("{orderId}/items/{itemId}")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateOrderItem(
-                   int order_id,
-                   int item_id,
+                   int orderId,
+                   int itemId,
                    [FromBody] OrderItemUpdateDTO updateData
                )
         {
             try
             {
                 var order = await _context.SessionOrders
-                    .FirstOrDefaultAsync(o => o.Order_Id == order_id);
+                    .FirstOrDefaultAsync(o => o.Order_Id == orderId);
 
                 if (order is null)
                 {
@@ -1065,7 +1065,7 @@ namespace back_end.Controllers
 
                 var orderItem = await _context.OrderItems
                     .Include(oi => oi.MenuItem)
-                    .FirstOrDefaultAsync(oi => oi.Order_Item_Id == item_id && oi.Order_Key == order_id);
+                    .FirstOrDefaultAsync(oi => oi.Order_Item_Id == itemId && oi.Order_Key == orderId);
 
                 if (orderItem is null)
                 {
@@ -1501,7 +1501,7 @@ namespace back_end.Controllers
         //Get all orders tied to a Dining Session
         [HttpGet("session/{sessionId}")]
         [Authorize]
-        public async Task<ActionResult<IEnumerable<object>>> GetOrderBySession(int sessionId, [FromQuery] int? bill_id = null)
+        public async Task<ActionResult<IEnumerable<object>>> GetOrderBySession(int sessionId, [FromQuery(Name = "bill_id")] int? billId = null)
         {
             try
             {
@@ -1520,16 +1520,16 @@ namespace back_end.Controllers
                 if (!SessionAccess.IsStaff(User))
                 {
                     var myBillId = await SessionAccess.MyBillIdAsync(_context, User, sessionId);
-                    if (bill_id.HasValue && bill_id != myBillId)
+                    if (billId.HasValue && billId != myBillId)
                     {
                         return Forbid();
                     }
-                    bill_id = myBillId ?? -1; // Not on a bill yet: nothing to show
+                    billId = myBillId ?? -1; // Not on a bill yet: nothing to show
                 }
 
                 var sessionOrder = await _context.SessionOrders
                     .Where(o => o.session_id == sessionId &&
-                                (!bill_id.HasValue || o.Bill_Id == bill_id.Value))
+                                (!billId.HasValue || o.Bill_Id == billId.Value))
                     .Include(o => o.Bill)
                     .Include(o => o.OrderItems)
                         .ThenInclude(or => or.MenuItem)
@@ -1602,7 +1602,7 @@ namespace back_end.Controllers
         //Add an optional Bill ID parameter in-case of bill splitting
         [HttpGet("active-session/orders")]
         [Authorize]
-        public async Task<ActionResult<IEnumerable<object>>> GetOrdersForActiveSession([FromQuery] int? bill_id = null)
+        public async Task<ActionResult<IEnumerable<object>>> GetOrdersForActiveSession([FromQuery(Name = "bill_id")] int? billId = null)
         {
 
             try
@@ -1631,7 +1631,7 @@ namespace back_end.Controllers
                 }
 
                 var orders = await _context.SessionOrders
-                                .Where(o => o.User_Id == userId && o.session_id == activeSessionId && (bill_id == null || o.Bill_Id == bill_id))
+                                .Where(o => o.User_Id == userId && o.session_id == activeSessionId && (billId == null || o.Bill_Id == billId))
                                 .Include(o => o.DiningSession)
                                     .ThenInclude(or => or.Menu)
                                 .Include(o => o.Bill)

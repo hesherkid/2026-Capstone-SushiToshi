@@ -176,7 +176,7 @@ public class DiningSessionJoinTests : IDisposable
     [Fact]
     public void CreateSession_IsStaffOnly()
     {
-        var method = typeof(DiningSessionController).GetMethod(nameof(DiningSessionController.create_dining_session))!;
+        var method = typeof(DiningSessionController).GetMethod(nameof(DiningSessionController.CreateDiningSession))!;
         var authorize = method
             .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
@@ -190,7 +190,7 @@ public class DiningSessionJoinTests : IDisposable
     [InlineData(103)]  // table's group already has a session
     public async Task CreateSession_RefusesBusyTables(int tableId)
     {
-        var result = await ControllerAs(1, "Staff").create_dining_session(new CreateSessionRequestDTO
+        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDTO
         {
             Menu_Id = 1,
             Location_Id = LocationId,
@@ -205,7 +205,7 @@ public class DiningSessionJoinTests : IDisposable
     [Fact]
     public async Task CreateSession_StartsASessionOnAFreeTableWithoutAddingParticipants()
     {
-        var result = await ControllerAs(1, "Staff").create_dining_session(new CreateSessionRequestDTO
+        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDTO
         {
             Menu_Id = 1,
             Location_Id = LocationId,

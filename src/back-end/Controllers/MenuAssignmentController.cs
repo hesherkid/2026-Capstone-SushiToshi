@@ -91,7 +91,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Create_Menu_Item_Assignment(
+        public async Task<IActionResult> CreateMenuItemAssignment(
                    MenuAssignmentCreate assignmentData
                )
         {
@@ -153,8 +153,8 @@ namespace back_end.Controllers
         /// <summary>
         /// Updates a menu item assignment including price, limits, and over limit behavior.
         /// </summary>
-        /// <param name="menu_id" > The unique identifier of the menu</param>
-        /// <param name="item_id">The unique identifier of the menu item</param>
+        /// <param name="menuId" > The unique identifier of the menu</param>
+        /// <param name="itemId">The unique identifier of the menu item</param>
         /// <param name="updateData">The updated assignment data</param>
         /// <param name="locationId">Optional location override; omit for the default (all locations) assignment</param>
         /// <returns>
@@ -193,14 +193,14 @@ namespace back_end.Controllers
         /// Add-on items require price greater than 0.
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
-        [HttpPut("{menu_id}/{item_id}")]
+        [HttpPut("{menuId}/{itemId}")]
         [ProducesResponseType(typeof(MenuItemAssignment), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Update_Menu_Item_Assignment(
-            int menu_id,
-            int item_id,
+        public async Task<IActionResult> UpdateMenuItemAssignment(
+            int menuId,
+            int itemId,
             MenuAssignmentUpdateDTO updateData,
             [FromQuery] int? locationId
         )
@@ -211,7 +211,7 @@ namespace back_end.Controllers
                 if (denied != null) return denied;
 
                 var assignment = await _context.MenuItemAssignments
-                    .Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == item_id && mia.Location_Id == locationId)
+                    .Where(mia => mia.Menu_Id == menuId && mia.Item_Id == itemId && mia.Location_Id == locationId)
                     .FirstOrDefaultAsync();
 
                 if (assignment == null)
@@ -252,7 +252,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating menu assignment {MenuId}/{ItemId}", menu_id, item_id);
+                _logger.LogError(ex, "Error updating menu assignment {MenuId}/{ItemId}", menuId, itemId);
                 return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
@@ -260,8 +260,8 @@ namespace back_end.Controllers
         /// <summary>
         /// Removes a menu item assignment from a specific menu.
         /// </summary>
-        /// <param name="menu_id">The unique identifier of the menu</param>
-        /// <param name="Item_id">The unique identifier of the menu item</param>
+        /// <param name="menuId">The unique identifier of the menu</param>
+        /// <param name="itemId">The unique identifier of the menu item</param>
         /// <returns>
         /// An <see cref="IActionResult"/> indicating the result of the operation.
         /// Returns HTTP 200 (OK) with a success message when the assignment is deleted.
@@ -280,13 +280,13 @@ namespace back_end.Controllers
         /// Removes the association between the specified menu item and menu.
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
-        [HttpDelete("{menu_id}/{Item_id}")]
+        [HttpDelete("{menuId}/{itemId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Delete_Menu_Item_Assignment(
-            int menu_id,
-            int Item_id,
+        public async Task<IActionResult> DeleteMenuItemAssignment(
+            int menuId,
+            int itemId,
             [FromQuery] int? locationId
         )
         {
@@ -296,7 +296,7 @@ namespace back_end.Controllers
                 if (denied != null) return denied;
 
                 var rows = await _context.MenuItemAssignments
-                    .Where(mia => mia.Menu_Id == menu_id && mia.Item_Id == Item_id && (locationId == null || mia.Location_Id == locationId))   // default → remove overrides too
+                    .Where(mia => mia.Menu_Id == menuId && mia.Item_Id == itemId && (locationId == null || mia.Location_Id == locationId))   // default → remove overrides too
                     .ToListAsync();
                 if (rows.Count == 0)
                 {
@@ -308,7 +308,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting menu assignment {MenuId}/{ItemId}", menu_id, Item_id);
+                _logger.LogError(ex, "Error deleting menu assignment {MenuId}/{ItemId}", menuId, itemId);
                 return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
@@ -318,8 +318,8 @@ namespace back_end.Controllers
         /// <summary>
         /// Creates a new menu by copying all item assignments from an existing menu.
         /// </summary>
-        /// <param name="source_menu_id">The unique identifier of the menu to copy from</param>
-        /// <param name="new_menu_name">The name for the new menu</param>
+        /// <param name="sourceMenuId">The unique identifier of the menu to copy from</param>
+        /// <param name="newMenuName">The name for the new menu</param>
         /// <returns>
         /// An <see cref="IActionResult"/> summary of the new menu.
         /// Returns HTTP 200 (OK) with the list of copied assignments on success.
@@ -341,36 +341,36 @@ namespace back_end.Controllers
         /// (including prices, limits, full price, and over-limit behavior) from the source menu.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]   // copies every location's overrides
-        [HttpPost("copy_menu/{source_menu_id}")]
+        [HttpPost("copy_menu/{sourceMenuId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Copy_Menu_Assignments(
-            int source_menu_id,
-            string new_menu_name
+        public async Task<IActionResult> CopyMenuAssignments(
+            int sourceMenuId,
+[FromQuery(Name = "new_menu_name")]             string newMenuName
         )
         {
             try
             {
-                var existingMenu = await _context.Menus.Where(m => m.Name == new_menu_name).FirstOrDefaultAsync();
+                var existingMenu = await _context.Menus.Where(m => m.Name == newMenuName).FirstOrDefaultAsync();
                 if (existingMenu != null)
                 {
                     return Conflict("Menu Name Already Exist");
                 }
-                var new_menu = new Menu
+                var newMenu = new Menu
                 {
-                    Name = new_menu_name,
+                    Name = newMenuName,
                 };
-                _context.Add(new_menu);
+                _context.Add(newMenu);
                 await _context.SaveChangesAsync();
-                var sourceAssignments = await _context.MenuItemAssignments.Where(mia => mia.Menu_Id == source_menu_id).ToListAsync();
+                var sourceAssignments = await _context.MenuItemAssignments.Where(mia => mia.Menu_Id == sourceMenuId).ToListAsync();
 
                 var newAssignment = new List<MenuItemAssignment>();
                 foreach (var element in sourceAssignments)
                 {
                     newAssignment.Add(new MenuItemAssignment
                     {
-                        Menu_Id = new_menu.Menu_id,
+                        Menu_Id = newMenu.Menu_id,
                         Item_Id = element.Item_Id,
                         Price = element.Price,
                         Over_Limit_Behavior = element.Over_Limit_Behavior,
@@ -389,15 +389,15 @@ namespace back_end.Controllers
 
                 return Ok(new
                 {
-                    menu_id = new_menu.Menu_id,
-                    name = new_menu.Name,
+                    menu_id = newMenu.Menu_id,
+                    name = newMenu.Name,
                     assignments_copied = newAssignment.Count
                 });
 
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error copying menu assignment from source menu {SourceMenuId} to new menu {NewMenuName}", source_menu_id, new_menu_name);
+                _logger.LogError(ex, "Error copying menu assignment from source menu {SourceMenuId} to new menu {NewMenuName}", sourceMenuId, newMenuName);
                 return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
