@@ -7,6 +7,21 @@ const inactive = {
   "&:hover": { backgroundColor: "transparent" },
 };
 
+// A visible outline for keyboard focus
+const focusRing = {
+  "&.Mui-focusVisible": {
+    outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: "2px",
+  },
+};
+
+// Looks disabled but stays focusable, so focus never drops when a limit is hit
+const inactiveSx = {
+  color: "action.disabled",
+  cursor: "not-allowed",
+  "&:hover": { backgroundColor: "transparent" },
+};
+
 // − qty + in one pill, shared by the menu cards and the Review order rows.
 // At 1 the minus becomes a bin, since one more tap takes the item out; at 0 it's disabled.
 // canIncrease=false (the item's limit is reached) hides the plus
@@ -40,7 +55,7 @@ const QuantityStepper = ({
         aria-disabled={!canDecrease}
         onClick={canDecrease ? onDecrease : undefined}
         disableRipple={!canDecrease}
-        sx={canDecrease ? undefined : inactive}
+        sx={canDecrease ? focusRing : { ...inactiveSx, ...focusRing }}
       >
         <MaterialSymbol name={quantity === 1 ? "delete" : "remove"} size={20} />
       </IconButton>
@@ -69,7 +84,7 @@ const QuantityStepper = ({
         aria-disabled={!canIncrease}
         onClick={canIncrease ? onIncrease : undefined}
         disableRipple={!canIncrease}
-        sx={canIncrease ? undefined : inactive}
+        sx={canDecrease ? focusRing : { ...inactiveSx, ...focusRing }}
       >
         <MaterialSymbol name="add" size={20} />
       </IconButton>
