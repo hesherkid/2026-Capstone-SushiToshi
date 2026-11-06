@@ -110,10 +110,17 @@ const AppNavigationDrawer = ({ id, open, role, onClose, onLogout }) => {
 
             return [
               item.section && (
-                <Divider
+                <Box
                   key={`${item.path}-divider`}
                   component="li"
-                  sx={{ my: 2, mr: 2 }}
+                  aria-hidden="true"
+                  sx={{
+                    my: 2,
+                    mr: 2,
+                    borderTop: 1,
+                    borderColor: "divider",
+                    listStyle: "none",
+                  }}
                 />
               ),
               item.section && (
@@ -135,10 +142,17 @@ const AppNavigationDrawer = ({ id, open, role, onClose, onLogout }) => {
                 </ListSubheader>
               ),
               item.divider && (
-                <Divider
+                <Box
                   key={`${item.path}-divider`}
                   component="li"
-                  sx={{ my: 2, mr: 2 }}
+                  aria-hidden="true"
+                  sx={{
+                    my: 2,
+                    mr: 2,
+                    borderTop: 1,
+                    borderColor: "divider",
+                    listStyle: "none",
+                  }}
                 />
               ),
               <ListItem key={item.path} disablePadding>

@@ -133,6 +133,47 @@ const theme = createTheme({
             : {},
       },
     },
+    MuiSwitch: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // Visible keyboard focus
+          "& .MuiSwitch-switchBase.Mui-focusVisible .MuiSwitch-thumb": {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "2px",
+          },
+          // Off: a darker track so the switch's shape and state are clear
+          "& .MuiSwitch-track": {
+            opacity: 0.6,
+          },
+          // On: a solid primary track instead of half-transparent red
+          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+            opacity: 1,
+          },
+        }),
+      },
+    },
+    //TODO: decide if you want to keep the below highlight styles for focus-visible on checkboxes and radios - AW
+    MuiCheckbox: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-focusVisible": {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "-4px",
+            borderRadius: 4,
+          },
+        }),
+      },
+    },
+    MuiRadio: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-focusVisible": {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "-4px",
+          },
+        }),
+      },
+    },
   },
 });
 
