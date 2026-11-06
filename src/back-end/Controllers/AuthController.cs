@@ -47,34 +47,6 @@ namespace back_end.controllers
         }
 
         /// <summary>
-        /// Authenticates a user and returns a JWT access token.
-        /// </summary>
-        /// <param name="request">The login credentials containing email and password</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the JWT token and authentication details.
-        /// Returns HTTP 200 (OK) with the access token on successful authentication.
-        /// Returns HTTP 401 (Unauthorized) if the credentials are invalid.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during authentication.
-        /// </returns>
-        /// <response code="200">Returns the JWT access token and token metadata</response>
-        /// <response code="401">If the email or password is invalid</response>
-        /// <response code="500">If an internal error occurs during authentication</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     POST /api/auth/login
-        ///     {
-        ///         "userEmail": "user@example.com",
-        ///         "userPassword": "SecurePassword123!"
-        ///     }
-        ///
-        /// Returns a JWT bearer token that expires in 2 hours.
-        /// The token should be included in subsequent requests in the Authorization header:
-        /// Authorization: Bearer {access_token}
-        /// 
-        /// Updates the user's last interaction timestamp upon successful login.
-        /// </remarks>
-        /// <summary>
         /// Signs in a new anonymous guest for "Continue as Guest".
         /// </summary>
         /// <remarks>
@@ -123,6 +95,38 @@ namespace back_end.controllers
             });
         }
 
+        /// <summary>
+        /// Authenticates a user and returns a JWT access token.
+        /// </summary>
+        /// <param name="request">The login credentials containing email and password</param>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing the JWT token and authentication details.
+        /// Returns HTTP 200 (OK) with the access token on successful authentication.
+        /// Returns HTTP 401 (Unauthorized) if the credentials are invalid.
+        /// Returns HTTP 403 (Forbidden) if the account is inactive or its email isn't verified yet.
+        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during authentication.
+        /// </returns>
+        /// <response code="200">Returns the JWT access token and token metadata</response>
+        /// <response code="401">If the email or password is invalid</response>
+        /// <response code="403">If the account is inactive, or its email isn't verified (requires_email_verification is true)</response>
+        /// <response code="429">Too many sign-in attempts from this network in the last minute</response>
+        /// <response code="500">If an internal error occurs during authentication</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/auth/login
+        ///     {
+        ///         "userEmail": "user@example.com",
+        ///         "userPassword": "SecurePassword123!"
+        ///     }
+        ///
+        /// Returns a JWT bearer token whose lifetime depends on the role (see <see cref="TokenMinutes"/>);
+        /// expires_in gives it in seconds.
+        /// The token should be included in subsequent requests in the Authorization header:
+        /// Authorization: Bearer {access_token}
+        /// 
+        /// Updates the user's last interaction timestamp upon successful login.
+        /// </remarks>
         [HttpPost("login")]
         [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -608,9 +612,10 @@ namespace back_end.controllers
         /// - Name: User's email
         /// - Email: User's email address
         /// - Role: User's role (Customer, Staff, or Admin)
-        /// - Sub: Subject identifier (email)
+        /// - Sub: User's unique ID (same as NameIdentifier)
         /// - Jti: Unique token identifier
-        /// 
+        /// - Guests only: given_name, family_name ("Guest K7P2") and guest = "true"
+        ///
         /// Token expiration depends on the role; see <see cref="TokenMinutes"/>.
         /// The token is signed using HMAC-SHA256 algorithm.
         /// </remarks>
