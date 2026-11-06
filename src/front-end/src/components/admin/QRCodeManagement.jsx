@@ -393,7 +393,7 @@ export default function QRCodeManagement() {
               type="number"
               value={tableNumber}
               onChange={(e) => setTableNumber(e.target.value)}
-              inputProps={{ min: 1 }}
+              slotProps={{ htmlInput: { min: 1 } }}
             />
           </Grid>
         </Grid>
