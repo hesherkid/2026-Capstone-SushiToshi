@@ -454,6 +454,21 @@ describe("LoginForm", () => {
       expect(localStorage.getItem("tableNumber")).toBe("4");
       expect(localStorage.getItem("session_id")).toBeNull();
     });
+
+    it("keeps the visit when sent back after the sign-in expired", () => {
+      localStorage.setItem("tableNumber", "4");
+      localStorage.setItem("session_id", "3");
+      localStorage.setItem("menuCart", "[1]");
+      useSearchParams.mockReturnValue(
+        new URLSearchParams("locationId=1&tableNumber=4&resume=1"),
+      );
+
+      render(<LoginForm />);
+
+      expect(localStorage.getItem("session_id")).toBe("3");
+      expect(localStorage.getItem("menuCart")).toBe("[1]");
+      expect(screen.getByRole("button", { name: /Continue as Guest/i })).toBeEnabled();
+    });
   });
 
   describe("QR table join after sign-in", () => {

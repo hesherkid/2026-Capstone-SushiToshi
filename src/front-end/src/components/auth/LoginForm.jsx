@@ -68,12 +68,15 @@ const LoginFormContent = () => {
   // Guests have no account to come back to, so they can only get in by joining a table,
   // and the table comes from its QR code
   const hasTable = !!(locationId && tableNumber);
+  // Sent back here after the sign-in expired mid-visit (see getExpiredLoginPath), not a new scan
+  const isResumingVisit = searchParams.get("resume") === "1";
 
   // A scanned QR code is a new visit: show its table right away (not the last visit's)
   // and drop the old session so nothing can order onto it
   useEffect(() => {
+    if (isResumingVisit) return;
     startTableVisit({ locationId, tableNumber });
-  }, [locationId, tableNumber]);
+  }, [locationId, tableNumber, isResumingVisit]);
 
   // --------------------------------------------------
   // HELPERS
