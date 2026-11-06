@@ -128,6 +128,9 @@ const FullMenu = () => {
           loading={!itemsLoaded && !error}
           ready={Boolean(menuId && itemsLoaded)}
           myItems={myItems}
+          // Keyboard shortcut to Review order at the end of each category
+          reviewOrderCount={billRequested ? 0 : cartCount}
+          onReviewOrder={reviewOrder}
           // What's in the cart stays on screen whatever the search
           keepItem={(item, categoryId) =>
             quantities[categoryId]?.[item.item_id] > 0

@@ -8,6 +8,7 @@ import {
   InputAdornment,
   IconButton,
   Divider,
+  Button,
 } from "@mui/material";
 import CategoryChips from "@/components/menu/CategoryChips";
 import TagFilter, { menuTags, hasAllTags } from "@/components/menu/TagFilter";
@@ -18,6 +19,27 @@ import useMenuSearch, { matchesSearch } from "@/components/menu/searchUtils";
 // Filter pills for customers with an account, shown before the menu's tags
 const FAVOURITES_FILTER = "my:favourites";
 const ORDER_AGAIN_FILTER = "my:order-again";
+
+// Hidden until it gets keyboard focus
+const hiddenUntilFocus = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  "&:focus": {
+    position: "relative",
+    width: "auto",
+    height: "auto",
+    overflow: "visible",
+    clip: "auto",
+  },
+  "&.Mui-focusVisible": {
+    outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: "2px",
+  },
+};
 
 /**
  * The menu's search box, filter pills, category bar and sections. Shared by the table's menu
@@ -39,6 +61,8 @@ const MenuBrowser = ({
   keepItem = () => false,
   notices = null,
   renderItem,
+  reviewOrderCount = 0,
+  onReviewOrder,
 }) => {
   const { canSave, favourites, orderedBefore } = myItems;
 
@@ -116,6 +140,19 @@ const MenuBrowser = ({
   const [activeCategory, setActiveCategory] = useState(null);
   // Set while a chip tap is scrolling the page, so the sections it passes don't light up
   const jumping = useRef(null);
+  const searchInputRef = useRef(null);
+
+  // active category's chip or the first chip if none is marked
+  const focusCategory = () => {
+    const bar = chipBarRef.current;
+    const chip =
+      bar?.querySelector(
+        '[aria-current="true"], [aria-pressed="true"], [aria-selected="true"]',
+      ) ?? bar?.querySelector("button, a");
+    chip?.focus();
+  };
+
+  const focusSearch = () => searchInputRef.current?.focus();
 
   // The app bar's height depends on its logo, so measure it rather than guess
   useEffect(() => {
@@ -207,6 +244,7 @@ const MenuBrowser = ({
         {/* Soft grey pill; a thin red ring while typing */}
         <TextField
           fullWidth
+          inputRef={searchInputRef}
           placeholder="Search sushi, rolls, tags..."
           value={searchTerm}
           onChange={handleSearchChange}
@@ -354,6 +392,39 @@ const MenuBrowser = ({
                   }}
                 >
                   {items.map((item) => renderItem(item, category))}
+                </Box>
+
+                {/* Keyboard shortcuts back up the page; hidden until focused */}
+                <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disableRipple
+                    onClick={focusCategory}
+                    sx={hiddenUntilFocus}
+                  >
+                    Back to categories
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disableRipple
+                    onClick={focusSearch}
+                    sx={hiddenUntilFocus}
+                  >
+                    Back to search
+                  </Button>
+                  {onReviewOrder && reviewOrderCount > 0 && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disableRipple
+                      onClick={onReviewOrder}
+                      sx={hiddenUntilFocus}
+                    >
+                      {`Review order (${reviewOrderCount} ${reviewOrderCount === 1 ? "item" : "items"})`}
+                    </Button>
+                  )}
                 </Box>
               </Box>
             ))
