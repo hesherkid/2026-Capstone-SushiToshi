@@ -130,6 +130,8 @@ export default function QRCodeManagement() {
         params: {
           locationId: selectedLocation,
           table: tableNumber,
+          // Build from current settings so a WiFi or URL change shows up without clearing the cache
+          refresh: true,
         },
         responseType: 'blob',
       });
@@ -167,6 +169,8 @@ export default function QRCodeManagement() {
         params: {
           locationId: selectedLocation,
           table: tableNumber,
+          // Build from current settings so a WiFi or URL change shows up without clearing the cache
+          refresh: true,
         },
         responseType: 'blob',
       });
