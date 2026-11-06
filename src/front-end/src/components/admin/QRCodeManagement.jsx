@@ -130,6 +130,8 @@ export default function QRCodeManagement() {
         params: {
           locationId: selectedLocation,
           table: tableNumber,
+          // Build from current settings so a WiFi or URL change shows up without clearing the cache
+          refresh: true,
         },
         responseType: 'blob',
       });
@@ -167,6 +169,8 @@ export default function QRCodeManagement() {
         params: {
           locationId: selectedLocation,
           table: tableNumber,
+          // Build from current settings so a WiFi or URL change shows up without clearing the cache
+          refresh: true,
         },
         responseType: 'blob',
       });
@@ -349,7 +353,7 @@ export default function QRCodeManagement() {
   )?.name || '';
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3 }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 0, sm: 2 }, pt: 5, pb: 3 }}>
       <ManagementHeader title="QR Code Management" />
 
       <Alert severity="info" sx={{ mb: 3 }}>
@@ -389,7 +393,7 @@ export default function QRCodeManagement() {
               type="number"
               value={tableNumber}
               onChange={(e) => setTableNumber(e.target.value)}
-              inputProps={{ min: 1 }}
+              slotProps={{ htmlInput: { min: 1 } }}
             />
           </Grid>
         </Grid>

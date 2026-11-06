@@ -19,7 +19,7 @@ export const useSessionData = ({ live = false } = {}) => {
   const fetchSessions = useCallback(async ({ silent = false } = {}) => {
     const locationId = storage.get("branch-location");
     if (!locationId) {
-      if (storage.get("guest") !== "true") setError(NO_LOCATION_ERROR);
+      setError(NO_LOCATION_ERROR);
       setIsLoading(false);
       return;
     }

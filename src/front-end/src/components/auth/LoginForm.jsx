@@ -60,6 +60,7 @@ const LoginFormContent = () => {
   const [joiningTable, setJoiningTable] = useState(false);
   // The table the signed-in customer was already joined to automatically ("locationId:tableNumber")
   const autoJoinedTable = useRef(null);
+  const emailInputRef = useRef(null);
 
   // Keep the context from the restaurant QR code.
   const locationId = searchParams.get("locationId");
@@ -67,12 +68,15 @@ const LoginFormContent = () => {
   // Guests have no account to come back to, so they can only get in by joining a table,
   // and the table comes from its QR code
   const hasTable = !!(locationId && tableNumber);
+  // Sent back here after the sign-in expired mid-visit (see getExpiredLoginPath), not a new scan
+  const isResumingVisit = searchParams.get("resume") === "1";
 
   // A scanned QR code is a new visit: show its table right away (not the last visit's)
   // and drop the old session so nothing can order onto it
   useEffect(() => {
+    if (isResumingVisit) return;
     startTableVisit({ locationId, tableNumber });
-  }, [locationId, tableNumber]);
+  }, [locationId, tableNumber, isResumingVisit]);
 
   // --------------------------------------------------
   // HELPERS
@@ -116,11 +120,10 @@ const LoginFormContent = () => {
     storage.remove("access_token");
     storage.remove("tokenExpiresAt");
     storage.remove("user");
-    storage.remove("guest");
   };
 
-  const getAuthRoute = (path) => {
-    const params = new URLSearchParams();
+  const getAuthRoute = (path, extraParams = {}) => {
+    const params = new URLSearchParams(extraParams);
 
     if (locationId) {
       params.set("locationId", locationId);
@@ -207,7 +210,6 @@ const LoginFormContent = () => {
         throw new Error("Login succeeded but no access token was returned.");
       }
 
-      clearGuestSession();
       saveRestaurantContext();
       const sessionId = await startQrDiningSession(response.access_token);
 
@@ -224,10 +226,6 @@ const LoginFormContent = () => {
   // GUEST SESSION
   // --------------------------------------------------
 
-  const clearGuestSession = () => {
-    storage.remove("guest");
-  };
-
   const handleContinueAsGuest = async () => {
     if (!hasTable) return;
     setLoading(true);
@@ -242,7 +240,6 @@ const LoginFormContent = () => {
         throw new Error("Guest login succeeded but no token was returned.");
       }
 
-      storage.set("guest", "true");
       return response.access_token;
     };
 
@@ -312,7 +309,7 @@ const LoginFormContent = () => {
     autoJoinedTable.current = table;
 
     const token = getAuthToken();
-    if (!token || isTokenExpired(token) || storage.get("guest") === "true") return;
+    if (!token || isTokenExpired(token)) return;
 
     const claims = decodeToken(token);
     const isCustomer = extractRoles(claims).some((role) => String(role).toLowerCase() === "customer");
@@ -381,7 +378,12 @@ const LoginFormContent = () => {
   // --------------------------------------------------
 
   const handleResendVerification = () => {
-    const url = getAuthRoute("/auth/resend-verification");
+    // Pre-fill the resend page with the email the user just tried to sign in with
+    const email = emailInputRef.current?.value.trim();
+    const url = getAuthRoute(
+      "/auth/resend-verification",
+      email ? { email } : {},
+    );
 
     router.push(url);
   };
@@ -536,8 +538,9 @@ const LoginFormContent = () => {
           name="email"
           type="email"
           defaultValue={defaultEmail}
+          inputRef={emailInputRef}
           autoComplete="username"
-          inputProps={{ autoCapitalize: "none", autoCorrect: "off", spellCheck: false }}
+          slotProps={{ htmlInput: { autoCapitalize: "none", autoCorrect: "off", spellCheck: false } }}
           required
           fullWidth
           disabled={loading}

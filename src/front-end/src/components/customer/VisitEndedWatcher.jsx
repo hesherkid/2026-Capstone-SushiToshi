@@ -1,10 +1,10 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { fetchMySessionId } from "@/services/tableSession";
-import { TABLE_VISIT_ENDED_EVENT, TABLE_VISIT_EVENT, THANK_YOU_PATH } from "@/utils/tableVisit";
+import { TABLE_VISIT_ENDED_EVENT, THANK_YOU_PATH } from "@/utils/tableVisit";
 import storage from "@/utils/storage";
 
 // Customers don't log out; the visit ends when staff close the table's session.
@@ -14,16 +14,8 @@ const VisitEndedWatcher = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { userRole } = useAuth();
-  const [isGuest, setIsGuest] = useState(false);
-
-  useEffect(() => {
-    const readGuest = () => setIsGuest(storage.get("guest") === "true");
-    readGuest();
-    window.addEventListener(TABLE_VISIT_EVENT, readGuest);
-    return () => window.removeEventListener(TABLE_VISIT_EVENT, readGuest);
-  }, [pathname]);
-
-  const isCustomer = isGuest || userRole === "customer";
+  // Guests' accounts are customers too
+  const isCustomer = userRole === "customer";
 
   useEffect(() => {
     if (!isCustomer) return undefined;

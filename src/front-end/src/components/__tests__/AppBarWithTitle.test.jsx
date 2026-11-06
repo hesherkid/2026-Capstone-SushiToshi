@@ -64,8 +64,7 @@ describe("App bar account icon", () => {
   });
 
   it("isn't shown to guests", () => {
-    localStorage.setItem("guest", "true");
-    signedInAs("customer");
+    useAuth.mockReturnValue({ isAuthenticated: true, userRole: "customer", isGuest: true, loading: false });
     render(<AppBarWithTitle />);
 
     expect(

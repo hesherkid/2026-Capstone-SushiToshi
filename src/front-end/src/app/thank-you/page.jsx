@@ -1,12 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, Typography } from "@mui/material";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import { useAuth } from "@/hooks/useAuth";
 import { logoutCustomer } from "@/utils/auth";
-import storage from "@/utils/storage";
 
 /**
  * Keeps the browser's back button on this page: behind it are the visit's menu, orders and
@@ -24,15 +23,10 @@ const useStayOnPage = () => {
 // Shown to customers once staff close their table's session (see VisitEndedWatcher)
 const ThankYouPage = () => {
   const router = useRouter();
-  const { isAuthenticated, loading } = useAuth();
-  const [isGuest, setIsGuest] = useState(false);
+  // A guest's sign-in is kept after the visit ends (see endTableVisit), so the next scan reuses it
+  const { isAuthenticated, isGuest, loading } = useAuth();
 
   useStayOnPage();
-
-  // Kept after the visit ends (see endTableVisit), so the next scan reuses the guest
-  useEffect(() => {
-    setIsGuest(storage.get("guest") === "true");
-  }, []);
 
   // Customers with an account have a home page to go back to, and can log out now
   const hasAccount = !loading && isAuthenticated && !isGuest;

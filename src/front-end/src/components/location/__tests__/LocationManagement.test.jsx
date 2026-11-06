@@ -57,8 +57,8 @@ if (typeof window.ResizeObserver === "undefined") {
 }
 
 const locations = [
-  { location_Id: 1, name: "Downtown", address_one: "123 Jasper Ave" },
-  { location_Id: 2, name: "Southgate", address_one: "45 Whyte Ave" },
+  { location_Id: 1, name: "Downtown", address_Primary: "123 Jasper Ave" },
+  { location_Id: 2, name: "Southgate", address_Primary: "45 Whyte Ave" },
 ];
 
 const menus = [

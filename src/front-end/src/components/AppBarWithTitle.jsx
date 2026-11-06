@@ -42,9 +42,8 @@ const AppBarWithTitle = ({ title }) => {
   const [canUseAllLocations, setCanUseAllLocations] = useState(false);
   const [locationsLoaded, setLocationsLoaded] = useState(false);
   const [tableNumber, setTableNumber] = useState("");
-  const { isAuthenticated, userRole, loading } = useAuth();
+  const { isAuthenticated, userRole, isGuest, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification();
-  const [isGuest, setIsGuest] = useState(false);
   // A page loading its data (see utils/pageLoading); shown with the same spinner as sign-in
   const [pageLoading, setPageLoadingState] = useState(false);
   const canShowDrawer = !isLoginPage && (isAuthenticated || isGuest);
@@ -79,13 +78,11 @@ const AppBarWithTitle = ({ title }) => {
   }, [pathname]);
 
   // The app bar stays mounted across client-side navigation, so re-read the
-  // table number and guest flag on each route change (e.g. after the QR login saves them),
+  // table number on each route change (e.g. after the QR login saves it),
   // and when a table QR code is opened on the current page
   useEffect(() => {
-    const readTableVisit = () => {
+    const readTableVisit = () =>
       setTableNumber(storage.get("tableNumber") || "");
-      setIsGuest(storage.get("guest") === "true");
-    };
 
     readTableVisit();
     window.addEventListener(TABLE_VISIT_EVENT, readTableVisit);
@@ -141,13 +138,9 @@ const AppBarWithTitle = ({ title }) => {
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {
-      [
-        "guest",
-        "session_id",
-        "tableNumber",
-        "locationId",
-        "currentBillId",
-      ].forEach((key) => storage.remove(key));
+      ["session_id", "tableNumber", "locationId", "currentBillId"].forEach(
+        (key) => storage.remove(key),
+      );
     }
 
     setDrawerOpen(false);
@@ -155,9 +148,8 @@ const AppBarWithTitle = ({ title }) => {
   };
 
   const handleLogin = () => {
-    // Clear guest mode
+    // Clear the table visit
     if (typeof window !== "undefined") {
-      storage.remove("guest");
       storage.remove("session_id");
       storage.remove("tableNumber");
     }
@@ -186,7 +178,6 @@ const AppBarWithTitle = ({ title }) => {
     storage.set("branch-location", locationId);
     window.location.reload();
   };
-  const effectiveRole = userRole || (isGuest ? "customer" : null);
 
   // Leave the dropdown empty until the stored location is one of the loaded options
   const locationValue =
@@ -228,7 +219,7 @@ const AppBarWithTitle = ({ title }) => {
           }}
         >
           {/* Customers get around with the bottom tabs (phones) and side rail (desktop) instead */}
-          {canShowDrawer && effectiveRole !== "customer" && (
+          {canShowDrawer && userRole !== "customer" && (
             <IconButton
               color="inherit"
               aria-label="Main menu"
@@ -277,7 +268,7 @@ const AppBarWithTitle = ({ title }) => {
             gap: { xs: 0.5, sm: 2 },
           }}
         >
-          {(isGuest || userRole === "customer") && tableNumber && (
+          {userRole === "customer" && tableNumber && (
             <Box
               aria-label={`Table ${tableNumber}`}
               sx={{
@@ -410,7 +401,7 @@ const AppBarWithTitle = ({ title }) => {
               </FormControl>
             )}
 
-          {!loading && !isLoginPage && !isAuthenticated && !isGuest && (
+          {!loading && !isLoginPage && !isAuthenticated && (
             <Button
               color="inherit"
               aria-label="Login"
@@ -436,11 +427,11 @@ const AppBarWithTitle = ({ title }) => {
           )}
         </Box>
 
-        {canShowDrawer && effectiveRole !== "customer" && (
+        {canShowDrawer && userRole !== "customer" && (
           <AppNavigationDrawer
             id={NAV_DRAWER_ID}
             open={drawerOpen}
-            role={effectiveRole}
+            role={userRole}
             onClose={() => setDrawerOpen(false)}
             onLogout={handleLogout}
           />

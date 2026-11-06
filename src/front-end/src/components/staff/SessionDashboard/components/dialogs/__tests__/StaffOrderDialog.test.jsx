@@ -32,15 +32,15 @@ const session = (overrides = {}) => ({
 });
 
 const ITEMS = [
-  { item_id: 10, name: "Salmon Roll", price: 0, categoryID: 1, is_add_on: false },
-  { item_id: 11, name: "Tuna Roll", price: 0, categoryID: 1, is_add_on: false },
-  { item_id: 66, name: "Hot Stone", price: 5, categoryID: 2, is_add_on: false },
+  { itemId: 10, name: "Salmon Roll", price: 0, categoryID: 1, isAddOn: false },
+  { itemId: 11, name: "Tuna Roll", price: 0, categoryID: 1, isAddOn: false },
+  { itemId: 66, name: "Hot Stone", price: 5, categoryID: 2, isAddOn: false },
 ];
 
 const mockMenu = (limits = { items: [], categories: [] }) => {
   api.get.mockImplementation((url) => {
     if (url === "/Category")
-      return Promise.resolve({ data: [{ category_id: 1, name: "Rolls" }, { category_id: 2, name: "Grill" }] });
+      return Promise.resolve({ data: [{ category_id: 1, category_name: "Rolls" }, { category_id: 2, category_name: "Grill" }] });
     if (url === "/Menu/1/item") return Promise.resolve({ data: ITEMS });
     if (url === "/Order/session/8/limits") return Promise.resolve({ data: limits });
     return Promise.reject(new Error(`Unexpected GET ${url}`));

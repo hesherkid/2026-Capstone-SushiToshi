@@ -74,9 +74,9 @@ const CategoryManagementDialog = ({
 
   useEffect(() => {
     if (selectedCategory) {
-      // Accept both API and dialog field names
+      // CategoryList passes the row with category_name copied to name
       setFormData({
-        name: selectedCategory.name ?? selectedCategory.category_name ?? "",
+        name: selectedCategory.name ?? "",
         description: selectedCategory.description || "",
         adult_limit: selectedCategory.adult_limit ?? 0,
         child_limit: selectedCategory.child_limit ?? 0,
@@ -169,7 +169,7 @@ const CategoryManagementDialog = ({
         open={open}
         onClose={onClose}
         title={selectedCategory ? "Edit Category" : "New Category"}
-        subtitle={selectedCategory && (selectedCategory.name ?? selectedCategory.category_name)}
+        subtitle={selectedCategory?.name}
         error={error}
         onErrorClose={() => setError(null)}
         onSubmit={handleSubmit}

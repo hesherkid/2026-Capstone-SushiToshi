@@ -227,13 +227,7 @@ const RegisterFormContent = () => {
             onClick={() =>
               router.push(getAuthRoute("/auth/login"))
             }
-            sx={{
-              backgroundColor: "#dc2626",
-              "&:hover": {
-                backgroundColor: "#b91c1c",
-              },
-              py: 1.5,
-            }}
+            sx={{ py: 1.5 }}
           >
             Go to Login
           </Button>
@@ -312,7 +306,7 @@ const RegisterFormContent = () => {
             onChange={handleChange}
             autoComplete="new-password"
             helperText="Minimum 8 characters"
-            inputProps={{ minLength: 8 }}
+            slotProps={{ htmlInput: { minLength: 8 } }}
             required
             fullWidth
             disabled={loading}
