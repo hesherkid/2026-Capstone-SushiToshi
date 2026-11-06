@@ -64,7 +64,12 @@ describe("App bar account icon", () => {
   });
 
   it("isn't shown to guests", () => {
-    useAuth.mockReturnValue({ isAuthenticated: true, userRole: "customer", isGuest: true, loading: false });
+    useAuth.mockReturnValue({
+      isAuthenticated: true,
+      userRole: "customer",
+      isGuest: true,
+      loading: false,
+    });
     render(<AppBarWithTitle />);
 
     expect(
@@ -90,7 +95,7 @@ describe("App bar account icon", () => {
     render(<AppBarWithTitle />);
 
     expect(
-      screen.queryByRole("button", { name: /^menu\b/ }),
+      screen.queryByRole("button", { name: /^Main menu\b/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -177,8 +182,8 @@ describe("App bar working location", () => {
     signedInAs("staff");
     render(<AppBarWithTitle />);
 
-    expect(await screen.findByLabelText("Working location")).toHaveTextContent(
-      "Downtown",
+    expect(await screen.findByText("Downtown")).toHaveTextContent(
+      "Working location: Downtown",
     );
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
@@ -193,7 +198,7 @@ describe("App bar working location", () => {
     render(<AppBarWithTitle />);
 
     expect(await screen.findByRole("combobox")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Working location")).not.toBeInTheDocument();
+    expect(screen.queryByText("Working location:")).not.toBeInTheDocument();
   });
 
   it("gives admins a dropdown", async () => {
@@ -223,8 +228,8 @@ describe("App bar working location", () => {
         "You don't have a location yet. Ask an admin to assign you one.",
       ),
     );
-    expect(screen.getByLabelText("Working location")).toHaveTextContent(
-      "No location",
+    expect(screen.getByText("No location")).toHaveTextContent(
+      "Working location: No location",
     );
     expect(localStorage.getItem("branch-location")).toBeNull();
   });

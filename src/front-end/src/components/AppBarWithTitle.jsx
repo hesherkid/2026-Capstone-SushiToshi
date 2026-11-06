@@ -27,6 +27,7 @@ import { useNotification } from "@/contexts/NotificationContext";
 import AppNavigationDrawer from "@/components/AppNavigationDrawer";
 import { TABLE_VISIT_EVENT } from "@/utils/tableVisit";
 import { PAGE_LOADING_EVENT } from "@/utils/pageLoading";
+import { visuallyHidden } from "@mui/utils";
 
 const AppBarWithTitle = ({ title }) => {
   const router = useRouter();
@@ -270,7 +271,6 @@ const AppBarWithTitle = ({ title }) => {
         >
           {userRole === "customer" && tableNumber && (
             <Box
-              aria-label={`Table ${tableNumber}`}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -317,7 +317,6 @@ const AppBarWithTitle = ({ title }) => {
             locationsLoaded &&
             !canSwitchLocation && (
               <Box
-                aria-label="Working location"
                 sx={{
                   display: "flex",
                   alignItems: "center",
@@ -337,6 +336,9 @@ const AppBarWithTitle = ({ title }) => {
                   component="span"
                   sx={{ fontSize: "0.875rem", fontWeight: 600 }}
                 >
+                  <Box component="span" sx={visuallyHidden}>
+                    Working location:{" "}
+                  </Box>
                   {currentLocationName || "No location"}
                 </Typography>
               </Box>
