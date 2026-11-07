@@ -65,7 +65,8 @@ There are also endpoints for verifying email, resending verification, and forgot
 | `Staff`    | Run the floor: sessions, tables, orders and service requests, limited to their current location        |
 | `Admin`    | Everything staff can do at any location, plus menus, pricing, holidays, staff, customers, QR codes and analytics |
 
-The `UserRoles` enum also has `Employee`, but nothing uses it.
+The `UserRoles` enum also has `Employee`. **Nothing is defined for it at this time.** It has no authorization policy, no endpoints and no pages, and no account can be given it: `StaffController` only accepts `Staff` or `Admin`, and sign-up and guest accounts are always `Customer`. It's kept only because `users.Role` is stored as a number (`Admin = 0`, `Employee = 1`, `Customer = 2`, `Staff = 3`). Removing it would shift those numbers and give existing accounts the wrong role. The numbers are fixed in `enums.cs` and checked by `UserRolesTests`.
+
 
 **In the backend**, controllers use `[Authorize]` for any signed-in user, or one of two policies defined in `Program.cs`:
 

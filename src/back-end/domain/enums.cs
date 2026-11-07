@@ -7,12 +7,14 @@ public enum UserStatus
     Suspended,
     Deleted
 }
+// users.Role is stored as these numbers, so never change or reuse a number.
+// Add new roles at the end with the next number.
 public enum UserRoles
 {
-    Admin,
-    Employee,
-    Customer,
-    Staff
+    Admin = 0,
+    Employee = 1, // Not used: no policies or endpoints. Kept so the stored role numbers don't change.
+    Customer = 2,
+    Staff = 3
 }
 
 public enum ServiceRequestStatus
