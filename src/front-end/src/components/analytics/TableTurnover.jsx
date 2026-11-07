@@ -41,6 +41,7 @@ import {
   printReport,
 } from "@/components/analytics/ReportExport";
 import { isHtmlPage } from "@/utils/serverMessage";
+import ChartDataTable from "@/components/analytics/ChartDataTable";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -156,7 +157,7 @@ const DurationCard = ({ label, duration, countLabel }) => (
   />
 );
 
-// ---------- Export ----------
+// Export
 
 const durationRow = (label, duration, counted) => [
   label,
@@ -239,8 +240,7 @@ const buildPartySizeRows = (data) => [
   ]),
 ];
 
-// ---------- Charts ----------
-
+// Charts
 // Parties or guests seated per hour, trimmed to the hours that had seatings, peak highlighted.
 const SeatingsByHourChart = ({ hours, measure, peak, chartRef }) => {
   const theme = useTheme();
@@ -282,24 +282,44 @@ const SeatingsByHourChart = ({ hours, measure, peak, chartRef }) => {
   };
 
   return (
-    <Box sx={{ position: "relative", height: 300 }}>
-      <Bar
-        id="seatings-by-hour-chart"
-        ref={chartRef}
-        data={chartData}
-        options={options}
-        role="img"
-        aria-label={
-          peak
-            ? `${BUSIEST_MEASURES[measure].label} seated by hour. Busiest hour ${formatHour(peak.hour)} with ${peak[measure]} ${unit}.`
-            : `${BUSIEST_MEASURES[measure].label} seated by hour.`
-        }
+    <>
+      <Box sx={{ position: "relative", height: 300 }}>
+        <Bar
+          id="seatings-by-hour-chart"
+          ref={chartRef}
+          data={chartData}
+          options={options}
+          role="img"
+          aria-label={
+            peak
+              ? `${BUSIEST_MEASURES[measure].label} seated by hour. Busiest hour ${formatHour(peak.hour)} with ${peak[measure]} ${unit}. Data table below.`
+              : `${BUSIEST_MEASURES[measure].label} seated by hour. Data table below.`
+          }
+        />
+      </Box>
+      <ChartDataTable
+        title="Seatings by hour"
+        rows={shown}
+        getRowKey={(h) => h.hour}
+        columns={[
+          { header: "Hour", value: (h) => formatHour(h.hour) },
+          {
+            header: "Parties seated",
+            value: (h) => h.seatings,
+            align: "right",
+          },
+          { header: "Guests seated", value: (h) => h.guests, align: "right" },
+          {
+            header: "Busiest",
+            value: (h) => (h.hour === peak?.hour ? `Busiest by ${unit}` : ""),
+          },
+        ]}
       />
-    </Box>
+    </>
   );
 };
 
-// Average closed-visit length for each party size. Median, count and over-limit are in the tooltip.
+// Average closed-visit length for each party size. Median, count and over-limit are in the tooltip and data table.
 const VisitLengthChart = ({ buckets, timeLimit, chartRef }) => {
   const theme = useTheme();
   const measured = buckets.filter((b) => b.duration.count > 0);
@@ -352,21 +372,51 @@ const VisitLengthChart = ({ buckets, timeLimit, chartRef }) => {
   };
 
   return (
-    <Box sx={{ position: "relative", height: 300 }}>
-      <Bar
-        id="visit-length-chart"
-        ref={chartRef}
-        data={chartData}
-        options={options}
-        role="img"
-        aria-label={`Average visit length by party size. ${measured
-          .map(
-            (b) =>
-              `${partySizeLabel(b.party_size)}: ${mins(b.duration.average_minutes)}`,
-          )
-          .join(", ")}.`}
+    <>
+      <Box sx={{ position: "relative", height: 300 }}>
+        <Bar
+          id="visit-length-chart"
+          ref={chartRef}
+          data={chartData}
+          options={options}
+          role="img"
+          aria-label={`Average visit length by party size. ${measured
+            .map(
+              (b) =>
+                `${partySizeLabel(b.party_size)}: ${mins(b.duration.average_minutes)}`,
+            )
+            .join(", ")}. Data table below.`}
+        />
+      </Box>
+      <ChartDataTable
+        title="Visit length by party size"
+        rows={measured}
+        getRowKey={(b) => b.party_size}
+        columns={[
+          { header: "Party size", value: (b) => partySizeLabel(b.party_size) },
+          {
+            header: "Average",
+            value: (b) => mins(b.duration.average_minutes),
+            align: "right",
+          },
+          {
+            header: "Median",
+            value: (b) => mins(b.duration.median_minutes),
+            align: "right",
+          },
+          {
+            header: "Closed visits",
+            value: (b) => b.duration.count,
+            align: "right",
+          },
+          {
+            header: `Over ${timeLimit} min`,
+            value: (b) => b.over_time_limit,
+            align: "right",
+          },
+        ]}
       />
-    </Box>
+    </>
   );
 };
 

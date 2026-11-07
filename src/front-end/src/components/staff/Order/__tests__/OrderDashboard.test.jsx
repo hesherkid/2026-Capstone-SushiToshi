@@ -97,7 +97,9 @@ const rowFor = (text) => screen.getByText(text).closest('[role="row"]');
 
 const openOrder = async (orderId) => {
   fireEvent.click(
-    within(rowFor(`#${orderId}`)).getByRole("button", { name: "View order" }),
+    within(rowFor(`#${orderId}`)).getByRole("button", {
+      name: `View order #${orderId}`,
+    }),
   );
   return screen.findByRole("dialog");
 };
@@ -140,7 +142,9 @@ describe("Order dashboard", () => {
     const row = await waitFor(() => rowFor("#502"));
     expect(within(row).getByText("Processing")).toBeInTheDocument();
     expect(
-      within(row).getByRole("button", { name: "Mark all delivered" }),
+      within(row).getByRole("button", {
+        name: "Mark all of order #502 delivered",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -148,7 +152,9 @@ describe("Order dashboard", () => {
     render(<OrderDashboard />);
     const row = await waitFor(() => rowFor("#501"));
 
-    fireEvent.click(within(row).getByRole("button", { name: "Approve order" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Approve order #501" }),
+    );
     await waitFor(() =>
       expect(orderActions.approveOrder).toHaveBeenCalledWith(501),
     );
@@ -277,7 +283,9 @@ describe("Past orders", () => {
     const row = await waitFor(() => rowFor("#42"));
 
     fireEvent.click(
-      within(row).getByRole("button", { name: "View table orders" }),
+      within(row).getByRole("button", {
+        name: "View table orders for session #42, Tables 1, 2",
+      }),
     );
     const dialog = await screen.findByRole("dialog");
 

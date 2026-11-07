@@ -1,4 +1,10 @@
-import { render, screen, within, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  within,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import CustomerManagement from "@/components/admin/CustomerManagement";
 import AppNavigationDrawer from "@/components/AppNavigationDrawer";
 import api from "@/config/api";
@@ -12,7 +18,10 @@ jest.mock("@/config/api", () => {
 jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
 
 beforeEach(() => {
-  useAuth.mockReturnValue({ userRole: "admin", userEmail: "admin@example.com" });
+  useAuth.mockReturnValue({
+    userRole: "admin",
+    userEmail: "admin@example.com",
+  });
 });
 
 jest.mock("@mui/x-data-grid", () => {
@@ -56,7 +65,10 @@ const customer = (id, overrides = {}) => ({
 });
 
 const statValue = (label) =>
-  screen.getByText(label).closest(".MuiCard-root").textContent.replace(label, "");
+  screen
+    .getByText(label)
+    .closest(".MuiCard-root")
+    .textContent.replace(label, "");
 
 describe("Customer management", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -64,7 +76,11 @@ describe("Customer management", () => {
   it("lists customers with their status and email verification", async () => {
     api.get.mockResolvedValue({
       data: [
-        customer(1, { first_name: "Mia", last_name: "Chen", created_at: daysAgo(3) }),
+        customer(1, {
+          first_name: "Mia",
+          last_name: "Chen",
+          created_at: daysAgo(3),
+        }),
         customer(2, { status: "Suspended", is_email_confirmed: false }),
       ],
     });
@@ -74,7 +90,9 @@ describe("Customer management", () => {
     expect(within(row).getByText("guest1@example.com")).toBeInTheDocument();
     expect(within(row).getByText("Verified")).toBeInTheDocument();
 
-    const suspended = screen.getByText("guest2@example.com").closest('[role="row"]');
+    const suspended = screen
+      .getByText("guest2@example.com")
+      .closest('[role="row"]');
     expect(within(suspended).getByText("Suspended")).toBeInTheDocument();
     expect(within(suspended).getByText("Unverified")).toBeInTheDocument();
 
@@ -91,15 +109,21 @@ describe("Customer management", () => {
     render(<CustomerManagement />);
 
     await waitFor(() => expect(statValue("Total Customers")).toBe("101"));
-    expect(api.get).toHaveBeenNthCalledWith(1, "/customers", { params: { skip: 0, limit: 100 } });
-    expect(api.get).toHaveBeenNthCalledWith(2, "/customers", { params: { skip: 100, limit: 100 } });
+    expect(api.get).toHaveBeenNthCalledWith(1, "/customers", {
+      params: { skip: 0, limit: 100 },
+    });
+    expect(api.get).toHaveBeenNthCalledWith(2, "/customers", {
+      params: { skip: 100, limit: 100 },
+    });
   });
 
   it("shows an error when customers can't be loaded", async () => {
     api.get.mockRejectedValue(new Error("network"));
     render(<CustomerManagement />);
 
-    expect(await screen.findByText("Failed to load customers")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Failed to load customers"),
+    ).toBeInTheDocument();
   });
 });
 
@@ -111,7 +135,11 @@ describe("Customer actions", () => {
     api.get.mockResolvedValue({
       data: [
         customer(1, { first_name: "Mia", last_name: "Chen" }),
-        customer(2, { first_name: "Sam", last_name: "Lee", status: "Inactive" }),
+        customer(2, {
+          first_name: "Sam",
+          last_name: "Lee",
+          status: "Inactive",
+        }),
       ],
     });
     api.put.mockResolvedValue({ data: {} });
@@ -128,35 +156,62 @@ describe("Customer actions", () => {
     render(<CustomerManagement />);
     await screen.findByText("guest1@example.com");
 
-    expect(within(rowFor("guest1@example.com")).queryByRole("button", { name: "Reactivate customer" })).not.toBeInTheDocument();
-    fireEvent.click(within(rowFor("guest1@example.com")).getByRole("button", { name: "Deactivate customer" }));
-    expect(await screen.findByText(/Deactivate Mia Chen\?/)).toBeInTheDocument();
+    expect(
+      within(rowFor("guest1@example.com")).queryByRole("button", {
+        name: "Reactivate customer",
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(rowFor("guest1@example.com")).getByRole("button", {
+        name: "Deactivate customer Mia Chen",
+      }),
+    );
+    expect(
+      await screen.findByText(/Deactivate Mia Chen\?/),
+    ).toBeInTheDocument();
     await confirmIn("Deactivate");
 
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith("/customers/1/status", { status: "Inactive" })
+      expect(api.put).toHaveBeenCalledWith("/customers/1/status", {
+        status: "Inactive",
+      }),
     );
-    expect(await screen.findByText("Mia Chen has been deactivated")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Mia Chen has been deactivated"),
+    ).toBeInTheDocument();
   });
 
   it("reactivates an inactive customer straight away", async () => {
     render(<CustomerManagement />);
     await screen.findByText("guest2@example.com");
 
-    fireEvent.click(within(rowFor("guest2@example.com")).getByRole("button", { name: "Reactivate customer" }));
+    fireEvent.click(
+      within(rowFor("guest2@example.com")).getByRole("button", {
+        name: "Reactivate customer Sam Lee",
+      }),
+    );
 
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith("/customers/2/status", { status: "Active" })
+      expect(api.put).toHaveBeenCalledWith("/customers/2/status", {
+        status: "Active",
+      }),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("hides account actions from anyone who isn't an admin", async () => {
-    useAuth.mockReturnValue({ userRole: "staff", userEmail: "sue@example.com" });
+    useAuth.mockReturnValue({
+      userRole: "staff",
+      userEmail: "sue@example.com",
+    });
     render(<CustomerManagement />);
     await screen.findByText("guest1@example.com");
 
-    for (const name of ["Deactivate customer", "Reactivate customer", "Delete customer"]) {
+    for (const name of [
+      "Deactivate customer",
+      "Reactivate customer",
+      "Delete customer",
+    ]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
   });
@@ -165,12 +220,20 @@ describe("Customer actions", () => {
     render(<CustomerManagement />);
     await screen.findByText("guest1@example.com");
 
-    fireEvent.click(within(rowFor("guest1@example.com")).getByRole("button", { name: "Delete customer" }));
+    fireEvent.click(
+      within(rowFor("guest1@example.com")).getByRole("button", {
+        name: "Delete customer Mia Chen",
+      }),
+    );
     expect(await screen.findByText(/This can't be undone/)).toBeInTheDocument();
     await confirmIn("Delete");
 
-    await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/customers/1"));
-    expect(await screen.findByText("Mia Chen has been deleted")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.delete).toHaveBeenCalledWith("/customers/1"),
+    );
+    expect(
+      await screen.findByText("Mia Chen has been deleted"),
+    ).toBeInTheDocument();
   });
 
   it("shows the server's message when an action fails", async () => {
@@ -178,7 +241,11 @@ describe("Customer actions", () => {
     render(<CustomerManagement />);
     await screen.findByText("guest1@example.com");
 
-    fireEvent.click(within(rowFor("guest1@example.com")).getByRole("button", { name: "Delete customer" }));
+    fireEvent.click(
+      within(rowFor("guest1@example.com")).getByRole("button", {
+        name: "Delete customer Mia Chen",
+      }),
+    );
     await confirmIn("Delete");
 
     expect(await screen.findByText("Customer not found")).toBeInTheDocument();
@@ -187,18 +254,40 @@ describe("Customer actions", () => {
 
 describe("Admin navigation", () => {
   it("links to customer management under Management", () => {
-    render(<AppNavigationDrawer open role="admin" onClose={jest.fn()} onNavigate={jest.fn()} onLogout={jest.fn()} />);
+    render(
+      <AppNavigationDrawer
+        open
+        role="admin"
+        onClose={jest.fn()}
+        onLogout={jest.fn()}
+      />,
+    );
 
-    const items = screen.getAllByRole("button").map((el) => el.textContent);
+    const items = screen.getAllByRole("link").map((el) => el.textContent);
     expect(items).toContain("Manage Customers");
     expect(screen.getByText("Management")).toBeInTheDocument();
     // Customers sits with the other management pages, before the tools group
-    expect(items.indexOf("Manage Customers")).toBe(items.indexOf("Manage Staff") + 1);
-    expect(items.indexOf("Manage Customers")).toBeLessThan(items.indexOf("QR Codes"));
+    expect(items.indexOf("Manage Customers")).toBe(
+      items.indexOf("Manage Staff") + 1,
+    );
+    expect(items.indexOf("Manage Customers")).toBeLessThan(
+      items.indexOf("QR Codes"),
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Manage Customers" }),
+    ).toHaveAttribute("href", "/admin/customers");
   });
 
   it("is not shown to staff", () => {
-    render(<AppNavigationDrawer open role="staff" onClose={jest.fn()} onNavigate={jest.fn()} onLogout={jest.fn()} />);
+    render(
+      <AppNavigationDrawer
+        open
+        role="staff"
+        onClose={jest.fn()}
+        onLogout={jest.fn()}
+      />,
+    );
 
     expect(screen.queryByText("Manage Customers")).not.toBeInTheDocument();
     expect(screen.queryByText("Management")).not.toBeInTheDocument();

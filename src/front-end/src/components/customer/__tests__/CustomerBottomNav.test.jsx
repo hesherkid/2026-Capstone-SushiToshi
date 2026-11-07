@@ -28,18 +28,26 @@ describe("Customer bottom nav", () => {
     render(<CustomerBottomNav />);
 
     ["Menu", "Orders", "Bill", "Call Server"].forEach((label) =>
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument(),
+      expect(screen.getByRole("link", { name: label })).toBeInTheDocument(),
     );
-    expect(screen.getByRole("button", { name: "Bill" })).toHaveClass("Mui-selected");
+
+    const bill = screen.getByRole("link", { name: "Bill" });
+    expect(bill).toHaveClass("Mui-selected");
+    expect(bill).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Menu" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("goes to a page in one tap", () => {
     useAuth.mockReturnValue({ userRole: "customer" });
 
     render(<CustomerBottomNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Call Server" }));
 
-    expect(mockPush).toHaveBeenCalledWith("/dashboard/call-server");
+    expect(screen.getByRole("link", { name: "Call Server" })).toHaveAttribute(
+      "href",
+      "/dashboard/call-server",
+    );
   });
 
   it("steps aside on Review order, which has its own bar at the bottom", () => {

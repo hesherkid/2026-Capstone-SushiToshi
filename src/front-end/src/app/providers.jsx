@@ -19,9 +19,22 @@ const theme = createTheme({
     secondary: {
       main: "#14171a",
     },
+    warning: {
+      main: "#b45309",
+      dark: "#92400e",
+      contrastText: "#ffffff",
+    },
+    info: {
+      main: "#01579b",
+      contrastText: "#ffffff",
+    },
+    error: {
+      main: "#d32f2f",
+      dark: "#b71c1c",
+    },
     text: {
       primary: "#000000",
-      secondary: "#657786",
+      secondary: "#5b6670",
     },
     background: {
       default: "#ffffff",
@@ -106,6 +119,59 @@ const theme = createTheme({
         root: {
           backgroundColor: "#C01E2E",
         },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        // Outlined warning text sits on tinted panels so need to use use the darker shade
+        root: ({ ownerState, theme }) =>
+          ownerState.variant === "outlined" && ownerState.color === "warning"
+            ? {
+                color: theme.palette.warning.dark,
+                borderColor: theme.palette.warning.dark,
+              }
+            : {},
+      },
+    },
+    MuiSwitch: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          // Visible keyboard focus
+          "& .MuiSwitch-switchBase.Mui-focusVisible .MuiSwitch-thumb": {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "2px",
+          },
+          // Off: a darker track so the switch's shape and state are clear
+          "& .MuiSwitch-track": {
+            opacity: 0.6,
+          },
+          // On: a solid primary track instead of half-transparent red
+          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+            opacity: 1,
+          },
+        }),
+      },
+    },
+    //TODO: decide if you want to keep the below highlight styles for focus-visible on checkboxes and radios - AW
+    MuiCheckbox: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-focusVisible": {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "-4px",
+            borderRadius: 4,
+          },
+        }),
+      },
+    },
+    MuiRadio: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "&.Mui-focusVisible": {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: "-4px",
+          },
+        }),
       },
     },
   },

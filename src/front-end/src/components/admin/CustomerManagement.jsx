@@ -15,8 +15,14 @@ import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { actionsColumn } from "@/components/common/RowActions";
 import StatCard from "@/components/home/StatCard";
 import { statsGrid } from "@/components/home/homeLayout";
-import { formatDate, parseUtcDate } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
-import { isActiveAccount, AccountStatusChip } from "@/components/admin/StaffList";
+import {
+  formatDate,
+  parseUtcDate,
+} from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import {
+  isActiveAccount,
+  AccountStatusChip,
+} from "@/components/admin/StaffList";
 import { useAuth } from "@/hooks/useAuth";
 import { serverMessage } from "@/utils/serverMessage";
 
@@ -27,10 +33,15 @@ const NEW_CUSTOMER_DAYS = 30;
 const daysAgo = (days) => Date.now() - days * 24 * 60 * 60 * 1000;
 
 const customerName = (customer) =>
-  `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() || customer.email;
+  `${customer.first_name ?? ""} ${customer.last_name ?? ""}`.trim() ||
+  customer.email;
 
 // Actions are only passed for admins
-export const getCustomerColumns = ({ onDeactivate, onReactivate, onDelete } = {}) => [
+export const getCustomerColumns = ({
+  onDeactivate,
+  onReactivate,
+  onDelete,
+} = {}) => [
   {
     field: "name",
     headerName: "Name",
@@ -53,9 +64,20 @@ export const getCustomerColumns = ({ onDeactivate, onReactivate, onDelete } = {}
     minWidth: 120,
     renderCell: ({ value }) =>
       value ? (
-        <Chip icon={<MailCheck size={14} />} label="Verified" color="success" size="small" variant="outlined" />
+        <Chip
+          icon={<MailCheck size={14} />}
+          label="Verified"
+          color="success"
+          size="small"
+          variant="outlined"
+        />
       ) : (
-        <Chip icon={<MailWarning size={14} />} label="Unverified" size="small" variant="outlined" />
+        <Chip
+          icon={<MailWarning size={14} />}
+          label="Unverified"
+          size="small"
+          variant="outlined"
+        />
       ),
   },
   {
@@ -107,7 +129,7 @@ export const getCustomerColumns = ({ onDeactivate, onReactivate, onDelete } = {}
         hidden: !onDelete,
       },
     ],
-    { width: 110 }
+    { width: 110, getRowName: (row) => customerName(row) },
   ),
 ];
 
@@ -168,7 +190,7 @@ const CustomerManagement = () => {
     runAction(
       () => setStatus(customer, "Active"),
       `${customerName(customer)} can sign in again`,
-      "Failed to reactivate customer"
+      "Failed to reactivate customer",
     );
 
   const confirmPendingAction = () => {
@@ -177,34 +199,38 @@ const CustomerManagement = () => {
       return runAction(
         () => setStatus(customer, "Inactive"),
         `${customerName(customer)} has been deactivated`,
-        "Failed to deactivate customer"
+        "Failed to deactivate customer",
       );
     }
     return runAction(
       () => api.delete(`/customers/${customer.user_id}`),
       `${customerName(customer)} has been deleted`,
-      "Failed to delete customer"
+      "Failed to delete customer",
     );
   };
 
-  const confirmText = pendingAction && {
-    deactivate: {
-      title: "Deactivate customer",
-      message: `Deactivate ${customerName(pendingAction.customer)}? They won't be able to sign in until you reactivate them.`,
-      confirmLabel: "Deactivate",
-    },
-    delete: {
-      title: "Delete customer",
-      message: `Delete ${customerName(pendingAction.customer)}? Their name, email and sign-in details are removed. Past orders stay in reports. This can't be undone.`,
-      confirmLabel: "Delete",
-    },
-  }[pendingAction.action];
+  const confirmText =
+    pendingAction &&
+    {
+      deactivate: {
+        title: "Deactivate customer",
+        message: `Deactivate ${customerName(pendingAction.customer)}? They won't be able to sign in until you reactivate them.`,
+        confirmLabel: "Deactivate",
+      },
+      delete: {
+        title: "Delete customer",
+        message: `Delete ${customerName(pendingAction.customer)}? Their name, email and sign-in details are removed. Past orders stay in reports. This can't be undone.`,
+        confirmLabel: "Delete",
+      },
+    }[pendingAction.action];
 
   const activeCount = customers.filter(
-    (c) => String(c.status).toLowerCase() === "active"
+    (c) => String(c.status).toLowerCase() === "active",
   ).length;
   const newCount = customers.filter(
-    (c) => c.created_at && parseUtcDate(c.created_at)?.getTime() >= daysAgo(NEW_CUSTOMER_DAYS)
+    (c) =>
+      c.created_at &&
+      parseUtcDate(c.created_at)?.getTime() >= daysAgo(NEW_CUSTOMER_DAYS),
   ).length;
 
   return (
@@ -216,8 +242,18 @@ const CustomerManagement = () => {
       onSuccessClose={() => setSuccess(null)}
       beforeGrid={
         <Box sx={{ ...statsGrid, mb: 3 }}>
-          <StatCard label="Total Customers" value={customers.length} icon={Users} loading={loading} />
-          <StatCard label="Active Customers" value={activeCount} icon={UserCheck} loading={loading} />
+          <StatCard
+            label="Total Customers"
+            value={customers.length}
+            icon={Users}
+            loading={loading}
+          />
+          <StatCard
+            label="Active Customers"
+            value={activeCount}
+            icon={UserCheck}
+            loading={loading}
+          />
           <StatCard
             label={`New in ${NEW_CUSTOMER_DAYS} Days`}
             value={newCount}
@@ -231,11 +267,13 @@ const CustomerManagement = () => {
         columns: getCustomerColumns(
           isAdmin
             ? {
-                onDeactivate: (customer) => setPendingAction({ action: "deactivate", customer }),
+                onDeactivate: (customer) =>
+                  setPendingAction({ action: "deactivate", customer }),
                 onReactivate: reactivate,
-                onDelete: (customer) => setPendingAction({ action: "delete", customer }),
+                onDelete: (customer) =>
+                  setPendingAction({ action: "delete", customer }),
               }
-            : {}
+            : {},
         ),
         loading,
         getRowId: (row) => row.user_id,

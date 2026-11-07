@@ -1,4 +1,10 @@
-import React, { createContext, useState, useContext, useCallback, useMemo } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useCallback,
+  useMemo,
+} from "react";
 
 export const NotificationContext = createContext(null);
 
@@ -16,28 +22,28 @@ export const useNotification = () => {
     (message, duration = 6000) => {
       showNotification(message, "success", duration);
     },
-    [showNotification]
+    [showNotification],
   );
 
   const notifyError = useCallback(
-    (message, duration = 6000) => {
+    (message, duration = null) => {
       showNotification(message, "error", duration);
     },
-    [showNotification]
+    [showNotification],
   );
 
   const notifyWarning = useCallback(
     (message, duration = 6000) => {
       showNotification(message, "warning", duration);
     },
-    [showNotification]
+    [showNotification],
   );
 
   const notifyInfo = useCallback(
     (message, duration = 6000) => {
       showNotification(message, "info", duration);
     },
-    [showNotification]
+    [showNotification],
   );
 
   return {
@@ -62,7 +68,7 @@ export const NotificationProvider = ({ children }) => {
       setAutoHideDuration(duration);
       setOpen(true);
     },
-    []
+    [],
   );
 
   const hideNotification = useCallback(() => {
@@ -78,7 +84,14 @@ export const NotificationProvider = ({ children }) => {
       showNotification,
       hideNotification,
     }),
-    [open, message, severity, autoHideDuration, showNotification, hideNotification]
+    [
+      open,
+      message,
+      severity,
+      autoHideDuration,
+      showNotification,
+      hideNotification,
+    ],
   );
 
   return (

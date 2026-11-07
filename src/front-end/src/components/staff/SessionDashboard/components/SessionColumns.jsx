@@ -1,5 +1,12 @@
 import { Box, Chip, Tooltip } from "@mui/material";
-import { Eye, ReceiptText, LogOut, Bell, AlertTriangle, Users } from "lucide-react";
+import {
+  Eye,
+  ReceiptText,
+  LogOut,
+  Bell,
+  AlertTriangle,
+  Users,
+} from "lucide-react";
 import { actionsColumn } from "@/components/common/RowActions";
 import {
   formatTime,
@@ -22,7 +29,13 @@ export const SeatedFor = ({ startedAt }) => {
     <Tooltip title={`Seated for more than ${hours} hours`}>
       <Box
         component="span"
-        sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, color: "warning.dark", fontWeight: 600 }}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.5,
+          color: "warning.dark",
+          fontWeight: 600,
+        }}
       >
         {duration}
         {/* The Tooltip labels the wrapper for screen readers */}
@@ -39,12 +52,17 @@ export const tableLabel = (tableNumbers = []) => {
     : `Table ${tableNumbers[0]}`;
 };
 
-export const isOpenBill = (bill) => String(bill.status).toUpperCase() === "OPEN";
+export const isOpenBill = (bill) =>
+  String(bill.status).toUpperCase() === "OPEN";
 
 // An open bill whose guest count staff should check: a guest started or changed it, or more people joined than it's for
 export const billNeedsGuestCheck = (bill) =>
   isOpenBill(bill) &&
-  Boolean(bill.started_By_Guest || bill.counts_Changed_By_Guest || bill.people_On_Bill > bill.total_Guests);
+  Boolean(
+    bill.started_By_Guest ||
+    bill.counts_Changed_By_Guest ||
+    bill.people_On_Bill > bill.total_Guests,
+  );
 
 // Rows are sessions from /Dashboard/sessions plus a `requestCount` from the pending service requests
 export const getSessionColumns = (actions) => [
@@ -132,12 +150,21 @@ export const getSessionColumns = (actions) => [
       const toCheck = (row.bills || []).filter(billNeedsGuestCheck).length;
       if (toCheck === 0) return value;
       return (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, height: "100%" }}>
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 1, height: "100%" }}
+        >
           {value}
-          <Tooltip title={toCheck === 1 ? "A bill's guest count needs checking" : `${toCheck} bills' guest counts need checking`}>
+          <Tooltip
+            title={
+              toCheck === 1
+                ? "A bill's guest count needs checking"
+                : `${toCheck} bills' guest counts need checking`
+            }
+          >
             <Chip
-              icon={<Users size={14} />}
+              icon={<Users size={14} aria-hidden="true" />}
               label="Check guests"
+              aria-label={`Check guests, ${tableLabel(row.table_Numbers)}`}
               color="warning"
               size="small"
               variant="outlined"
@@ -153,7 +180,11 @@ export const getSessionColumns = (actions) => [
   },
   actionsColumn(
     (row) => [
-      { label: "View session", icon: Eye, onClick: () => actions.viewSession(row) },
+      {
+        label: "View session",
+        icon: Eye,
+        onClick: () => actions.viewSession(row),
+      },
       {
         label: "New bill",
         icon: ReceiptText,
@@ -169,6 +200,10 @@ export const getSessionColumns = (actions) => [
         hidden: !row.is_Closable,
       },
     ],
-    { width: 140 }
+    {
+      width: 140,
+      getRowName: (row) =>
+        `#${row.session_Id}, ${tableLabel(row.table_Numbers)}`,
+    },
   ),
 ];

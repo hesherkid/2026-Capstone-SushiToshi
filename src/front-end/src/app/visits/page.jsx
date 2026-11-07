@@ -7,9 +7,13 @@ import { decodeToken } from "@/config/auth";
 import { getAuthToken, isGuestClaims } from "@/utils/auth";
 import { fetchPastVisits } from "@/services/myItems";
 import { setPageLoading } from "@/utils/pageLoading";
-import { parseUtcDate, RESTAURANT_TIME_ZONE } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
+import {
+  parseUtcDate,
+  RESTAURANT_TIME_ZONE,
+} from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
+import NextLink from "next/link";
 
 const LOGIN_PATH = "/auth/login";
 const MENU_PATH = "/menu/full-menu";
@@ -29,7 +33,9 @@ const visitDate = (value) =>
   }) ?? "";
 
 const tableText = (numbers) =>
-  numbers.length === 0 ? "" : `${numbers.length > 1 ? "Tables" : "Table"} ${numbers.join(", ")}`;
+  numbers.length === 0
+    ? ""
+    : `${numbers.length > 1 ? "Tables" : "Table"} ${numbers.join(", ")}`;
 
 const VisitCard = ({ visit }) => {
   const [showAll, setShowAll] = useState(false);
@@ -37,17 +43,27 @@ const VisitCard = ({ visit }) => {
   const hidden = visit.items.length - ITEMS_SHOWN;
 
   return (
-    <Paper component="article" variant="outlined" sx={{ borderRadius: 3, p: 2.5, textAlign: "left" }}>
+    <Paper
+      component="article"
+      variant="outlined"
+      sx={{ borderRadius: 3, p: 2.5, textAlign: "left" }}
+    >
       <Typography component="h2" sx={{ fontWeight: 700 }}>
         {visitDate(visit.started_at)}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {[visit.location_name, tableText(visit.table_numbers)].filter(Boolean).join(" · ")}
+        {[visit.location_name, tableText(visit.table_numbers)]
+          .filter(Boolean)
+          .join(" · ")}
       </Typography>
 
       <Divider sx={{ my: 1.5 }} />
 
-      <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 700, mb: 0.5 }}>
+      <Typography
+        variant="subtitle2"
+        component="h3"
+        sx={{ fontWeight: 700, mb: 0.5 }}
+      >
         What you ordered
       </Typography>
       {visit.items.length === 0 ? (
@@ -57,8 +73,15 @@ const VisitCard = ({ visit }) => {
       ) : (
         <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }}>
           {items.map((item) => (
-            <Box component="li" key={item.item_id} sx={{ display: "flex", gap: 1, py: 0.25 }}>
-              <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 28 }}>
+            <Box
+              component="li"
+              key={item.item_id}
+              sx={{ display: "flex", gap: 1, py: 0.25 }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 700, minWidth: 28 }}
+              >
                 {item.quantity}×
               </Typography>
               <Typography variant="body2">{item.name}</Typography>
@@ -67,7 +90,11 @@ const VisitCard = ({ visit }) => {
         </Box>
       )}
       {hidden > 0 && (
-        <Button size="small" onClick={() => setShowAll(!showAll)} sx={{ mt: 0.5, ml: -1 }}>
+        <Button
+          size="small"
+          onClick={() => setShowAll(!showAll)}
+          sx={{ mt: 0.5, ml: -1 }}
+        >
           {showAll ? "Show less" : `Show all ${visit.items.length}`}
         </Button>
       )}
@@ -76,13 +103,20 @@ const VisitCard = ({ visit }) => {
         <>
           <Divider sx={{ my: 1.5 }} />
           {visit.bills.map((bill) => (
-            <Box key={bill.bill_id} sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+            <Box
+              key={bill.bill_id}
+              sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}
+            >
               <Typography variant="body2" color="text.secondary">
                 {/* A name tells a table's bills apart; one bill is just the total */}
-                {visit.bills.length > 1 ? `${bill.bill_name || `Bill #${bill.bill_id}`} total` : "Bill total"}
+                {visit.bills.length > 1
+                  ? `${bill.bill_name || `Bill #${bill.bill_id}`} total`
+                  : "Bill total"}
                 {` · ${bill.guest_count} ${bill.guest_count === 1 ? "guest" : "guests"}`}
               </Typography>
-              <Typography sx={{ fontWeight: 700 }}>{money(bill.total)}</Typography>
+              <Typography sx={{ fontWeight: 700 }}>
+                {money(bill.total)}
+              </Typography>
             </Box>
           ))}
         </>
@@ -118,7 +152,10 @@ const PastVisitsPage = () => {
       .then(setVisits)
       .catch((err) => {
         console.error("Error loading past visits:", err);
-        setError(err?.response?.data?.message || "Couldn't load your past visits. Please try again.");
+        setError(
+          err?.response?.data?.message ||
+            "Couldn't load your past visits. Please try again.",
+        );
       })
       .finally(() => setPageLoading(false));
   }, [authLoading, isAuthenticated, router]);
@@ -127,9 +164,18 @@ const PastVisitsPage = () => {
 
   return (
     <CustomerPageContainer sx={{ maxWidth: 560 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: { xs: 3, sm: 2 }, mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mt: { xs: 3, sm: 2 },
+          mb: 3,
+        }}
+      >
         <Button
-          onClick={() => router.push("/")}
+          component={NextLink}
+          href="/"
           aria-label="Back to home"
           sx={{ minWidth: 0, p: 1, borderRadius: 999, color: "text.primary" }}
         >
@@ -144,7 +190,8 @@ const PastVisitsPage = () => {
 
       {visits?.length === 0 && (
         <Alert severity="info">
-          No past visits yet. Your visits show up here once your table&apos;s visit has ended.
+          No past visits yet. Your visits show up here once your table&apos;s
+          visit has ended.
         </Alert>
       )}
 

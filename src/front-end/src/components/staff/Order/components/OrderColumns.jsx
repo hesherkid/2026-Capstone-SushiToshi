@@ -102,12 +102,13 @@ export const getOrderColumns = (actions) => [
       },
       {
         label: "Mark all delivered",
+        ariaLabel: `Mark all of order #${row.orderId} delivered`,
         icon: Package,
         color: "success",
         onClick: () => actions.markAllDelivered(row),
         hidden: row.status !== ORDER_STATUS.PROCESSING,
       },
     ],
-    { width: 130 },
+    { width: 130, getRowName: (row) => `#${row.orderId}` },
   ),
 ];

@@ -1,10 +1,21 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import LocationManagement from "../LocationManagement";
 import api from "@/config/api";
 import * as pricingService from "@/services/pricingService";
 
 jest.mock("@/config/api", () => {
-  const mockApi = { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() };
+  const mockApi = {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  };
   return { __esModule: true, default: mockApi, api: mockApi };
 });
 jest.mock("@/services/pricingService");
@@ -29,7 +40,11 @@ jest.mock("@mui/x-data-grid", () => {
   const React = jest.requireActual("react");
   return {
     ...actual,
-    DataGrid: (props) => React.createElement(actual.DataGrid, { ...props, disableVirtualization: true }),
+    DataGrid: (props) =>
+      React.createElement(actual.DataGrid, {
+        ...props,
+        disableVirtualization: true,
+      }),
   };
 });
 
@@ -82,17 +97,27 @@ describe("LocationManagement menus column", () => {
     await screen.findByText("No menus");
 
     // Southgate is the second row
-    fireEvent.click(screen.getAllByRole("button", { name: "Assign Menus" })[1]);
-    const dialog = (await screen.findByRole("heading", { name: "Manage Menus" })).closest('[role="dialog"]');
+    fireEvent.click(
+      screen.getByRole("button", { name: "Assign Menus Southgate" }),
+    );
+    const dialog = (
+      await screen.findByRole("heading", { name: "Manage Menus" })
+    ).closest('[role="dialog"]');
     expect(within(dialog).getByText("Southgate")).toBeInTheDocument();
 
-    assignedMenus[2] = [11];   // Dinner was assigned in the dialog
+    assignedMenus[2] = [11]; // Dinner was assigned in the dialog
     // The bottom Close button (the ✕ in the title bar is labelled Close too)
-    fireEvent.click(within(dialog).getAllByRole("button", { name: "Close" }).at(-1));
+    fireEvent.click(
+      within(dialog).getAllByRole("button", { name: "Close" }).at(-1),
+    );
 
-    await waitFor(() => expect(screen.queryByText("No menus")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText("No menus")).not.toBeInTheDocument(),
+    );
     // Chips only: the dialog's own list of menus may still be fading out
-    expect(screen.getAllByText("Dinner").filter((el) => el.closest(".MuiChip-root"))).toHaveLength(2);
+    expect(
+      screen.getAllByText("Dinner").filter((el) => el.closest(".MuiChip-root")),
+    ).toHaveLength(2);
   });
 
   it("leaves the column blank when menus can't be loaded", async () => {
@@ -118,8 +143,14 @@ describe("LocationManagement pricing column", () => {
     ]);
     render(<LocationManagement />);
 
-    expect(await screen.findByRole("button", { name: "Custom pricing for Downtown" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Default pricing for Southgate" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", {
+        name: "Custom pricing for Downtown",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Default pricing for Southgate" }),
+    ).toBeInTheDocument();
   });
 
   it("opens the location's pricing from its chip and refreshes the column on close", async () => {
@@ -128,7 +159,11 @@ describe("LocationManagement pricing column", () => {
     ]);
     render(<LocationManagement />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Default pricing for Downtown" }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Default pricing for Downtown",
+      }),
+    );
     expect(screen.getByRole("dialog")).toHaveTextContent("Pricing: Downtown");
 
     // Custom pricing was switched on in the dialog
@@ -137,7 +172,11 @@ describe("LocationManagement pricing column", () => {
     ]);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(await screen.findByRole("button", { name: "Custom pricing for Downtown" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", {
+        name: "Custom pricing for Downtown",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("leaves the column blank when pricing can't be loaded", async () => {
@@ -146,8 +185,12 @@ describe("LocationManagement pricing column", () => {
     render(<LocationManagement />);
 
     expect(await screen.findByText("Downtown")).toBeInTheDocument();
-    await waitFor(() => expect(pricingService.getLocationPricingList).toHaveBeenCalled());
-    expect(screen.queryByRole("button", { name: /pricing for/ })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(pricingService.getLocationPricingList).toHaveBeenCalled(),
+    );
+    expect(
+      screen.queryByRole("button", { name: /pricing for/ }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

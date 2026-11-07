@@ -69,7 +69,7 @@ const StaffManagementForm = ({
     await onSubmit(
       account.role === "staff"
         ? { ...account, location_ids, location_id: location_ids[0] ?? null }
-        : account
+        : account,
     );
   };
 
@@ -91,8 +91,13 @@ const StaffManagementForm = ({
     <FormDialog
       open={open}
       onClose={onClose}
-      title={mode === "create" ? "Create New Staff Account" : "Edit Staff Account"}
-      subtitle={mode === "edit" && `${initialData?.first_name ?? ""} ${initialData?.last_name ?? ""}`.trim()}
+      title={
+        mode === "create" ? "Create New Staff Account" : "Edit Staff Account"
+      }
+      subtitle={
+        mode === "edit" &&
+        `${initialData?.first_name ?? ""} ${initialData?.last_name ?? ""}`.trim()
+      }
       error={error}
       onErrorClose={onErrorClose}
       onSubmit={handleSubmit}
@@ -144,12 +149,13 @@ const StaffManagementForm = ({
       />
 
       <FormControl fullWidth required disabled={lockRole}>
-        <InputLabel>Role</InputLabel>
+        <InputLabel id="staff-role-label">Role</InputLabel>
         <Select
+          labelId="staff-role-label"
+          label="Role"
           name="role"
           value={formData.role}
           onChange={handleChange}
-          label="Role"
         >
           <MenuItem value="staff">Staff</MenuItem>
           <MenuItem value="admin">Admin</MenuItem>
@@ -178,10 +184,7 @@ const StaffManagementForm = ({
             )}
           >
             {locations.map((location) => (
-              <MenuItem
-                key={location.location_Id}
-                value={location.location_Id}
-              >
+              <MenuItem key={location.location_Id} value={location.location_Id}>
                 {location.name}
               </MenuItem>
             ))}

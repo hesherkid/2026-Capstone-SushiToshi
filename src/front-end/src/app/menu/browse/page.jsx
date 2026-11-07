@@ -1,7 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Box, Button, ButtonBase, InputAdornment, MenuItem, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  ButtonBase,
+  InputAdornment,
+  MenuItem,
+  TextField,
+  Typography,
+} from "@mui/material";
 import api from "@/config/api";
 import useAuth from "@/hooks/useAuth";
 import { decodeToken } from "@/config/auth";
@@ -11,7 +20,10 @@ import storage from "@/utils/storage";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import MenuBrowser from "@/components/menu/MenuBrowser";
 import useMyItems from "@/components/menu/useMyItems";
-import { groupItemsByCategory, normalizeCategory } from "@/components/menu/cartRules";
+import {
+  groupItemsByCategory,
+  normalizeCategory,
+} from "@/components/menu/cartRules";
 import { RESTAURANT_TIME_ZONE } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 import CustomerPageContainer from "@/components/customer/CustomerPageContainer";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
@@ -23,19 +35,26 @@ const BROWSE_LOCATION_KEY = "browseLocationId";
 
 // "14:05:09" in the restaurant's time zone, to compare with a menu's "HH:mm:ss" hours
 const timeNow = () =>
-  new Date().toLocaleTimeString("en-GB", { timeZone: RESTAURANT_TIME_ZONE, hour12: false });
+  new Date().toLocaleTimeString("en-GB", {
+    timeZone: RESTAURANT_TIME_ZONE,
+    hour12: false,
+  });
 
 // Whether a menu's hours cover the time; hours past midnight (22:00 to 02:00) wrap around
 const servedAt = (menu, time) => {
   const start = menu.start_time ?? "";
   const end = menu.end_time ?? "";
   if (start === end) return true;
-  return start < end ? time >= start && time < end : time >= start || time < end;
+  return start < end
+    ? time >= start && time < end
+    : time >= start || time < end;
 };
 
 // "11:00:00" as "11 a.m.", "17:30:00" as "5:30 p.m."
 const clockText = (value) => {
-  const [hours, minutes] = String(value ?? "").split(":").map(Number);
+  const [hours, minutes] = String(value ?? "")
+    .split(":")
+    .map(Number);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return "";
   return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString("en-CA", {
     hour: "numeric",
@@ -45,10 +64,13 @@ const clockText = (value) => {
 
 // "11 a.m.–3 p.m."; a menu served all day has no hours
 const menuHours = (menu) =>
-  menu.start_time === menu.end_time ? "" : `${clockText(menu.start_time)}–${clockText(menu.end_time)}`;
+  menu.start_time === menu.end_time
+    ? ""
+    : `${clockText(menu.start_time)}–${clockText(menu.end_time)}`;
 
 // "Lunch · 11 a.m.–3 p.m."
-const menuLabel = (menu) => [menu.name, menuHours(menu)].filter(Boolean).join(" · ");
+const menuLabel = (menu) =>
+  [menu.name, menuHours(menu)].filter(Boolean).join(" · ");
 
 // Same pills as the menu's tag filter
 const pill = (selected) => ({
@@ -63,14 +85,22 @@ const pill = (selected) => ({
   color: selected ? "common.white" : "grey.800",
   transition: "background-color 150ms ease, color 150ms ease",
   "&:hover": { bgcolor: selected ? "primary.dark" : "grey.200" },
-  "&.Mui-focusVisible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 },
+  "&.Mui-focusVisible": {
+    outline: "2px solid",
+    outlineColor: "primary.main",
+    outlineOffset: 2,
+  },
 });
 
 const firstLocation = (locations) => {
   const ids = locations.map((location) => location.location_Id);
-  return [storage.get(BROWSE_LOCATION_KEY), storage.get("locationId")]
-    .map(Number)
-    .find((id) => ids.includes(id)) ?? ids[0] ?? "";
+  return (
+    [storage.get(BROWSE_LOCATION_KEY), storage.get("locationId")]
+      .map(Number)
+      .find((id) => ids.includes(id)) ??
+    ids[0] ??
+    ""
+  );
 };
 
 /**
@@ -127,7 +157,9 @@ const BrowseMenuPage = () => {
       });
     api
       .get("/Category")
-      .then(({ data }) => setCategories((Array.isArray(data) ? data : []).map(normalizeCategory)))
+      .then(({ data }) =>
+        setCategories((Array.isArray(data) ? data : []).map(normalizeCategory)),
+      )
       .catch((err) => console.error("Error fetching categories:", err));
   }, [ready]);
 
@@ -147,7 +179,9 @@ const BrowseMenuPage = () => {
         );
         setMenus(list);
         const now = timeNow();
-        setMenuId((list.find((menu) => servedAt(menu, now)) ?? list[0])?.menu_id ?? "");
+        setMenuId(
+          (list.find((menu) => servedAt(menu, now)) ?? list[0])?.menu_id ?? "",
+        );
       })
       .catch((err) => {
         if (cancelled) return;
@@ -168,7 +202,8 @@ const BrowseMenuPage = () => {
     api
       .get(`/Menu/${menuId}/item`, { params: { locationId } })
       .then(({ data }) => {
-        if (!cancelled) setMenuItems(groupItemsByCategory(Array.isArray(data) ? data : []));
+        if (!cancelled)
+          setMenuItems(groupItemsByCategory(Array.isArray(data) ? data : []));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -193,11 +228,20 @@ const BrowseMenuPage = () => {
   if (!ready) return null;
 
   const noMenus = menus?.length === 0 && !error;
-  const locationName = locations.find((location) => location.location_Id === locationId)?.name ?? "";
+  const locationName =
+    locations.find((location) => location.location_Id === locationId)?.name ??
+    "";
 
   return (
     <CustomerPageContainer>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: { xs: 3, sm: 2 } }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mt: { xs: 3, sm: 2 },
+        }}
+      >
         <Button
           onClick={() => router.push("/")}
           aria-label="Back to home"
@@ -223,7 +267,12 @@ const BrowseMenuPage = () => {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <MaterialSymbol name="location_on" filled size={20} sx={{ color: "primary.main" }} />
+                  <MaterialSymbol
+                    name="location_on"
+                    filled
+                    size={20}
+                    sx={{ color: "primary.main" }}
+                  />
                 </InputAdornment>
               ),
             },
@@ -235,14 +284,23 @@ const BrowseMenuPage = () => {
                   paper: {
                     variant: "outlined",
                     elevation: 0,
-                    sx: { mt: 0.5, borderRadius: 2, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)" },
+                    sx: {
+                      mt: 0.5,
+                      borderRadius: 2,
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                    },
                   },
                   list: { dense: true, sx: { py: 0.5 } },
                 },
               },
             },
           }}
-          sx={{ mt: 1, mb: 2, textAlign: "left", "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+          sx={{
+            mt: 1,
+            mb: 2,
+            textAlign: "left",
+            "& .MuiOutlinedInput-root": { borderRadius: 2 },
+          }}
         >
           {locations.map((location) => (
             <MenuItem
@@ -254,13 +312,19 @@ const BrowseMenuPage = () => {
                 fontSize: "0.95rem",
                 justifyContent: "space-between",
                 // A check marks the current one, rather than a highlight
-                "&.Mui-selected, &.Mui-selected:hover": { bgcolor: "transparent" },
+                "&.Mui-selected, &.Mui-selected:hover": {
+                  bgcolor: "transparent",
+                },
                 "&.Mui-selected:hover, &:hover": { bgcolor: "grey.100" },
               }}
             >
               {location.name}
               {location.location_Id === locationId && (
-                <MaterialSymbol name="check" size={18} sx={{ color: "primary.main" }} />
+                <MaterialSymbol
+                  name="check"
+                  size={18}
+                  sx={{ color: "primary.main" }}
+                />
               )}
             </MenuItem>
           ))}
@@ -269,9 +333,22 @@ const BrowseMenuPage = () => {
         locationName && (
           // Lined up with the title, past the back arrow
           <Typography
-            sx={{ display: "flex", alignItems: "center", gap: 0.5, pl: 6, mb: 2.5, fontWeight: 600, fontSize: "0.95rem" }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              pl: 6,
+              mb: 2.5,
+              fontWeight: 600,
+              fontSize: "0.95rem",
+            }}
           >
-            <MaterialSymbol name="location_on" filled size={18} sx={{ color: "primary.main" }} />
+            <MaterialSymbol
+              name="location_on"
+              filled
+              size={18}
+              sx={{ color: "primary.main" }}
+            />
             {locationName}
           </Typography>
         )
@@ -311,7 +388,9 @@ const BrowseMenuPage = () => {
       )}
 
       {noMenus ? (
-        <Alert severity="info">This location has no menu to show right now.</Alert>
+        <Alert severity="info">
+          This location has no menu to show right now.
+        </Alert>
       ) : (
         <MenuBrowser
           categories={categories}

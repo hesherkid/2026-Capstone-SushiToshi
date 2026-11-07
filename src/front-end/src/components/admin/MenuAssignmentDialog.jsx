@@ -137,16 +137,36 @@ const getAssignmentColumns = ({ locationName, onEdit, onDelete }) => [
     valueGetter: (value) => (value ? "Yes" : "No"),
   },
   actionsColumn(
-    (row) => [
-      { label: "Edit assignment", icon: Edit, onClick: () => onEdit(row) },
-      {
-        label: row.location_Id == null ? "Remove from menu" : "Reset to default price",
-        icon: Trash2,
-        color: "error",
-        onClick: () => onDelete(row),
-      },
-    ],
-    { width: 110 },
+    (row) => {
+      const menu = row.menu?.name || "Unknown Menu";
+      return [
+        {
+          label: "Edit assignment",
+          icon: Edit,
+          onClick: () => onEdit(row),
+        },
+        row.location_Id == null
+          ? {
+              label: "Remove from menu",
+              ariaLabel: `Remove from menu ${menu}`,
+              icon: Trash2,
+              color: "error",
+              onClick: () => onDelete(row),
+            }
+          : {
+              label: "Reset to default price",
+              ariaLabel: `Reset to default price: ${menu}, ${locationName(row.location_Id)}`,
+              icon: Trash2,
+              color: "error",
+              onClick: () => onDelete(row),
+            },
+      ];
+    },
+    {
+      width: 110,
+      getRowName: (row) =>
+        `${row.menu?.name || "Unknown Menu"}, ${locationName(row.location_Id)}`,
+    },
   ),
 ];
 
@@ -354,7 +374,11 @@ const MenuAssignmentDialog = ({
     // md: wide enough for every table column without scrolling sideways
     <AppDialog open={open} onClose={onClose} maxWidth="md">
       {/* Outside the scrolling content, so the title and close button stay in view */}
-      <DialogHeader title="Menu Assignments" subtitle={selectedItem?.name} onClose={onClose} />
+      <DialogHeader
+        title="Menu Assignments"
+        subtitle={selectedItem?.name}
+        onClose={onClose}
+      />
       <DialogContent dividers>
         <form onSubmit={handleSubmit}>
           <Box>
@@ -385,7 +409,11 @@ const MenuAssignmentDialog = ({
                   // The row being edited stays highlighted
                   rowSelectionModel={{
                     type: "include",
-                    ids: new Set(editingAssignment ? [editingAssignment.assignment_Id] : []),
+                    ids: new Set(
+                      editingAssignment
+                        ? [editingAssignment.assignment_Id]
+                        : [],
+                    ),
                   }}
                   showToolbar={false}
                   hideFooter={assignments.length <= 10}
@@ -404,8 +432,10 @@ const MenuAssignmentDialog = ({
 
             <Stack spacing={2}>
               <FormControl fullWidth>
-                <InputLabel>Location</InputLabel>
+                <InputLabel id="assignment-location-label">Location</InputLabel>
                 <Select
+                  labelId="assignment-location-label"
+                  label="Location"
                   value={formData.location_id}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -414,7 +444,6 @@ const MenuAssignmentDialog = ({
                       menu_id: "", // menu choices depend on the location
                     }))
                   }
-                  label="Location"
                   disabled={Boolean(editingAssignment)}
                 >
                   <MenuItem value={ALL_LOCATIONS}>
@@ -428,11 +457,12 @@ const MenuAssignmentDialog = ({
                 </Select>
               </FormControl>
               <FormControl fullWidth required>
-                <InputLabel>Menu</InputLabel>
+                <InputLabel id="assignment-menu-label">Menu</InputLabel>
                 <Select
+                  labelId="assignment-menu-label"
+                  label="Menu"
                   value={formData.menu_id}
                   onChange={setField("menu_id")}
-                  label="Menu"
                   disabled={Boolean(editingAssignment)}
                 >
                   {availableMenus.map((menu) => (
@@ -460,11 +490,12 @@ const MenuAssignmentDialog = ({
                 />
 
                 <FormControl sx={{ flex: 1 }}>
-                  <InputLabel>Status</InputLabel>
+                  <InputLabel id="assignment-status-label">Status</InputLabel>
                   <Select
+                    labelId="assignment-status-label"
+                    label="Status"
                     value={formData.status}
                     onChange={setField("status")}
-                    label="Status"
                   >
                     <MenuItem value="available">Available</MenuItem>
                     <MenuItem value="unavailable">Unavailable</MenuItem>
@@ -533,7 +564,9 @@ const MenuAssignmentDialog = ({
                     onChange={setField("over_limit_behavior")}
                   >
                     <MenuItem value="Block">Block</MenuItem>
-                    <MenuItem value="Charge">Charge the item&apos;s price</MenuItem>
+                    <MenuItem value="Charge">
+                      Charge the item&apos;s price
+                    </MenuItem>
                   </Select>
                   <FormHelperText>
                     Charge bills the price for each extra over the limits above

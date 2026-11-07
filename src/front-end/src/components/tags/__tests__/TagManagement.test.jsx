@@ -99,9 +99,12 @@ const mockGets = (items = ITEMS) =>
     return Promise.resolve({ status: 200, data: [] });
   });
 
-const rowAction = async (label) => {
+// Row actions there tag "Edit Spicy" or "Delete Spicy"
+const rowAction = async (label, tagName = SPICY.tag_name) => {
   const row = (await screen.findByText("#FF5733")).closest("tr");
-  fireEvent.click(within(row).getByRole("button", { name: label }));
+  fireEvent.click(
+    within(row).getByRole("button", { name: `${label} ${tagName}` }),
+  );
 };
 
 const tagListLoads = () => api.get.mock.calls.filter(([url]) => url === "/Tag");

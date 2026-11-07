@@ -1,4 +1,10 @@
-import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  within,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import TableDashboard from "@/components/staff/TableDashboard";
 import api from "@/config/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,10 +47,34 @@ if (typeof window.ResizeObserver === "undefined") {
 }
 
 const tables = [
-  { table_Id: 1, table_number: 1, seat_count: 4, is_active: true, tableGroup_Id: null },
-  { table_Id: 2, table_number: 2, seat_count: 2, is_active: true, tableGroup_Id: null },
-  { table_Id: 3, table_number: 3, seat_count: 6, is_active: false, tableGroup_Id: null },
-  { table_Id: 4, table_number: 4, seat_count: 4, is_active: true, tableGroup_Id: 10 },
+  {
+    table_Id: 1,
+    table_number: 1,
+    seat_count: 4,
+    is_active: true,
+    tableGroup_Id: null,
+  },
+  {
+    table_Id: 2,
+    table_number: 2,
+    seat_count: 2,
+    is_active: true,
+    tableGroup_Id: null,
+  },
+  {
+    table_Id: 3,
+    table_number: 3,
+    seat_count: 6,
+    is_active: false,
+    tableGroup_Id: null,
+  },
+  {
+    table_Id: 4,
+    table_number: 4,
+    seat_count: 4,
+    is_active: true,
+    tableGroup_Id: 10,
+  },
 ];
 const groups = [
   {
@@ -59,8 +89,10 @@ const emptyTables = [{ table_Id: 1 }, { table_Id: 4 }];
 
 const mockApiData = () => {
   api.get.mockImplementation((url) => {
-    if (url.startsWith("/TableEntity/empty")) return Promise.resolve({ data: emptyTables });
-    if (url.startsWith("/TableEntity")) return Promise.resolve({ data: tables });
+    if (url.startsWith("/TableEntity/empty"))
+      return Promise.resolve({ data: emptyTables });
+    if (url.startsWith("/TableEntity"))
+      return Promise.resolve({ data: tables });
     if (url.startsWith("/TableGroup")) return Promise.resolve({ data: groups });
     return Promise.resolve({ data: [] });
   });
@@ -79,8 +111,12 @@ describe("Table dashboard", () => {
     render(<TableDashboard />);
 
     expect(await screen.findByText("Table 3")).toBeInTheDocument();
-    expect(within(rowFor("Table 1")).getByText("Available")).toBeInTheDocument();
-    expect(within(rowFor("Table 2")).getByText("In session")).toBeInTheDocument();
+    expect(
+      within(rowFor("Table 1")).getByText("Available"),
+    ).toBeInTheDocument();
+    expect(
+      within(rowFor("Table 2")).getByText("In session"),
+    ).toBeInTheDocument();
     expect(within(rowFor("Table 3")).getByText("Inactive")).toBeInTheDocument();
     expect(within(rowFor("Table 4")).getByText("Patio")).toBeInTheDocument();
 
@@ -100,7 +136,9 @@ describe("Table dashboard", () => {
     expect(availableCard).toHaveTextContent("2Tables Available");
 
     fireEvent.click(screen.getByRole("button", { name: "Available" }));
-    await waitFor(() => expect(screen.queryByText("Table 2")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText("Table 2")).not.toBeInTheDocument(),
+    );
     expect(screen.queryByText("Table 3")).not.toBeInTheDocument();
     expect(screen.getByText("Table 1")).toBeInTheDocument();
     expect(screen.getByText("Table 4")).toBeInTheDocument();
@@ -110,9 +148,21 @@ describe("Table dashboard", () => {
     render(<TableDashboard />);
     await screen.findByText("Table 2");
 
-    expect(within(rowFor("Table 1")).getByRole("button", { name: "Deactivate" })).toBeInTheDocument();
-    expect(within(rowFor("Table 2")).queryByRole("button", { name: "Deactivate" })).not.toBeInTheDocument();
-    expect(within(rowFor("Table 3")).getByRole("button", { name: "Activate" })).toBeInTheDocument();
+    expect(
+      within(rowFor("Table 1")).getByRole("button", {
+        name: "Deactivate Table 1",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(rowFor("Table 2")).queryByRole("button", {
+        name: /^Deactivate\b/,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(rowFor("Table 3")).getByRole("button", {
+        name: "Activate Table 3",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("asks before deleting a table", async () => {
@@ -120,12 +170,16 @@ describe("Table dashboard", () => {
     render(<TableDashboard />);
     await screen.findByText("Table 1");
 
-    fireEvent.click(within(rowFor("Table 1")).getByRole("button", { name: "Delete table" }));
+    fireEvent.click(
+      within(rowFor("Table 1")).getByRole("button", { name: "Delete table 1" }),
+    );
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/Delete Table 1\?/)).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
-    await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/TableEntity/1"));
+    await waitFor(() =>
+      expect(api.delete).toHaveBeenCalledWith("/TableEntity/1"),
+    );
   });
 
   it("does not let staff delete a table", async () => {
@@ -133,8 +187,14 @@ describe("Table dashboard", () => {
     render(<TableDashboard />);
     await screen.findByText("Table 1");
 
-    expect(within(rowFor("Table 1")).queryByRole("button", { name: "Delete table" })).not.toBeInTheDocument();
-    expect(within(rowFor("Table 1")).getByRole("button", { name: "Edit table" })).toBeInTheDocument();
+    expect(
+      within(rowFor("Table 1")).queryByRole("button", {
+        name: /^Delete table\b/,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(rowFor("Table 1")).getByRole("button", { name: "Edit table 1" }),
+    ).toBeInTheDocument();
   });
 
   it("lists table groups with their tables and seats", async () => {

@@ -2,9 +2,18 @@ import React from "react";
 import { Box, Toolbar, Typography } from "@mui/material";
 import AppBarWithTitle from "./AppBarWithTitle";
 import CustomerBottomNav from "./customer/CustomerBottomNav";
-import CustomerSideNav, { SIDE_NAV_ATTR, SIDE_NAV_WIDTH } from "./customer/CustomerSideNav";
+import CustomerSideNav, {
+  SIDE_NAV_ATTR,
+  SIDE_NAV_WIDTH,
+} from "./customer/CustomerSideNav";
 import DevResetButton from "./dev/DevResetButton";
-import { FLOATING_BUTTON_ATTR, FLOATING_BUTTON_SPACE } from "./menu/ReviewOrderButton";
+import {
+  FLOATING_BUTTON_ATTR,
+  FLOATING_BUTTON_SPACE,
+} from "./menu/ReviewOrderButton";
+import SkipLink from "./common/SkipLink";
+
+export const MAIN_CONTENT_ID = "main-content";
 
 // While the customer side rail is up (desktop), the page and footer sit to its right
 const besideSideNav = {
@@ -20,11 +29,14 @@ const Layout = ({ children }) => {
         minHeight: "100vh",
       }}
     >
+      <SkipLink href={`#${MAIN_CONTENT_ID}`} />
       <AppBarWithTitle />
       <Toolbar />
 
       <Box
         component="main"
+        id={MAIN_CONTENT_ID}
+        tabIndex={-1}
         sx={{
           flexGrow: 1,
           display: "flex",
@@ -32,6 +44,7 @@ const Layout = ({ children }) => {
           // Phones get thin gutters so customer pages use most of the screen
           px: { xs: 1.5, sm: 2 },
           py: { xs: 2, sm: 4 },
+          "&:focus": { outline: "none" },
           ...besideSideNav,
         }}
       >

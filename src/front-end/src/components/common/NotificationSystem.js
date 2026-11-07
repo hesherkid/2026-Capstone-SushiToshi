@@ -34,6 +34,7 @@ const NotificationSystem = () => {
         onClose={handleClose}
         severity={severity}
         variant="filled"
+        role={severity === "error" ? "alert" : "status"}
         sx={{
           width: "100%",
           maxWidth: { xs: "calc(100vw - 32px)", sm: "400px" },

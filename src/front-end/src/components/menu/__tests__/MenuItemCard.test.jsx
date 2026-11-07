@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import MenuItemCard, { limitText } from "../MenuItemCard";
 
 jest.mock("@/components/Tags", () => ({
@@ -93,22 +93,28 @@ describe("Menu item card", () => {
   });
 
   it("stops adding once the cart holds as many as the limit allows", () => {
+    const onQuantityChange = jest.fn();
     render(
       <MenuItemCard
         item={nigiri}
         categoryId={2}
         quantity={1}
-        onQuantityChange={jest.fn()}
+        onQuantityChange={onQuantityChange}
         atLimit
       />,
     );
 
-    expect(
-      screen.queryByRole("button", { name: "Add one Salmon Nigiri" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Remove one Salmon Nigiri" }),
-    ).toBeEnabled();
+    const add = screen.getByRole("button", {
+      name: "Add one Salmon Nigiri, limit reached",
+    });
+    expect(add).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(add);
+    expect(onQuantityChange).not.toHaveBeenCalled();
+
+    const remove = screen.getByRole("button", { name: "Remove Salmon Nigiri" });
+    expect(remove).not.toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(remove);
+    expect(onQuantityChange).toHaveBeenCalledWith(2, nigiri.item_id, -1);
   });
 
   it("shows an add-on's price with two decimals", () => {

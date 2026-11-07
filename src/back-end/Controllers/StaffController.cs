@@ -38,10 +38,9 @@ namespace back_end.Controllers
         // POST: /api/staff?role=Admin
         // Create a new staff or admin user by Admin only.
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Policy = "adminOnly")]
         public async Task<ActionResult<UserResponseDTO>> CreateStaff(
             [FromBody] CreateStaffDTO user_data
-        // [FromQuery] UserRoles role
         )
         {
             Locations location = new();
@@ -54,7 +53,7 @@ namespace back_end.Controllers
                 return ValidationProblem(ModelState);
 
             string? email = user_data.Email?.Trim().ToLowerInvariant();
-            bool emailExists = await _context.Users.AnyAsync(u => u.Email.Equals(email, StringComparison.CurrentCultureIgnoreCase));
+            bool emailExists = email != null && await _context.Users.AnyAsync(u => u.Email.ToLower() == email);
 
             if (string.IsNullOrWhiteSpace(user_data.First_name) || string.IsNullOrWhiteSpace(user_data.Last_name))
                 return BadRequest("First name and last name are required");
@@ -110,7 +109,7 @@ namespace back_end.Controllers
         // GET: /api/staff?role=Staff&skip=0&limit=100
         // List all staff and/or admin users with pagination.
         [HttpGet]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Policy = "staffOnly")]
         public async Task<ActionResult<IEnumerable<UserResponseDTO>>> ListStaff(
             [FromQuery] UserRoles? role = null,
             [FromQuery] int skip = 0,
@@ -158,7 +157,7 @@ namespace back_end.Controllers
         // GET: /api/staff/5
         // Get details of a specific staff/admin user.
         [HttpGet("{user_id:int}")]
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Policy = "staffOnly")]
         public async Task<ActionResult<UserResponseDTO>> GetStaff(int user_id)
         {
             var u = await _context.Users.AsNoTracking()
@@ -173,7 +172,7 @@ namespace back_end.Controllers
         // PUT: /api/staff/5
         // Update a staff/admin user's details.
         [HttpPut("{user_id:int}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Policy = "adminOnly")]
         public async Task<ActionResult<UserResponseDTO>> UpdateStaff(int user_id, [FromBody] StaffMemberUpdateDTO user_data)
         {
             // Staff and admin accounts only, so this can't turn a customer into staff
