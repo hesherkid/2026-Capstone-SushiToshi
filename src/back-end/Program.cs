@@ -222,7 +222,7 @@ builder.Services.AddCors(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "https://calorie-daylight-define.ngrok-free.dev")
+            policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();
@@ -392,7 +392,8 @@ using (var scope = app.Services.CreateScope())
             logger.LogWarning("Cannot connect to database");
         }
     }
-    catch (Exception ex)
+    // Missing default prices must stop startup; other database errors are only logged
+    catch (Exception ex) when (ex is not PricingNotConfiguredException)
     {
         logger.LogError(ex, "An error occurred during database initialization: {Message}", ex.Message);
     }
