@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TextField, MenuItem } from "@mui/material";
 import FormDialog from "@/components/common/FormDialog";
-import { PROVINCE_CODES } from "@/services/holidayService";
+import { getHolidayOptions } from "@/services/holidayService";
 
 // Add / Edit Location. The page mounts it while open, so the fields start fresh each time
 const LocationForm = ({
@@ -24,6 +24,20 @@ const LocationForm = ({
     postal_code: initialData?.postal_code || "",
     phone_number: initialData?.phone_number || "",
   });
+
+  // Province codes come from Provinces.cs via GET /holidays/options.
+  // Starts with the current code so the dropdown is never empty while loading,
+  // and editing still works if the request fails.
+  const [provinceCodes, setProvinceCodes] = useState([formData.province_code]);
+
+  useEffect(() => {
+    getHolidayOptions()
+      .then((options) => {
+        if (options.provinces?.length) setProvinceCodes(options.provinces);
+      })
+      .catch((err) => console.error("Error fetching provinces:", err));
+  }, []);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -95,7 +109,7 @@ const LocationForm = ({
         required
         fullWidth
       >
-        {PROVINCE_CODES.map((code) => (
+        {provinceCodes.map((code) => (
           <MenuItem key={code} value={code}>
             {code}
           </MenuItem>
