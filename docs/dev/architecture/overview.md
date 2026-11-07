@@ -57,6 +57,20 @@ There are also endpoints for verifying email, resending verification, and forgot
 
 **In the browser**, the token is stored in `localStorage` (`authToken`). The shared axios instance in `src/front-end/src/config/api.js` adds it to every request as `Authorization: Bearer ...`. On a 401 it clears the token and sends the user to `/auth/login`. Calls that must not send a token, such as before sign-in, use `config/publicApi.js`.
 
+### Guest account cleanup
+
+"Continue as Guest" creates an account per phone, so many are never used to order.
+`GuestCleanupWorker` runs `GuestCleanup` daily at `GuestCleanup:RunAtHourUtc` (default 10:00 UTC,
+3–4 AM Alberta time) and removes guest accounts that:
+
+- are older than `GuestCleanup:MinAgeHours` (default 24, must be longer than the guest token)
+- have no orders and no service requests
+- aren't seated at a table that's still open
+
+Their `session_participants` rows are kept with `User_Id` set to null, so table history and
+head counts don't change. Set `GuestCleanup:Enabled` to `false` to turn it off.
+
+
 ### Roles
 
 | Role       | Can                                                                                                     |
