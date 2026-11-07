@@ -59,7 +59,9 @@ namespace back_end.Services
                 var cleanup = scope.ServiceProvider.GetRequiredService<GuestCleanup>();
                 await cleanup.RunAsync(DateTime.UtcNow, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            // Log every failure, including timeouts that look like cancellations.
+            // Only a real shutdown (ct cancelled) is passed up, to the catch in ExecuteAsync.
+            catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 // A failed night shouldn't stop tomorrow's run or crash the app
                 _logger.LogError(ex, "Guest cleanup failed");

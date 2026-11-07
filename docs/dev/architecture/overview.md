@@ -67,7 +67,7 @@ There are also endpoints for verifying email, resending verification, and forgot
 - have no orders and no service requests
 - aren't seated at a table that's still open
 
-Their `session_participants` rows are kept with `User_Id` set to null, so table history and
+Their `session_participant` rows are kept with `User_Id` set to null, so table history and
 head counts don't change. Set `GuestCleanup:Enabled` to `false` to turn it off.
 
 
