@@ -71,6 +71,7 @@ let assignedMenus;
 const getResponses = (url) => {
   if (url === "/Location") return { data: locations };
   if (url === "/Menu") return { data: menus };
+  if (url === "/holidays/options") return { data: { provinces: ["AB", "BC", "ON"] } };
   const match = url.match(/^\/Location\/(\d+)\/menus$/);
   if (match) return { data: assignedMenus[match[1]] ?? [] };
   throw new Error(`Unexpected GET ${url}`);

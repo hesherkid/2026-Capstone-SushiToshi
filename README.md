@@ -126,7 +126,7 @@ Guides for admins, setup and development are listed in [docs/README.md](docs/REA
 | Role            | Permissions                                                                         |
 | --------------- | ----------------------------------------------------------------------------------- |
 | Customers       | Browse menu, submit orders, request assistance, and manage billing.                 |
-| Employees/Staff | Manage tables, sessions and customer requests.                                      |
+| Staff           | Manage tables, sessions and customer requests.                                      |
 | Admins          | Full access to table, sessions, location, staff, and menu management and analytics. |
 
 ## 👨‍💻 2026 Contributors

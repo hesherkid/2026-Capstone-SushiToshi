@@ -8,7 +8,6 @@ using back_end.Services.Auth;
 using back_end.Services.Email;
 using back_end.Services.Holidays;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -41,6 +40,15 @@ builder.Services
         HolidayApiSettings.SectionName))
     .ValidateDataAnnotations()
     .Validate(s => s.BaseUrl.EndsWith('/'), "HolidayApi:BaseUrl must end with '/'")
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<GuestCleanupSettings>()
+    .Bind(builder.Configuration.GetSection(
+        GuestCleanupSettings.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(s => s.MinAgeHours * 60 > builder.Configuration.GetValue("Jwt:GuestExpiresInMinutes", GuestAccounts.DefaultTokenMinutes),
+        "GuestCleanup:MinAgeHours must be longer than Jwt:GuestExpiresInMinutes")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<ISendGridClient>(sp =>
@@ -222,7 +230,7 @@ builder.Services.AddCors(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "https://calorie-daylight-define.ngrok-free.dev")
+            policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();
@@ -244,6 +252,11 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ILocationAccessService, LocationAccessService>();
+builder.Services.AddScoped<GuestCleanup>();
+if (builder.Configuration.GetValue("GuestCleanup:Enabled", true))
+{
+    builder.Services.AddHostedService<GuestCleanupWorker>();
+}
 
 // Holiday loading (canada-holidays.ca); base URL and timeout from the HolidayApi settings
 builder.Services.AddHttpClient<IHolidayProvider, CanadaHolidaysClient>((sp, http) =>
@@ -392,7 +405,8 @@ using (var scope = app.Services.CreateScope())
             logger.LogWarning("Cannot connect to database");
         }
     }
-    catch (Exception ex)
+    // Missing default prices must stop startup; other database errors are only logged
+    catch (Exception ex) when (ex is not PricingNotConfiguredException)
     {
         logger.LogError(ex, "An error occurred during database initialization: {Message}", ex.Message);
     }
