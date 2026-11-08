@@ -183,9 +183,9 @@ public class PasswordRuleTests : IDisposable
         var password = new string('a', length);
 
         IsValid(new ResetPasswordDto { Token = "reset", NewPassword = password }).Should().Be(valid);
-        IsValid(new CreateStaffDto { Email = "sam@example.com", First_name = "Sam", Last_name = "Tanaka", Password = password }).Should().Be(valid);
+        IsValid(new CreateStaffDto { Email = "sam@example.com", FirstName = "Sam", LastName = "Tanaka", Password = password }).Should().Be(valid);
         IsValid(new ResetPasswordRequestDto { New_password = password }).Should().Be(valid);
-        IsValid(new StaffMemberChangePasswordDto { New_password = password, Current_password = "Current1!" }).Should().Be(valid);
+        IsValid(new StaffMemberChangePasswordDto { NewPassword = password, CurrentPassword = "Current1!" }).Should().Be(valid);
     }
 
     // [Required] rejects whitespace-only strings; staff create checks this in the controller instead
@@ -196,6 +196,6 @@ public class PasswordRuleTests : IDisposable
 
         IsValid(new ResetPasswordDto { Token = "reset", NewPassword = password }).Should().BeFalse();
         IsValid(new ResetPasswordRequestDto { New_password = password }).Should().BeFalse();
-        IsValid(new StaffMemberChangePasswordDto { New_password = password, Current_password = "Current1!" }).Should().BeFalse();
+        IsValid(new StaffMemberChangePasswordDto { NewPassword = password, CurrentPassword = "Current1!" }).Should().BeFalse();
     }
 }

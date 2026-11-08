@@ -54,7 +54,7 @@ namespace back_end.Controllers
             string? email = userData.Email?.Trim().ToLowerInvariant();
             bool emailExists = email != null && await _context.Users.AnyAsync(u => u.Email.ToLower() == email);
 
-            if (string.IsNullOrWhiteSpace(userData.First_name) || string.IsNullOrWhiteSpace(userData.Last_name))
+            if (string.IsNullOrWhiteSpace(userData.FirstName) || string.IsNullOrWhiteSpace(userData.LastName))
                 return BadRequest("First name and last name are required");
 
             if (string.IsNullOrWhiteSpace(email))
@@ -65,7 +65,7 @@ namespace back_end.Controllers
             if (string.IsNullOrWhiteSpace(userData.Password))
                 return BadRequest("Password is required");
 
-            if (userData.Location_Id is int locationId
+            if (userData.LocationId is int locationId
                 && !await _context.Locations.AnyAsync(l => l.Location_Id == locationId))
                 return BadRequest("Location not found");
 
@@ -75,23 +75,23 @@ namespace back_end.Controllers
             {
                 Email = email,
                 Password_hash = BCrypt.Net.BCrypt.HashPassword(userData.Password, workFactor: 12),
-                First_name = userData.First_name.Trim(),
-                Last_name = userData.Last_name.Trim(),
+                First_name = userData.FirstName.Trim(),
+                Last_name = userData.LastName.Trim(),
                 Role = (UserRoles)role,
                 Status = userData.Status,
                 Is_email_confirmed = true,
                 Created_at = now,
                 Last_Interaction_at = now,
-                Location_id = userData.Location_Id
+                Location_id = userData.LocationId
             };
 
             // Staff can switch only between assigned locations, so assign the one they start at too
             if (entity.Role == UserRoles.Staff)
             {
-                var locationIds = userData.Location_Ids ?? [];
-                if (userData.Location_Id is int startingLocationId) locationIds = [.. locationIds, startingLocationId];
+                var locationIds = userData.LocationIds ?? [];
+                if (userData.LocationId is int startingLocationId) locationIds = [.. locationIds, startingLocationId];
 
-                var error = await AssignLocationsAsync(entity, locationIds, userData.Location_Id);
+                var error = await AssignLocationsAsync(entity, locationIds, userData.LocationId);
                 if (error != null) return BadRequest(error);
             }
 
@@ -133,7 +133,7 @@ namespace back_end.Controllers
                 .Take(limit)
                 .Select(u => new StaffResponseDto
                 {
-                    Created_At = u.Created_at,
+                    CreatedAt = u.Created_at,
                     Email = u.Email,
                     IsEmailConfirmed = u.Is_email_confirmed,
                     LastTransactionAt = u.Last_Interaction_at ?? u.Created_at,
@@ -141,10 +141,10 @@ namespace back_end.Controllers
                     FirstName = u.First_name,
                     Role = u.Role,
                     Status = u.Status,
-                    User_Id = u.User_id,
+                    UserId = u.User_id,
                     Location = u.PrimaryLocation != null ? u.PrimaryLocation.Name : "Not Assigned",
-                    Location_Id = u.Location_id,
-                    Location_Ids = u.AssignedLocations.OrderBy(a => a.Location_Id).Select(a => a.Location_Id).ToList(),
+                    LocationId = u.Location_id,
+                    LocationIds = u.AssignedLocations.OrderBy(a => a.Location_Id).Select(a => a.Location_Id).ToList(),
                     Locations = u.AssignedLocations.OrderBy(a => a.Location_Id).Select(a => a.Location.Name).ToList()
                 })
                 .ToListAsync();
@@ -210,9 +210,9 @@ namespace back_end.Controllers
             user.Status = userData.Status;
 
             // Admins can work at every location, so only staff have assigned locations
-            if (user.Role == UserRoles.Staff && userData.Location_Ids != null)
+            if (user.Role == UserRoles.Staff && userData.LocationIds != null)
             {
-                var error = await AssignLocationsAsync(user, userData.Location_Ids);
+                var error = await AssignLocationsAsync(user, userData.LocationIds);
                 if (error != null) return BadRequest(error);
             }
 
@@ -289,10 +289,10 @@ namespace back_end.Controllers
 
             if (user == null) return NotFound("Staff user not found");
 
-            var ok = BCrypt.Net.BCrypt.Verify(passwordData.Current_password, user.Password_hash);
+            var ok = BCrypt.Net.BCrypt.Verify(passwordData.CurrentPassword, user.Password_hash);
             if (!ok) return BadRequest("Incorrect current password");
 
-            user.Password_hash = BCrypt.Net.BCrypt.HashPassword(passwordData.New_password, workFactor: 12);
+            user.Password_hash = BCrypt.Net.BCrypt.HashPassword(passwordData.NewPassword, workFactor: 12);
             user.Last_Interaction_at = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -411,21 +411,21 @@ namespace back_end.Controllers
             var locations = allLocations
                 ? await _context.Locations
                     .OrderBy(l => l.Location_Id)
-                    .Select(l => new LocationOptionDto { Location_Id = l.Location_Id, Name = l.Name })
+                    .Select(l => new LocationOptionDto { LocationId = l.Location_Id, Name = l.Name })
                     .ToListAsync()
                 : await _context.StaffLocations
                     .Where(sl => sl.User_Id == userId)
                     .OrderBy(sl => sl.Location_Id)
-                    .Select(sl => new LocationOptionDto { Location_Id = sl.Location_Id, Name = sl.Location.Name })
+                    .Select(sl => new LocationOptionDto { LocationId = sl.Location_Id, Name = sl.Location.Name })
                     .ToListAsync();
 
             return Ok(new MyLocationsDto
             {
-                Current_Location = user.PrimaryLocation is null
+                CurrentLocation = user.PrimaryLocation is null
                     ? null
-                    : new LocationOptionDto { Location_Id = user.PrimaryLocation.Location_Id, Name = user.PrimaryLocation.Name },
+                    : new LocationOptionDto { LocationId = user.PrimaryLocation.Location_Id, Name = user.PrimaryLocation.Name },
                 Locations = locations,
-                All_Locations = allLocations,
+                AllLocations = allLocations,
             });
         }
 

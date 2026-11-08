@@ -61,7 +61,7 @@ namespace back_end.Controllers
 
         // Check if table number already exists at this location
         var existingTable = await _context.Tables
-            .FirstOrDefaultAsync(t => t.table_number == tableData.Table_Number &&
+            .FirstOrDefaultAsync(t => t.table_number == tableData.TableNumber &&
                                       t.Location_Id == tableData.Location_Id);
 
         if (existingTable != null)
@@ -71,10 +71,10 @@ namespace back_end.Controllers
 
         var newTable = new TableEntity
         {
-          table_number = tableData.Table_Number,
+          table_number = tableData.TableNumber,
           QR_Code = tableData.Qr_Code_Url ?? string.Empty,
-          seat_count = tableData.Seat_Count,
-          is_active = tableData.Is_Active,
+          seat_count = tableData.SeatCount,
+          is_active = tableData.IsActive,
           Location_Id = tableData.Location_Id
         };
 
@@ -249,26 +249,26 @@ namespace back_end.Controllers
         }
 
         // Check if table number is being changed
-        if (tableData.Table_Number.HasValue && table.table_number != tableData.Table_Number)
+        if (tableData.TableNumber.HasValue && table.table_number != tableData.TableNumber)
         {
           var existingTable = await _context.Tables
-              .FirstOrDefaultAsync(t => t.table_number == tableData.Table_Number && t.Table_Id != tableId);
+              .FirstOrDefaultAsync(t => t.table_number == tableData.TableNumber && t.Table_Id != tableId);
 
           if (existingTable != null)
           {
             return BadRequest("Table number already exists");
           }
-          table.table_number = tableData.Table_Number.Value;
+          table.table_number = tableData.TableNumber.Value;
         }
 
-        if (tableData.Seat_Count.HasValue)
+        if (tableData.SeatCount.HasValue)
         {
-          table.seat_count = tableData.Seat_Count.Value;
+          table.seat_count = tableData.SeatCount.Value;
         }
 
-        if (tableData.Is_Active.HasValue)
+        if (tableData.IsActive.HasValue)
         {
-          table.is_active = tableData.Is_Active.Value;
+          table.is_active = tableData.IsActive.Value;
         }
 
         if (tableData.Qr_Code_Url != null)

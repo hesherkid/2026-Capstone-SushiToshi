@@ -38,10 +38,10 @@ namespace back_end.Controllers
             return Ok(new HolidayOptionsResponse
             {
                 Provinces = Provinces.Codes,
-                Default_Province = _settings.DefaultProvince,
-                Year_From = years.From,
-                Year_To = years.To,
-                Include_Optional = _settings.IncludeOptional,
+                DefaultProvince = _settings.DefaultProvince,
+                YearFrom = years.From,
+                YearTo = years.To,
+                IncludeOptional = _settings.IncludeOptional,
             });
         }
 
@@ -78,7 +78,7 @@ namespace back_end.Controllers
         public Task<IActionResult> Import(HolidayImportRequest request) =>
           Run("loading holidays", async () =>
           {
-              var result = await _holidays.ImportAsync(request.Province_Code, request.Year, request.Include_Optional);
+              var result = await _holidays.ImportAsync(request.ProvinceCode, request.Year, request.IncludeOptional);
               return Ok(new HolidayImportResponse
               {
                   Added = result.Added,
@@ -123,7 +123,7 @@ namespace back_end.Controllers
                   return Unauthorized();
               }
 
-              var holiday = await _holidays.AddManualAsync(request.Province_Code, request.Date!.Value, request.Name, userId);
+              var holiday = await _holidays.AddManualAsync(request.ProvinceCode, request.Date!.Value, request.Name, userId);
               return StatusCode(StatusCodes.Status201Created, ToResponse(holiday));
           });
 
@@ -204,16 +204,16 @@ namespace back_end.Controllers
 
         private static HolidayResponse ToResponse(Holiday holiday) => new()
         {
-            Holiday_Id = holiday.Holiday_Id,
-            Province_Code = holiday.Province_Code,
+            HolidayId = holiday.Holiday_Id,
+            ProvinceCode = holiday.Province_Code,
             Date = holiday.Date,
-            Observed_Date = holiday.Observed_Date,
+            ObservedDate = holiday.Observed_Date,
             Name = holiday.Name,
             Source = holiday.Source,
             Status = holiday.Status,
-            Imported_At = holiday.Imported_At,
-            Reviewed_By = holiday.Reviewed_By,
-            Reviewed_At = holiday.Reviewed_At,
+            ImportedAt = holiday.Imported_At,
+            ReviewedBy = holiday.Reviewed_By,
+            ReviewedAt = holiday.Reviewed_At,
         };
     }
 }

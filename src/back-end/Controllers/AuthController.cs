@@ -116,8 +116,8 @@ namespace back_end.Controllers
         ///
         ///     POST /api/auth/login
         ///     {
-        ///         "userEmail": "user@example.com",
-        ///         "userPassword": "SecurePassword123!"
+        ///         "email": "user@example.com",
+        ///         "password": "SecurePassword123!"
         ///     }
         ///
         /// Returns a JWT bearer token whose lifetime depends on the role (see <see cref="TokenMinutes"/>);
@@ -208,10 +208,10 @@ namespace back_end.Controllers
         ///
         ///     POST /api/auth/register
         ///     {
-        ///         "userEmail": "newuser@example.com",
-        ///         "userPassword": "SecurePassword123!",
-        ///         "firstName": "John",
-        ///         "lastName": "Doe"
+        ///         "email": "newuser@example.com",
+        ///         "password": "SecurePassword123!",
+        ///         "first_name": "John",
+        ///         "last_name": "Doe"
         ///     }
         ///
         /// Requirements:

@@ -54,7 +54,7 @@ namespace back_end.Controllers
       {
         // Check if tag already exists
         var existingTag = await _context.Tags
-          .FirstOrDefaultAsync(t => t.tag_name == tagData.Tag_Name);
+          .FirstOrDefaultAsync(t => t.tag_name == tagData.TagName);
 
         if (existingTag != null)
         {
@@ -63,8 +63,8 @@ namespace back_end.Controllers
 
         var tag = new Tag
         {
-          tag_name = tagData.Tag_Name,
-          tag_color = tagData.Tag_Color
+          tag_name = tagData.TagName,
+          tag_color = tagData.TagColor
         };
 
         _context.Tags.Add(tag);
@@ -72,9 +72,9 @@ namespace back_end.Controllers
 
         return CreatedAtAction(nameof(GetTagById), new { tagId = tag.tag_id }, new TagBaseDto
         {
-          Tag_Id = tag.tag_id,
-          Tag_Name = tag.tag_name,
-          Tag_Color = tag.tag_color
+          TagId = tag.tag_id,
+          TagName = tag.tag_name,
+          TagColor = tag.tag_color
         });
       }
       catch (Exception ex)
@@ -113,9 +113,9 @@ namespace back_end.Controllers
           .OrderBy(t => t.tag_id)
           .Select(t => new TagBaseDto
           {
-            Tag_Id = t.tag_id,
-            Tag_Name = t.tag_name,
-            Tag_Color = t.tag_color
+            TagId = t.tag_id,
+            TagName = t.tag_name,
+            TagColor = t.tag_color
           })
           .ToListAsync();
 
@@ -165,9 +165,9 @@ namespace back_end.Controllers
 
         return Ok(new TagBaseDto
         {
-          Tag_Id = tag.tag_id,
-          Tag_Name = tag.tag_name,
-          Tag_Color = tag.tag_color
+          TagId = tag.tag_id,
+          TagName = tag.tag_name,
+          TagColor = tag.tag_color
         });
       }
       catch (Exception ex)
@@ -219,10 +219,10 @@ namespace back_end.Controllers
         }
 
         // Another tag may not share the new name (renaming a tag to its own name is fine)
-        if (tagData.Tag_Name != null)
+        if (tagData.TagName != null)
         {
           var nameTaken = await _context.Tags
-            .AnyAsync(t => t.tag_name == tagData.Tag_Name && t.tag_id != tagId);
+            .AnyAsync(t => t.tag_name == tagData.TagName && t.tag_id != tagId);
 
           if (nameTaken)
           {
@@ -231,22 +231,22 @@ namespace back_end.Controllers
         }
 
         // Update only provided fields
-        if (tagData.Tag_Name != null)
+        if (tagData.TagName != null)
         {
-          tag.tag_name = tagData.Tag_Name;
+          tag.tag_name = tagData.TagName;
         }
-        if (tagData.Tag_Color != null)
+        if (tagData.TagColor != null)
         {
-          tag.tag_color = tagData.Tag_Color;
+          tag.tag_color = tagData.TagColor;
         }
 
         await _context.SaveChangesAsync();
 
         return Ok(new TagBaseDto
         {
-          Tag_Id = tag.tag_id,
-          Tag_Name = tag.tag_name,
-          Tag_Color = tag.tag_color
+          TagId = tag.tag_id,
+          TagName = tag.tag_name,
+          TagColor = tag.tag_color
         });
       }
       catch (Exception ex)

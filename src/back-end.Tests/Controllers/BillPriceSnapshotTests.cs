@@ -94,13 +94,13 @@ namespace back_end.Tests.Controllers
         [Fact]
         public async Task OpenBill_FollowsCurrentPrices()
         {
-            (await Summary()).Base_Charges_Subtotal.Should().Be(160m);   // 4 × 40
+            (await Summary()).BaseChargesSubtotal.Should().Be(160m);   // 4 × 40
 
             _current = Weekday(adult: 45m);
 
             var summary = await Summary();
-            summary.Base_Charges_Subtotal.Should().Be(180m);
-            summary.Prices_Locked.Should().BeFalse();
+            summary.BaseChargesSubtotal.Should().Be(180m);
+            summary.PricesLocked.Should().BeFalse();
         }
 
         [Fact]
@@ -111,10 +111,10 @@ namespace back_end.Tests.Controllers
 
             var summary = await Summary();
 
-            summary.Prices_Locked.Should().BeTrue();
-            summary.Adult_Base_Price.Should().Be(40m);
-            summary.Base_Charges_Subtotal.Should().Be(160m);
-            summary.Total_Amount.Should().Be(198.24m);   // 160 + 28.80 gratuity + 9.44 GST
+            summary.PricesLocked.Should().BeTrue();
+            summary.AdultBasePrice.Should().Be(40m);
+            summary.BaseChargesSubtotal.Should().Be(160m);
+            summary.TotalAmount.Should().Be(198.24m);   // 160 + 28.80 gratuity + 9.44 GST
         }
 
         [Fact]
@@ -140,9 +140,9 @@ namespace back_end.Tests.Controllers
             await _context.SaveChangesAsync();
 
             var summary = await Summary();
-            summary.Party_Size.Should().Be(4);
-            summary.Gratuity_Rate.Should().Be(0.18m);
-            summary.Gratuity_Amount.Should().Be(28.80m);
+            summary.PartySize.Should().Be(4);
+            summary.GratuityRate.Should().Be(0.18m);
+            summary.GratuityAmount.Should().Be(28.80m);
         }
 
         [Fact]
@@ -157,7 +157,7 @@ namespace back_end.Tests.Controllers
             other.Status = BillStatus.Open;   // e.g. cancelled by mistake and restored
             await _context.SaveChangesAsync();
 
-            (await Summary()).Gratuity_Amount.Should().Be(0m);
+            (await Summary()).GratuityAmount.Should().Be(0m);
         }
 
         [Fact]
@@ -170,8 +170,8 @@ namespace back_end.Tests.Controllers
             _current = Weekday(adult: 45m);
 
             var summary = await Summary();
-            summary.Prices_Locked.Should().BeFalse();
-            summary.Base_Charges_Subtotal.Should().Be(180m);
+            summary.PricesLocked.Should().BeFalse();
+            summary.BaseChargesSubtotal.Should().Be(180m);
         }
 
         [Fact]
@@ -181,15 +181,15 @@ namespace back_end.Tests.Controllers
             _current.PricingType = "Holiday";
             _current.HolidayName = "Canada Day";
 
-            (await Summary()).Holiday_Name.Should().Be("Canada Day");
+            (await Summary()).HolidayName.Should().Be("Canada Day");
 
             await Close();
             _current = Weekday(adult: 40m);   // e.g. the holiday was rejected later
 
             var summary = await Summary();
-            summary.Pricing_Type.Should().Be("Holiday");
-            summary.Holiday_Name.Should().Be("Canada Day");
-            summary.Adult_Base_Price.Should().Be(42.95m);
+            summary.PricingType.Should().Be("Holiday");
+            summary.HolidayName.Should().Be("Canada Day");
+            summary.AdultBasePrice.Should().Be(42.95m);
         }
 
         [Fact]

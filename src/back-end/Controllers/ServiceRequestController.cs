@@ -161,14 +161,14 @@ namespace back_end.Controllers
 
         return Ok(new ServiceRequestResponseDto
         {
-          Request_Id = serviceRequest.request_id,
-          Session_Id = serviceRequest.Session_Id,
-          Table_Id = serviceRequest.Table_Id,
-          Requested_By = serviceRequest.Request_By,
+          RequestId = serviceRequest.request_id,
+          SessionId = serviceRequest.Session_Id,
+          TableId = serviceRequest.Table_Id,
+          RequestedBy = serviceRequest.Request_By,
           Status = serviceRequest.Status,
           Notes = serviceRequest.Notes,
-          Created_At = serviceRequest.Created_At,
-          Table_Number = serviceRequest.Table.table_number,
+          CreatedAt = serviceRequest.Created_At,
+          TableNumber = serviceRequest.Table.table_number,
         });
       }
       catch (Exception ex)
@@ -240,17 +240,17 @@ namespace back_end.Controllers
 
         return Ok(new ServiceRequestResponseDto
         {
-          Request_Id = serviceRequest.request_id,
-          Session_Id = serviceRequest.Session_Id,
-          Table_Id = serviceRequest.Table_Id,
-          Requested_By = serviceRequest.Request_By,
-          Claimed_By = serviceRequest.Claimed_By,
+          RequestId = serviceRequest.request_id,
+          SessionId = serviceRequest.Session_Id,
+          TableId = serviceRequest.Table_Id,
+          RequestedBy = serviceRequest.Request_By,
+          ClaimedBy = serviceRequest.Claimed_By,
           Status = serviceRequest.Status,
           Notes = serviceRequest.Notes,
-          Created_At = serviceRequest.Created_At,
-          Claimed_At = serviceRequest.Claimed_At,
-          Completed_at = serviceRequest.Completed_At,
-          Table_Number = serviceRequest.Table?.table_number ?? 0
+          CreatedAt = serviceRequest.Created_At,
+          ClaimedAt = serviceRequest.Claimed_At,
+          CompletedAt = serviceRequest.Completed_At,
+          TableNumber = serviceRequest.Table?.table_number ?? 0
         });
       }
       catch (Exception ex)
@@ -309,15 +309,15 @@ namespace back_end.Controllers
 
         var response = sessionRequestList.Select(sr => new ServiceRequestResponseDto
         {
-          Request_Id = sr.request_id,
-          Session_Id = sr.Session_Id,
-          Table_Id = sr.Table_Id,
+          RequestId = sr.request_id,
+          SessionId = sr.Session_Id,
+          TableId = sr.Table_Id,
           Status = sr.Status,
-          Requested_By = sr.Request_By,
-          Claimed_By = sr.Claimed_By,
+          RequestedBy = sr.Request_By,
+          ClaimedBy = sr.Claimed_By,
           Notes = sr.Notes,
-          Created_At = sr.Created_At,
-          Table_Number = sr.Table?.table_number ?? 0
+          CreatedAt = sr.Created_At,
+          TableNumber = sr.Table?.table_number ?? 0
         }).ToList();
 
         return Ok(response);
@@ -389,15 +389,15 @@ namespace back_end.Controllers
 
         var response = pendingRequests.Select(sr => new ServiceRequestResponseDto
         {
-          Request_Id = sr.request_id,
-          Session_Id = sr.Session_Id,
-          Table_Id = sr.Table_Id,
+          RequestId = sr.request_id,
+          SessionId = sr.Session_Id,
+          TableId = sr.Table_Id,
           Status = sr.Status,
-          Requested_By = sr.Request_By,
-          Claimed_By = sr.Claimed_By,
+          RequestedBy = sr.Request_By,
+          ClaimedBy = sr.Claimed_By,
           Notes = sr.Notes,
-          Created_At = sr.Created_At,
-          Table_Number = sr.Table?.table_number ?? 0
+          CreatedAt = sr.Created_At,
+          TableNumber = sr.Table?.table_number ?? 0
         }).ToList();
 
         return Ok(response);

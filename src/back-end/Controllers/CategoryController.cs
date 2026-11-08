@@ -24,15 +24,15 @@ namespace back_end.Controllers
 
         private static CategoryResponse ToResponse(Category c) => new()
         {
-            Category_Id = c.Category_id,
-            Category_Name = c.Category_name,
+            CategoryId = c.Category_id,
+            CategoryName = c.Category_name,
             Description = c.Description,
-            Adult_Limit = c.adult_limit,
-            Child_Limit = c.child_limit,
-            Senior_Limit = c.senior_limit,
-            Toddler_Limit = c.toddler_limit,
-            Per_Order_Limit = c.per_order_limit,
-            Over_Limit_Behavior = c.over_limit_behavior,
+            AdultLimit = c.adult_limit,
+            ChildLimit = c.child_limit,
+            SeniorLimit = c.senior_limit,
+            ToddlerLimit = c.toddler_limit,
+            PerOrderLimit = c.per_order_limit,
+            OverLimitBehavior = c.over_limit_behavior,
         };
 
 
@@ -122,8 +122,8 @@ namespace back_end.Controllers
         {
             try
             {
-                var error = LimitRules.Validate(category.Adult_Limit!.Value, category.Child_Limit!.Value,
-                                  category.Senior_Limit!.Value, category.Toddler_Limit, category.Per_Order_Limit);
+                var error = LimitRules.Validate(category.AdultLimit!.Value, category.ChildLimit!.Value,
+                                  category.SeniorLimit!.Value, category.ToddlerLimit, category.PerOrderLimit);
                 if (error != null) return BadRequest(error);
                 var newCategory = await _context.Categories.FirstOrDefaultAsync(c => c.Category_name == category.Name);
                 if (newCategory != null)
@@ -135,12 +135,12 @@ namespace back_end.Controllers
                 {
                     Category_name = category.Name ?? string.Empty,
                     Description = category.Description ?? string.Empty,
-                    adult_limit = category.Adult_Limit!.Value,
-                    child_limit = category.Child_Limit!.Value,
-                    senior_limit = category.Senior_Limit!.Value,
-                    toddler_limit = category.Toddler_Limit,
-                    per_order_limit = category.Per_Order_Limit,
-                    over_limit_behavior = category.Over_Limit_Behavior
+                    adult_limit = category.AdultLimit!.Value,
+                    child_limit = category.ChildLimit!.Value,
+                    senior_limit = category.SeniorLimit!.Value,
+                    toddler_limit = category.ToddlerLimit,
+                    per_order_limit = category.PerOrderLimit,
+                    over_limit_behavior = category.OverLimitBehavior
                 };
 
                 _context.Categories.Add(categoryEntity);
@@ -258,11 +258,11 @@ namespace back_end.Controllers
                     return NotFound("Category not found.");
                 }
 
-                var adult = updatedCategory.Adult_Limit ?? existingCategory.adult_limit;
-                var child = updatedCategory.Child_Limit ?? existingCategory.child_limit;
-                var senior = updatedCategory.Senior_Limit ?? existingCategory.senior_limit;
-                var toddler = updatedCategory.Toddler_Limit ?? existingCategory.toddler_limit;
-                var perOrder = updatedCategory.Per_Order_Limit ?? existingCategory.per_order_limit;
+                var adult = updatedCategory.AdultLimit ?? existingCategory.adult_limit;
+                var child = updatedCategory.ChildLimit ?? existingCategory.child_limit;
+                var senior = updatedCategory.SeniorLimit ?? existingCategory.senior_limit;
+                var toddler = updatedCategory.ToddlerLimit ?? existingCategory.toddler_limit;
+                var perOrder = updatedCategory.PerOrderLimit ?? existingCategory.per_order_limit;
 
                 var error = LimitRules.Validate(adult, child, senior, toddler, perOrder);
                 if (error != null) return BadRequest(error);
@@ -274,7 +274,7 @@ namespace back_end.Controllers
                 existingCategory.per_order_limit = perOrder;
                 existingCategory.Category_name = updatedCategory.Name ?? existingCategory.Category_name;
                 existingCategory.Description = updatedCategory.Description ?? existingCategory.Description;
-                existingCategory.over_limit_behavior = updatedCategory.Over_Limit_Behavior ?? existingCategory.over_limit_behavior;
+                existingCategory.over_limit_behavior = updatedCategory.OverLimitBehavior ?? existingCategory.over_limit_behavior;
                 _context.Categories.Update(existingCategory);
                 await _context.SaveChangesAsync();
                 return Ok(ToResponse(existingCategory));

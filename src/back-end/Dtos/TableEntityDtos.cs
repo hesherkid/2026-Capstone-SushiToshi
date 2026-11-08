@@ -10,12 +10,12 @@ namespace back_end.Dtos
   {
     [JsonPropertyName("table_number")]
     [Range(0, int.MaxValue)]
-    public int Table_Number { get; set; }
+    public int TableNumber { get; set; }
     [JsonPropertyName("seat_count")]
     [Range(0, int.MaxValue)]
-    public int Seat_Count { get; set; }
+    public int SeatCount { get; set; }
     [JsonPropertyName("is_active")]
-    public bool Is_Active { get; set; } = true;
+    public bool IsActive { get; set; } = true;
 
     public string? Qr_Code_Url { get; set; }
 
@@ -31,12 +31,12 @@ namespace back_end.Dtos
   {
     [JsonPropertyName("table_number")]
     [Range(0, int.MaxValue)]
-    public int? Table_Number { get; set; }
+    public int? TableNumber { get; set; }
     [JsonPropertyName("seat_count")]
     [Range(0, int.MaxValue)]
-    public int? Seat_Count { get; set; }
+    public int? SeatCount { get; set; }
     [JsonPropertyName("is_active")]
-    public bool? Is_Active { get; set; }
+    public bool? IsActive { get; set; }
 
     public string? Qr_Code_Url { get; set; }
   }
@@ -44,7 +44,7 @@ namespace back_end.Dtos
   public class TableEntityResponseDto : TableEntityBaseDto
   {
     [JsonPropertyName("table_id")]
-    public int Table_Id { get; set; }
+    public int TableId { get; set; }
   }
 
 }

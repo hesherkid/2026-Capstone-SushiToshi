@@ -332,10 +332,7 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     POST /api/menu/copy_menu/123
-        ///     {
-        ///         "new_menu_name": "Winter Menu 2025"
-        ///     }
+        ///     POST /api/menuassignment/copy_menu/123?new_menu_name=Winter%20Menu%202025
         ///
         /// Creates a new menu with the specified name and copies all item assignments
         /// (including prices, limits, full price, and over-limit behavior) from the source menu.

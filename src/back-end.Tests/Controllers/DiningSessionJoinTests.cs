@@ -191,7 +191,7 @@ public class DiningSessionJoinTests : IDisposable
     {
         var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDto
         {
-            Menu_Id = 1,
+            MenuId = 1,
             Location_Id = LocationId,
             Table_Id = tableId,
             AssignmentType = "table",
@@ -206,7 +206,7 @@ public class DiningSessionJoinTests : IDisposable
     {
         var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDto
         {
-            Menu_Id = 1,
+            MenuId = 1,
             Location_Id = LocationId,
             Table_Id = 102,
             AssignmentType = "table",

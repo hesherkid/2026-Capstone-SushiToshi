@@ -218,11 +218,11 @@ public class StaffControllerTests : IDisposable
         var result = await _controller.CreateStaff(new CreateStaffDto
         {
             Email = "new@example.com",
-            First_name = "Nina",
-            Last_name = "New",
+            FirstName = "Nina",
+            LastName = "New",
             Password = "StaffPass123!",
             Role = UserRoles.Staff,
-            Location_Id = 2,
+            LocationId = 2,
         });
 
         result.Result.Should().BeOfType<CreatedAtActionResult>();
@@ -237,11 +237,11 @@ public class StaffControllerTests : IDisposable
         var result = await _controller.CreateStaff(new CreateStaffDto
         {
             Email = "new@example.com",
-            First_name = "Nina",
-            Last_name = "New",
+            FirstName = "Nina",
+            LastName = "New",
             Password = "StaffPass123!",
             Role = UserRoles.Staff,
-            Location_Id = 99,
+            LocationId = 99,
         });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
@@ -256,7 +256,7 @@ public class StaffControllerTests : IDisposable
         FirstName = "Sue",
         Role = UserRoles.Staff,
         Status = UserStatus.Active,
-        Location_Ids = locationIds,
+        LocationIds = locationIds,
     };
 
     [Fact]
@@ -311,12 +311,12 @@ public class StaffControllerTests : IDisposable
         await _controller.CreateStaff(new CreateStaffDto
         {
             Email = "new@example.com",
-            First_name = "Nina",
-            Last_name = "New",
+            FirstName = "Nina",
+            LastName = "New",
             Password = "StaffPass123!",
             Role = UserRoles.Staff,
-            Location_Ids = [1, 2],
-            Location_Id = 2,
+            LocationIds = [1, 2],
+            LocationId = 2,
         });
 
         var nina = await _context.Users.SingleAsync(u => u.Email == "new@example.com");
@@ -329,9 +329,9 @@ public class StaffControllerTests : IDisposable
     {
         var result = await _controller.ListStaff();
 
-        var sue = ((result.Result as OkObjectResult)!.Value as IEnumerable<StaffResponseDto>)!.Single(u => u.User_Id == 2);
-        sue.Location_Id.Should().Be(1);
-        sue.Location_Ids.Should().Equal(1, 2);
+        var sue = ((result.Result as OkObjectResult)!.Value as IEnumerable<StaffResponseDto>)!.Single(u => u.UserId == 2);
+        sue.LocationId.Should().Be(1);
+        sue.LocationIds.Should().Equal(1, 2);
         sue.Locations.Should().Equal("Northside", "Southside");
     }
 
@@ -342,9 +342,9 @@ public class StaffControllerTests : IDisposable
 
         var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDto;
 
-        mine!.Current_Location!.Location_Id.Should().Be(1);
+        mine!.CurrentLocation!.LocationId.Should().Be(1);
         mine.Locations.Select(l => l.Name).Should().Equal("Northside", "Southside");
-        mine.All_Locations.Should().BeFalse();
+        mine.AllLocations.Should().BeFalse();
     }
 
     [Fact]
@@ -354,7 +354,7 @@ public class StaffControllerTests : IDisposable
 
         var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDto;
 
-        mine!.Current_Location.Should().BeNull();
+        mine!.CurrentLocation.Should().BeNull();
         mine.Locations.Should().BeEmpty();
     }
 
@@ -364,6 +364,6 @@ public class StaffControllerTests : IDisposable
         var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDto;
 
         mine!.Locations.Select(l => l.Name).Should().Equal("Northside", "Southside", "Westside");
-        mine.All_Locations.Should().BeTrue();
+        mine.AllLocations.Should().BeTrue();
     }
 }
