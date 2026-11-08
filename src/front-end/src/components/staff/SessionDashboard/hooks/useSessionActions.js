@@ -279,58 +279,6 @@ export const useSessionActions = (onSuccess) => {
     [apiWrapper]
   );
 
-  // SESSION OPERATIONS
-
-  /**
-   * Fetches all active sessions
-   */
-  const fetchActiveSessions = useCallback(
-    async () => {
-      return apiWrapper(
-        "fetchActiveSessions",
-        async () => {
-          const res = await api.get("/session/active");
-          return res.data || [];
-        },
-        { defaultReturn: [] }
-      );
-    },
-    [apiWrapper]
-  );
-
-  /**
-   * Fetch a session by ID
-   */
-  const fetchSessionById = useCallback(
-    async (sessionId) => {
-      return apiWrapper("fetchSessionById", async () => {
-        const sid = toInt(sessionId);
-        validateIds({ "session ID": sid });
-
-        const res = await api.get(`/session/${sid}`);
-        return res.data;
-      });
-    },
-    [apiWrapper]
-  );
-
-  /**
-   * Get session for a table
-   */
-
-  const fetchSessionByTable = useCallback(
-    async (tableId) => {
-      return apiWrapper("fetchSessionByTable", async () => {
-        const tid = toInt(tableId);
-        validateIds({ "table ID": tid });
-
-        const res = await api.get(`/session/table/${tid}`);
-        return res.data;
-      });
-    },
-    [apiWrapper]
-  );
-
   // TABLE OPERATIONS
 
   /**
@@ -620,11 +568,6 @@ export const useSessionActions = (onSuccess) => {
     removeTableGroupFromSession,
     getActiveSessionId,
     getSessionMenuId,
-
-    // Session operations
-    fetchActiveSessions,
-    fetchSessionById,
-    fetchSessionByTable,
 
     // Table operations
     listEmptyTables,
