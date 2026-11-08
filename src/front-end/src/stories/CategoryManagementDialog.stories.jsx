@@ -145,8 +145,8 @@ const MenuAssignmentDialog = ({
       .then((res) =>
         setLocations(
           (Array.isArray(res.data) ? res.data : []).map((l) => ({
-            location_id: l.location_Id ?? l.location_id,
-            name: l.name ?? l.Name,
+            location_id: l.location_Id,
+            name: l.name,
           })),
         ),
       )
@@ -478,7 +478,7 @@ const MenuAssignmentDialog = ({
                 onChange={setField("price")}
                 required
                 disabled={!formData.is_add_on}
-                inputProps={{ step: "0.01", min: "0" }}
+                slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
                 helperText="Charged every time (add-ons only)"
                 sx={{ flex: 1 }}
               />
@@ -554,7 +554,7 @@ const MenuAssignmentDialog = ({
                 type="number"
                 value={formData.full_price}
                 onChange={setField("full_price")}
-                inputProps={{ step: "0.01", min: "0" }}
+                slotProps={{ htmlInput: { step: "0.01", min: "0" } }}
                 helperText="Charged per item over a Charge limit (category or item)"
                 required={formData.over_limit_behavior === "Charge"}
                 sx={{ flex: 1 }}

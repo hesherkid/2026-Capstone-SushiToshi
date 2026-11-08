@@ -81,6 +81,7 @@ namespace back_end.DTO.StaffDTOs
         [MaxLength(100)]
         [JsonPropertyName("first_name")]
         public string? First_name { get; set; }
+        [MinLength(8), MaxLength(200)]
         [JsonPropertyName("password")]
         public string? Password { get; set; }
 

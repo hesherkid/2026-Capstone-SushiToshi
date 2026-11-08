@@ -117,7 +117,9 @@ describe("Category list", () => {
     render(<CategoryList onEditCategory={onEditCategory} />);
 
     fireEvent.click(
-      within(await rowFor("Hot Stone")).getByRole("button", { name: "Edit" }),
+      within(await rowFor("Hot Stone")).getByRole("button", {
+        name: "Edit Hot Stone",
+      }),
     );
 
     expect(onEditCategory).toHaveBeenCalledWith(
@@ -130,7 +132,9 @@ describe("Category list", () => {
     render(<CategoryList />);
 
     fireEvent.click(
-      within(await rowFor("Hot Stone")).getByRole("button", { name: "Delete" }),
+      within(await rowFor("Hot Stone")).getByRole("button", {
+        name: "Delete Hot Stone",
+      }),
     );
     const confirm = screen
       .getByText(/Are you sure you want to delete "Hot Stone"/)
@@ -145,7 +149,9 @@ describe("Category list", () => {
 
   const openDelete = async () => {
     fireEvent.click(
-      within(await rowFor("Hot Stone")).getByRole("button", { name: "Delete" }),
+      within(await rowFor("Hot Stone")).getByRole("button", {
+        name: "Delete Hot Stone",
+      }),
     );
     return screen
       .getByText(/Are you sure you want to delete "Hot Stone"/)

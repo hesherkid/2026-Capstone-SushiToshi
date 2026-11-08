@@ -4,9 +4,22 @@ import { Edit, Trash2 } from "lucide-react";
 import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
+import { Box } from "@mui/material";
+import { visuallyHidden } from "@mui/utils";
 
 // 0 means "no limit" for every limit except toddler, where it means "same as child"
-const limitCell = ({ value }) => (value ? value : "—");
+// Limit cells display the value if present, otherwise show "No limit" for accessibility purposes
+const limitCell = ({ value }) =>
+  value ? (
+    value
+  ) : (
+    <>
+      <span aria-hidden="true">—</span>
+      <Box component="span" sx={visuallyHidden}>
+        No limit
+      </Box>
+    </>
+  );
 const toddlerCell = ({ value, row }) =>
   value ? value : row.child_limit ? `${row.child_limit} (child)` : "—";
 
@@ -39,7 +52,7 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
 
   const handleDeleteClick = (category) => {
     setCategoryToDelete(category);
-    setError(null);   // the confirmation shows the shared error
+    setError(null); // the confirmation shows the shared error
     setDeleteDialogOpen(true);
   };
 

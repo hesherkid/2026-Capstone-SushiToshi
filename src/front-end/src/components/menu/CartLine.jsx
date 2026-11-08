@@ -26,21 +26,32 @@ const CartLine = ({
     <Box sx={{ px: 2, py: 2, textAlign: "left" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography component={nameComponent} sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+          <Typography
+            component={nameComponent}
+            sx={{ fontWeight: 600, lineHeight: 1.3 }}
+          >
             {item.name}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
             {item.is_add_on ? (
               <>
                 Add-on{" "}
-                <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
+                <Box
+                  component="span"
+                  sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}
+                >
                   {money(item.price)} each
                 </Box>
               </>
             ) : extra > 0 ? (
               <>
-                {included > 0 ? `${included} included + ${extra} extra` : "Extra"}{" "}
-                <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
+                {included > 0
+                  ? `${included} included + ${extra} extra`
+                  : "Extra"}{" "}
+                <Box
+                  component="span"
+                  sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}
+                >
                   {money(extraPrice)} each
                 </Box>
               </>
@@ -67,7 +78,7 @@ const CartLine = ({
             py: 0.75,
             borderRadius: 1.5,
             bgcolor: atLimit ? "rgba(192, 30, 46, 0.08)" : "grey.100",
-            color: atLimit ? "error.main" : "text.secondary",
+            color: atLimit ? "error.dark" : "text.secondary",
             fontSize: "0.8rem",
             fontWeight: atLimit ? 600 : 400,
             lineHeight: 1.4,

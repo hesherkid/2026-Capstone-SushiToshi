@@ -28,23 +28,28 @@ describe("Customer side nav (desktop)", () => {
     const nav = screen.getByRole("navigation", { name: "Customer navigation" });
     expect(nav).toHaveAttribute(SIDE_NAV_ATTR);
     ["Menu", "Orders", "Bill", "Call Server"].forEach((label) =>
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument(),
+      expect(screen.getByRole("link", { name: label })).toBeInTheDocument(),
     );
-    expect(screen.getByRole("button", { name: "Orders" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("button", { name: "Menu" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Orders" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Menu" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("goes to a page in one click", () => {
     render(<CustomerSideNav />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Bill" }));
-
-    expect(mockPush).toHaveBeenCalledWith("/dashboard/bills");
+    expect(screen.getByRole("link", { name: "Bill" })).toHaveAttribute(
+      "href",
+      "/dashboard/bills",
+    );
   });
 
   it("shows for guests at a table too", () => {
-    useAuth.mockReturnValue({ userRole: null });
-    localStorage.setItem("guest", "true");
+    useAuth.mockReturnValue({ userRole: "customer", isGuest: true });
 
     render(<CustomerSideNav />);
 
@@ -54,8 +59,18 @@ describe("Customer side nav (desktop)", () => {
   // Same rules as the phone tab bar
   it.each([
     ["before joining a table", () => localStorage.removeItem("session_id")],
-    ["on Review order", () => { mockPathname = "/menu/review"; }],
-    ["on the thank-you page", () => { mockPathname = "/thank-you"; }],
+    [
+      "on Review order",
+      () => {
+        mockPathname = "/menu/review";
+      },
+    ],
+    [
+      "on the thank-you page",
+      () => {
+        mockPathname = "/thank-you";
+      },
+    ],
     ["for staff", () => useAuth.mockReturnValue({ userRole: "staff" })],
   ])("stays hidden %s", (_, setUp) => {
     setUp();

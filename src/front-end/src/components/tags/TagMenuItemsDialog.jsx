@@ -71,6 +71,7 @@ const getTagItemColumns = ({ onRemoveItem }) => [
     (row) => [
       {
         label: `Remove tag from ${row.name}`,
+        ariaLabel: `Remove tag from ${row.name}`,
         icon: X,
         color: "error",
         onClick: () => onRemoveItem(row),

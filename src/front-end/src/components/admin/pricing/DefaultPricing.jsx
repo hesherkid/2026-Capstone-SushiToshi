@@ -41,7 +41,7 @@ const DefaultPricing = () => {
   const ownPricing = locations.filter((l) => l.source === "Location");
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, textAlign: "left" }}>
+    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 0, sm: 2 }, pt: 5, pb: 3, textAlign: "left" }}>
       <ManagementHeader title="Default Pricing" />
       <Typography color="text.secondary" sx={{ mb: ownPricing.length > 0 ? 1 : 2 }}>
         These prices apply to every location that doesn&apos;t have its own pricing. To give a location

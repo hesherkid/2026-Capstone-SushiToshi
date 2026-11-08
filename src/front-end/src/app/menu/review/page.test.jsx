@@ -73,7 +73,6 @@ describe("Review order page", () => {
     // jsdom doesn't scroll; the confirmation screen scrolls to the top
     window.scrollTo = jest.fn();
     localStorage.clear();
-    localStorage.setItem("guest", "true");
     api.get.mockImplementation(tableApi({ bills: [LEE] }));
   });
 
@@ -297,7 +296,7 @@ describe("Review order page", () => {
 
   it("charges for what's past a limit that charges, with the category's free units shared", async () => {
     // 2 Miso Soup and 1 Salmon Roll, both in a category with 2 free left, then $5 each
-    const SALMON_IN_APPETIZERS = { ...SALMON_ROLL, category_id: 1 };
+    const SALMON_IN_APPETIZERS = { ...SALMON_ROLL, categoryID: 1 };
     api.get.mockImplementation(
       tableApi({
         bills: [LEE],

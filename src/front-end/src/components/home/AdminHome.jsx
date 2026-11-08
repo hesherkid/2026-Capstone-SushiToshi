@@ -171,7 +171,7 @@ export const AdminHome = ({ userEmail }) => {
         display: "flex",
         flexDirection: "column",
         gap: 3,
-        pt: 7,
+        pt: 5,
       }}
     >
       <Box>

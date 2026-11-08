@@ -224,7 +224,7 @@ describe("LoginForm", () => {
   });
 
   describe("Guest Login", () => {
-    it("signs in as a new guest and marks the session as guest", async () => {
+    it("signs in as a new guest", async () => {
       const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
@@ -241,7 +241,6 @@ describe("LoginForm", () => {
       await waitFor(() => {
         expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu");
       });
-      expect(localStorage.getItem("guest")).toBe("true");
     });
 
     it("won't let a guest in without a table to join", async () => {
@@ -426,7 +425,6 @@ describe("LoginForm", () => {
         { Table_Number: 8, Location_Id: 3 },
         { headers: { Authorization: "Bearer new-guest-token" } }
       );
-      expect(localStorage.getItem("guest")).toBe("true");
     });
 
     it("keeps the saved guest when the table just hasn't been started", async () => {
@@ -453,6 +451,21 @@ describe("LoginForm", () => {
 
       expect(localStorage.getItem("tableNumber")).toBe("4");
       expect(localStorage.getItem("session_id")).toBeNull();
+    });
+
+    it("keeps the visit when sent back after the sign-in expired", () => {
+      localStorage.setItem("tableNumber", "4");
+      localStorage.setItem("session_id", "3");
+      localStorage.setItem("menuCart", "[1]");
+      useSearchParams.mockReturnValue(
+        new URLSearchParams("locationId=1&tableNumber=4&resume=1"),
+      );
+
+      render(<LoginForm />);
+
+      expect(localStorage.getItem("session_id")).toBe("3");
+      expect(localStorage.getItem("menuCart")).toBe("[1]");
+      expect(screen.getByRole("button", { name: /Continue as Guest/i })).toBeEnabled();
     });
   });
 
@@ -681,7 +694,9 @@ describe("LoginForm", () => {
       await user.click(
         screen.getByRole("button", { name: /Resend Verification Email/i }),
       );
-      expect(mockPush).toHaveBeenCalledWith("/auth/resend-verification");
+      expect(mockPush).toHaveBeenCalledWith(
+        "/auth/resend-verification?email=test%40example.com",
+      );
     });
   });
 

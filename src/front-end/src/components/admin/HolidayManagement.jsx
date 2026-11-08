@@ -33,7 +33,11 @@ import {
 import serverMessage from "@/utils/serverMessage";
 
 const STATUSES = ["All", "Pending", "Approved", "Rejected"];
-const STATUS_COLORS = { Pending: "warning", Approved: "success", Rejected: "default" };
+const STATUS_COLORS = {
+  Pending: "warning",
+  Approved: "success",
+  Rejected: "default",
+};
 
 // "2026-12-25" -> "Fri, Dec 25, 2026". Built from its parts: new Date("2026-12-25") is
 // UTC midnight, which is still 24 Dec in Edmonton
@@ -88,14 +92,21 @@ export const getHolidayColumns = ({ onEdit, onDelete }) => [
     headerName: "Status",
     flex: 0.8,
     minWidth: 110,
-    renderCell: ({ value }) => <Chip size="small" label={value} color={STATUS_COLORS[value]} />,
+    renderCell: ({ value }) => (
+      <Chip size="small" label={value} color={STATUS_COLORS[value]} />
+    ),
   },
   actionsColumn(
     (row) => [
-      { label: `Edit ${row.name}`, icon: Edit, onClick: () => onEdit(row) },
-      { label: `Delete ${row.name}`, icon: Trash2, color: "error", onClick: () => onDelete(row) },
+      { label: "Edit", icon: Edit, onClick: () => onEdit(row) },
+      {
+        label: "Delete",
+        icon: Trash2,
+        color: "error",
+        onClick: () => onDelete(row),
+      },
     ],
-    { width: 110 },
+    { width: 110, getRowName: (row) => `${row.name}, ${formatDay(row.date)}` },
   ),
 ];
 
@@ -181,7 +192,7 @@ const HolidayManagement = () => {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [editing, setEditing] = useState(undefined);   // undefined = closed, null = new
+  const [editing, setEditing] = useState(undefined); // undefined = closed, null = new
   const [toDelete, setToDelete] = useState(null);
 
   useEffect(() => {
@@ -193,7 +204,9 @@ const HolidayManagement = () => {
         setYear(Math.min(Math.max(thisYear, data.year_from), data.year_to));
         setIncludeOptional(data.include_optional);
       })
-      .catch((err) => setError(serverMessage(err, "Couldn't load holiday settings.")));
+      .catch((err) =>
+        setError(serverMessage(err, "Couldn't load holiday settings.")),
+      );
   }, []);
 
   const refresh = useCallback(async () => {
@@ -214,12 +227,18 @@ const HolidayManagement = () => {
   }, [refresh]);
 
   const visible = useMemo(
-    () => (statusFilter === "All" ? holidays : holidays.filter((h) => h.status === statusFilter)),
+    () =>
+      statusFilter === "All"
+        ? holidays
+        : holidays.filter((h) => h.status === statusFilter),
     [holidays, statusFilter],
   );
 
   const years = options
-    ? Array.from({ length: options.year_to - options.year_from + 1 }, (_, i) => options.year_from + i)
+    ? Array.from(
+        { length: options.year_to - options.year_from + 1 },
+        (_, i) => options.year_from + i,
+      )
     : [];
 
   const handleLoad = async () => {
@@ -290,11 +309,25 @@ const HolidayManagement = () => {
   }
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", p: 3, textAlign: "left" }}>
-      <ManagementHeader title="Holidays" addLabel="Add Holiday" onAdd={() => setEditing(null)} />
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 1200,
+        mx: "auto",
+        px: { xs: 0, sm: 2 },
+        pt: 5,
+        pb: 3,
+        textAlign: "left",
+      }}
+    >
+      <ManagementHeader
+        title="Holidays"
+        addLabel="Add Holiday"
+        onAdd={() => setEditing(null)}
+      />
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        Holiday pricing applies on approved holidays in each location&apos;s province. Loaded holidays
-        wait here as Pending until you approve them.
+        Holiday pricing applies on approved holidays in each location&apos;s
+        province. Loaded holidays wait here as Pending until you approve them.
       </Typography>
 
       {error && (
@@ -303,12 +336,21 @@ const HolidayManagement = () => {
         </Alert>
       )}
       {success && (
-        <Alert severity="success" onClose={() => setSuccess(null)} sx={{ mb: 2 }}>
+        <Alert
+          severity="success"
+          onClose={() => setSuccess(null)}
+          sx={{ mb: 2 }}
+        >
           {success}
         </Alert>
       )}
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }} sx={{ mb: 2 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2}
+        alignItems={{ sm: "center" }}
+        sx={{ mb: 2 }}
+      >
         <TextField
           select
           label="Province"
@@ -340,20 +382,34 @@ const HolidayManagement = () => {
         <FormControlLabel
           label="Include optional holidays"
           control={
-            <Checkbox checked={includeOptional} onChange={(e) => setIncludeOptional(e.target.checked)} />
+            <Checkbox
+              checked={includeOptional}
+              onChange={(e) => setIncludeOptional(e.target.checked)}
+            />
           }
         />
         <Button
           variant="contained"
           onClick={handleLoad}
           disabled={importing}
-          startIcon={importing ? <CircularProgress size={16} color="inherit" /> : <Download size={18} />}
+          startIcon={
+            importing ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : (
+              <Download size={18} />
+            )
+          }
         >
           Load holidays
         </Button>
       </Stack>
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" sx={{ mb: 1 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2}
+        justifyContent="space-between"
+        sx={{ mb: 1 }}
+      >
         <ToggleButtonGroup
           size="small"
           exclusive
@@ -394,12 +450,18 @@ const HolidayManagement = () => {
         getRowId={(row) => row.holiday_id}
         checkboxSelection
         rowSelectionModel={{ type: "include", ids: new Set(selected) }}
-        onRowSelectionModelChange={(model) => setSelected(selectedIds(model, visible))}
-        initialState={{ sorting: { sortModel: [{ field: "date", sort: "asc" }] } }}
+        onRowSelectionModelChange={(model) =>
+          setSelected(selectedIds(model, visible))
+        }
+        initialState={{
+          sorting: { sortModel: [{ field: "date", sort: "asc" }] },
+        }}
         localeText={{
           noRowsLabel:
             `No ${statusFilter === "All" ? "" : `${statusFilter.toLowerCase()} `}holidays for ${province} ${year}.` +
-            (statusFilter === "All" ? " Press Load holidays to fetch them." : ""),
+            (statusFilter === "All"
+              ? " Press Load holidays to fetch them."
+              : ""),
         }}
       />
 

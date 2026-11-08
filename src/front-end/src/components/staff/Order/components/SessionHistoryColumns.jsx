@@ -82,7 +82,12 @@ export const getSessionHistoryColumns = ({ view }) => [
   },
   actionsColumn(
     (row) => [
-      { label: "View table orders", icon: Eye, onClick: () => view(row) },
+      {
+        label: "View table orders",
+        ariaLabel: `View table orders for session #${row.sessionId}, ${tableLabel(row.tableNumbers)}`,
+        icon: Eye,
+        onClick: () => view(row),
+      },
     ],
     { width: 80 },
   ),

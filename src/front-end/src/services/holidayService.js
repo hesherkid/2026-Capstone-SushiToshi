@@ -1,10 +1,5 @@
 import api from "@/config/api";
 
-// Canadian province and territory codes, as the API and canada-holidays.ca use them
-export const PROVINCE_CODES = [
-  "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT",
-];
-
 // Provinces, loadable years and defaults for the Holidays page
 export const getHolidayOptions = async () => (await api.get("/holidays/options")).data;
 

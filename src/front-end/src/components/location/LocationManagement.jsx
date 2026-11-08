@@ -54,25 +54,16 @@ const LocationManagement = () => {
       const response = await api.get("/Location");
       const data = Array.isArray(response.data) ? response.data : [];
 
-      const normalized = data.map((r) => {
-        const locationId = r.location_Id ?? r.location_id ?? r.locationId ?? r.id ?? r.ID ?? null;
+      // GET /Location returns the Locations entity; rename its fields to the ones LocationForm uses
+      const normalized = data.map((r) => ({
+        ...r,
+        address_one: r.address_Primary,
+        address_two: r.address_Secondary,
+        postal_code: r.postal_Code,
+        province_code: r.province_Code,
+        phone_number: r.phone_Number,
+      }));
 
-        return {
-          ...r,
-          location_Id: locationId,
-          id: locationId, // DataGrid default id field
-          name: r.name ?? r.Name,
-          address_one: r.address_one ?? r.address_Primary ?? r.addressPrimary ?? r.address1,
-          address_two: r.address_two ?? r.address_Secondary ?? r.addressSecondary ?? r.address2,
-          city: r.city ?? r.City,
-          province: r.province ?? r.Province,
-          postal_code: r.postal_code ?? r.postalCode ?? r.postal_Code ?? r.PostalCode,
-          province_code: r.province_code ?? r.province_Code ?? "AB",
-          phone_Number: r.phone_Number ?? r.phoneNumber,
-          created_At: r.created_At ?? r.createdAt ?? r.CreatedAt,
-        };
-      });
-      
       setLocations(normalized);
     } catch (err) {
       console.error("Error fetching data:", err);

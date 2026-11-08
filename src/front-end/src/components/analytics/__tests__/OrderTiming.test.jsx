@@ -302,7 +302,7 @@ describe("OrderTiming", () => {
     it("names the busiest hour in restaurant time", async () => {
       await renderLoaded();
 
-      expect(screen.getByText(/Busiest hour/)).toHaveTextContent(
+      expect(screen.getByText(/Busiest hour:/)).toHaveTextContent(
         "Busiest hour: 6 PM with 9 orders.",
       );
     });
@@ -337,7 +337,7 @@ describe("OrderTiming", () => {
 
       expect(
         screen.getByRole("img", {
-          name: "Orders by hour. Busiest hour 6 PM with 9 orders.",
+          name: "Orders by hour. Busiest hour 6 PM with 9 orders. Data table below.",
         }),
       ).toBeInTheDocument();
     });

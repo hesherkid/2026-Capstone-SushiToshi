@@ -294,14 +294,14 @@ const OrdersPage = () => {
 
         {items.length > 0 ? (
           <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }}>
-            {items.map((item, index) => {
+            {items.map((item) => {
               const status = statusKey(item.status);
               const cancelled = status === "CANCELLED";
               const price = itemPrice(item);
               return (
                 <Box
                   component="li"
-                  key={item.order_item_id ?? item.orderItemId ?? `${order.orderId}-${item.item_id ?? item.itemId}-${index}`}
+                  key={item.orderItemId}
                 >
                   <Divider />
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5 }}>
@@ -316,7 +316,7 @@ const OrdersPage = () => {
                           color: cancelled ? "text.secondary" : "text.primary",
                         }}
                       >
-                        {item.name || `Item #${item.item_id ?? item.itemId}`}
+                        {item.name || `Item #${item.itemId}`}
                       </Typography>
                       {/* Same wording as Review order; extras are the units over a limit that charges */}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>

@@ -26,7 +26,7 @@ describe("Thank-you page", () => {
   });
 
   it("tells a guest how to start another visit, and takes them back to sign in", () => {
-    localStorage.setItem("guest", "true");
+    useAuth.mockReturnValue({ isAuthenticated: true, isGuest: true, loading: false });
 
     render(<ThankYouPage />);
 

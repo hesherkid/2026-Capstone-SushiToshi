@@ -238,12 +238,49 @@ describe("Menu item create and edit", () => {
     );
   });
 
+  it("updates the new item instead of creating it again when retrying a failed image upload", async () => {
+    api.post.mockImplementation((url) =>
+      url === "/menuItem"
+        ? Promise.resolve({ data: { ...SALMON, item_id: 12 } })
+        : Promise.reject({ response: { status: 400, data: "File too large" } }),
+    );
+    api.put.mockResolvedValue({ data: { ...SALMON, item_id: 12 } });
+    await openCreate();
+    typeNameAndDescription();
+    choose(/^Category/, "Rolls");
+    await chooseImage();
+
+    submit();
+
+    expect(
+      await within(screen.getByRole("dialog")).findByText(
+        "Menu item saved, but the image upload failed: File too large",
+      ),
+    ).toBeInTheDocument();
+    expectTypedValuesKept();
+
+    submit();
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/menuItem/12", {
+        name: "Spicy Tuna Roll",
+        description: "Eight pieces",
+        category_id: 1,
+      }),
+    );
+    expect(
+      api.post.mock.calls.filter(([url]) => url === "/menuItem"),
+    ).toHaveLength(1);
+  });
+
   it("opens an existing item with its values and category, and saves changes to it", async () => {
     api.put.mockResolvedValue({ data: SALMON });
     render(<MenuItemManagement />);
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
 
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Edit Salmon Nigiri" }),
+    );
     await screen.findByText("Edit Menu Item");
 
     expect(nameInput()).toHaveValue("Salmon Nigiri");
@@ -275,7 +312,9 @@ describe("Menu item create and edit", () => {
     );
 
     const row = screen.getByText("Salmon Nigiri").closest("tr");
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Edit Salmon Nigiri" }),
+    );
     await screen.findByText("Edit Menu Item");
     submit();
 
@@ -286,7 +325,9 @@ describe("Menu item create and edit", () => {
   it("starts a new item empty after editing one", async () => {
     render(<MenuItemManagement />);
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
-    fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Edit Salmon Nigiri" }),
+    );
     await screen.findByText("Edit Menu Item");
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
@@ -310,7 +351,9 @@ describe("Menu item delete", () => {
   const clickRowDelete = async () => {
     render(<MenuItemManagement />);
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
-    fireEvent.click(within(row).getByRole("button", { name: "Delete" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Delete Salmon Nigiri" }),
+    );
   };
 
   const confirmDelete = async () => {
@@ -414,7 +457,7 @@ describe("Removing a tag from the grid", () => {
 
   const clickTagX = async (tagName) => {
     const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
-    const chip = within(row).getByRole("button", { name: tagName });
+    const chip = within(row).getByRole("button", { name: `Remove ${tagName}` });
     fireEvent.click(chip.querySelector(".MuiChip-deleteIcon"));
   };
 

@@ -57,6 +57,20 @@ There are also endpoints for verifying email, resending verification, and forgot
 
 **In the browser**, the token is stored in `localStorage` (`authToken`). The shared axios instance in `src/front-end/src/config/api.js` adds it to every request as `Authorization: Bearer ...`. On a 401 it clears the token and sends the user to `/auth/login`. Calls that must not send a token, such as before sign-in, use `config/publicApi.js`.
 
+### Guest account cleanup
+
+"Continue as Guest" creates an account per phone, so many are never used to order.
+`GuestCleanupWorker` runs `GuestCleanup` daily at `GuestCleanup:RunAtHourUtc` (default 10:00 UTC,
+3–4 AM Alberta time) and removes guest accounts that:
+
+- are older than `GuestCleanup:MinAgeHours` (default 24, must be longer than the guest token)
+- have no orders and no service requests
+- aren't seated at a table that's still open
+
+Their `session_participant` rows are kept with `User_Id` set to null, so table history and
+head counts don't change. Set `GuestCleanup:Enabled` to `false` to turn it off.
+
+
 ### Roles
 
 | Role       | Can                                                                                                     |
@@ -65,7 +79,8 @@ There are also endpoints for verifying email, resending verification, and forgot
 | `Staff`    | Run the floor: sessions, tables, orders and service requests, limited to their current location        |
 | `Admin`    | Everything staff can do at any location, plus menus, pricing, holidays, staff, customers, QR codes and analytics |
 
-The `UserRoles` enum also has `Employee`, but nothing uses it.
+The `UserRoles` enum also has `Employee`. **Nothing is defined for it at this time.** It has no authorization policy, no endpoints and no pages, and no account can be given it: `StaffController` only accepts `Staff` or `Admin`, and sign-up and guest accounts are always `Customer`. It's kept only because `users.Role` is stored as a number (`Admin = 0`, `Employee = 1`, `Customer = 2`, `Staff = 3`). Removing it would shift those numbers and give existing accounts the wrong role. The numbers are fixed in `enums.cs` and checked by `UserRolesTests`.
+
 
 **In the backend**, controllers use `[Authorize]` for any signed-in user, or one of two policies defined in `Program.cs`:
 

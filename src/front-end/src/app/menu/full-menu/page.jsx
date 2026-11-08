@@ -105,18 +105,18 @@ const FullMenu = () => {
     <CustomerPageContainer>
       {/* Not seated: only the info message below shows, without a menu title */}
       {sessionId && (
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}>
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{ fontWeight: 700, mt: { xs: 3, sm: 2 }, mb: 3 }}
+        >
           All You Can Eat Menu
         </Typography>
       )}
 
       {/* Error Alert */}
       {displayError && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          onClose={() => setError(null)}
-        >
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {displayError}
         </Alert>
       )}
@@ -128,8 +128,13 @@ const FullMenu = () => {
           loading={!itemsLoaded && !error}
           ready={Boolean(menuId && itemsLoaded)}
           myItems={myItems}
+          // Keyboard shortcut to Review order at the end of each category
+          reviewOrderCount={billRequested ? 0 : cartCount}
+          onReviewOrder={reviewOrder}
           // What's in the cart stays on screen whatever the search
-          keepItem={(item, categoryId) => quantities[categoryId]?.[item.item_id] > 0}
+          keepItem={(item, categoryId) =>
+            quantities[categoryId]?.[item.item_id] > 0
+          }
           notices={
             <>
               {selectedBillId && billRequested && (
@@ -143,7 +148,11 @@ const FullMenu = () => {
                   severity="warning"
                   sx={{ mb: 2 }}
                   action={
-                    <Button color="inherit" size="small" onClick={() => setBillDialogOpen(true)}>
+                    <Button
+                      color="inherit"
+                      size="small"
+                      onClick={() => setBillDialogOpen(true)}
+                    >
                       Choose bill
                     </Button>
                   }
@@ -154,8 +163,9 @@ const FullMenu = () => {
 
               {myBill && !selectedBillId && (
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  {myBill.bill_name} is {String(myBill.status).toLowerCase()}, so no more
-                  orders can be added. Ask your server if you&apos;d like anything else.
+                  {myBill.bill_name} is {String(myBill.status).toLowerCase()},
+                  so no more orders can be added. Ask your server if you&apos;d
+                  like anything else.
                 </Alert>
               )}
             </>
@@ -170,10 +180,7 @@ const FullMenu = () => {
               <MenuItemCard
                 item={item}
                 categoryId={category.category_id}
-                quantity={
-                  quantities[category.category_id]?.[item.item_id] ||
-                  0
-                }
+                quantity={quantities[category.category_id]?.[item.item_id] || 0}
                 onQuantityChange={changeQuantity}
                 atLimit={
                   limitStatus(category.category_id, item.item_id).atLimit
@@ -195,7 +202,11 @@ const FullMenu = () => {
               // Customers with an account can look over the menu before they're seated
               action={
                 canSave && (
-                  <Button color="inherit" size="small" onClick={() => router.push(BROWSE_PATH)}>
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => router.push(BROWSE_PATH)}
+                  >
                     Browse the menu
                   </Button>
                 )
@@ -208,9 +219,14 @@ const FullMenu = () => {
       )}
 
       {/* Ordering is over once the bill's been asked for */}
-      {!billRequested && <ReviewOrderButton count={cartCount} onClick={reviewOrder} />}
+      {!billRequested && (
+        <ReviewOrderButton count={cartCount} onClick={reviewOrder} />
+      )}
 
-      <BillChoiceDialog open={billDialogOpen} onClose={() => setBillDialogOpen(false)} />
+      <BillChoiceDialog
+        open={billDialogOpen}
+        onClose={() => setBillDialogOpen(false)}
+      />
     </CustomerPageContainer>
   );
 };

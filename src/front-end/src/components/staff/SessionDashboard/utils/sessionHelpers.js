@@ -333,7 +333,7 @@ export const formatGuestBreakdown = (bill) => {
 export const sessionGuestCount = (session) =>
   (session?.bills || [])
     .filter((bill) => String(bill.status).toUpperCase() !== "CANCELLED")
-    .reduce((sum, bill) => sum + (Number(bill.total_Guests ?? bill.total_count) || 0), 0);
+    .reduce((sum, bill) => sum + (Number(bill.total_Guests) || 0), 0);
 
 /**
  * Validate bill data before creation

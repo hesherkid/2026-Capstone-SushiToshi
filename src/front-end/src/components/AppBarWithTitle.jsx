@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   AppBar,
   Toolbar,
@@ -13,17 +13,13 @@ import {
   MenuItem,
   FormControl,
 } from "@mui/material";
-import {
-  Menu as MenuIcon,
-  LogIn,
-  CircleUserRound,
-} from "lucide-react";
+import { Menu as MenuIcon, LogIn, CircleUserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { logoutUser } from "@/utils/auth";
 import { dispatchAuthChange } from "@/hooks/useAuth";
-import { login, logout } from '@/utils/auth';
+import { login, logout } from "@/utils/auth";
 import api from "@/config/api";
 import storage from "@/utils/storage";
 import { LocationOn } from "@mui/icons-material";
@@ -31,6 +27,7 @@ import { useNotification } from "@/contexts/NotificationContext";
 import AppNavigationDrawer from "@/components/AppNavigationDrawer";
 import { TABLE_VISIT_EVENT } from "@/utils/tableVisit";
 import { PAGE_LOADING_EVENT } from "@/utils/pageLoading";
+import { visuallyHidden } from "@mui/utils";
 
 const AppBarWithTitle = ({ title }) => {
   const router = useRouter();
@@ -39,26 +36,41 @@ const AppBarWithTitle = ({ title }) => {
   const theme = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(
-    storage.get("branch-location")
+    storage.get("branch-location"),
   );
   // The locations this user can switch between (see staff/my-locations)
   const [allLocations, setAllLocations] = useState([]);
   const [canUseAllLocations, setCanUseAllLocations] = useState(false);
   const [locationsLoaded, setLocationsLoaded] = useState(false);
   const [tableNumber, setTableNumber] = useState("");
-  const { isAuthenticated, userRole, loading } = useAuth();
+  const { isAuthenticated, userRole, isGuest, loading } = useAuth();
   const { notifySuccess, notifyError, notifyInfo } = useNotification();
-  const [isGuest, setIsGuest] = useState(false);
   // A page loading its data (see utils/pageLoading); shown with the same spinner as sign-in
   const [pageLoading, setPageLoadingState] = useState(false);
-  const canShowDrawer =
-    !isLoginPage && (isAuthenticated || isGuest);
+  const canShowDrawer = !isLoginPage && (isAuthenticated || isGuest);
+  const appBarRef = useRef(null);
+
+  // logo sets the bars height, measure it for scroll-padding-top
+  useEffect(() => {
+    const bar = appBarRef.current;
+    if (!bar) return;
+    const root = document.documentElement;
+    const update = () =>
+      root.style.setProperty("--app-bar-height", `${bar.offsetHeight}px`);
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
-    const handlePageLoading = (event) => setPageLoadingState(Boolean(event.detail?.loading));
+    const handlePageLoading = (event) =>
+      setPageLoadingState(Boolean(event.detail?.loading));
 
     window.addEventListener(PAGE_LOADING_EVENT, handlePageLoading);
-    return () => window.removeEventListener(PAGE_LOADING_EVENT, handlePageLoading);
+    return () =>
+      window.removeEventListener(PAGE_LOADING_EVENT, handlePageLoading);
   }, []);
 
   // A page that was loading when the user navigated away no longer is
@@ -67,13 +79,11 @@ const AppBarWithTitle = ({ title }) => {
   }, [pathname]);
 
   // The app bar stays mounted across client-side navigation, so re-read the
-  // table number and guest flag on each route change (e.g. after the QR login saves them),
+  // table number on each route change (e.g. after the QR login saves it),
   // and when a table QR code is opened on the current page
   useEffect(() => {
-    const readTableVisit = () => {
+    const readTableVisit = () =>
       setTableNumber(storage.get("tableNumber") || "");
-      setIsGuest(storage.get("guest") === "true");
-    };
 
     readTableVisit();
     window.addEventListener(TABLE_VISIT_EVENT, readTableVisit);
@@ -83,7 +93,11 @@ const AppBarWithTitle = ({ title }) => {
   useEffect(() => {
     const fetchAllLocations = async () => {
       try {
-        if (!isAuthenticated || !userRole || (userRole !== "staff" && userRole !== "admin")) {
+        if (
+          !isAuthenticated ||
+          !userRole ||
+          (userRole !== "staff" && userRole !== "admin")
+        ) {
           return;
         }
         // Staff get the locations an admin assigned them; admins get every location
@@ -102,7 +116,9 @@ const AppBarWithTitle = ({ title }) => {
           setSelectedLocation(null);
           storage.remove("branch-location");
           if (!allLocationsAllowed) {
-            notifyError("You don't have a location yet. Ask an admin to assign you one.");
+            notifyError(
+              "You don't have a location yet. Ask an admin to assign you one.",
+            );
           }
           return;
         }
@@ -121,11 +137,10 @@ const AppBarWithTitle = ({ title }) => {
     fetchAllLocations();
   }, [isAuthenticated, userRole, notifyError, notifyInfo]);
 
-
   const handleLogout = () => {
     if (typeof window !== "undefined") {
-      ["guest", "session_id", "tableNumber", "locationId", "currentBillId"].forEach(
-        (key) => storage.remove(key)
+      ["session_id", "tableNumber", "locationId", "currentBillId"].forEach(
+        (key) => storage.remove(key),
       );
     }
 
@@ -134,9 +149,8 @@ const AppBarWithTitle = ({ title }) => {
   };
 
   const handleLogin = () => {
-    // Clear guest mode
+    // Clear the table visit
     if (typeof window !== "undefined") {
-      storage.remove("guest");
       storage.remove("session_id");
       storage.remove("tableNumber");
     }
@@ -165,22 +179,25 @@ const AppBarWithTitle = ({ title }) => {
     storage.set("branch-location", locationId);
     window.location.reload();
   };
-  const effectiveRole = userRole || (isGuest ? "customer" : null);
 
   // Leave the dropdown empty until the stored location is one of the loaded options
   const locationValue =
     Array.isArray(allLocations) &&
-      allLocations.some((loc) => loc.location_id === Number(selectedLocation))
+    allLocations.some((loc) => loc.location_id === Number(selectedLocation))
       ? Number(selectedLocation)
       : "";
 
   // Staff with only one location have nothing to switch to, so they get a label instead
   const canSwitchLocation = canUseAllLocations || allLocations.length > 1;
-  const currentLocationName =
-    allLocations.find((loc) => loc.location_id === Number(selectedLocation))?.name;
+  const currentLocationName = allLocations.find(
+    (loc) => loc.location_id === Number(selectedLocation),
+  )?.name;
+
+  const NAV_DRAWER_ID = "app-navigation-drawer";
 
   return (
     <AppBar
+      ref={appBarRef}
       position="fixed"
       sx={{ zIndex: theme.zIndex.drawer + 1, overflow: "visible" }}
     >
@@ -203,17 +220,19 @@ const AppBarWithTitle = ({ title }) => {
           }}
         >
           {/* Customers get around with the bottom tabs (phones) and side rail (desktop) instead */}
-          {canShowDrawer && effectiveRole !== "customer" && (
+          {canShowDrawer && userRole !== "customer" && (
             <IconButton
               color="inherit"
-              aria-label="menu"
+              aria-label="Main menu"
+              aria-expanded={drawerOpen}
+              aria-controls={drawerOpen ? NAV_DRAWER_ID : undefined}
               onClick={() => setDrawerOpen(true)}
               sx={{
                 p: { xs: 1, sm: 1.5 },
                 flexShrink: 0,
               }}
             >
-              <MenuIcon />
+              <MenuIcon aria-hidden="true" />
             </IconButton>
           )}
         </Box>
@@ -250,9 +269,8 @@ const AppBarWithTitle = ({ title }) => {
             gap: { xs: 0.5, sm: 2 },
           }}
         >
-          {(isGuest || userRole === "customer") && tableNumber && (
+          {userRole === "customer" && tableNumber && (
             <Box
-              aria-label={`Table ${tableNumber}`}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -294,40 +312,52 @@ const AppBarWithTitle = ({ title }) => {
           )}
 
           {/* Staff with one location (or none): their location as a label */}
-          {isAuthenticated && userRole === "staff" && locationsLoaded && !canSwitchLocation && (
-            <Box
-              aria-label="Working location"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.75,
-                px: { xs: 1, sm: 1.5 },
-                py: 0.5,
-                borderRadius: 2,
-                border: "1px solid rgba(255, 255, 255, 0.3)",
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                color: "inherit",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              <LocationOn sx={{ color: "white" }} />
-              <Typography component="span" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
-                {currentLocationName || "No location"}
-              </Typography>
-            </Box>
-          )}
+          {isAuthenticated &&
+            userRole === "staff" &&
+            locationsLoaded &&
+            !canSwitchLocation && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  px: { xs: 1, sm: 1.5 },
+                  py: 0.5,
+                  borderRadius: 2,
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  backgroundColor: "rgba(255, 255, 255, 0.12)",
+                  color: "inherit",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                <LocationOn sx={{ color: "white" }} />
+                <Typography
+                  component="span"
+                  sx={{ fontSize: "0.875rem", fontWeight: 600 }}
+                >
+                  <Box component="span" sx={visuallyHidden}>
+                    Working location:{" "}
+                  </Box>
+                  {currentLocationName || "No location"}
+                </Typography>
+              </Box>
+            )}
 
           {/* Location Dropdown - staff with several locations, and admins */}
           {isAuthenticated &&
-            (userRole === "staff" || userRole === "admin") && canSwitchLocation && (
+            (userRole === "staff" || userRole === "admin") &&
+            canSwitchLocation && (
               <FormControl size="small">
                 <Select
                   value={locationValue}
                   onChange={handleLocationChange}
+                  inputProps={{
+                    "aria-label": `Working location: ${currentLocationName || "none selected"}`,
+                  }}
                   renderValue={(value) => {
                     const location = allLocations?.find(
-                      (loc) => loc.location_id === value
+                      (loc) => loc.location_id === value,
                     );
                     return (
                       <Box
@@ -344,10 +374,10 @@ const AppBarWithTitle = ({ title }) => {
                   sx={{
                     color: "white",
                     ".MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(255, 255, 255, 0.5)",
+                      borderColor: "rgba(255, 255, 255, 0.75)",
                     },
                     "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(255, 255, 255, 0.7)",
+                      borderColor: "rgba(255, 255, 255, 0.9)",
                     },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
                       borderColor: "white",
@@ -373,11 +403,12 @@ const AppBarWithTitle = ({ title }) => {
               </FormControl>
             )}
 
-          {!loading && !isLoginPage && !isAuthenticated && !isGuest && (
+          {!loading && !isLoginPage && !isAuthenticated && (
             <Button
               color="inherit"
+              aria-label="Login"
               onClick={() => handleNavigation("/auth/login")}
-              endIcon={<LogIn />}
+              endIcon={<LogIn aria-hidden="true" />}
               sx={{
                 minWidth: { xs: 56, sm: "auto" },
                 px: { xs: 2, sm: 2.5 },
@@ -388,19 +419,22 @@ const AppBarWithTitle = ({ title }) => {
                 },
               }}
             >
-              <Typography sx={{ display: { xs: "none", sm: "block" } }}>
+              <Typography
+                component="span"
+                sx={{ display: { xs: "none", sm: "block" } }}
+              >
                 Login
               </Typography>
             </Button>
           )}
         </Box>
 
-        {canShowDrawer && effectiveRole !== "customer" && (
+        {canShowDrawer && userRole !== "customer" && (
           <AppNavigationDrawer
+            id={NAV_DRAWER_ID}
             open={drawerOpen}
-            role={effectiveRole}
+            role={userRole}
             onClose={() => setDrawerOpen(false)}
-            onNavigate={handleNavigation}
             onLogout={handleLogout}
           />
         )}

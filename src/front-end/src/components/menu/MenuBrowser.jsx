@@ -8,6 +8,7 @@ import {
   InputAdornment,
   IconButton,
   Divider,
+  Button,
 } from "@mui/material";
 import CategoryChips from "@/components/menu/CategoryChips";
 import TagFilter, { menuTags, hasAllTags } from "@/components/menu/TagFilter";
@@ -18,6 +19,27 @@ import useMenuSearch, { matchesSearch } from "@/components/menu/searchUtils";
 // Filter pills for customers with an account, shown before the menu's tags
 const FAVOURITES_FILTER = "my:favourites";
 const ORDER_AGAIN_FILTER = "my:order-again";
+
+// Hidden until it gets keyboard focus
+const hiddenUntilFocus = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  "&:focus": {
+    position: "relative",
+    width: "auto",
+    height: "auto",
+    overflow: "visible",
+    clip: "auto",
+  },
+  "&.Mui-focusVisible": {
+    outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+    outlineOffset: "2px",
+  },
+};
 
 /**
  * The menu's search box, filter pills, category bar and sections. Shared by the table's menu
@@ -39,15 +61,14 @@ const MenuBrowser = ({
   keepItem = () => false,
   notices = null,
   renderItem,
+  reviewOrderCount = 0,
+  onReviewOrder,
 }) => {
   const { canSave, favourites, orderedBefore } = myItems;
 
   const allItems = Object.values(menuItems).flat().filter(Boolean);
 
-  const {
-    searchTerm,
-    setSearchTerm,
-  } = useMenuSearch(allItems);
+  const { searchTerm, setSearchTerm } = useMenuSearch(allItems);
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
@@ -55,14 +76,27 @@ const MenuBrowser = ({
 
   // Pills picked in the filter row; an item has to match all of them
   const [selectedFilters, setSelectedFilters] = useState([]);
-  const onThisMenu = (itemIds) => allItems.some((item) => itemIds.has(item.item_id));
+  const onThisMenu = (itemIds) =>
+    allItems.some((item) => itemIds.has(item.item_id));
   const filterPills = [
-    canSave && onThisMenu(favourites) && { key: FAVOURITES_FILTER, name: "Favourites", symbol: "favorite" },
-    canSave && onThisMenu(orderedBefore) && { key: ORDER_AGAIN_FILTER, name: "Order again", symbol: "history" },
+    canSave &&
+      onThisMenu(favourites) && {
+        key: FAVOURITES_FILTER,
+        name: "Favourites",
+        symbol: "favorite",
+      },
+    canSave &&
+      onThisMenu(orderedBefore) && {
+        key: ORDER_AGAIN_FILTER,
+        name: "Order again",
+        symbol: "history",
+      },
     ...menuTags(allItems),
   ].filter(Boolean);
   // A pill that's gone since it was picked (e.g. the last favourite un-hearted) no longer filters
-  const activeFilters = selectedFilters.filter((key) => filterPills.some((pill) => pill.key === key));
+  const activeFilters = selectedFilters.filter((key) =>
+    filterPills.some((pill) => pill.key === key),
+  );
 
   const matchesFilters = (item) =>
     activeFilters.every((key) => {
@@ -93,7 +127,9 @@ const MenuBrowser = ({
     .filter(({ items }) => items.length > 0);
 
   // ---- Category bar: pinned under the app bar, jumps to sections, follows the scroll ----
-  const visibleIds = filteredMenuGroups.map(({ category }) => category.category_id);
+  const visibleIds = filteredMenuGroups.map(
+    ({ category }) => category.category_id,
+  );
   const visibleIdsRef = useRef(visibleIds);
   useEffect(() => {
     visibleIdsRef.current = visibleIds;
@@ -104,6 +140,19 @@ const MenuBrowser = ({
   const [activeCategory, setActiveCategory] = useState(null);
   // Set while a chip tap is scrolling the page, so the sections it passes don't light up
   const jumping = useRef(null);
+  const searchInputRef = useRef(null);
+
+  // active category's chip or the first chip if none is marked
+  const focusCategory = () => {
+    const bar = chipBarRef.current;
+    const chip =
+      bar?.querySelector(
+        '[aria-current="true"], [aria-pressed="true"], [aria-selected="true"]',
+      ) ?? bar?.querySelector("button, a");
+    chip?.focus();
+  };
+
+  const focusSearch = () => searchInputRef.current?.focus();
 
   // The app bar's height depends on its logo, so measure it rather than guess
   useEffect(() => {
@@ -117,7 +166,8 @@ const MenuBrowser = ({
   }, []);
 
   // Space taken at the top by the app bar and the pinned category bar
-  const pinnedHeight = () => appBarHeight + (chipBarRef.current?.offsetHeight ?? 0);
+  const pinnedHeight = () =>
+    appBarHeight + (chipBarRef.current?.offsetHeight ?? 0);
 
   // Light up the section whose heading has reached the category bar
   const visibleKey = visibleIds.join(",");
@@ -128,7 +178,8 @@ const MenuBrowser = ({
       let current = visibleIdsRef.current[0] ?? null;
       for (const id of visibleIdsRef.current) {
         const section = sectionRefs.current[id];
-        if (section && section.getBoundingClientRect().top <= line) current = id;
+        if (section && section.getBoundingClientRect().top <= line)
+          current = id;
       }
       setActiveCategory(current);
     };
@@ -154,11 +205,38 @@ const MenuBrowser = ({
     window.addEventListener("scrollend", done, { once: true });
     jumping.current = setTimeout(done, 1000);
 
+    const reduceMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+
     window.scrollTo({
-      top: section.getBoundingClientRect().top + window.scrollY - pinnedHeight() - 8,
-      behavior: "smooth",
+      top:
+        section.getBoundingClientRect().top +
+        window.scrollY -
+        pinnedHeight() -
+        8,
+      behavior: reduceMotion ? "auto" : "smooth",
     });
+
+    section.querySelector("h2")?.focus({ preventScroll: true });
   };
+
+  // Add the pinned category bar to scroll-padding-top while it's on screen
+  const chipBarShown = ready && visibleIds.length > 0;
+  useEffect(() => {
+    const bar = chipBarRef.current;
+    if (!chipBarShown || !bar) return;
+    const root = document.documentElement;
+    const update = () =>
+      root.style.setProperty("--sticky-bar-height", `${bar.offsetHeight}px`);
+    update();
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    observer?.observe(bar);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty("--sticky-bar-height");
+    };
+  }, [chipBarShown]);
 
   return (
     <>
@@ -166,6 +244,7 @@ const MenuBrowser = ({
         {/* Soft grey pill; a thin red ring while typing */}
         <TextField
           fullWidth
+          inputRef={searchInputRef}
           placeholder="Search sushi, rolls, tags..."
           value={searchTerm}
           onChange={handleSearchChange}
@@ -174,7 +253,11 @@ const MenuBrowser = ({
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <MaterialSymbol name="search" size={22} sx={{ color: "text.secondary" }} />
+                  <MaterialSymbol
+                    name="search"
+                    size={22}
+                    sx={{ color: "text.secondary" }}
+                  />
                 </InputAdornment>
               ),
               endAdornment: searchTerm ? (
@@ -215,7 +298,11 @@ const MenuBrowser = ({
         />
 
         {ready && (
-          <TagFilter tags={filterPills} selected={activeFilters} onChange={setSelectedFilters} />
+          <TagFilter
+            tags={filterPills}
+            selected={activeFilters}
+            onChange={setSelectedFilters}
+          />
         )}
       </Box>
 
@@ -275,6 +362,7 @@ const MenuBrowser = ({
                 <Typography
                   variant="h5"
                   component="h2"
+                  tabIndex={-1}
                   sx={{
                     fontWeight: 600,
                     mb: 1.5,
@@ -304,6 +392,39 @@ const MenuBrowser = ({
                   }}
                 >
                   {items.map((item) => renderItem(item, category))}
+                </Box>
+
+                {/* Keyboard shortcuts back up the page; hidden until focused */}
+                <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disableRipple
+                    onClick={focusCategory}
+                    sx={hiddenUntilFocus}
+                  >
+                    Back to categories
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disableRipple
+                    onClick={focusSearch}
+                    sx={hiddenUntilFocus}
+                  >
+                    Back to search
+                  </Button>
+                  {onReviewOrder && reviewOrderCount > 0 && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disableRipple
+                      onClick={onReviewOrder}
+                      sx={hiddenUntilFocus}
+                    >
+                      {`Review order (${reviewOrderCount} ${reviewOrderCount === 1 ? "item" : "items"})`}
+                    </Button>
+                  )}
                 </Box>
               </Box>
             ))

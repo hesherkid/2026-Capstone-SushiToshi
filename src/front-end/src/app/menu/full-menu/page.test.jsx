@@ -40,7 +40,6 @@ const render = (ui) => rtlRender(<TableOrderProvider>{ui}</TableOrderProvider>);
 describe("FullMenu guest flow", () => {
   beforeEach(() => {
     localStorage.clear();
-    localStorage.setItem("guest", "true");
     localStorage.setItem("session_id", "42");
     mockSearchTerm = "";
     mockPush.mockReset();
@@ -131,7 +130,7 @@ describe("FullMenu guest flow", () => {
     });
 
     it("shares a category's limit between its items", async () => {
-      const greenTea = { ...MISO_SOUP, item_id: 14, name: "Green Tea" };
+      const greenTea = { ...MISO_SOUP, itemId: 14, name: "Green Tea" };
       api.get.mockImplementation(
         tableApi({
           items: [MISO_SOUP, greenTea, SALMON_ROLL],
@@ -186,15 +185,15 @@ describe("FullMenu guest flow", () => {
           status: 200,
           data: [
             {
-              item_id: 13,
+              itemId: 13,
               name: "Wagyu Nigiri",
               description: "Premium add-on",
               price: atLocation3 ? 9 : 6, // location override vs default
-              is_add_on: true, // price is only shown for add-ons
-              category_id: 2,
+              isAddOn: true, // price is only shown for add-ons
+              categoryID: 2,
               category: "Sushi Rolls",
               tags: [],
-              item_image_url: "",
+              imageURL: "",
             },
           ],
         });
@@ -216,7 +215,7 @@ describe("FullMenu guest flow", () => {
     const baseMock = api.get.getMockImplementation();
     api.get.mockImplementation((url, config) => {
       if (url.includes("/DiningSession/session-menu/42")) {
-        return Promise.resolve({ status: 200, data: { menu_id: 7 } }); // no location
+        return Promise.resolve({ status: 200, data: { menu_Id: 7 } }); // no location
       }
       return baseMock(url, config);
     });
@@ -546,11 +545,11 @@ describe("FullMenu guest flow", () => {
   describe("tag filter", () => {
     const SPICY_TUNA = {
       ...SALMON_ROLL,
-      item_id: 13,
+      itemId: 13,
       name: "Spicy Tuna Roll",
       tags: [
-        { tag_id: 3, name: "Popular", color_code: "#C01E2E" },
-        { tag_id: 5, name: "Spicy", color_code: "#FF5733" },
+        { name: "Popular", color: "#C01E2E" },
+        { name: "Spicy", color: "#FF5733" },
       ],
     };
 
@@ -622,7 +621,6 @@ describe("FullMenu guest flow", () => {
 
     // A customer with an account, with these favourites and past orders saved
     const signInCustomer = ({ favourites = [], orderedBefore = [] } = {}) => {
-      localStorage.removeItem("guest");
       localStorage.setItem("authToken", tokenFor({ [ROLE]: "Customer" }));
       const menu = tableApi();
       api.get.mockImplementation((url, config) => {
@@ -653,7 +651,7 @@ describe("FullMenu guest flow", () => {
     });
 
     it("un-hearts a favourite, and puts it back if saving fails", async () => {
-      signInCustomer({ favourites: [MISO_SOUP.item_id] });
+      signInCustomer({ favourites: [MISO_SOUP.itemId] });
       api.delete.mockRejectedValue(new Error("offline"));
       render(<FullMenu />);
 
@@ -666,7 +664,7 @@ describe("FullMenu guest flow", () => {
     });
 
     it("filters to favourites", async () => {
-      signInCustomer({ favourites: [SALMON_ROLL.item_id] });
+      signInCustomer({ favourites: [SALMON_ROLL.itemId] });
       render(<FullMenu />);
       await screen.findByText("Miso Soup");
 
@@ -678,7 +676,7 @@ describe("FullMenu guest flow", () => {
 
     it("Order again shows only what the customer has ordered before", async () => {
       // 99 was ordered on a visit but isn't on this menu, so it's left out
-      signInCustomer({ orderedBefore: [99, MISO_SOUP.item_id] });
+      signInCustomer({ orderedBefore: [99, MISO_SOUP.itemId] });
       render(<FullMenu />);
       await screen.findByText("Salmon Roll");
 

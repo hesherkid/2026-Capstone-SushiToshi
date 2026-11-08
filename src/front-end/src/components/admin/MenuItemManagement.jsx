@@ -250,13 +250,13 @@ const MenuItemManagement = () => {
             ))}
             <IconButton
               size="small"
-              aria-label="Manage Tags"
+              aria-label={`Manage tags for ${params.row.name}`}
               onClick={() => {
                 setSelectedItem(params.row);
                 setTagDialogOpen(true);
               }}
             >
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
             </IconButton>
           </Box>
         </Box>
@@ -297,12 +297,17 @@ const MenuItemManagement = () => {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     setError(null);
+    let itemSaved = false;
 
     try {
       // Step 1: Save menu item basic data
       const savedItem = selectedItem
         ? await api.put(`/menuItem/${selectedItem.item_id}`, formData)
         : await api.post("/menuItem", formData);
+      itemSaved = true;
+
+      // Remember a newly created item so a retry updates it instead of creating a duplicate
+      if (!selectedItem) setSelectedItem(savedItem.data);
 
       // Step 2: Upload the image if one was chosen
       if (imageFile) {
@@ -328,7 +333,14 @@ const MenuItemManagement = () => {
       );
     } catch (err) {
       console.error("Error saving item:", err, err.response);
-      setError("Failed to save menu item");
+      if (itemSaved) {
+        await fetchData();
+        setError(
+          `Menu item saved, but the image upload failed: ${serverMessage(err, "please try again")}`,
+        );
+      } else {
+        setError(serverMessage(err, "Failed to save menu item"));
+      }
     } finally {
       setSubmitting(false);
     }
