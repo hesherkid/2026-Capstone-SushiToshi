@@ -3,7 +3,7 @@ using back_end.Configurations;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.Auth;
+using back_end.Dtos;
 using back_end.Services.Auth;
 using back_end.Services.Email;
 using back_end.Helpers;

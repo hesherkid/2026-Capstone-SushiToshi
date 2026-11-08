@@ -1,7 +1,7 @@
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.MenuItemViewDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
-using back_end.DTO.DiningSessionDTOs;
+using back_end.Dtos;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace back_end.Controllers

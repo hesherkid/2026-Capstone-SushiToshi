@@ -59,7 +59,7 @@ src/
 │   ├── Controllers/             # Controller tests (incl. analytics, auth, staff location lock)
 │   ├── Services/                # Service tests
 │   ├── Helpers/                 # Helper tests (bill calculator, order limits, claims, date ranges)
-│   ├── DTO/                     # DTO validation tests
+│   ├── Dtos/                    # DTO validation tests
 │   └── Seeders/                 # Seed data rule tests
 └── back-end.IntegrationTests/   # Integration tests (QR codes, rate limits, forwarded headers)
 ```

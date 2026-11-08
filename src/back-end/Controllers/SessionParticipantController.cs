@@ -4,13 +4,11 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using System.Linq.Expressions;
-using back_end.DTO.MenuItems;
+using back_end.Dtos;
 using Microsoft.AspNetCore.Authorization;
-using back_end.DTO.MenuDTO;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using back_end.domain.Seeders;
 using System.Security.Claims;
-using back_end.DTO.SessionParticipantDTOs;
 using Swashbuckle.AspNetCore.Annotations;
 using back_end.Helpers;
 

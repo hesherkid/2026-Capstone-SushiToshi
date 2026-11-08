@@ -11,8 +11,7 @@ using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using back_end.domain.enums;
-using back_end.DTO.MenuDTO;
-using back_end.DTO.MenuItems;
+using back_end.Dtos;
 
 namespace back_end.Tests.Controllers;
 

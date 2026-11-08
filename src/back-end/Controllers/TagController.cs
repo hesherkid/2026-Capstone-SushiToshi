@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
-using back_end.DTO.TagDTOs;
+using back_end.Dtos;
 using Swashbuckle.AspNetCore.Annotations;
 using back_end.Helpers;
 

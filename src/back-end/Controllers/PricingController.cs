@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
-using back_end.DTO.PricingDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using back_end.Services;
 

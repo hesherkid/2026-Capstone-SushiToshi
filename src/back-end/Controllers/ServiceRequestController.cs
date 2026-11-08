@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using Microsoft.AspNetCore.Authorization;
-using back_end.DTO.ServiceRequestDTOs;
+using back_end.Dtos;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;

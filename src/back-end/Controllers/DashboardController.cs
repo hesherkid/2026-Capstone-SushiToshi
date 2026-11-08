@@ -3,7 +3,7 @@ using back_end.domain.DbContexts;
 using Microsoft.AspNetCore.Mvc;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.DashBoardDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using back_end.Services;
 using Microsoft.AspNetCore.Authorization;

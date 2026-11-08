@@ -1,6 +1,6 @@
 using back_end.domain.DbContexts;
 using back_end.domain.enums;
-using back_end.DTO.Analytics;
+using back_end.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace back_end.Services.Analytics

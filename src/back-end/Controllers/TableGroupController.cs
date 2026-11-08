@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using Microsoft.AspNetCore.Authorization;
-using back_end.DTO.TableGroupDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using back_end.Services;
 

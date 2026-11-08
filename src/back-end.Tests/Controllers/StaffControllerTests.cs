@@ -10,8 +10,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.StaffDTOs;
-using back_end.DTO.UserDTOs;
+using back_end.Dtos;
 using back_end.Services;
 
 namespace back_end.Tests.Controllers;

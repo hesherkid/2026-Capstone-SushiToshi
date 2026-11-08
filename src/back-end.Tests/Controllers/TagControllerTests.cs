@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
-using back_end.DTO.TagDTOs;
+using back_end.Dtos;
 
 namespace back_end.Tests.Controllers;
 
