@@ -56,7 +56,7 @@ namespace back_end.Controllers
             return heads.IsEmpty ? OrderLimitRules.Headcount.Fallback : heads;
         }
 
-        private sealed record UsedUnits(int Order_Key, int Item_Id, int Category_id, int Quantity);
+        private sealed record UsedUnits(int OrderKey, int ItemId, int CategoryId, int Quantity);
 
         // Units already ordered this session (cancelled orders/items don't count)
         private Task<List<UsedUnits>> SessionUsageAsync(int sessionId) =>
@@ -106,12 +106,12 @@ namespace back_end.Controllers
             var heads = await SessionHeadcountAsync(session.Session_Id);
             var used = await SessionUsageAsync(session.Session_Id);
 
-            var sessionItemUsed = used.GroupBy(u => u.Item_Id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
-            var sessionCategoryUsed = used.GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
-            var orderItemUsed = used.Where(u => u.Order_Key == orderId)
-                .GroupBy(u => u.Item_Id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
-            var orderCategoryUsed = used.Where(u => u.Order_Key == orderId)
-                .GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+            var sessionItemUsed = used.GroupBy(u => u.ItemId).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+            var sessionCategoryUsed = used.GroupBy(u => u.CategoryId).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+            var orderItemUsed = used.Where(u => u.OrderKey == orderId)
+                .GroupBy(u => u.ItemId).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+            var orderCategoryUsed = used.Where(u => u.OrderKey == orderId)
+                .GroupBy(u => u.CategoryId).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
 
             var errors = new List<string>();
             var newLines = new List<OrderItems>();
@@ -213,8 +213,8 @@ namespace back_end.Controllers
 
             var heads = await SessionHeadcountAsync(sessionId);
             var used = await SessionUsageAsync(sessionId);
-            var itemUsed = used.GroupBy(u => u.Item_Id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
-            var categoryUsed = used.GroupBy(u => u.Category_id).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+            var itemUsed = used.GroupBy(u => u.ItemId).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
+            var categoryUsed = used.GroupBy(u => u.CategoryId).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
 
             static OrderLimitRules.Limits CategoryLimits(Category c) => new(c.adult_limit, c.child_limit,
                 c.senior_limit, c.toddler_limit, c.per_order_limit, c.over_limit_behavior);

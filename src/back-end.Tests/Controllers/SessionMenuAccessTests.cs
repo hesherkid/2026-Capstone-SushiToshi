@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using back_end.controllers;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
@@ -50,7 +49,7 @@ public class SessionMenuAccessTests : IDisposable
     public void Dispose() => _context.Dispose();
 
     private DiningSessionController ControllerAs(int userId, string role) =>
-        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DiningSessionController>>().Object, new LocationAccessService(_context))
         {
             ControllerContext = new ControllerContext
             {

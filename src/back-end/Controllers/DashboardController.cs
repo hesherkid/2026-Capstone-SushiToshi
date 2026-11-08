@@ -9,18 +9,18 @@ using back_end.Services;
 using Microsoft.AspNetCore.Authorization;
 
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
-  public class DashBoardController : Controller
+  public class DashboardController : Controller
   {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
-    private readonly ILogger<DashBoardController> _logger;
+    private readonly ILogger<DashboardController> _logger;
     private readonly ILocationAccessService _locationAccess;
 
-    public DashBoardController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger, ILocationAccessService locationAccess)
+    public DashboardController(ApplicationDbContext context, IConfiguration config, ILogger<DashboardController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _config = config;
@@ -92,7 +92,7 @@ namespace back_end.controllers
     [ProducesResponseType(typeof(List<DashBoardSessionsDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDashBoardSessions([FromQuery] int? locationId)
+    public async Task<IActionResult> GetDashboardSessions([FromQuery] int? locationId)
     {
       try
       {
@@ -124,7 +124,7 @@ namespace back_end.controllers
           return NoContent();
         }
 
-        var dashBoardSessions = new List<DashBoardSessionsDTO>();
+        var dashboardSessions = new List<DashBoardSessionsDTO>();
         foreach (var session in sessions)
         {
           bool hasOpenBill = session.Bills.Any(b => b.Status == BillStatus.Open);
@@ -132,7 +132,7 @@ namespace back_end.controllers
 
           var activeParticipants = session.Participants.Count(p => p.Left_At == null);
 
-          var dashBoardSession = new DashBoardSessionsDTO
+          var dashboardSession = new DashBoardSessionsDTO
           {
             Session_Id = session.Session_Id,
             Menu_Id = session.Menu_Id,
@@ -169,9 +169,9 @@ namespace back_end.controllers
             Bill_Count = session.Bills.Count(),
             Is_Closable = isClosable
           };
-          dashBoardSessions.Add(dashBoardSession);
+          dashboardSessions.Add(dashboardSession);
         }
-        return Ok(dashBoardSessions);
+        return Ok(dashboardSessions);
       }
       catch (Exception ex)
       {
@@ -211,7 +211,7 @@ namespace back_end.controllers
     [HttpGet("summary")]
     [ProducesResponseType(typeof(DashBoardSummaryDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDashBoardSummary([FromQuery] int? locationId)
+    public async Task<IActionResult> GetDashboardSummary([FromQuery] int? locationId)
     {
       try
       {

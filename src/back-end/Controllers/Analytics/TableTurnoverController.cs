@@ -1,4 +1,4 @@
-using back_end.controllers;
+using back_end.Controllers;
 using back_end.DTO.Analytics;
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Mvc;

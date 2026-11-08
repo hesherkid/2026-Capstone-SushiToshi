@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using back_end.controllers;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
@@ -98,7 +97,7 @@ public class BillLinkTests : IDisposable
         new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context)) { ControllerContext = As(userId) };
 
     private DiningSessionController Sessions(int userId) =>
-        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DiningSessionController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(userId) };
 
     private static MyBillResponseDTO Body(IActionResult result) =>
@@ -778,10 +777,10 @@ public class BillLinkTests : IDisposable
 
     private async Task<DashBoardBillDTO> DashboardBill(int billId)
     {
-        var dashboard = new DashBoardController(_context, new Mock<IConfiguration>().Object,
-            new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        var dashboard = new DashboardController(_context, new Mock<IConfiguration>().Object,
+            new Mock<ILogger<DashboardController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(Server, "Staff") };
-        var sessions = ((await dashboard.GetDashBoardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
+        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
         return sessions!.SelectMany(s => s.Bills).Single(b => b.Bill_Id == billId);
     }
 
@@ -801,10 +800,10 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task Dashboard_ListsWhoIsOnWhichBill()
     {
-        var dashboard = new DashBoardController(_context, new Mock<IConfiguration>().Object,
-            new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        var dashboard = new DashboardController(_context, new Mock<IConfiguration>().Object,
+            new Mock<ILogger<DashboardController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(Server, "Staff") };
-        var sessions = ((await dashboard.GetDashBoardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
+        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
 
         var people = sessions!.Single(s => s.Session_Id == Table).People;
         people.Should().HaveCount(2);
@@ -815,10 +814,10 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task Dashboard_ShowsTheTablesSeats_SoStaffCanBeWarnedBeforeGoingPastThem()
     {
-        var dashboard = new DashBoardController(_context, new Mock<IConfiguration>().Object,
-            new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        var dashboard = new DashboardController(_context, new Mock<IConfiguration>().Object,
+            new Mock<ILogger<DashboardController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(Server, "Staff") };
-        var sessions = ((await dashboard.GetDashBoardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
+        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDTO>;
 
         sessions!.Single(s => s.Session_Id == Table).Seat_Count.Should().Be(8);
     }

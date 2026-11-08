@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
 using back_end.Services;
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]

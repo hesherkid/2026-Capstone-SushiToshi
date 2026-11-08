@@ -20,7 +20,7 @@ using System.Text;
 using BCryptNet = BCrypt.Net.BCrypt;
 
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

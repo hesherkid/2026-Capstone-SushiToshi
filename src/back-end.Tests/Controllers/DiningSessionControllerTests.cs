@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using back_end.Controllers;
-using back_end.controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -33,7 +32,7 @@ public class DiningSessionControllerTests : IDisposable
     private const int OtherSessionId = 200;
     private const int BillId = 1;
     private readonly ApplicationDbContext _context;
-    private readonly Mock<ILogger<DashBoardController>> _logger = new();
+    private readonly Mock<ILogger<DiningSessionController>> _logger = new();
     private int _nextOrderItemId = 1;
 
     public DiningSessionControllerTests()

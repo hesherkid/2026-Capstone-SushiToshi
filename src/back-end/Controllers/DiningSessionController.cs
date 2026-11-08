@@ -11,7 +11,7 @@ using back_end.Helpers;
 using back_end.Services;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
@@ -19,10 +19,10 @@ namespace back_end.controllers
   {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
-    private readonly ILogger<DashBoardController> _logger;
+    private readonly ILogger<DiningSessionController> _logger;
     private readonly ILocationAccessService _locationAccess;
 
-    public DiningSessionController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger, ILocationAccessService locationAccess)
+    public DiningSessionController(ApplicationDbContext context, IConfiguration config, ILogger<DiningSessionController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _config = config;
