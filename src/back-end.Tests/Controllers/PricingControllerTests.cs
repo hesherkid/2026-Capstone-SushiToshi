@@ -57,23 +57,23 @@ namespace back_end.Tests.Controllers
         // Saturday/Sunday weekends; only the weekday adult price and tax vary
         private static PricingProfileRequest Request(decimal weekdayAdult, decimal taxRate = 0.05m) => new()
         {
-            Tax_Rate = taxRate,
-            Gratuity_Rate = 0.18m,
-            Gratuity_Min_Party_Size = 6,
-            Leftover_Fee = 15m,
-            Weekend_Days = new() { DayOfWeek.Sunday, DayOfWeek.Saturday },
+            TaxRate = taxRate,
+            GratuityRate = 0.18m,
+            GratuityMinPartySize = 6,
+            LeftoverFee = 15m,
+            WeekendDays = new() { DayOfWeek.Sunday, DayOfWeek.Saturday },
             Rates = new()
             {
-                new() { Day_Type = PricingDayType.Weekday, Adult_Price = weekdayAdult },
-                new() { Day_Type = PricingDayType.Weekend, Adult_Price = 50m },
-                new() { Day_Type = PricingDayType.Holiday, Adult_Price = 55m },
+                new() { DayType = PricingDayType.Weekday, AdultPrice = weekdayAdult },
+                new() { DayType = PricingDayType.Weekend, AdultPrice = 50m },
+                new() { DayType = PricingDayType.Holiday, AdultPrice = 55m },
             },
         };
 
         private static T Body<T>(IActionResult result) => (T)(result as OkObjectResult)!.Value!;
 
         private static decimal WeekdayAdult(PricingProfileResponse profile) =>
-            profile.Rates.Single(r => r.Day_Type == PricingDayType.Weekday).Adult_Price;
+            profile.Rates.Single(r => r.DayType == PricingDayType.Weekday).AdultPrice;
 
         private void AddHoliday(DateOnly date, HolidayStatus status)
         {
@@ -90,9 +90,9 @@ namespace back_end.Tests.Controllers
             var profile = Body<PricingProfileResponse>(await Pricing().GetDefault());
 
             profile.Source.Should().Be("Default");
-            profile.Location_Id.Should().BeNull();
-            profile.Tax_Rate.Should().Be(0.05m);
-            profile.Rates.Select(r => r.Day_Type).Should().Equal(
+            profile.LocationId.Should().BeNull();
+            profile.TaxRate.Should().Be(0.05m);
+            profile.Rates.Select(r => r.DayType).Should().Equal(
                 PricingDayType.Weekday, PricingDayType.Weekend, PricingDayType.Holiday);
         }
 
@@ -104,7 +104,7 @@ namespace back_end.Tests.Controllers
 
             var profile = Body<PricingProfileResponse>(await Pricing().GetDefault());
             WeekdayAdult(profile).Should().Be(39.95m);   // rounded to the cent
-            profile.Weekend_Days.Should().Equal(DayOfWeek.Saturday, DayOfWeek.Sunday);   // Monday-first order
+            profile.WeekendDays.Should().Equal(DayOfWeek.Saturday, DayOfWeek.Sunday);   // Monday-first order
         }
 
         // ---------- Location pricing ----------
@@ -125,7 +125,7 @@ namespace back_end.Tests.Controllers
             _context.ChangeTracker.Clear();
 
             profile.Source.Should().Be("Location");
-            profile.Location_Id.Should().Be(LocationId);
+            profile.LocationId.Should().Be(LocationId);
             WeekdayAdult(profile).Should().Be(45m);
 
             WeekdayAdult(Body<PricingProfileResponse>(await Pricing().GetDefault())).Should().Be(40.95m);
@@ -192,7 +192,7 @@ namespace back_end.Tests.Controllers
 
             var locations = Body<List<LocationPricingSummary>>(await Pricing().GetLocations());
 
-            locations.Select(l => (l.Location_Id, l.Source)).Should().Equal((1, "Location"), (2, "Default"));
+            locations.Select(l => (l.LocationId, l.Source)).Should().Equal((1, "Location"), (2, "Default"));
         }
 
         // ---------- Preview ----------
@@ -205,9 +205,9 @@ namespace back_end.Tests.Controllers
             var preview = Body<PricingPreviewResponse>(
                 await Pricing().Preview(LocationId, new DateOnly(year, month, day)));
 
-            preview.Pricing_Type.Should().Be(pricingType);
-            preview.Pricing_Source.Should().Be("Default");
-            preview.Adult_Price.Should().Be(adult);
+            preview.PricingType.Should().Be(pricingType);
+            preview.PricingSource.Should().Be("Default");
+            preview.AdultPrice.Should().Be(adult);
         }
 
         [Fact]
@@ -217,9 +217,9 @@ namespace back_end.Tests.Controllers
 
             var preview = Body<PricingPreviewResponse>(await Pricing().Preview(LocationId, new DateOnly(2026, 12, 25)));
 
-            preview.Pricing_Type.Should().Be("Holiday");
-            preview.Holiday_Name.Should().Be("Christmas Day");
-            preview.Adult_Price.Should().Be(44.95m);
+            preview.PricingType.Should().Be("Holiday");
+            preview.HolidayName.Should().Be("Christmas Day");
+            preview.AdultPrice.Should().Be(44.95m);
         }
 
         [Fact]
@@ -229,8 +229,8 @@ namespace back_end.Tests.Controllers
 
             var preview = Body<PricingPreviewResponse>(await Pricing().Preview(LocationId, new DateOnly(2026, 12, 25)));
 
-            preview.Pricing_Type.Should().Be("Weekend");   // 25 Dec 2026 is a Friday
-            preview.Holiday_Name.Should().BeNull();
+            preview.PricingType.Should().Be("Weekend");   // 25 Dec 2026 is a Friday
+            preview.HolidayName.Should().BeNull();
         }
 
         [Fact]
@@ -241,8 +241,8 @@ namespace back_end.Tests.Controllers
 
             var preview = Body<PricingPreviewResponse>(await Pricing().Preview(LocationId, new DateOnly(2026, 11, 12)));
 
-            preview.Pricing_Source.Should().Be("Location");
-            preview.Adult_Price.Should().Be(45m);
+            preview.PricingSource.Should().Be("Location");
+            preview.AdultPrice.Should().Be(45m);
         }
 
         [Fact]
