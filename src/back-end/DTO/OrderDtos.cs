@@ -4,7 +4,7 @@ using back_end.domain.enums;
 
 namespace back_end.DTO.OrdersDTOs
 {
-    public class OrderItemCreateDTO
+    public class OrderItemCreateDto
     {
         [JsonPropertyName("order_id")]
         public int Order_Id { get; set; }
@@ -24,7 +24,7 @@ namespace back_end.DTO.OrdersDTOs
 
     }
 
-    public class OrderItemResponseDTO
+    public class OrderItemResponseDto
     {
         [JsonPropertyName("order_item_id")]
         public int Order_Item_Id { get; set; }
@@ -86,7 +86,7 @@ namespace back_end.DTO.OrdersDTOs
     /// null = no blocking limit. Charge limits don't block: going over them is allowed at full price,
     /// so they're reported separately as Free_Left.
     /// </summary>
-    public class OrderLimitLeftDTO
+    public class OrderLimitLeftDto
     {
         [JsonPropertyName("per_order")]
         public int? Per_Order { get; set; }
@@ -101,7 +101,7 @@ namespace back_end.DTO.OrdersDTOs
         public int? Free_Left { get; set; }
     }
 
-    public class ItemOrderLimitDTO : OrderLimitLeftDTO
+    public class ItemOrderLimitDto : OrderLimitLeftDto
     {
         [JsonPropertyName("item_id")]
         public int Item_Id { get; set; }
@@ -116,22 +116,22 @@ namespace back_end.DTO.OrdersDTOs
         public decimal Extra_Price { get; set; }
     }
 
-    public class CategoryOrderLimitDTO : OrderLimitLeftDTO
+    public class CategoryOrderLimitDto : OrderLimitLeftDto
     {
         [JsonPropertyName("category_id")]
         public int Category_Id { get; set; }
     }
 
-    public class SessionOrderLimitsDTO
+    public class SessionOrderLimitsDto
     {
         [JsonPropertyName("items")]
-        public List<ItemOrderLimitDTO> Items { get; set; } = new();
+        public List<ItemOrderLimitDto> Items { get; set; } = new();
 
         [JsonPropertyName("categories")]
-        public List<CategoryOrderLimitDTO> Categories { get; set; } = new();
+        public List<CategoryOrderLimitDto> Categories { get; set; } = new();
     }
 
-    public class OrderItemUpdateDTO
+    public class OrderItemUpdateDto
     {
         [JsonPropertyName("quantity")]
         public int? Quantity { get; set; }
@@ -140,7 +140,7 @@ namespace back_end.DTO.OrdersDTOs
         [JsonPropertyName("status")]
         public string? Status { get; set; }
     }
-    public class OrderCreateDTO
+    public class OrderCreateDto
     {
         [JsonPropertyName("session_id")]
         public int Session_Id { get; set; }
@@ -150,16 +150,16 @@ namespace back_end.DTO.OrdersDTOs
 
         // Saved together with the order, so an order is never left without items
         [JsonPropertyName("items")]
-        public List<OrderItemCreateDTO> Items { get; set; } = new();
+        public List<OrderItemCreateDto> Items { get; set; } = new();
     }
 
-    // public class OrderUpdateDTO
+    // public class OrderUpdateDto
     // {
     //     [JsonPropertyName("status")]
     //     public OrderStatus Status { get; set; }
     // }
 
-    public class OrderResponseDTO
+    public class OrderResponseDto
     {
         public int Order_Id { get; set; }
         public int Session_Id { get; set; }
@@ -170,7 +170,7 @@ namespace back_end.DTO.OrdersDTOs
         public DateTime Created_At { get; set; }
         public DateTime? Completed_At { get; set; }
 
-        public List<OrderItemResponseDTO> OrderItems { get; set; } = new();
+        public List<OrderItemResponseDto> OrderItems { get; set; } = new();
 
         // Automatically calculated from OrderItems
         public int PendingItemsCount
@@ -185,7 +185,7 @@ namespace back_end.DTO.OrdersDTOs
         }
     }
     
-    // public class OrderStatusResponseDTO
+    // public class OrderStatusResponseDto
     // {
     //     [JsonPropertyName("order_id")]
     //     public int Order_Id { get; set; }

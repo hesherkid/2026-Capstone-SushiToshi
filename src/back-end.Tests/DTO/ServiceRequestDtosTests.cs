@@ -7,24 +7,24 @@ using back_end.domain.enums;
 
 namespace back_end.Tests.DTO;
 
-public class ServiceRequestDTOsTests
+public class ServiceRequestDtosTests
 {
     /// <summary>
-    /// Tests for ServiceRequestCreateDTO and ServiceRequestResponseDTO.
+    /// Tests for ServiceRequestCreateDto and ServiceRequestResponseDto.
     /// The requestion user comes from the JWT token, not in the request body, create DTO only carries notes.
     /// User references in the response are numeric user IDs.
     /// </summary>
 
-    // ------------ ServiceRequestCreateDTO Tests ------------
+    // ------------ ServiceRequestCreateDto Tests ------------
     [Fact]
-    public void ServiceRequestCreateDTO_WithNotes_SerializesandDeserializes()
+    public void ServiceRequestCreateDto_WithNotes_SerializesandDeserializes()
     {
         // Arrange
-        var dto = new ServiceRequestCreateDTO { Notes = "Need more napkins" };
+        var dto = new ServiceRequestCreateDto { Notes = "Need more napkins" };
 
         // Act
         var json = JsonSerializer.Serialize(dto);
-        var deserialized = JsonSerializer.Deserialize<ServiceRequestCreateDTO>(json);
+        var deserialized = JsonSerializer.Deserialize<ServiceRequestCreateDto>(json);
 
         // Assert
         deserialized.Should().NotBeNull();
@@ -32,10 +32,10 @@ public class ServiceRequestDTOsTests
     }
 
     [Fact]
-    public void ServiceRequestCreateDTO_JsonPropertyName_IsSnakeCase()
+    public void ServiceRequestCreateDto_JsonPropertyName_IsSnakeCase()
     {
         // Arrange
-        var dto = new ServiceRequestCreateDTO { Notes = "Test" };
+        var dto = new ServiceRequestCreateDto { Notes = "Test" };
 
         // Act
         var json = JsonSerializer.Serialize(dto);
@@ -49,10 +49,10 @@ public class ServiceRequestDTOsTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void ServiceRequestCreateDTO_WithMissingOrBlankNotes_IsValid(string? notes)
+    public void ServiceRequestCreateDto_WithMissingOrBlankNotes_IsValid(string? notes)
     {
         // Arrange
-        var dto = new ServiceRequestCreateDTO { Notes = notes };
+        var dto = new ServiceRequestCreateDto { Notes = notes };
 
         // Act
         var validationResults = new List<ValidationResult>();
@@ -64,10 +64,10 @@ public class ServiceRequestDTOsTests
     }
 
     [Fact]
-    public void ServiceRequestCreateDTO_WithLongNotes_IsValid()
+    public void ServiceRequestCreateDto_WithLongNotes_IsValid()
     {
         // Arrange
-        var dto = new ServiceRequestCreateDTO { Notes = new string('x', 1000) };
+        var dto = new ServiceRequestCreateDto { Notes = new string('x', 1000) };
 
         // Act
         var validationResults = new List<ValidationResult>();
@@ -78,14 +78,14 @@ public class ServiceRequestDTOsTests
         dto.Notes!.Length.Should().Be(1000);
     }
 
-    // ------------ ServiceRequestResponseDTO Tests ------------
+    // ------------ ServiceRequestResponseDto Tests ------------
 
     [Fact]
-    public void ServiceRequestResponseDTO_WithValidData_SerializesAndDeserializes()
+    public void ServiceRequestResponseDto_WithValidData_SerializesAndDeserializes()
     {
         // Arrange
         var now = DateTime.UtcNow;
-        var dto = new ServiceRequestResponseDTO
+        var dto = new ServiceRequestResponseDto
         {
             Request_Id = 1,
             Session_Id = 5,
@@ -102,7 +102,7 @@ public class ServiceRequestDTOsTests
 
         // Act
         var json = JsonSerializer.Serialize(dto);
-        var deserialized = JsonSerializer.Deserialize<ServiceRequestResponseDTO>(json);
+        var deserialized = JsonSerializer.Deserialize<ServiceRequestResponseDto>(json);
 
         // Assert
         deserialized.Should().NotBeNull();
@@ -119,10 +119,10 @@ public class ServiceRequestDTOsTests
     }
 
     [Fact]
-    public void ServiceRequestResponseDTO_DefaultValues_AreSetCorrectly()
+    public void ServiceRequestResponseDto_DefaultValues_AreSetCorrectly()
     {
         // Arrange & Act
-        var dto = new ServiceRequestResponseDTO();
+        var dto = new ServiceRequestResponseDto();
 
         // Assert
         dto.Requested_By.Should().Be(0);
@@ -133,10 +133,10 @@ public class ServiceRequestDTOsTests
     }
 
     [Fact]
-    public void ServiceRequestResponseDTO_JsonPropertyNames_AreSnakeCase()
+    public void ServiceRequestResponseDto_JsonPropertyNames_AreSnakeCase()
     {
         // Arrange
-        var dto = new ServiceRequestResponseDTO
+        var dto = new ServiceRequestResponseDto
         {
             Request_Id = 1,
             Session_Id = 2,
@@ -171,10 +171,10 @@ public class ServiceRequestDTOsTests
     [InlineData(ServiceRequestStatus.Claimed)]
     [InlineData(ServiceRequestStatus.Completed)]
     [InlineData(ServiceRequestStatus.Cancelled)]
-    public void ServiceRequestResponseDTO_SupportsAllServiceRequestStatuses(ServiceRequestStatus status)
+    public void ServiceRequestResponseDto_SupportsAllServiceRequestStatuses(ServiceRequestStatus status)
     {
         // Arrange
-        var dto = new ServiceRequestResponseDTO
+        var dto = new ServiceRequestResponseDto
         {
             Request_Id = 1,
             Session_Id = 1,
@@ -187,7 +187,7 @@ public class ServiceRequestDTOsTests
 
         // Act
         var json = JsonSerializer.Serialize(dto);
-        var deserialized = JsonSerializer.Deserialize<ServiceRequestResponseDTO>(json);
+        var deserialized = JsonSerializer.Deserialize<ServiceRequestResponseDto>(json);
 
         // Assert
         deserialized.Should().NotBeNull();
@@ -195,10 +195,10 @@ public class ServiceRequestDTOsTests
     }
 
     [Fact]
-    public void ServiceRequestResponseDTO_UnclaimedRequest_KeepsOptionalFieldsNull()
+    public void ServiceRequestResponseDto_UnclaimedRequest_KeepsOptionalFieldsNull()
     {
         // Arrange — a new, unclaimed request
-        var dto = new ServiceRequestResponseDTO
+        var dto = new ServiceRequestResponseDto
         {
             Request_Id = 1,
             Session_Id = 1,
@@ -215,7 +215,7 @@ public class ServiceRequestDTOsTests
 
         // Act
         var json = JsonSerializer.Serialize(dto);
-        var deserialized = JsonSerializer.Deserialize<ServiceRequestResponseDTO>(json);
+        var deserialized = JsonSerializer.Deserialize<ServiceRequestResponseDto>(json);
 
         // Assert
         deserialized.Should().NotBeNull();

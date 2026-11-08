@@ -4,7 +4,7 @@ using back_end.domain;
 
 namespace back_end.DTO.DiningSessionDTOs
 {
-  public class TableAssignmentDTO
+  public class TableAssignmentDto
   {
     [JsonPropertyName("table_id")]
     [Required(ErrorMessage = "Table Id is Required")]
@@ -12,7 +12,7 @@ namespace back_end.DTO.DiningSessionDTOs
     public int Table_Id { get; set; }
   }
 
-  public class CreateSessionRequestDTO
+  public class CreateSessionRequestDto
   {
     [JsonPropertyName("menu_id")]
     [Required(ErrorMessage = "Menu Id is Required")]
@@ -25,7 +25,7 @@ namespace back_end.DTO.DiningSessionDTOs
     public string? AssignmentType { get; set; }
   }
 
-  public class DiningSessionResponseDTO
+  public class DiningSessionResponseDto
   {
     public int Session_Id { get; set; }
     public int Menu_Id { get; set; }
@@ -38,7 +38,7 @@ namespace back_end.DTO.DiningSessionDTOs
     public int Active_Participants { get; set; }
   }
 
-  class DiningSessionDetailDTO : DiningSessionResponseDTO
+  class DiningSessionDetailDto : DiningSessionResponseDto
   {
     public int Orders_Count { get; set; }
     public int Bills_Count { get; set; }
@@ -49,26 +49,26 @@ namespace back_end.DTO.DiningSessionDTOs
 
   }
 
-  public class SessionIdResponseDTO
+  public class SessionIdResponseDto
   {
     public int Session_Id { get; set; }
 
 
   }
 
-  public class SessionMenuResponseDTO
+  public class SessionMenuResponseDto
   {
     public int Menu_Id { get; set; }
     public int Location_Id { get; set; }
     }
 
-  public class ListDiningSessionsRequestDTO
+  public class ListDiningSessionsRequestDto
   {
     public bool ActiveOnly { get; set; } = false;
   }
 
   // Body for POST /api/DiningSession/join. Values come from the table's QR code.
-  public class JoinTableSessionDTO
+  public class JoinTableSessionDto
   {
     // The number printed on the table, not the database Table_Id
     [Range(1, int.MaxValue, ErrorMessage = "Table number must be positive")]
@@ -78,7 +78,7 @@ namespace back_end.DTO.DiningSessionDTOs
     public int Location_Id { get; set; }
   }
 
-  public class JoinTableSessionResponseDTO
+  public class JoinTableSessionResponseDto
   {
     public int Session_Id { get; set; }
     public int Participant_Id { get; set; }

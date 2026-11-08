@@ -66,9 +66,9 @@ namespace back_end.Controllers
     /// <response code="200">A list of all sessions was returned.</response>
     /// <response code="500">An error occurred while retrieving sessions.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IEnumerable<DiningSessionResponseDTO>>> GetAllSessions()
+    public async Task<ActionResult<IEnumerable<DiningSessionResponseDto>>> GetAllSessions()
     {
       try
       {
@@ -81,7 +81,7 @@ namespace back_end.Controllers
           .OrderByDescending(s => s.Started_At)
           .ToListAsync();
 
-        var sessionDtos = sessions.Select(s => new DiningSessionResponseDTO
+        var sessionDtos = sessions.Select(s => new DiningSessionResponseDto
         {
           Session_Id = s.Session_Id,
           Menu_Id = s.Menu_Id,

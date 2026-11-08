@@ -94,7 +94,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateLocation(
-        LocationCreateDTO createLocation
+        LocationCreateDto createLocation
     )
     {
       try
@@ -205,7 +205,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateLocation(
         int locationId,
-        LocationUpdateDTO locationUpdate
+        LocationUpdateDto locationUpdate
     )
     {
       try
@@ -383,7 +383,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddMenuToLocation(
        int locationId,
-       MenuLocationCreateDTO menuLocationCreate
+       MenuLocationCreateDto menuLocationCreate
    )
     {
       try

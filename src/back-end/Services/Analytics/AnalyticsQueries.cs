@@ -9,7 +9,7 @@ namespace back_end.Services.Analytics
     internal sealed record AnalyticsWindow(
         ResolvedDateRange Period,
         TimeZoneInfo TimeZone,
-        AnalyticsLocationDTO? Location);
+        AnalyticsLocationDto? Location);
 
     internal sealed record CandidateItem(
         int ItemId,
@@ -21,9 +21,9 @@ namespace back_end.Services.Analytics
 
     internal sealed class ItemCatalog
     {
-        private readonly Dictionary<int, List<AnalyticsTagDTO>> _tagsByItem;
+        private readonly Dictionary<int, List<AnalyticsTagDto>> _tagsByItem;
 
-        public ItemCatalog(List<CandidateItem> items, Dictionary<int, List<AnalyticsTagDTO>> tagsByItem)
+        public ItemCatalog(List<CandidateItem> items, Dictionary<int, List<AnalyticsTagDto>> tagsByItem)
         {
             Items = items;
             _tagsByItem = tagsByItem;
@@ -31,19 +31,19 @@ namespace back_end.Services.Analytics
 
         public IReadOnlyList<CandidateItem> Items { get; }
 
-        public List<AnalyticsTagDTO> TagsFor(int itemId) =>
-            _tagsByItem.TryGetValue(itemId, out var tags) ? tags : new List<AnalyticsTagDTO>();
+        public List<AnalyticsTagDto> TagsFor(int itemId) =>
+            _tagsByItem.TryGetValue(itemId, out var tags) ? tags : new List<AnalyticsTagDto>();
 
         public IEnumerable<CandidateItem> Filter(int? categoryId, int? tagId) =>
             Items
                 .Where(i => categoryId == null || i.CategoryId == categoryId)
                 .Where(i => tagId == null || TagsFor(i.ItemId).Any(t => t.TagId == tagId));
 
-        public AnalyticsFiltersDTO BuildFilters() => new()
+        public AnalyticsFiltersDto BuildFilters() => new()
         {
             Categories = Items
                 .GroupBy(i => new { i.CategoryId, i.CategoryName })
-                .Select(g => new AnalyticsFilterOptionDTO { Id = g.Key.CategoryId, Name = g.Key.CategoryName })
+                .Select(g => new AnalyticsFilterOptionDto { Id = g.Key.CategoryId, Name = g.Key.CategoryName })
                 .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList(),
             Tags = _tagsByItem.Values
@@ -81,14 +81,14 @@ namespace back_end.Services.Analytics
                 return AnalyticsResult<AnalyticsWindow>.Invalid(errorKey, errorMessage);
             }
 
-            AnalyticsLocationDTO? location = null;
+            AnalyticsLocationDto? location = null;
             if (locationId.HasValue)
             {
                 var locId = locationId.Value;
                 location = await context.Locations
                     .AsNoTracking()
                     .Where(l => l.Location_Id == locId)
-                    .Select(l => new AnalyticsLocationDTO { Id = l.Location_Id, Name = l.Name })
+                    .Select(l => new AnalyticsLocationDto { Id = l.Location_Id, Name = l.Name })
                     .FirstOrDefaultAsync();
 
                 if (location == null)
@@ -137,7 +137,7 @@ namespace back_end.Services.Analytics
                     .Select(t => new
                     {
                         t.Menu_item_id,
-                        Tag = new AnalyticsTagDTO
+                        Tag = new AnalyticsTagDto
                         {
                             TagId = t.Tag_id,
                             Name = t.Tag.tag_name,
@@ -151,7 +151,7 @@ namespace back_end.Services.Analytics
             return new ItemCatalog(items, tagsByItem);
         }
 
-        public static AnalyticsRangeDTO ToRangeDto(ResolvedDateRange period) => new()
+        public static AnalyticsRangeDto ToRangeDto(ResolvedDateRange period) => new()
         {
             Preset = period.Preset.ToString().ToLowerInvariant(),
             From = period.FromLocal.ToString("yyyy-MM-dd"),
@@ -166,15 +166,15 @@ namespace back_end.Services.Analytics
         public static decimal? SecondsPerView(int seconds, int views) =>
             views == 0 ? null : Math.Round((decimal)seconds / views, 1, MidpointRounding.AwayFromZero);
 
-        public static DurationSummaryDTO Durations(IEnumerable<double> seconds)
+        public static DurationSummaryDto Durations(IEnumerable<double> seconds)
         {
             var sorted = seconds.Where(s => s >= 0).OrderBy(s => s).ToList();
-            if (sorted.Count == 0) return new DurationSummaryDTO();
+            if (sorted.Count == 0) return new DurationSummaryDto();
 
             var mid = sorted.Count / 2;
             var median = sorted.Count % 2 == 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 
-            return new DurationSummaryDTO
+            return new DurationSummaryDto
             {
                 Count = sorted.Count,
                 AverageMinutes = ToMinutes(sorted.Average()),

@@ -61,7 +61,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="locationId">Optional location ID to filter sessions by specific location</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of <see cref="DashBoardSessionsDTO"/> objects.
+    /// An <see cref="IActionResult"/> containing a collection of <see cref="DashBoardSessionsDto"/> objects.
     /// Returns HTTP 200 (OK) with the list of active sessions on success.
     /// Returns HTTP 404 (Not Found) if no active sessions exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -89,7 +89,7 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpGet("sessions")]
-    [ProducesResponseType(typeof(List<DashBoardSessionsDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<DashBoardSessionsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDashboardSessions([FromQuery] int? locationId)
@@ -124,7 +124,7 @@ namespace back_end.Controllers
           return NoContent();
         }
 
-        var dashboardSessions = new List<DashBoardSessionsDTO>();
+        var dashboardSessions = new List<DashBoardSessionsDto>();
         foreach (var session in sessions)
         {
           bool hasOpenBill = session.Bills.Any(b => b.Status == BillStatus.Open);
@@ -132,7 +132,7 @@ namespace back_end.Controllers
 
           var activeParticipants = session.Participants.Count(p => p.Left_At == null);
 
-          var dashboardSession = new DashBoardSessionsDTO
+          var dashboardSession = new DashBoardSessionsDto
           {
             Session_Id = session.Session_Id,
             Menu_Id = session.Menu_Id,
@@ -144,7 +144,7 @@ namespace back_end.Controllers
             Table_Numbers = GetTableNumbers(session),
             Seat_Count = BillLinks.TableCapacity(session),
             Active_Participants = activeParticipants,
-            Bills = session.Bills.Select(b => new DashBoardBillDTO
+            Bills = session.Bills.Select(b => new DashBoardBillDto
             {
               Bill_Id = b.Bill_Id,
               Bill_Name = b.Bill_Name,
@@ -164,7 +164,7 @@ namespace back_end.Controllers
             People = session.Participants
                 .Where(p => p.Left_At == null)
                 .OrderBy(p => p.Joined_At)
-                .Select(p => new DashBoardPersonDTO { Participant_Id = p.Participant_Id, User_Name = p.User_Name, Bill_Id = p.Bill_Id })
+                .Select(p => new DashBoardPersonDto { Participant_Id = p.Participant_Id, User_Name = p.User_Name, Bill_Id = p.Bill_Id })
                 .ToList(),
             Bill_Count = session.Bills.Count(),
             Is_Closable = isClosable
@@ -185,7 +185,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="locationId">Optional location ID to filter statistics by specific location</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing a <see cref="DashBoardSummaryDTO"/> object with summary statistics.
+    /// An <see cref="IActionResult"/> containing a <see cref="DashBoardSummaryDto"/> object with summary statistics.
     /// Returns HTTP 200 (OK) with the dashboard summary on success.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
@@ -209,7 +209,7 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpGet("summary")]
-    [ProducesResponseType(typeof(DashBoardSummaryDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(DashBoardSummaryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDashboardSummary([FromQuery] int? locationId)
     {
@@ -284,7 +284,7 @@ namespace back_end.Controllers
           locationName = location?.Name;
         }
 
-        var summary = new DashBoardSummaryDTO
+        var summary = new DashBoardSummaryDto
         {
           Location_Id = locationId,
           Location_Name = locationName,

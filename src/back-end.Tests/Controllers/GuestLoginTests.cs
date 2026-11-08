@@ -125,7 +125,7 @@ public class GuestLoginTests : IDisposable
                     },
                 },
             };
-            await sessions.JoinTableSession(new JoinTableSessionDTO { Table_Number = 1, Location_Id = 1 });
+            await sessions.JoinTableSession(new JoinTableSessionDto { Table_Number = 1, Location_Id = 1 });
         }
 
         var participants = await _context.SessionParticipants.Where(p => p.Session_Id == 7).ToListAsync();
@@ -144,7 +144,7 @@ public class GuestLoginTests : IDisposable
         var customers = new CustomerController(_context, new Mock<ILogger<CustomerController>>().Object);
         var result = await customers.ListCustomers();
 
-        var list = (result.Result as OkObjectResult)!.Value as IEnumerable<UserResponseDTO>;
+        var list = (result.Result as OkObjectResult)!.Value as IEnumerable<UserResponseDto>;
         list!.Select(c => c.Email).Should().Equal("mia@example.com");
     }
 }

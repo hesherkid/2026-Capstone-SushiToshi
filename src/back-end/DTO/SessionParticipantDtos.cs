@@ -4,7 +4,7 @@ using back_end.domain;
 
 namespace back_end.DTO.SessionParticipantDTOs
 {
-    public class SessionParticipantResponseDTO
+    public class SessionParticipantResponseDto
     {
         [JsonPropertyName("participant")]
         public int Participant_Id { get; set; }
@@ -21,7 +21,7 @@ namespace back_end.DTO.SessionParticipantDTOs
     }
 
     // A bill at the table, as a guest choosing one sees it: names and party size only, no totals
-    public class TableBillChoiceDTO
+    public class TableBillChoiceDto
     {
         [JsonPropertyName("bill_id")]
         public int Bill_Id { get; set; }
@@ -39,7 +39,7 @@ namespace back_end.DTO.SessionParticipantDTOs
     }
 
     // The guest's own bill: also its counts by kind of guest, so they can update them
-    public class MyBillDTO : TableBillChoiceDTO
+    public class MyBillDto : TableBillChoiceDto
     {
         [JsonPropertyName("adult_count")]
         public int Adult_Count { get; set; }
@@ -54,11 +54,11 @@ namespace back_end.DTO.SessionParticipantDTOs
         public bool Counts_Locked { get; set; }
     }
 
-    public class MyBillResponseDTO
+    public class MyBillResponseDto
     {
         // The bill this guest is on, or null if they still need to pick or start one
         [JsonPropertyName("my_bill")]
-        public MyBillDTO? My_Bill { get; set; }
+        public MyBillDto? My_Bill { get; set; }
 
         // Why they can't move to another bill themselves (staff can), or null if they can
         [JsonPropertyName("change_blocked_reason")]
@@ -66,10 +66,10 @@ namespace back_end.DTO.SessionParticipantDTOs
 
         // The table's open bills they could join
         [JsonPropertyName("open_bills")]
-        public List<TableBillChoiceDTO> Open_Bills { get; set; } = new();
+        public List<TableBillChoiceDto> Open_Bills { get; set; } = new();
     }
 
-    public class ChooseBillDTO
+    public class ChooseBillDto
     {
         [Required]
         [JsonPropertyName("bill_id")]
@@ -77,7 +77,7 @@ namespace back_end.DTO.SessionParticipantDTOs
     }
 
     // Staff moving someone at the table onto another bill
-    public class MoveGuestDTO
+    public class MoveGuestDto
     {
         [Required]
         [JsonPropertyName("bill_id")]
@@ -99,7 +99,7 @@ namespace back_end.DTO.SessionParticipantDTOs
     }
 
     // Staff merging one bill into another at the same table
-    public class MergeBillDTO
+    public class MergeBillDto
     {
         [Required]
         [JsonPropertyName("into_bill_id")]
@@ -107,14 +107,14 @@ namespace back_end.DTO.SessionParticipantDTOs
     }
 
     // Staff locking a bill's guest counts so guests can't change them, or unlocking them
-    public class LockGuestCountsDTO
+    public class LockGuestCountsDto
     {
         [JsonPropertyName("locked")]
         public bool Locked { get; set; }
     }
 
     // New guest counts for a bill
-    public class UpdateGuestCountsDTO
+    public class UpdateGuestCountsDto
     {
         [Range(0, 50)]
         [JsonPropertyName("adult_count")]

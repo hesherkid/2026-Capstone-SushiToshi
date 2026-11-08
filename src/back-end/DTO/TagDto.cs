@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace back_end.DTO.TagDTOs
 {
-  public class TagBaseDTO
+  public class TagBaseDto
   {
     [JsonPropertyName("tag_id")]
     public int? Tag_Id { get; set; }
@@ -20,7 +20,7 @@ namespace back_end.DTO.TagDTOs
     public required string Tag_Color { get; set; }
   }
 
-  public class TagUpdateDTO
+  public class TagUpdateDto
   {
     [JsonPropertyName("tag_name")]
     [StringLength(100, ErrorMessage = "Tag name cannot exceed 100 characters")]

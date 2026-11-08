@@ -16,7 +16,7 @@ namespace back_end.Tests.DTO
             Leftover_Fee = 15m,
             Weekend_Days = new() { DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday },
             Rates = Enum.GetValues<PricingDayType>()
-                .Select(d => new PricingRateDTO { Day_Type = d, Adult_Price = 40m })
+                .Select(d => new PricingRateDto { Day_Type = d, Adult_Price = 40m })
                 .ToList(),
         };
 
@@ -111,9 +111,9 @@ namespace back_end.Tests.DTO
         [Fact]
         public void NegativePrice_IsRejected()
         {
-            var rate = new PricingRateDTO { Day_Type = PricingDayType.Weekday, Adult_Price = -1m };
+            var rate = new PricingRateDto { Day_Type = PricingDayType.Weekday, Adult_Price = -1m };
 
-            Errors(rate).Should().Contain(nameof(PricingRateDTO.Adult_Price));
+            Errors(rate).Should().Contain(nameof(PricingRateDto.Adult_Price));
         }
     }
 }

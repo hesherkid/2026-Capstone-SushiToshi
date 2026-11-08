@@ -7,7 +7,7 @@ using back_end.domain.enums;
 
 namespace back_end.DTO.MenuItems
 {
-    public class MenuItemBaseDTO
+    public class MenuItemBaseDto
     {
         [MinLength(1)]
         [MaxLength(255)]
@@ -19,7 +19,7 @@ namespace back_end.DTO.MenuItems
         public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
     }
 
-    // public class MenuItemResponseDTO
+    // public class MenuItemResponseDto
     // {
     //     [JsonPropertyName("name")]
     //     public string? Name { get; set; }
@@ -33,37 +33,37 @@ namespace back_end.DTO.MenuItems
 
     //     public List<int>? Tag_Ids { get; set; }
     // }
-    public class MenuItemCreateDTO : MenuItemBaseDTO
+    public class MenuItemCreateDto : MenuItemBaseDto
     {
         public List<int> Tag_Ids { get; set; } = [];
     }
 
-    public class TagResponseDTO
+    public class TagResponseDto
     {
         [JsonPropertyName("tag_id")]
         public int Tag_Id { get; set; }
         public string Name { get; set; } = string.Empty;
 
     }
-    public class FullTagResponseDTO : TagResponseDTO
+    public class FullTagResponseDto : TagResponseDto
     {
         [JsonPropertyName("color_code")]
         public string Color_Code { get; set; } = string.Empty;
 
     }
 
-    public class MenuItemResponseDTO : MenuItemBaseDTO
+    public class MenuItemResponseDto : MenuItemBaseDto
     {
         [JsonPropertyName("item_id")]
         public int Item_Id { get; set; }
         [JsonPropertyName("tags")]
-        public List<FullTagResponseDTO> Tags { get; set; } = [];
+        public List<FullTagResponseDto> Tags { get; set; } = [];
         [JsonPropertyName("created_at")]
         public DateTime? Created_At { get; set; }
         [JsonPropertyName("updated_at")]
         public DateTime? Updated_At { get; set; }
     }
-    public class MenuItemDetailDTO
+    public class MenuItemDetailDto
     {
         public string Category_Name { get; set; } = string.Empty;
         public List<string> Tag_Names { get; set; } = [];
@@ -71,7 +71,7 @@ namespace back_end.DTO.MenuItems
         public int Total_Orders { get; set; }
 
     }
-    public class MenuItemUpdateDTO{
+    public class MenuItemUpdateDto{
         public string? Name { get; set; }
         public string? Description { get; set; }
         public int? Category_Id { get; set; }

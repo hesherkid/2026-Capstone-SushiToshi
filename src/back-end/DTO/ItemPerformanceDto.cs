@@ -3,37 +3,37 @@ using System.Text.Json.Serialization;
 namespace back_end.DTO.Analytics
 {
 
-    public class ItemPerformanceResponseDTO
+    public class ItemPerformanceResponseDto
     {
         [JsonPropertyName("range")]
-        public AnalyticsRangeDTO Range { get; set; } = new();
+        public AnalyticsRangeDto Range { get; set; } = new();
 
         [JsonPropertyName("location")]
-        public AnalyticsLocationDTO? Location { get; set; }
+        public AnalyticsLocationDto? Location { get; set; }
 
         [JsonPropertyName("summary")]
-        public ItemPerformanceSummaryDTO Summary { get; set; } = new();
+        public ItemPerformanceSummaryDto Summary { get; set; } = new();
 
         [JsonPropertyName("best")]
-        public List<ItemPerformanceDTO> Best { get; set; } = new();
+        public List<ItemPerformanceDto> Best { get; set; } = new();
 
         [JsonPropertyName("worst")]
-        public List<ItemPerformanceDTO> Worst { get; set; } = new();
+        public List<ItemPerformanceDto> Worst { get; set; } = new();
 
         [JsonPropertyName("zero_sales")]
-        public List<ItemPerformanceDTO> ZeroSales { get; set; } = new();
+        public List<ItemPerformanceDto> ZeroSales { get; set; } = new();
 
         [JsonPropertyName("add_ons")]
-        public List<ItemPerformanceDTO> AddOns { get; set; } = new();
+        public List<ItemPerformanceDto> AddOns { get; set; } = new();
 
         [JsonPropertyName("items")]
-        public List<ItemPerformanceDTO> Items { get; set; } = new();
+        public List<ItemPerformanceDto> Items { get; set; } = new();
 
         [JsonPropertyName("filters")]
-        public AnalyticsFiltersDTO Filters { get; set; } = new();
+        public AnalyticsFiltersDto Filters { get; set; } = new();
     }
 
-    public class ItemPerformanceSummaryDTO
+    public class ItemPerformanceSummaryDto
     {
         [JsonPropertyName("total_units_sold")]
         public int TotalUnitsSold { get; set; }
@@ -51,7 +51,7 @@ namespace back_end.DTO.Analytics
         public int ItemsWithZeroSales { get; set; }
     }
 
-    public class ItemPerformanceDTO
+    public class ItemPerformanceDto
     {
         [JsonPropertyName("item_id")]
         public int ItemId { get; set; }
@@ -72,7 +72,7 @@ namespace back_end.DTO.Analytics
         public bool CurrentlyAvailable { get; set; }
 
         [JsonPropertyName("tags")]
-        public List<AnalyticsTagDTO> Tags { get; set; } = new();
+        public List<AnalyticsTagDto> Tags { get; set; } = new();
 
         [JsonPropertyName("units_sold")]
         public int UnitsSold { get; set; }

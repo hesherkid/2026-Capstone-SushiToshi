@@ -48,7 +48,7 @@ namespace back_end.Controllers
         /// - Best and worst never overlap; zero-sales items are returned separately.
         /// </remarks>
         [HttpGet("item-performance")]
-        [ProducesResponseType(typeof(ItemPerformanceResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ItemPerformanceResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

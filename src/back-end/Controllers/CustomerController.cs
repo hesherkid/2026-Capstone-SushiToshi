@@ -31,7 +31,7 @@ namespace back_end.Controllers
         // GET: /api/customers?skip=0&limit=100
         // List customer accounts, newest first. Deleted accounts are left out.
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserResponseDTO>>> ListCustomers(
+        public async Task<ActionResult<IEnumerable<UserResponseDto>>> ListCustomers(
             [FromQuery] int skip = 0,
             [FromQuery] int limit = 100)
         {
@@ -45,7 +45,7 @@ namespace back_end.Controllers
                 .OrderByDescending(u => u.Created_at)
                 .Skip(skip)
                 .Take(limit)
-                .Select(u => new UserResponseDTO
+                .Select(u => new UserResponseDto
                 {
                     User_id = u.User_id,
                     Email = u.Email,
@@ -65,9 +65,9 @@ namespace back_end.Controllers
         // PUT: /api/customers/5/status
         // Deactivate or reactivate a customer. Inactive accounts can't log in.
         [HttpPut("{userId:int}/status")]
-        public async Task<ActionResult<UserResponseDTO>> UpdateCustomerStatus(
+        public async Task<ActionResult<UserResponseDto>> UpdateCustomerStatus(
             int userId,
-            [FromBody] AccountStatusUpdateDTO request)
+            [FromBody] AccountStatusUpdateDto request)
         {
             if (request.Status != UserStatus.Active && request.Status != UserStatus.Inactive)
                 return BadRequest("Status must be Active or Inactive");
@@ -77,7 +77,7 @@ namespace back_end.Controllers
 
             user.Status = request.Status;
             await _context.SaveChangesAsync();
-            return Ok(UserResponseDTO.From(user));
+            return Ok(UserResponseDto.From(user));
         }
 
         // DELETE: /api/customers/5

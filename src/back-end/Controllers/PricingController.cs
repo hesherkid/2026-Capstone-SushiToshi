@@ -280,7 +280,7 @@ namespace back_end.Controllers
             Updated_At = profile.Updated_At,
             Rates = profile.Rates
             .OrderBy(r => r.Day_Type)
-            .Select(r => new PricingRateDTO
+            .Select(r => new PricingRateDto
             {
                 Day_Type = r.Day_Type,
                 Adult_Price = r.Adult_Price,

@@ -151,7 +151,7 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await Dashboard(StaffId, UserRoles.Staff).GetDashboardSessions(locationId: Southside);
 
-        var sessions = (result as OkObjectResult)!.Value as IEnumerable<DashBoardSessionsDTO>;
+        var sessions = (result as OkObjectResult)!.Value as IEnumerable<DashBoardSessionsDto>;
         sessions!.Select(s => s.Location_Id).Should().OnlyContain(id => id == Northside);
     }
 
@@ -160,7 +160,7 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await ServiceRequests(StaffId, UserRoles.Staff).GetAllPendingServiceRequests();
 
-        var requests = (result.Result as OkObjectResult)!.Value as IEnumerable<ServiceRequestResponseDTO>;
+        var requests = (result.Result as OkObjectResult)!.Value as IEnumerable<ServiceRequestResponseDto>;
         requests!.Select(r => r.Session_Id).Should().Equal(NorthSession);
     }
 
@@ -169,7 +169,7 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await ServiceRequests(AdminId, UserRoles.Admin).GetAllPendingServiceRequests();
 
-        var requests = (result.Result as OkObjectResult)!.Value as IEnumerable<ServiceRequestResponseDTO>;
+        var requests = (result.Result as OkObjectResult)!.Value as IEnumerable<ServiceRequestResponseDto>;
         requests!.Select(r => r.Session_Id).Should().BeEquivalentTo(new[] { NorthSession, SouthSession });
     }
 
@@ -178,7 +178,7 @@ public class StaffLocationLockTests : IDisposable
     [Fact]
     public async Task CreateTable_ForbidsStaffAtAnotherLocation()
     {
-        var result = await Tables(StaffId, UserRoles.Staff).CreateTable(new TableEntityCreateDTO
+        var result = await Tables(StaffId, UserRoles.Staff).CreateTable(new TableEntityCreateDto
         {
             Table_Number = 2, Seat_Count = 4, Is_Active = true, Location_Id = Southside,
         });
@@ -192,7 +192,7 @@ public class StaffLocationLockTests : IDisposable
     [Fact]
     public async Task UpdateTable_ForbidsStaffAtAnotherLocation()
     {
-        var result = await Tables(StaffId, UserRoles.Staff).UpdateTable(SouthTable, new TableEntityUpdateDTO { Seat_Count = 8 });
+        var result = await Tables(StaffId, UserRoles.Staff).UpdateTable(SouthTable, new TableEntityUpdateDto { Seat_Count = 8 });
 
         ShouldBeForbidden(result);
         (await _context.Tables.FindAsync(SouthTable))!.seat_count.Should().Be(4);
@@ -201,7 +201,7 @@ public class StaffLocationLockTests : IDisposable
     [Fact]
     public async Task UpdateTable_LetsStaffChangeTheirOwnLocation()
     {
-        var result = await Tables(StaffId, UserRoles.Staff).UpdateTable(NorthTable, new TableEntityUpdateDTO { Seat_Count = 8 });
+        var result = await Tables(StaffId, UserRoles.Staff).UpdateTable(NorthTable, new TableEntityUpdateDto { Seat_Count = 8 });
 
         result.Should().BeOfType<OkObjectResult>();
         (await _context.Tables.FindAsync(NorthTable))!.seat_count.Should().Be(8);
@@ -210,7 +210,7 @@ public class StaffLocationLockTests : IDisposable
     [Fact]
     public async Task UpdateTable_LetsAdminsChangeAnyLocation()
     {
-        var result = await Tables(AdminId, UserRoles.Admin).UpdateTable(SouthTable, new TableEntityUpdateDTO { Seat_Count = 8 });
+        var result = await Tables(AdminId, UserRoles.Admin).UpdateTable(SouthTable, new TableEntityUpdateDto { Seat_Count = 8 });
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -265,7 +265,7 @@ public class StaffLocationLockTests : IDisposable
     public async Task UpdateMenuAssignment_ForbidsStaffChangingEveryLocation()
     {
         var result = await MenuAssignments(StaffId, UserRoles.Staff)
-            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: null);
+            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDto { Price = 9.99m }, locationId: null);
 
         ShouldBeForbidden(result);
     }
@@ -274,7 +274,7 @@ public class StaffLocationLockTests : IDisposable
     public async Task UpdateMenuAssignment_ForbidsStaffAtAnotherLocation()
     {
         var result = await MenuAssignments(StaffId, UserRoles.Staff)
-            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: Southside);
+            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDto { Price = 9.99m }, locationId: Southside);
 
         ShouldBeForbidden(result);
     }

@@ -70,7 +70,7 @@ public class ServiceRequestBySessionTests : IDisposable
     {
         var result = await ControllerAs(SeatedCustomer, "Customer").GetSessionServiceRequest(7);
 
-        var requests = (result as OkObjectResult)!.Value as List<ServiceRequestResponseDTO>;
+        var requests = (result as OkObjectResult)!.Value as List<ServiceRequestResponseDto>;
         requests!.Single().Notes.Should().Be("Ready for bill: Lee");
     }
 

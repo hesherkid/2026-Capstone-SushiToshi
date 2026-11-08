@@ -151,7 +151,7 @@ Content-Type: application/json
 {"token":"RESET_TOKEN","newPassword":"ExampleNewPassword123!"}
 ```
 
-The request bodies bind to `VerifyEmailDTO` and `ResetPasswordDTO` in `src/back-end/DTO/`. Token consumption and user updates should occur within one database transaction.
+The request bodies bind to `VerifyEmailDto` and `ResetPasswordDto` in `src/back-end/DTO/`. Token consumption and user updates should occur within one database transaction.
 
 ## 8. API endpoints and frontend pages
 

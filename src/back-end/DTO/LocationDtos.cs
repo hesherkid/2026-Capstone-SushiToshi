@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace back_end.DTO.LocationDTOs
 {
-    public class LocationBaseDTO
+    public class LocationBaseDto
     {
         [MaxLength(125)]
         [MinLength(1)]
@@ -34,19 +34,19 @@ namespace back_end.DTO.LocationDTOs
 
     }
 
-    public class LocationCreateDTO : LocationBaseDTO
+    public class LocationCreateDto : LocationBaseDto
     {
 
     }
 
-    public class LocationUpdateDTO : LocationBaseDTO { }
+    public class LocationUpdateDto : LocationBaseDto { }
 
-    public class LocationResponseDTO : LocationBaseDTO
+    public class LocationResponseDto : LocationBaseDto
     {
         public int Location_Id { get; set; }
     }
 
-    public class MenuLocationCreateDTO
+    public class MenuLocationCreateDto
     {
         [Required]
         public int Menu_id { get; set; }

@@ -4,7 +4,7 @@ using back_end.domain.enums;
 
 namespace back_end.DTO.PricingDTOs
 {
-    public class PricingRateDTO
+    public class PricingRateDto
     {
         [JsonPropertyName("day_type")]
         public PricingDayType Day_Type { get; set; }
@@ -56,7 +56,7 @@ namespace back_end.DTO.PricingDTOs
 
         [JsonPropertyName("rates")]
         [Required]
-        public List<PricingRateDTO> Rates { get; set; } = new();
+        public List<PricingRateDto> Rates { get; set; } = new();
 
         // Exactly one rate for each day type, and real weekdays only
         // (the enum converter also accepts numbers, so 7 would otherwise get through)
@@ -109,7 +109,7 @@ namespace back_end.DTO.PricingDTOs
         public bool Apply_Holiday_Pricing { get; set; }
 
         [JsonPropertyName("rates")]
-        public List<PricingRateDTO> Rates { get; set; } = new();
+        public List<PricingRateDto> Rates { get; set; } = new();
 
         [JsonPropertyName("updated_at")]
         public DateTime Updated_At { get; set; }

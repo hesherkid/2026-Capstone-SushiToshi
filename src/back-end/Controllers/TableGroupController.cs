@@ -26,7 +26,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpPost]
-    public async Task<IActionResult> CreateTableGroup([FromBody] TableGroupCreateDTO groupData)
+    public async Task<IActionResult> CreateTableGroup([FromBody] TableGroupCreateDto groupData)
     {
       try
       {
@@ -240,7 +240,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpPut("{tableGroupId}")]
-    public async Task<IActionResult> UpdateTableGroup(int tableGroupId, [FromBody] TableGroupUpdateDTO groupData)
+    public async Task<IActionResult> UpdateTableGroup(int tableGroupId, [FromBody] TableGroupUpdateDto groupData)
     {
       try
       {

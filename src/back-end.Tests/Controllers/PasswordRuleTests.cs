@@ -85,7 +85,7 @@ public class PasswordRuleTests : IDisposable
     [Fact]
     public async Task Register_KeepsSurroundingSpacesInThePassword()
     {
-        var result = await _auth.CreateUser(new RegisterDTO
+        var result = await _auth.CreateUser(new RegisterDto
         {
             UserEmail = "sam@example.com",
             UserPassword = " Password1! ",
@@ -105,7 +105,7 @@ public class PasswordRuleTests : IDisposable
     [InlineData("Passwd1 ", true)]
     public async Task Register_RequiresEightCharacters(string password, bool accepted)
     {
-        var result = await _auth.CreateUser(new RegisterDTO
+        var result = await _auth.CreateUser(new RegisterDto
         {
             UserEmail = "sam@example.com",
             UserPassword = password,
@@ -120,7 +120,7 @@ public class PasswordRuleTests : IDisposable
     [Fact]
     public async Task Register_RejectsPasswordsOver200Characters()
     {
-        var result = await _auth.CreateUser(new RegisterDTO
+        var result = await _auth.CreateUser(new RegisterDto
         {
             UserEmail = "sam@example.com",
             UserPassword = new string('a', 201),
@@ -135,7 +135,7 @@ public class PasswordRuleTests : IDisposable
     [Fact]
     public async Task Register_RejectsAPasswordOfOnlyWhitespace()
     {
-        var result = await _auth.CreateUser(new RegisterDTO
+        var result = await _auth.CreateUser(new RegisterDto
         {
             UserEmail = "sam@example.com",
             UserPassword = " \t        ",
@@ -152,8 +152,8 @@ public class PasswordRuleTests : IDisposable
     {
         await AddConfirmedUser("Password1! ");
 
-        var withSpace = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = "Password1! " });
-        var withoutSpace = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = "Password1!" });
+        var withSpace = await _auth.Login(new LoginDto { UserEmail = "sam@example.com", UserPassword = "Password1! " });
+        var withoutSpace = await _auth.Login(new LoginDto { UserEmail = "sam@example.com", UserPassword = "Password1!" });
 
         withSpace.Should().BeOfType<OkObjectResult>();
         withoutSpace.Should().BeOfType<UnauthorizedObjectResult>();
@@ -167,9 +167,9 @@ public class PasswordRuleTests : IDisposable
             .Setup(t => t.FindValidAsync("reset", AuthTokenPurpose.PasswordReset, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AuthActionToken { UserId = user.User_id, Purpose = AuthTokenPurpose.PasswordReset });
 
-        await _auth.ResetPassword(new ResetPasswordDTO { Token = "reset", NewPassword = " NewPassword1! " });
+        await _auth.ResetPassword(new ResetPasswordDto { Token = "reset", NewPassword = " NewPassword1! " });
 
-        var login = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = " NewPassword1! " });
+        var login = await _auth.Login(new LoginDto { UserEmail = "sam@example.com", UserPassword = " NewPassword1! " });
         login.Should().BeOfType<OkObjectResult>();
     }
 
@@ -179,24 +179,24 @@ public class PasswordRuleTests : IDisposable
     [InlineData(8, true)]
     [InlineData(200, true)]
     [InlineData(201, false)]
-    public void PasswordDTOs_AllowEightTo200Characters(int length, bool valid)
+    public void PasswordDtos_AllowEightTo200Characters(int length, bool valid)
     {
         var password = new string('a', length);
 
-        IsValid(new ResetPasswordDTO { Token = "reset", NewPassword = password }).Should().Be(valid);
-        IsValid(new CreateStaffDTO { Email = "sam@example.com", First_name = "Sam", Last_name = "Tanaka", Password = password }).Should().Be(valid);
-        IsValid(new ResetPasswordRequestDTO { New_password = password }).Should().Be(valid);
-        IsValid(new StaffMemberChangePasswordDTO { New_password = password, Current_password = "Current1!" }).Should().Be(valid);
+        IsValid(new ResetPasswordDto { Token = "reset", NewPassword = password }).Should().Be(valid);
+        IsValid(new CreateStaffDto { Email = "sam@example.com", First_name = "Sam", Last_name = "Tanaka", Password = password }).Should().Be(valid);
+        IsValid(new ResetPasswordRequestDto { New_password = password }).Should().Be(valid);
+        IsValid(new StaffMemberChangePasswordDto { New_password = password, Current_password = "Current1!" }).Should().Be(valid);
     }
 
     // [Required] rejects whitespace-only strings; staff create checks this in the controller instead
     [Fact]
-    public void PasswordDTOs_RejectAPasswordOfOnlyWhitespace()
+    public void PasswordDtos_RejectAPasswordOfOnlyWhitespace()
     {
         var password = " \t        ";
 
-        IsValid(new ResetPasswordDTO { Token = "reset", NewPassword = password }).Should().BeFalse();
-        IsValid(new ResetPasswordRequestDTO { New_password = password }).Should().BeFalse();
-        IsValid(new StaffMemberChangePasswordDTO { New_password = password, Current_password = "Current1!" }).Should().BeFalse();
+        IsValid(new ResetPasswordDto { Token = "reset", NewPassword = password }).Should().BeFalse();
+        IsValid(new ResetPasswordRequestDto { New_password = password }).Should().BeFalse();
+        IsValid(new StaffMemberChangePasswordDto { New_password = password, Current_password = "Current1!" }).Should().BeFalse();
     }
 }

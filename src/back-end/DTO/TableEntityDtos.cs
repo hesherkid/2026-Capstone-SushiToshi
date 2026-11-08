@@ -6,7 +6,7 @@ using back_end.domain;
 
 namespace back_end.DTO.TableEntityDTOs
 {
-  public class TableEntityBaseDTO
+  public class TableEntityBaseDto
   {
     [JsonPropertyName("table_number")]
     [Range(0, int.MaxValue)]
@@ -22,12 +22,12 @@ namespace back_end.DTO.TableEntityDTOs
     public int Location_Id { get; set; }
   }
 
-  public class TableEntityCreateDTO : TableEntityBaseDTO
+  public class TableEntityCreateDto : TableEntityBaseDto
   {
 
   }
 
-  public class TableEntityUpdateDTO
+  public class TableEntityUpdateDto
   {
     [JsonPropertyName("table_number")]
     [Range(0, int.MaxValue)]
@@ -41,7 +41,7 @@ namespace back_end.DTO.TableEntityDTOs
     public string? Qr_Code_Url { get; set; }
   }
 
-  public class TableEntityResponseDTO : TableEntityBaseDTO
+  public class TableEntityResponseDto : TableEntityBaseDto
   {
     [JsonPropertyName("table_id")]
     public int Table_Id { get; set; }

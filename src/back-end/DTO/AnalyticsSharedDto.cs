@@ -4,7 +4,7 @@ namespace back_end.DTO.Analytics
 {
     // Shared by the analytics reports (date range, location, tags, filter dropdowns).
 
-    public class AnalyticsRangeDTO
+    public class AnalyticsRangeDto
     {
         [JsonPropertyName("preset")]
         public string Preset { get; set; } = string.Empty;
@@ -22,7 +22,7 @@ namespace back_end.DTO.Analytics
         public string TimeZone { get; set; } = string.Empty;
     }
 
-    public class AnalyticsLocationDTO
+    public class AnalyticsLocationDto
     {
         [JsonPropertyName("id")]
         public int Id { get; set; }
@@ -31,7 +31,7 @@ namespace back_end.DTO.Analytics
         public string Name { get; set; } = string.Empty;
     }
 
-    public class AnalyticsTagDTO
+    public class AnalyticsTagDto
     {
         [JsonPropertyName("tag_id")]
         public int TagId { get; set; }
@@ -43,16 +43,16 @@ namespace back_end.DTO.Analytics
         public string Color { get; set; } = string.Empty;
     }
 
-    public class AnalyticsFiltersDTO
+    public class AnalyticsFiltersDto
     {
         [JsonPropertyName("categories")]
-        public List<AnalyticsFilterOptionDTO> Categories { get; set; } = new();
+        public List<AnalyticsFilterOptionDto> Categories { get; set; } = new();
 
         [JsonPropertyName("tags")]
-        public List<AnalyticsTagDTO> Tags { get; set; } = new();
+        public List<AnalyticsTagDto> Tags { get; set; } = new();
     }
 
-    public class AnalyticsFilterOptionDTO
+    public class AnalyticsFilterOptionDto
     {
         [JsonPropertyName("id")]
         public int Id { get; set; }
@@ -61,7 +61,7 @@ namespace back_end.DTO.Analytics
         public string Name { get; set; } = string.Empty;
     }
 
-    public class DurationSummaryDTO
+    public class DurationSummaryDto
     {
         [JsonPropertyName("count")]
         public int Count { get; set; }

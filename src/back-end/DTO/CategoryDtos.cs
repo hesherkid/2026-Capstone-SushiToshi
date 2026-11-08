@@ -4,10 +4,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace back_end.DTO.Category
 {
-    public class CategoryDTOs
+    public class CategoryDtos
     {
-        public record CategoryCreateDTO(string Name, string Description);
-        public record CategoryUpdateDTO(string Name, string Description);
+        public record CategoryCreateDto(string Name, string Description);
+        public record CategoryUpdateDto(string Name, string Description);
     }
 
     public class CreateCategory

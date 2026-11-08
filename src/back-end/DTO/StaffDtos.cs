@@ -8,7 +8,7 @@ using back_end.domain.enums;
 
 namespace back_end.DTO.StaffDTOs
 {
-    public class StaffResponseDTO
+    public class StaffResponseDto
     {
         [JsonPropertyName("created_at")]
         public DateTime Created_At { get; set; }
@@ -50,7 +50,7 @@ namespace back_end.DTO.StaffDTOs
         public List<string> Locations { get; set; } = new();
     }
 
-    public class StaffUserUpdateDTO
+    public class StaffUserUpdateDto
     {
         [MaxLength(255), EmailAddress]
         [JsonPropertyName("email")]
@@ -72,7 +72,7 @@ namespace back_end.DTO.StaffDTOs
         public string? Location { get; set; }
     }
 
-    public class CreateStaffDTO
+    public class CreateStaffDto
     {
         [MaxLength(255), EmailAddress]
         [JsonPropertyName("email")]
@@ -105,7 +105,7 @@ namespace back_end.DTO.StaffDTOs
         public List<int>? Location_Ids { get; set; }
     }
 
-    public class StaffMemberChangePasswordDTO
+    public class StaffMemberChangePasswordDto
     {
         [Required, MinLength(8), MaxLength(200)]
         [JsonPropertyName("password")]
@@ -116,7 +116,7 @@ namespace back_end.DTO.StaffDTOs
         public string Current_password { get; set; } = string.Empty;
     }
     
-    public class StaffMemberUpdateDTO
+    public class StaffMemberUpdateDto
     {
                 [JsonPropertyName("created_at")]
         public DateTime Created_At { get; set; }
@@ -152,22 +152,22 @@ namespace back_end.DTO.StaffDTOs
     }
 
     // The signed-in user's locations, for the app bar's location picker
-    public class MyLocationsDTO
+    public class MyLocationsDto
     {
         // The location they're working at now; null when they have none
         [JsonPropertyName("current_location")]
-        public LocationOptionDTO? Current_Location { get; set; }
+        public LocationOptionDto? Current_Location { get; set; }
 
         // Staff: the locations an admin assigned them. Admins: every location
         [JsonPropertyName("locations")]
-        public List<LocationOptionDTO> Locations { get; set; } = new();
+        public List<LocationOptionDto> Locations { get; set; } = new();
 
         // Admins can work at any location
         [JsonPropertyName("all_locations")]
         public bool All_Locations { get; set; }
     }
 
-    public class LocationOptionDTO
+    public class LocationOptionDto
     {
         [JsonPropertyName("location_id")]
         public int Location_Id { get; set; }

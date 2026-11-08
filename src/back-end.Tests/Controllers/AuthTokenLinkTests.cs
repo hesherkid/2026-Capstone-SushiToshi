@@ -69,7 +69,7 @@ public class AuthTokenLinkTests : IDisposable
     {
         TokenFoundButConsumed(true);
 
-        var result = await _auth.VerifyEmail(new VerifyEmailDTO { Token = "link" });
+        var result = await _auth.VerifyEmail(new VerifyEmailDto { Token = "link" });
 
         result.Should().BeOfType<OkObjectResult>();
         (await _context.Users.SingleAsync()).Is_email_confirmed.Should().BeTrue();
@@ -81,7 +81,7 @@ public class AuthTokenLinkTests : IDisposable
     {
         TokenFoundButConsumed(false);
 
-        var result = await _auth.VerifyEmail(new VerifyEmailDTO { Token = "link" });
+        var result = await _auth.VerifyEmail(new VerifyEmailDto { Token = "link" });
 
         result.Should().BeOfType<BadRequestObjectResult>();
         (await _context.Users.SingleAsync()).Is_email_confirmed.Should().BeFalse();
@@ -92,7 +92,7 @@ public class AuthTokenLinkTests : IDisposable
     {
         TokenFoundButConsumed(false);
 
-        var result = await _auth.ResetPassword(new ResetPasswordDTO { Token = "link", NewPassword = "NewPassword1!" });
+        var result = await _auth.ResetPassword(new ResetPasswordDto { Token = "link", NewPassword = "NewPassword1!" });
 
         result.Should().BeOfType<BadRequestObjectResult>();
         BCryptNet.Verify("OldPassword1!", (await _context.Users.SingleAsync()).Password_hash).Should().BeTrue();

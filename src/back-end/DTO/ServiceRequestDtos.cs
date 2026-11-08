@@ -6,13 +6,13 @@ using back_end.domain.enums;
 
 namespace back_end.DTO.ServiceRequestDTOs
 {
-    public class ServiceRequestCreateDTO
+    public class ServiceRequestCreateDto
     {
         [JsonPropertyName("notes")]
         public string? Notes { get; set; }
     }
 
-    public class ServiceRequestResponseDTO
+    public class ServiceRequestResponseDto
     {
         [JsonPropertyName("request_id")]
         public int Request_Id { get; set; }

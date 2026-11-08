@@ -18,7 +18,7 @@ namespace back_end.Services.Analytics
 
     public interface IBrowsingBehaviorService
     {
-        Task<AnalyticsResult<BrowsingBehaviorResponseDTO>> GetAsync(BrowsingBehaviorQuery query);
+        Task<AnalyticsResult<BrowsingBehaviorResponseDto>> GetAsync(BrowsingBehaviorQuery query);
     }
 
     public sealed class BrowsingBehaviorService : IBrowsingBehaviorService
@@ -32,20 +32,20 @@ namespace back_end.Services.Analytics
             _clock = clock;
         }
 
-        public async Task<AnalyticsResult<BrowsingBehaviorResponseDTO>> GetAsync(BrowsingBehaviorQuery query)
+        public async Task<AnalyticsResult<BrowsingBehaviorResponseDto>> GetAsync(BrowsingBehaviorQuery query)
         {
-            var topError = AnalyticsQueries.ValidateTop<BrowsingBehaviorResponseDTO>(query.Top);
+            var topError = AnalyticsQueries.ValidateTop<BrowsingBehaviorResponseDto>(query.Top);
             if (topError != null) return topError;
 
             if (query.MinViews < 1 || query.MinViews > ViewTrackingRules.MaxMinViews)
             {
-                return AnalyticsResult<BrowsingBehaviorResponseDTO>.Invalid(
+                return AnalyticsResult<BrowsingBehaviorResponseDto>.Invalid(
                     "minViews", $"minViews must be between 1 and {ViewTrackingRules.MaxMinViews}");
             }
 
             var windowResult = await AnalyticsQueries.ResolveWindowAsync(
                 _context, _clock, query.Range, query.From, query.To, query.LocationId);
-            if (!windowResult.IsOk) return windowResult.AsError<BrowsingBehaviorResponseDTO>();
+            if (!windowResult.IsOk) return windowResult.AsError<BrowsingBehaviorResponseDto>();
 
             var (period, _, location) = windowResult.Value!;
             var top = query.Top;
@@ -111,7 +111,7 @@ namespace back_end.Services.Analytics
                     var views = pairs.Sum(p => p.Views);
                     var seconds = pairs.Sum(p => p.Seconds);
 
-                    return new BrowsingItemDTO
+                    return new BrowsingItemDto
                     {
                         ItemId = i.ItemId,
                         Name = i.Name,
@@ -164,11 +164,11 @@ namespace back_end.Services.Analytics
             var totalViews = includedPairs.Sum(p => p.Views);
             var totalSeconds = includedPairs.Sum(p => p.Seconds);
 
-            return AnalyticsResult<BrowsingBehaviorResponseDTO>.Ok(new BrowsingBehaviorResponseDTO
+            return AnalyticsResult<BrowsingBehaviorResponseDto>.Ok(new BrowsingBehaviorResponseDto
             {
                 Range = AnalyticsQueries.ToRangeDto(period),
                 Location = location,
-                Summary = new BrowsingSummaryDTO
+                Summary = new BrowsingSummaryDto
                 {
                     TotalViews = totalViews,
                     ShortViewsExcluded = rows.Sum(r => r.ShortViews),

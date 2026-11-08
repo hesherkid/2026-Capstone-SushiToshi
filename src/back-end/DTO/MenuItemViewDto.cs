@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace back_end.DTO.MenuItemViewDTOs
 {
-    public class MenuItemViewCreateDTO
+    public class MenuItemViewCreateDto
     {
         [JsonPropertyName("session_id")]
         [Range(1, int.MaxValue, ErrorMessage = "session_id must be a positive number.")]

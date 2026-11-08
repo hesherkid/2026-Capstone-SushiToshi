@@ -2,7 +2,7 @@
 
 namespace back_end.DTO.Auth;
 
-public sealed class ResetPasswordDTO
+public sealed class ResetPasswordDto
 {
     [Required]
     public string Token { get; set; } = "";

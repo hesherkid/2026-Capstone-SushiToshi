@@ -3,7 +3,7 @@ using back_end.domain.enums;
 
 namespace back_end.DTO.DashBoardDTOs
 {
-    public class DashBoardBillDTO
+    public class DashBoardBillDto
     {
         public int Bill_Id { get; set; }
         public string Bill_Name { get; set; } = string.Empty;
@@ -26,14 +26,14 @@ namespace back_end.DTO.DashBoardDTOs
     }
 
     // Someone seated at the table, and the bill they're on (null: not on one yet)
-    public class DashBoardPersonDTO
+    public class DashBoardPersonDto
     {
         public int Participant_Id { get; set; }
         public string? User_Name { get; set; }
         public int? Bill_Id { get; set; }
     }
 
-    public class DashBoardSessionsDTO
+    public class DashBoardSessionsDto
     {
         public int Session_Id { get; set; }
         public int Menu_Id { get; set; }
@@ -47,14 +47,14 @@ namespace back_end.DTO.DashBoardDTOs
         public int Seat_Count { get; set; }
         public int Active_Participants { get; set; }
 
-        public List<DashBoardBillDTO> Bills { get; set; } = new List<DashBoardBillDTO>();
+        public List<DashBoardBillDto> Bills { get; set; } = new List<DashBoardBillDto>();
         // Everyone still seated, so staff can move them between bills
-        public List<DashBoardPersonDTO> People { get; set; } = new List<DashBoardPersonDTO>();
+        public List<DashBoardPersonDto> People { get; set; } = new List<DashBoardPersonDto>();
         public int Bill_Count { get; set; }
         public bool Is_Closable { get; set; }
     }
 
-    public class DashBoardSummaryDTO
+    public class DashBoardSummaryDto
     {
         public int? Location_Id { get; set; }
         public string? Location_Name { get; set; }

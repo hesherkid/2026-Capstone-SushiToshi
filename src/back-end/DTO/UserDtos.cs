@@ -6,7 +6,7 @@ using back_end.domain.Entities;
 
 namespace back_end.DTO.UserDTOs
 {
-    public class UserCreateDTO
+    public class UserCreateDto
     {
         [Required, MaxLength(255), EmailAddress]
         public string Email { get; set; } = string.Empty;
@@ -24,7 +24,7 @@ namespace back_end.DTO.UserDTOs
         public UserStatus Status { get; set; } = UserStatus.Active;
     }
 
-    public class UserUpdateDTO
+    public class UserUpdateDto
     {
         [MaxLength(255), EmailAddress]
         public string? Email { get; set; }
@@ -42,7 +42,7 @@ namespace back_end.DTO.UserDTOs
         public string? New_password { get; set; }
     }
 
-    public class UserResponseDTO
+    public class UserResponseDto
     {
         public int User_id { get; set; }
         public string Email { get; set; } = string.Empty;
@@ -54,7 +54,7 @@ namespace back_end.DTO.UserDTOs
         public DateTime? Last_Interaction_at { get; set; }
         public bool Is_email_confirmed { get; set; }
 
-        public static UserResponseDTO From(User u) => new UserResponseDTO
+        public static UserResponseDto From(User u) => new UserResponseDto
         {
             User_id = u.User_id,
             Email = u.Email,
@@ -68,16 +68,16 @@ namespace back_end.DTO.UserDTOs
         };
     }
 
-    public class PagedUserResponseDTO
+    public class PagedUserResponseDto
     {
         public int page { get; set; }
         public int page_size { get; set; }
         public int total { get; set; }
-        public List<UserResponseDTO> items { get; set; } = new();
+        public List<UserResponseDto> items { get; set; } = new();
     }
 
 
-    public class PasswordChangeDTO
+    public class PasswordChangeDto
     {
         [Required, MinLength(8), MaxLength(200)]
         public string Current_password { get; set; } = string.Empty;
@@ -86,14 +86,14 @@ namespace back_end.DTO.UserDTOs
         public string New_password { get; set; } = string.Empty;
     }
 
-    public class ResetPasswordRequestDTO
+    public class ResetPasswordRequestDto
     {
         [Required, MinLength(8), MaxLength(200)]
         public string New_password { get; set; } = string.Empty;
     }
 
     // Admin deactivate/reactivate for staff and customer accounts (Active or Inactive)
-    public class AccountStatusUpdateDTO
+    public class AccountStatusUpdateDto
     {
         [Required]
         public UserStatus Status { get; set; }

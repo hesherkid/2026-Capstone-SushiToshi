@@ -427,7 +427,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, UpdateGuestCountsDTO counts)
+    public async Task<IActionResult> UpdateGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, UpdateGuestCountsDto counts)
     {
       try
       {
@@ -508,7 +508,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> LockGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, LockGuestCountsDTO request)
+    public async Task<IActionResult> LockGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, LockGuestCountsDto request)
     {
       try
       {
@@ -571,7 +571,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> MergeBill([FromQuery(Name = "_session_id")] int sessionId, int billId, MergeBillDTO request)
+    public async Task<IActionResult> MergeBill([FromQuery(Name = "_session_id")] int sessionId, int billId, MergeBillDto request)
     {
       try
       {

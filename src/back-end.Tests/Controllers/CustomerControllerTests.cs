@@ -44,7 +44,7 @@ public class CustomerControllerTests : IDisposable
     {
         var result = await _controller.ListCustomers();
 
-        var customers = (result.Result as OkObjectResult)!.Value as IEnumerable<UserResponseDTO>;
+        var customers = (result.Result as OkObjectResult)!.Value as IEnumerable<UserResponseDto>;
         customers!.Select(c => c.User_id).Should().BeEquivalentTo(new[] { 1, 2 });
     }
 
@@ -53,7 +53,7 @@ public class CustomerControllerTests : IDisposable
     [InlineData(2, UserStatus.Active)]
     public async Task UpdateCustomerStatus_DeactivatesAndReactivates(int userId, UserStatus status)
     {
-        var result = await _controller.UpdateCustomerStatus(userId, new AccountStatusUpdateDTO { Status = status });
+        var result = await _controller.UpdateCustomerStatus(userId, new AccountStatusUpdateDto { Status = status });
 
         result.Result.Should().BeOfType<OkObjectResult>();
         (await _context.Users.FindAsync(userId))!.Status.Should().Be(status);
@@ -64,7 +64,7 @@ public class CustomerControllerTests : IDisposable
     [InlineData(UserStatus.Suspended)]
     public async Task UpdateCustomerStatus_RejectsOtherStatuses(UserStatus status)
     {
-        var result = await _controller.UpdateCustomerStatus(1, new AccountStatusUpdateDTO { Status = status });
+        var result = await _controller.UpdateCustomerStatus(1, new AccountStatusUpdateDto { Status = status });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
         (await _context.Users.FindAsync(1))!.Status.Should().Be(UserStatus.Active);
@@ -76,7 +76,7 @@ public class CustomerControllerTests : IDisposable
     [InlineData(99)]  // doesn't exist
     public async Task UpdateCustomerStatus_OnlyAppliesToCustomers(int userId)
     {
-        var result = await _controller.UpdateCustomerStatus(userId, new AccountStatusUpdateDTO { Status = UserStatus.Inactive });
+        var result = await _controller.UpdateCustomerStatus(userId, new AccountStatusUpdateDto { Status = UserStatus.Inactive });
 
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }

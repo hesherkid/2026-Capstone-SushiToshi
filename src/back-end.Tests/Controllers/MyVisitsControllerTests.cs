@@ -145,10 +145,10 @@ public class MyVisitsControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    private async Task<List<PastVisitDTO>> Visits()
+    private async Task<List<PastVisitDto>> Visits()
     {
         var result = await _controller.GetPastVisits();
-        return (List<PastVisitDTO>)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
+        return (List<PastVisitDto>)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
     }
 
     [Fact]

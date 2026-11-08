@@ -39,8 +39,8 @@ namespace back_end.Controllers
         // Create a new staff or admin user by Admin only.
         [HttpPost]
         [Authorize(Policy = "adminOnly")]
-        public async Task<ActionResult<UserResponseDTO>> CreateStaff(
-            [FromBody] CreateStaffDTO userData
+        public async Task<ActionResult<UserResponseDto>> CreateStaff(
+            [FromBody] CreateStaffDto userData
         )
         {
             Locations location = new();
@@ -110,7 +110,7 @@ namespace back_end.Controllers
         // List all staff and/or admin users with pagination.
         [HttpGet]
         [Authorize(Policy = "staffOnly")]
-        public async Task<ActionResult<IEnumerable<UserResponseDTO>>> ListStaff(
+        public async Task<ActionResult<IEnumerable<UserResponseDto>>> ListStaff(
             [FromQuery] UserRoles? role = null,
             [FromQuery] int skip = 0,
             [FromQuery] int limit = 100)
@@ -132,7 +132,7 @@ namespace back_end.Controllers
                 .OrderByDescending(u => u.Created_at)
                 .Skip(skip)
                 .Take(limit)
-                .Select(u => new StaffResponseDTO
+                .Select(u => new StaffResponseDto
                 {
                     Created_At = u.Created_at,
                     Email = u.Email,
@@ -158,7 +158,7 @@ namespace back_end.Controllers
         // Get details of a specific staff/admin user.
         [HttpGet("{userId:int}")]
         [Authorize(Policy = "staffOnly")]
-        public async Task<ActionResult<UserResponseDTO>> GetStaff(int userId)
+        public async Task<ActionResult<UserResponseDto>> GetStaff(int userId)
         {
             var u = await _context.Users.AsNoTracking()
                 .Where(x => x.User_id == userId &&
@@ -173,7 +173,7 @@ namespace back_end.Controllers
         // Update a staff/admin user's details.
         [HttpPut("{userId:int}")]
         [Authorize(Policy = "adminOnly")]
-        public async Task<ActionResult<UserResponseDTO>> UpdateStaff(int userId, [FromBody] StaffMemberUpdateDTO userData)
+        public async Task<ActionResult<UserResponseDto>> UpdateStaff(int userId, [FromBody] StaffMemberUpdateDto userData)
         {
             // Staff and admin accounts only, so this can't turn a customer into staff
             var user = await FindStaff(userId);
@@ -225,7 +225,7 @@ namespace back_end.Controllers
         // Deactivate or reactivate a staff/admin account by Admin only. Inactive accounts can't log in.
         [HttpPut("{userId:int}/status")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserResponseDTO>> UpdateStaffStatus(int userId, [FromBody] AccountStatusUpdateDTO request)
+        public async Task<ActionResult<UserResponseDto>> UpdateStaffStatus(int userId, [FromBody] AccountStatusUpdateDto request)
         {
             if (request.Status != UserStatus.Active && request.Status != UserStatus.Inactive)
                 return BadRequest("Status must be Active or Inactive");
@@ -281,7 +281,7 @@ namespace back_end.Controllers
         // Change a staff user's password by Admin only.
         [HttpPost("{userId:int}/change-password")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserResponseDTO>> ChangeStaffPassword(int userId, [FromBody] StaffMemberChangePasswordDTO passwordData)
+        public async Task<ActionResult<UserResponseDto>> ChangeStaffPassword(int userId, [FromBody] StaffMemberChangePasswordDto passwordData)
         {
             var user = await _context.Users
                 .Where(x => x.User_id == userId &&
@@ -304,7 +304,7 @@ namespace back_end.Controllers
         // Reset a staff user's password by Admin only.
         [HttpPost("{userId:int}/reset-password")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserResponseDTO>> ResetStaffPassword(int userId, [FromBody] ResetPasswordRequestDTO request)
+        public async Task<ActionResult<UserResponseDto>> ResetStaffPassword(int userId, [FromBody] ResetPasswordRequestDto request)
         {
             var user = await _context.Users
                 .Where(x => x.User_id == userId &&
@@ -398,7 +398,7 @@ namespace back_end.Controllers
         // The signed-in user's current location, and the locations they can switch between
         [HttpGet("my-locations")]
         [Authorize(Roles = "Admin,Staff")]
-        public async Task<ActionResult<MyLocationsDTO>> GetMyLocations()
+        public async Task<ActionResult<MyLocationsDto>> GetMyLocations()
         {
             if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
                 return BadRequest("Issue in processing a User location request.");
@@ -412,24 +412,24 @@ namespace back_end.Controllers
             var locations = allLocations
                 ? await _context.Locations
                     .OrderBy(l => l.Location_Id)
-                    .Select(l => new LocationOptionDTO { Location_Id = l.Location_Id, Name = l.Name })
+                    .Select(l => new LocationOptionDto { Location_Id = l.Location_Id, Name = l.Name })
                     .ToListAsync()
                 : await _context.StaffLocations
                     .Where(sl => sl.User_Id == userId)
                     .OrderBy(sl => sl.Location_Id)
-                    .Select(sl => new LocationOptionDTO { Location_Id = sl.Location_Id, Name = sl.Location.Name })
+                    .Select(sl => new LocationOptionDto { Location_Id = sl.Location_Id, Name = sl.Location.Name })
                     .ToListAsync();
 
-            return Ok(new MyLocationsDTO
+            return Ok(new MyLocationsDto
             {
                 Current_Location = user.PrimaryLocation is null
                     ? null
-                    : new LocationOptionDTO { Location_Id = user.PrimaryLocation.Location_Id, Name = user.PrimaryLocation.Name },
+                    : new LocationOptionDto { Location_Id = user.PrimaryLocation.Location_Id, Name = user.PrimaryLocation.Name },
                 Locations = locations,
                 All_Locations = allLocations,
             });
         }
 
-        private static UserResponseDTO ToResponse(User u) => UserResponseDTO.From(u);
+        private static UserResponseDto ToResponse(User u) => UserResponseDto.From(u);
     }
 }

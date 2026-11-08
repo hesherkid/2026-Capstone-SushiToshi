@@ -40,7 +40,7 @@ namespace back_end.Controllers
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="requestData">The service request data containing notes and other details</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing the created <see cref="ServiceRequestResponseDTO"/> object.
+    /// An <see cref="IActionResult"/> containing the created <see cref="ServiceRequestResponseDto"/> object.
     /// Returns HTTP 200 (OK) with the created service request on success.
     /// Returns HTTP 400 (Bad Request) if the user is not authorized or not a participant in the session.
     /// Returns HTTP 404 (Not Found) if the session doesn't exist or has ended.
@@ -69,7 +69,7 @@ namespace back_end.Controllers
     [HttpPost("{sessionId}")]
     public async Task<IActionResult> CreateServiceRequest(
         int sessionId,
-        ServiceRequestCreateDTO requestData
+        ServiceRequestCreateDto requestData
     )
     {
       try
@@ -159,7 +159,7 @@ namespace back_end.Controllers
         // Reload to get table navigation property
         await _context.Entry(serviceRequest).Reference(sr => sr.Table).LoadAsync();
 
-        return Ok(new ServiceRequestResponseDTO
+        return Ok(new ServiceRequestResponseDto
         {
           Request_Id = serviceRequest.request_id,
           Session_Id = serviceRequest.Session_Id,
@@ -238,7 +238,7 @@ namespace back_end.Controllers
 
         await _context.SaveChangesAsync();
 
-        return Ok(new ServiceRequestResponseDTO
+        return Ok(new ServiceRequestResponseDto
         {
           Request_Id = serviceRequest.request_id,
           Session_Id = serviceRequest.Session_Id,
@@ -265,7 +265,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the session</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of <see cref="ServiceRequestResponseDTO"/> objects.
+    /// An <see cref="IActionResult"/> containing a collection of <see cref="ServiceRequestResponseDto"/> objects.
     /// Returns HTTP 200 (OK) with the list of pending service requests on success.
     /// Returns HTTP 404 (Not Found) if the session doesn't exist or no pending requests are found.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -307,7 +307,7 @@ namespace back_end.Controllers
             .Where(sr => sr.Session_Id == sessionId && sr.Status == ServiceRequestStatus.Pending)
             .ToListAsync();
 
-        var response = sessionRequestList.Select(sr => new ServiceRequestResponseDTO
+        var response = sessionRequestList.Select(sr => new ServiceRequestResponseDto
         {
           Request_Id = sr.request_id,
           Session_Id = sr.Session_Id,
@@ -370,7 +370,7 @@ namespace back_end.Controllers
     //Get all pending service requests
     [Authorize(Roles = "Admin,Staff")]
     [HttpGet("pending")]
-    public async Task<ActionResult<IEnumerable<ServiceRequestResponseDTO>>> GetAllPendingServiceRequests()
+    public async Task<ActionResult<IEnumerable<ServiceRequestResponseDto>>> GetAllPendingServiceRequests()
     {
       try
       {
@@ -387,7 +387,7 @@ namespace back_end.Controllers
             .OrderBy(sr => sr.Created_At)
             .ToListAsync();
 
-        var response = pendingRequests.Select(sr => new ServiceRequestResponseDTO
+        var response = pendingRequests.Select(sr => new ServiceRequestResponseDto
         {
           Request_Id = sr.request_id,
           Session_Id = sr.Session_Id,

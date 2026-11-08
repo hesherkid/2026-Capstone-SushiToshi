@@ -35,7 +35,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="itemData">The menu item data including name, description, category, image URL, and tag IDs</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the created <see cref="MenuItemResponseDTO"/> object.
+        /// An <see cref="IActionResult"/> containing the created <see cref="MenuItemResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the created menu item on success.
         /// Returns HTTP 409 (Conflict) if a menu item with the same name already exists.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
@@ -61,11 +61,11 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPost]
-        [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateMenuItem(
-            MenuItemCreateDTO itemData
+            MenuItemCreateDto itemData
         )
         {
             try
@@ -96,7 +96,7 @@ namespace back_end.Controllers
                 }
                 _context.Add(newMenuItem);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuItemResponseDTO
+                return Ok(new MenuItemResponseDto
                 {
                     Name = newMenuItem.Name,
                     Description = newMenuItem.Description,
@@ -104,7 +104,7 @@ namespace back_end.Controllers
                     Item_Image_Url = newMenuItem.image_url,
                     Status = newMenuItem.Status,
                     Item_Id = newMenuItem.item_id,
-                    Tags = newMenuItem.MenuItemTags.Select(t => new FullTagResponseDTO
+                    Tags = newMenuItem.MenuItemTags.Select(t => new FullTagResponseDto
                     {
                         Tag_Id = t.Tag.tag_id,
                         Name = t.Tag.tag_name,
@@ -208,7 +208,7 @@ namespace back_end.Controllers
                     .ThenBy(mi => mi.Name)
                     .ToListAsync();
 
-                var result = allItems.Select(item => new MenuItemResponseDTO
+                var result = allItems.Select(item => new MenuItemResponseDto
                 {
                     Item_Id = item.item_id,
                     Name = item.Name,
@@ -217,7 +217,7 @@ namespace back_end.Controllers
                     Item_Image_Url = item.image_url,
                     Status = item.Status,
 
-                    Tags = item.MenuItemTags.Select(mit => new FullTagResponseDTO
+                    Tags = item.MenuItemTags.Select(mit => new FullTagResponseDto
                     {
                         Tag_Id = mit.Tag.tag_id,
                         Name = mit.Tag.tag_name,
@@ -240,7 +240,7 @@ namespace back_end.Controllers
         /// <param name="itemId">The unique identifier of the menu item to update</param>
         /// <param name="menuItemUpdate">The updated menu item data</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuItemResponseDTO"/> object.
+        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuItemResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the updated menu item on success.
         /// Returns HTTP 404 (Not Found) if the menu item doesn't exist.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the update.
@@ -267,12 +267,12 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPut("{itemId}")]
-        [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateMenuItem(
             int itemId,
-            MenuItemUpdateDTO menuItemUpdate
+            MenuItemUpdateDto menuItemUpdate
         )
         {
             try
@@ -318,7 +318,7 @@ namespace back_end.Controllers
                 ;
                 _context.Update(itemUpdate);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuItemResponseDTO
+                return Ok(new MenuItemResponseDto
                 {
                     Name = itemUpdate.Name,
                     Description = itemUpdate.Description,
@@ -326,7 +326,7 @@ namespace back_end.Controllers
                     Item_Image_Url = itemUpdate.image_url,
                     Status = itemUpdate.Status,
                     Item_Id = itemUpdate.item_id,
-                    Tags = itemUpdate.MenuItemTags.Select(t => new FullTagResponseDTO
+                    Tags = itemUpdate.MenuItemTags.Select(t => new FullTagResponseDto
                     {
                         Tag_Id = t.Tag.tag_id,
                         Name = t.Tag.tag_name,
@@ -677,7 +677,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="itemId">The unique identifier of the menu item</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of <see cref="TagResponseDTO"/> objects.
+        /// An <see cref="IActionResult"/> containing a collection of <see cref="TagResponseDto"/> objects.
         /// Returns HTTP 200 (OK) with the list of tags sorted alphabetically on success.
         /// Returns HTTP 404 (Not Found) if the menu item doesn't exist.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -695,7 +695,7 @@ namespace back_end.Controllers
         /// </remarks>
 
         [HttpGet("{itemId}/tags")]
-        [ProducesResponseType(typeof(IEnumerable<TagResponseDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<TagResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetItemTags(
@@ -711,7 +711,7 @@ namespace back_end.Controllers
                     return NotFound("Menu Item was not found");
                 }
                 var tags = await _context.Tags.Where(t => t.MenuItemTags.Any(mt => mt.Menu_item_id == itemId)).OrderBy(t => t.tag_name).ToListAsync();
-                var response = tags.Select(t => new TagResponseDTO
+                var response = tags.Select(t => new TagResponseDto
                 {
                     Name = t.tag_name,
                     Tag_Id = t.tag_id
@@ -735,7 +735,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="itemId">The unique identifier of the menu item</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of <see cref="FullTagResponseDTO"/> objects.
+        /// An <see cref="IActionResult"/> containing a collection of <see cref="FullTagResponseDto"/> objects.
         /// Returns HTTP 200 (OK) with the list of tags including color codes sorted alphabetically on success.
         /// Returns HTTP 404 (Not Found) if the menu item doesn't exist.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -753,7 +753,7 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpGet("{itemId}/tags-with-colors")]
-        [ProducesResponseType(typeof(IEnumerable<FullTagResponseDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<FullTagResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddTagToMenu(

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace back_end.DTO.PastVisitDTOs
 {
     // One ended visit on the customer's Past visits page
-    public class PastVisitDTO
+    public class PastVisitDto
     {
         [JsonPropertyName("session_id")]
         public int SessionId { get; set; }
@@ -22,13 +22,13 @@ namespace back_end.DTO.PastVisitDTOs
 
         // What this customer ordered, same items added together
         [JsonPropertyName("items")]
-        public List<PastVisitItemDTO> Items { get; set; } = [];
+        public List<PastVisitItemDto> Items { get; set; } = [];
 
         [JsonPropertyName("bills")]
-        public List<PastVisitBillDTO> Bills { get; set; } = [];
+        public List<PastVisitBillDto> Bills { get; set; } = [];
     }
 
-    public class PastVisitItemDTO
+    public class PastVisitItemDto
     {
         [JsonPropertyName("item_id")]
         public int ItemId { get; set; }
@@ -40,7 +40,7 @@ namespace back_end.DTO.PastVisitDTOs
         public int Quantity { get; set; }
     }
 
-    public class PastVisitBillDTO
+    public class PastVisitBillDto
     {
         [JsonPropertyName("bill_id")]
         public int BillId { get; set; }

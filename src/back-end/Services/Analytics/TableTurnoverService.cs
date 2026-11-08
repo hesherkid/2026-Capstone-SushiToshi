@@ -13,7 +13,7 @@ namespace back_end.Services.Analytics
 
     public interface ITableTurnoverService
     {
-        Task<AnalyticsResult<TableTurnoverResponseDTO>> GetAsync(TableTurnoverQuery query);
+        Task<AnalyticsResult<TableTurnoverResponseDto>> GetAsync(TableTurnoverQuery query);
     }
 
     public sealed class TableTurnoverService : ITableTurnoverService
@@ -41,17 +41,17 @@ namespace back_end.Services.Analytics
             int? PartySize
         );
 
-        public async Task<AnalyticsResult<TableTurnoverResponseDTO>> GetAsync(TableTurnoverQuery query)
+        public async Task<AnalyticsResult<TableTurnoverResponseDto>> GetAsync(TableTurnoverQuery query)
         {
             var windowResult = await AnalyticsQueries.ResolveWindowAsync(
                 _context, _clock, query.Range, query.From, query.To, query.LocationId);
-            if (!windowResult.IsOk) return windowResult.AsError<TableTurnoverResponseDTO>();
+            if (!windowResult.IsOk) return windowResult.AsError<TableTurnoverResponseDto>();
 
             var (period, timeZone, location) = windowResult.Value!;
 
             var sessions = await LoadSessionsAsync(period.StartUtc, period.EndUtc, query.LocationId);
 
-            var response = new TableTurnoverResponseDTO
+            var response = new TableTurnoverResponseDto
             {
                 Range = AnalyticsQueries.ToRangeDto(period),
                 Location = location
@@ -69,7 +69,7 @@ namespace back_end.Services.Analytics
             AddDurationByPartySize(response, sessions);
             AddTurnoverGaps(response, sessions, timeZone);
 
-            return AnalyticsResult<TableTurnoverResponseDTO>.Ok(response);
+            return AnalyticsResult<TableTurnoverResponseDto>.Ok(response);
         }
 
         private async Task<List<SeatedSession>> LoadSessionsAsync(DateTime startUtc, DateTime endUtc, int? locationId)
@@ -113,14 +113,14 @@ namespace back_end.Services.Analytics
         }
 
         private static void AddSeatingsByHour(
-                    TableTurnoverResponseDTO response, List<SeatedSession> sessions, TimeZoneInfo timeZone)
+                    TableTurnoverResponseDto response, List<SeatedSession> sessions, TimeZoneInfo timeZone)
         {
             var byHour = sessions
                 .GroupBy(s => AnalyticsQueries.ToLocal(s.StartedAt, timeZone).Hour)
                 .ToDictionary(g => g.Key, g => (Seatings: g.Count(), Guests: g.Sum(s => s.PartySize ?? 0)));
 
             response.SeatingsByHour = Enumerable.Range(0, 24)
-                .Select(hour => new SeatingHourDTO
+                .Select(hour => new SeatingHourDto
                 {
                     Hour = hour,
                     Label = $"{hour:00}:00",
@@ -142,7 +142,7 @@ namespace back_end.Services.Analytics
                 .FirstOrDefault();
         }
 
-        private static void AddDurationByPartySize(TableTurnoverResponseDTO response, List<SeatedSession> sessions)
+        private static void AddDurationByPartySize(TableTurnoverResponseDto response, List<SeatedSession> sessions)
         {
             var byBucket = sessions
                 .GroupBy(s => PartySizeBucket(s.PartySize))
@@ -154,7 +154,7 @@ namespace back_end.Services.Analytics
 
             response.DurationByPartySize = bucketOrder
                 .Where(byBucket.ContainsKey)
-                .Select(bucket => new PartySizeDurationDTO
+                .Select(bucket => new PartySizeDurationDto
                 {
                     PartySize = bucket,
                     Sessions = byBucket[bucket].Count,
@@ -167,7 +167,7 @@ namespace back_end.Services.Analytics
         }
 
         private static void AddTurnoverGaps(
-            TableTurnoverResponseDTO response, List<SeatedSession> sessions, TimeZoneInfo timeZone)
+            TableTurnoverResponseDto response, List<SeatedSession> sessions, TimeZoneInfo timeZone)
         {
             var sessionsByTable = sessions
                  .Where(s => s.TableId != null)
@@ -190,7 +190,7 @@ namespace back_end.Services.Analytics
                 MeasureGaps(oneGroup.ToList(), timeZone, groupTally);
             }
 
-            response.TurnoverGap = new TurnoverGapDTO
+            response.TurnoverGap = new TurnoverGapDto
             {
                 Tables = AnalyticsQueries.Durations(tableTally.GapSeconds),
                 Groups = AnalyticsQueries.Durations(groupTally.GapSeconds),

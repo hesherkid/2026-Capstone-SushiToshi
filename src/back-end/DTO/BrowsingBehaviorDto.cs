@@ -2,49 +2,49 @@ using System.Text.Json.Serialization;
 
 namespace back_end.DTO.Analytics
 {
-    public class BrowsingBehaviorResponseDTO
+    public class BrowsingBehaviorResponseDto
     {
         [JsonPropertyName("range")]
-        public AnalyticsRangeDTO Range { get; set; } = new();
+        public AnalyticsRangeDto Range { get; set; } = new();
 
         [JsonPropertyName("location")]
-        public AnalyticsLocationDTO? Location { get; set; }
+        public AnalyticsLocationDto? Location { get; set; }
 
         [JsonPropertyName("summary")]
-        public BrowsingSummaryDTO Summary { get; set; } = new();
+        public BrowsingSummaryDto Summary { get; set; } = new();
 
         [JsonPropertyName("most_viewed")]
-        public List<BrowsingItemDTO> MostViewed { get; set; } = new();
+        public List<BrowsingItemDto> MostViewed { get; set; } = new();
 
         [JsonPropertyName("least_viewed")]
-        public List<BrowsingItemDTO> LeastViewed { get; set; } = new();
+        public List<BrowsingItemDto> LeastViewed { get; set; } = new();
 
         [JsonPropertyName("never_viewed")]
-        public List<BrowsingItemDTO> NeverViewed { get; set; } = new();
+        public List<BrowsingItemDto> NeverViewed { get; set; } = new();
 
         [JsonPropertyName("viewed_not_ordered")]
-        public List<BrowsingItemDTO> ViewedNotOrdered { get; set; } = new();
+        public List<BrowsingItemDto> ViewedNotOrdered { get; set; } = new();
 
         [JsonPropertyName("top_viewed_not_ordered")]
-        public List<BrowsingItemDTO> TopViewedNotOrdered { get; set; } = new();
+        public List<BrowsingItemDto> TopViewedNotOrdered { get; set; } = new();
 
         [JsonPropertyName("top_viewed_and_ordered")]
-        public List<BrowsingItemDTO> TopViewedAndOrdered { get; set; } = new();
+        public List<BrowsingItemDto> TopViewedAndOrdered { get; set; } = new();
 
         [JsonPropertyName("low_conversion_high_views")]
-        public List<BrowsingItemDTO> LowConversionHighViews { get; set; } = new();
+        public List<BrowsingItemDto> LowConversionHighViews { get; set; } = new();
 
         [JsonPropertyName("unavailable_views")]
-        public List<BrowsingItemDTO> UnavailableViews { get; set; } = new();
+        public List<BrowsingItemDto> UnavailableViews { get; set; } = new();
 
         [JsonPropertyName("items")]
-        public List<BrowsingItemDTO> Items { get; set; } = new();
+        public List<BrowsingItemDto> Items { get; set; } = new();
 
         [JsonPropertyName("filters")]
-        public AnalyticsFiltersDTO Filters { get; set; } = new();
+        public AnalyticsFiltersDto Filters { get; set; } = new();
     }
 
-    public class BrowsingSummaryDTO
+    public class BrowsingSummaryDto
     {
         [JsonPropertyName("total_views")]
         public int TotalViews { get; set; }
@@ -95,7 +95,7 @@ namespace back_end.DTO.Analytics
         public int MinViews { get; set; }
     }
 
-    public class BrowsingItemDTO
+    public class BrowsingItemDto
     {
         [JsonPropertyName("item_id")]
         public int ItemId { get; set; }
@@ -116,7 +116,7 @@ namespace back_end.DTO.Analytics
         public bool CurrentlyAvailable { get; set; }
 
         [JsonPropertyName("tags")]
-        public List<AnalyticsTagDTO> Tags { get; set; } = new();
+        public List<AnalyticsTagDto> Tags { get; set; } = new();
 
         [JsonPropertyName("views")]
         public int Views { get; set; }

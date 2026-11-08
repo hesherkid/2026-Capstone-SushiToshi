@@ -46,9 +46,9 @@ namespace back_end.Controllers
         Summary = "Create a tag",
         Description = "Creates a new tag with a name and optional color. Requires Admin role."
     )]
-    [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(TagBaseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> CreateTag([FromBody] TagBaseDTO tagData)
+    public async Task<IActionResult> CreateTag([FromBody] TagBaseDto tagData)
     {
       try
       {
@@ -70,7 +70,7 @@ namespace back_end.Controllers
         _context.Tags.Add(tag);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetTagById), new { tagId = tag.tag_id }, new TagBaseDTO
+        return CreatedAtAction(nameof(GetTagById), new { tagId = tag.tag_id }, new TagBaseDto
         {
           Tag_Id = tag.tag_id,
           Tag_Name = tag.tag_name,
@@ -103,7 +103,7 @@ namespace back_end.Controllers
         Summary = "Retrieve all tags",
         Description = "Returns every tag with its ID, name, and color. Requires authentication."
     )]
-    [ProducesResponseType(typeof(IEnumerable<TagBaseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<TagBaseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTags()
     {
       try
@@ -111,7 +111,7 @@ namespace back_end.Controllers
         var tags = await _context.Tags
           .AsNoTracking()
           .OrderBy(t => t.tag_id)
-          .Select(t => new TagBaseDTO
+          .Select(t => new TagBaseDto
           {
             Tag_Id = t.tag_id,
             Tag_Name = t.tag_name,
@@ -149,8 +149,8 @@ namespace back_end.Controllers
         Summary = "Retrieve a tag by ID",
         Description = "Fetches a single tag's details (ID, name, color) by its unique identifier. Requires authentication."
     )]
-    [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status200OK)]
-    [SwaggerResponse(StatusCodes.Status200OK, "Tag retrieved successfully", typeof(TagBaseDTO))]
+    [ProducesResponseType(typeof(TagBaseDto), StatusCodes.Status200OK)]
+    [SwaggerResponse(StatusCodes.Status200OK, "Tag retrieved successfully", typeof(TagBaseDto))]
     public async Task<IActionResult> GetTagById(int tagId)
     {
       try
@@ -163,7 +163,7 @@ namespace back_end.Controllers
           return NotFound(new { detail = "Tag not found" });
         }
 
-        return Ok(new TagBaseDTO
+        return Ok(new TagBaseDto
         {
           Tag_Id = tag.tag_id,
           Tag_Name = tag.tag_name,
@@ -185,7 +185,7 @@ namespace back_end.Controllers
     /// <param name="tagData">The fields to update for the tag.</param>
     /// <remarks>
     /// Requires <c>Admin</c> role.  
-    /// Only non-null fields in <see cref="TagUpdateDTO"/> are applied.  
+    /// Only non-null fields in <see cref="TagUpdateDto"/> are applied.  
     /// Note: Although this is a <c>PUT</c>, this endpoint performs a partial update for convenience.
     /// </remarks>
     /// <response code="200">The tag was updated successfully and the updated tag is returned.</response>
@@ -203,10 +203,10 @@ namespace back_end.Controllers
         Summary = "Update a tag",
         Description = "Updates the name and/or color of a tag by ID. Requires Admin role."
     )]
-    [ProducesResponseType(typeof(TagBaseDTO), StatusCodes.Status200OK)]
-    [SwaggerResponse(StatusCodes.Status200OK, "Tag updated", typeof(TagBaseDTO))]
+    [ProducesResponseType(typeof(TagBaseDto), StatusCodes.Status200OK)]
+    [SwaggerResponse(StatusCodes.Status200OK, "Tag updated", typeof(TagBaseDto))]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> UpdateTag(int tagId, [FromBody] TagUpdateDTO tagData)
+    public async Task<IActionResult> UpdateTag(int tagId, [FromBody] TagUpdateDto tagData)
     {
       try
       {
@@ -242,7 +242,7 @@ namespace back_end.Controllers
 
         await _context.SaveChangesAsync();
 
-        return Ok(new TagBaseDTO
+        return Ok(new TagBaseDto
         {
           Tag_Id = tag.tag_id,
           Tag_Name = tag.tag_name,

@@ -77,10 +77,10 @@ public class DiningSessionJoinTests : IDisposable
             },
         };
 
-    private static JoinTableSessionDTO Table(int number) => new() { Table_Number = number, Location_Id = LocationId };
+    private static JoinTableSessionDto Table(int number) => new() { Table_Number = number, Location_Id = LocationId };
 
-    private static JoinTableSessionResponseDTO Body(IActionResult result) =>
-        ((result as OkObjectResult)!.Value as JoinTableSessionResponseDTO)!;
+    private static JoinTableSessionResponseDto Body(IActionResult result) =>
+        ((result as OkObjectResult)!.Value as JoinTableSessionResponseDto)!;
 
     [Fact]
     public async Task Join_AddsTheSignedInUserToTheTablesSession()
@@ -189,7 +189,7 @@ public class DiningSessionJoinTests : IDisposable
     [InlineData(103)]  // table's group already has a session
     public async Task CreateSession_RefusesBusyTables(int tableId)
     {
-        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDTO
+        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDto
         {
             Menu_Id = 1,
             Location_Id = LocationId,
@@ -204,7 +204,7 @@ public class DiningSessionJoinTests : IDisposable
     [Fact]
     public async Task CreateSession_StartsASessionOnAFreeTableWithoutAddingParticipants()
     {
-        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDTO
+        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDto
         {
             Menu_Id = 1,
             Location_Id = LocationId,
@@ -212,7 +212,7 @@ public class DiningSessionJoinTests : IDisposable
             AssignmentType = "table",
         });
 
-        var body = (result as OkObjectResult)!.Value as DiningSessionResponseDTO;
+        var body = (result as OkObjectResult)!.Value as DiningSessionResponseDto;
         body!.Table_Numbers.Should().Equal(2);
         (await _context.DiningSessions.AnyAsync(ds => ds.Table_Id == 102 && ds.Ended_At == null)).Should().BeTrue();
         (await _context.SessionParticipants.AnyAsync()).Should().BeFalse();

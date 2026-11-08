@@ -116,14 +116,14 @@ public class TableTurnoverControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    private async Task<TableTurnoverResponseDTO> GetWeekAsync(int? locationId = North)
+    private async Task<TableTurnoverResponseDto> GetWeekAsync(int? locationId = North)
     {
         var result = await _controller.GetTableTurnover("custom", WeekFrom, WeekTo, locationId);
 
         result.Should().BeOfType<OkObjectResult>();
         var value = (result as OkObjectResult)!.Value;
-        value.Should().BeOfType<TableTurnoverResponseDTO>();
-        return (TableTurnoverResponseDTO)value!;
+        value.Should().BeOfType<TableTurnoverResponseDto>();
+        return (TableTurnoverResponseDto)value!;
     }
 
     [Fact]

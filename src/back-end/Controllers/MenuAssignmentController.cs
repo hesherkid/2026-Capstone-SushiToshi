@@ -201,7 +201,7 @@ namespace back_end.Controllers
         public async Task<IActionResult> UpdateMenuItemAssignment(
             int menuId,
             int itemId,
-            MenuAssignmentUpdateDTO updateData,
+            MenuAssignmentUpdateDto updateData,
             [FromQuery] int? locationId
         )
         {

@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace back_end.DTO.Auth
 {
-    public class LoginDTO
+    public class LoginDto
     {
         [JsonPropertyName("email")]
         public string? UserEmail { get; set; }
@@ -11,7 +11,7 @@ namespace back_end.DTO.Auth
         public string? UserPassword { get; set; }
     }
 
-    public class RegisterDTO
+    public class RegisterDto
     {
         [JsonPropertyName("email")]
         public string? UserEmail { get; set; }
@@ -26,7 +26,7 @@ namespace back_end.DTO.Auth
         public string? LastName { get; set; }
     }
 
-    public class GoogleTokenDTO
+    public class GoogleTokenDto
     {
         public string IdToken { get; set; } = string.Empty;
     }

@@ -6,7 +6,7 @@ using back_end.domain.enums;
 
 namespace back_end.DTO.MenuItemAssignmentDTO
 {
-    public class MenuItemAssignmentBaseDTO
+    public class MenuItemAssignmentBaseDto
     {
         public int Menu_Id { get; set; }
         public int Item_Id { get; set; }
@@ -19,7 +19,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public int? Location_Id { get; set; }   // null = default for all locations
     }
 
-    public class MenuAssignmentCreate : MenuItemAssignmentBaseDTO
+    public class MenuAssignmentCreate : MenuItemAssignmentBaseDto
     {
         [Required(ErrorMessage = "Adult limit is required (0 = unlimited)")]
         public int? Adult_Limit { get; set; }
@@ -31,7 +31,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public bool Is_Add_on { get; set; } = false;
     }
 
-    public class MenuAssignmentUpdateDTO
+    public class MenuAssignmentUpdateDto
     {
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative")]
         public decimal? Price { get; set; }
@@ -46,7 +46,7 @@ namespace back_end.DTO.MenuItemAssignmentDTO
         public int? Per_Order_Limit { get; set; }
     }
 
-    class MenuAssignmentResponse : MenuItemAssignmentBaseDTO
+    class MenuAssignmentResponse : MenuItemAssignmentBaseDto
     {
         public bool? Is_Add_On { get; set; }
         public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;

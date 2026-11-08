@@ -2,7 +2,7 @@
 
 namespace back_end.DTO.Auth;
 
-public sealed class ForgotPasswordDTO
+public sealed class ResendVerificationDto
 {
     [Required, EmailAddress]
     public string Email { get; set; } = "";

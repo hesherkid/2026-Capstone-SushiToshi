@@ -132,7 +132,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Login([FromBody] LoginDTO request)
+        public async Task<IActionResult> Login([FromBody] LoginDto request)
         {
             var userEmail = (request.UserEmail ?? "")
             .Trim()
@@ -229,7 +229,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CreateUser([FromBody] RegisterDTO request)
+        public async Task<IActionResult> CreateUser([FromBody] RegisterDto request)
         {
             var sendNewTokenUser = new domain.Entities.User();
             int passwordMinLength = 8;
@@ -300,7 +300,7 @@ namespace back_end.Controllers
 
         [HttpPost("verify-email")]
         [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
-        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDTO request)
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto request)
         {
             var token = await _tokenService.FindValidAsync(
                 request.Token,
@@ -347,7 +347,7 @@ namespace back_end.Controllers
 
         [HttpPost("forgot-password")]
         [EnableRateLimiting(AuthRateLimits.EmailPolicy)]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO request)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
         {
             const string successMessage =
                 "If an account exists for this email, " +
@@ -383,7 +383,7 @@ namespace back_end.Controllers
 
         [HttpPost("reset-password")]
         [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO request)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
         {
             var token = await _tokenService.FindValidAsync(
                 request.Token,
@@ -433,7 +433,7 @@ namespace back_end.Controllers
 
         [HttpPost("resend-verification")]
         [EnableRateLimiting(AuthRateLimits.EmailPolicy)]
-        public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationDTO request)
+        public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationDto request)
         {
             const string message =
                 "If this account needs verification, " +
@@ -468,7 +468,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> GoogleLogin([FromBody] GoogleTokenDTO request)
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleTokenDto request)
         {
             try
             {

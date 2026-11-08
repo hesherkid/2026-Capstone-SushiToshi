@@ -131,7 +131,7 @@ public class OrderLimitEnforcementTests : IDisposable
     private async Task<IActionResult> Add(int orderId, params (int ItemId, int Quantity)[] items)
     {
         var result = await Orders().AddOrderItems(orderId,
-            items.Select(i => new OrderItemCreateDTO { Order_Id = orderId, Menu_Id = 1, Item_Id = i.ItemId, Quantity = i.Quantity }).ToList());
+            items.Select(i => new OrderItemCreateDto { Order_Id = orderId, Menu_Id = 1, Item_Id = i.ItemId, Quantity = i.Quantity }).ToList());
         _context.ChangeTracker.Clear();
         return result;
     }
@@ -286,8 +286,8 @@ public class OrderLimitEnforcementTests : IDisposable
 
     // GET session/{id}/limits: what the menu uses to stop guests before the server would
 
-    private async Task<SessionOrderLimitsDTO> Limits() =>
-        ((await Orders().GetSessionOrderLimits(SessionId)) as OkObjectResult)!.Value as SessionOrderLimitsDTO
+    private async Task<SessionOrderLimitsDto> Limits() =>
+        ((await Orders().GetSessionOrderLimits(SessionId)) as OkObjectResult)!.Value as SessionOrderLimitsDto
             ?? throw new InvalidOperationException("No limits returned");
 
     [Fact]

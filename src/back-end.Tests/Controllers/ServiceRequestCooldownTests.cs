@@ -61,7 +61,7 @@ public class ServiceRequestCooldownTests : IDisposable
         };
 
     private Task<IActionResult> Send(int userId, string notes = "Need napkins") =>
-        ControllerAs(userId).CreateServiceRequest(SessionId, new ServiceRequestCreateDTO { Notes = notes });
+        ControllerAs(userId).CreateServiceRequest(SessionId, new ServiceRequestCreateDto { Notes = notes });
 
     private void AddEarlierRequest(string notes, TimeSpan ago)
     {

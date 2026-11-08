@@ -7,7 +7,7 @@ using back_end.domain.enums;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace back_end.DTO.MenuDTO{
-    public class MenuBaseDTO
+    public class MenuBaseDto
     {
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
@@ -22,11 +22,11 @@ namespace back_end.DTO.MenuDTO{
 
     }
 
-    public class MenuCreateDTO : MenuBaseDTO
+    public class MenuCreateDto : MenuBaseDto
     {
 
     }
-    public class MenuUpdateDTO
+    public class MenuUpdateDto
     {
         [MinLength(1)]
         [MaxLength(255)]
@@ -37,13 +37,13 @@ namespace back_end.DTO.MenuDTO{
         public bool? Is_Active { get; set; }
     }
 
-    public class MenuResponseDTO : MenuBaseDTO
+    public class MenuResponseDto : MenuBaseDto
     {
         [JsonPropertyName("menu_id")]
         public int Menu_Id { get; set; }
     }
     
-    public class MenuItemDetailResponseDTO
+    public class MenuItemDetailResponseDto
     {
         [JsonPropertyName("menu_id")]
         public int Menu_Id { get; set; } 

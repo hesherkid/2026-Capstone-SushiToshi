@@ -26,12 +26,12 @@ namespace back_end.Controllers
 
         [Authorize(Policy = "adminOnly")]
         [HttpPost("createmenu")]
-        [ProducesResponseType(typeof(MenuResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateMenu(
-            MenuCreateDTO itemData
+            MenuCreateDto itemData
         )
         {
             try
@@ -55,7 +55,7 @@ namespace back_end.Controllers
                 };
                 _context.Add(newMenu);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuResponseDTO
+                return Ok(new MenuResponseDto
                 {
                     Menu_Id = newMenu.Menu_id,
                     Name = newMenu.Name,
@@ -77,7 +77,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="itemData">The menu item data including name, description, category, image URL, and tag IDs</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the created <see cref="MenuItemResponseDTO"/> object.
+        /// An <see cref="IActionResult"/> containing the created <see cref="MenuItemResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the created menu item on success.
         /// Returns HTTP 409 (Conflict) if a menu item with the same name already exists.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
@@ -103,11 +103,11 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPost]
-        [ProducesResponseType(typeof(MenuItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateMenuItem(
-            MenuItemCreateDTO itemData
+            MenuItemCreateDto itemData
         )
         {
             try
@@ -154,7 +154,7 @@ namespace back_end.Controllers
                 _context.Add(newItem);
                 await _context.SaveChangesAsync();
 
-                return Ok(new MenuItemResponseDTO
+                return Ok(new MenuItemResponseDto
                 {
                     Item_Id = newItem.item_id,
                     Name = newItem.Name,
@@ -162,7 +162,7 @@ namespace back_end.Controllers
                     Category_Id = newItem.Category_id,
                     Item_Image_Url = newItem.image_url,
                     Status = newItem.Status,
-                    Tags = newItem.MenuItemTags.Select(t => new FullTagResponseDTO
+                    Tags = newItem.MenuItemTags.Select(t => new FullTagResponseDto
                     {
                         Tag_Id = t.Tag.tag_id,
                         Name = t.Tag.tag_name,
@@ -425,7 +425,7 @@ namespace back_end.Controllers
         /// <param name="menuId">The unique identifier of the menu to update</param>
         /// <param name="menuData">The updated menu data</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuResponseDTO"/> object.
+        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the updated menu on success.
         /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
         /// Returns HTTP 409 (Conflict) if a menu with the new name already exists.
@@ -453,13 +453,13 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPut("{menuId}")]
-        [ProducesResponseType(typeof(MenuResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateMenu(
             int menuId,
-            MenuUpdateDTO menuData
+            MenuUpdateDto menuData
         )
         {
             try
@@ -500,7 +500,7 @@ namespace back_end.Controllers
                 }
                 _context.Update(menu);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuResponseDTO
+                return Ok(new MenuResponseDto
                 {
                     Menu_Id = menu.Menu_id,
                     Name = menu.Name,

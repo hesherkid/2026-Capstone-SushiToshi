@@ -50,7 +50,7 @@ namespace back_end.Controllers
         ///   negative ones (overlapping sessions) in overlapping_sessions.
         /// </remarks>
         [HttpGet("table-turnover")]
-        [ProducesResponseType(typeof(TableTurnoverResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(TableTurnoverResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
