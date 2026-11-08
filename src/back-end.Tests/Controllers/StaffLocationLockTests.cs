@@ -151,7 +151,7 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await Dashboard(StaffId, UserRoles.Staff).GetDashboardSessions(locationId: Southside);
 
-        var sessions = (result as OkObjectResult)!.Value as IEnumerable<DashBoardSessionsDto>;
+        var sessions = (result as OkObjectResult)!.Value as IEnumerable<DashboardSessionsDto>;
         sessions!.Select(s => s.Location_Id).Should().OnlyContain(id => id == Northside);
     }
 

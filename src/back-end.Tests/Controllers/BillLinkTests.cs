@@ -775,12 +775,12 @@ public class BillLinkTests : IDisposable
 
     // ---- What staff see ----
 
-    private async Task<DashBoardBillDto> DashboardBill(int billId)
+    private async Task<DashboardBillDto> DashboardBill(int billId)
     {
         var dashboard = new DashboardController(_context, new Mock<IConfiguration>().Object,
             new Mock<ILogger<DashboardController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(Server, "Staff") };
-        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDto>;
+        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashboardSessionsDto>;
         return sessions!.SelectMany(s => s.Bills).Single(b => b.Bill_Id == billId);
     }
 
@@ -803,7 +803,7 @@ public class BillLinkTests : IDisposable
         var dashboard = new DashboardController(_context, new Mock<IConfiguration>().Object,
             new Mock<ILogger<DashboardController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(Server, "Staff") };
-        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDto>;
+        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashboardSessionsDto>;
 
         var people = sessions!.Single(s => s.Session_Id == Table).People;
         people.Should().HaveCount(2);
@@ -817,7 +817,7 @@ public class BillLinkTests : IDisposable
         var dashboard = new DashboardController(_context, new Mock<IConfiguration>().Object,
             new Mock<ILogger<DashboardController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(Server, "Staff") };
-        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashBoardSessionsDto>;
+        var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashboardSessionsDto>;
 
         sessions!.Single(s => s.Session_Id == Table).Seat_Count.Should().Be(8);
     }
