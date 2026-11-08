@@ -78,9 +78,9 @@ namespace back_end.Tests.Controllers
             var options = (HolidayOptionsResponse)((OkObjectResult)Holidays().GetOptions()).Value!;
 
             options.Provinces.Should().HaveCount(13).And.Contain("AB");
-            options.Default_Province.Should().Be("AB");
-            (options.Year_From, options.Year_To).Should().Be((2025, 2028));
-            options.Include_Optional.Should().BeFalse();
+            options.DefaultProvince.Should().Be("AB");
+            (options.YearFrom, options.YearTo).Should().Be((2025, 2028));
+            options.IncludeOptional.Should().BeFalse();
         }
 
         [Fact]
@@ -103,7 +103,7 @@ namespace back_end.Tests.Controllers
             _service.Setup(s => s.ImportAsync("AB", 2027, null, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new HolidayImportResult(2, 7, new List<Holiday> { Holiday(1), Holiday(2) }));
 
-            var result = await Holidays().Import(new HolidayImportRequest { Province_Code = "AB", Year = 2027 });
+            var result = await Holidays().Import(new HolidayImportRequest { ProvinceCode = "AB", Year = 2027 });
 
             var body = (HolidayImportResponse)((OkObjectResult)result).Value!;
             body.Added.Should().Be(2);
@@ -117,7 +117,7 @@ namespace back_end.Tests.Controllers
             _service.Setup(s => s.ImportAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
                     .ThrowsAsync(new HolidayProviderException("The holiday service didn't respond in time."));
 
-            var result = await Holidays().Import(new HolidayImportRequest { Province_Code = "AB", Year = 2027 });
+            var result = await Holidays().Import(new HolidayImportRequest { ProvinceCode = "AB", Year = 2027 });
 
             StatusCode(result).Should().Be(StatusCodes.Status502BadGateway);
             Message(result).Should().Be("The holiday service didn't respond in time.");
@@ -129,7 +129,7 @@ namespace back_end.Tests.Controllers
             _service.Setup(s => s.ImportAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
                     .ThrowsAsync(new ArgumentException("Holidays can only be loaded for 2025 to 2028.", "year"));
 
-            var result = await Holidays().Import(new HolidayImportRequest { Province_Code = "AB", Year = 2030 });
+            var result = await Holidays().Import(new HolidayImportRequest { ProvinceCode = "AB", Year = 2030 });
 
             result.Should().BeOfType<BadRequestObjectResult>();
             Message(result).Should().Be("Holidays can only be loaded for 2025 to 2028.");
@@ -141,7 +141,7 @@ namespace back_end.Tests.Controllers
             _service.Setup(s => s.ImportAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
                     .ThrowsAsync(new DbUpdateException("Duplicate entry"));
 
-            var result = await Holidays().Import(new HolidayImportRequest { Province_Code = "AB", Year = 2027 });
+            var result = await Holidays().Import(new HolidayImportRequest { ProvinceCode = "AB", Year = 2027 });
 
             result.Should().BeOfType<ConflictObjectResult>();
         }
@@ -152,7 +152,7 @@ namespace back_end.Tests.Controllers
             _service.Setup(s => s.ImportAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
                     .ThrowsAsync(new Exception("boom"));
 
-            var result = await Holidays().Import(new HolidayImportRequest { Province_Code = "AB", Year = 2027 });
+            var result = await Holidays().Import(new HolidayImportRequest { ProvinceCode = "AB", Year = 2027 });
 
             StatusCode(result).Should().Be(500);
             Message(result).Should().Be("Error loading holidays");   // no internal details
@@ -202,7 +202,7 @@ namespace back_end.Tests.Controllers
 
             var result = await Holidays().Create(new HolidayCreateRequest
             {
-                Province_Code = "AB", Date = BoxingDay, Name = "Boxing Day",
+                ProvinceCode = "AB", Date = BoxingDay, Name = "Boxing Day",
             });
 
             StatusCode(result).Should().Be(StatusCodes.Status201Created);
@@ -217,7 +217,7 @@ namespace back_end.Tests.Controllers
 
             var result = await Holidays().Create(new HolidayCreateRequest
             {
-                Province_Code = "AB", Date = BoxingDay, Name = "Boxing Day",
+                ProvinceCode = "AB", Date = BoxingDay, Name = "Boxing Day",
             });
 
             result.Should().BeOfType<ConflictObjectResult>();

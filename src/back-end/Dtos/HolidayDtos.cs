@@ -7,16 +7,16 @@ namespace back_end.Dtos
     public class HolidayResponse
     {
         [JsonPropertyName("holiday_id")]
-        public int Holiday_Id { get; set; }
+        public int HolidayId { get; set; }
 
         [JsonPropertyName("province_code")]
-        public string Province_Code { get; set; } = string.Empty;
+        public string ProvinceCode { get; set; } = string.Empty;
 
         [JsonPropertyName("date")]
         public DateOnly Date { get; set; }
 
         [JsonPropertyName("observed_date")]
-        public DateOnly? Observed_Date { get; set; }
+        public DateOnly? ObservedDate { get; set; }
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
@@ -28,13 +28,13 @@ namespace back_end.Dtos
         public HolidayStatus Status { get; set; }
 
         [JsonPropertyName("imported_at")]
-        public DateTime? Imported_At { get; set; }
+        public DateTime? ImportedAt { get; set; }
 
         [JsonPropertyName("reviewed_by")]
-        public int? Reviewed_By { get; set; }
+        public int? ReviewedBy { get; set; }
 
         [JsonPropertyName("reviewed_at")]
-        public DateTime? Reviewed_At { get; set; }
+        public DateTime? ReviewedAt { get; set; }
     }
 
     // Everything the Holidays page needs for its dropdowns
@@ -44,23 +44,23 @@ namespace back_end.Dtos
         public IReadOnlyList<string> Provinces { get; set; } = Array.Empty<string>();
 
         [JsonPropertyName("default_province")]
-        public string Default_Province { get; set; } = string.Empty;
+        public string DefaultProvince { get; set; } = string.Empty;
 
         [JsonPropertyName("year_from")]
-        public int Year_From { get; set; }
+        public int YearFrom { get; set; }
 
         [JsonPropertyName("year_to")]
-        public int Year_To { get; set; }
+        public int YearTo { get; set; }
 
         [JsonPropertyName("include_optional")]
-        public bool Include_Optional { get; set; }
+        public bool IncludeOptional { get; set; }
     }
 
     public class HolidayImportRequest
     {
         [JsonPropertyName("province_code")]
         [Required]
-        public string Province_Code { get; set; } = string.Empty;
+        public string ProvinceCode { get; set; } = string.Empty;
 
         // Checked against HolidayApi:YearsBack/YearsAhead by the service
         [JsonPropertyName("year")]
@@ -69,7 +69,7 @@ namespace back_end.Dtos
 
         // null = use the HolidayApi:IncludeOptional setting
         [JsonPropertyName("include_optional")]
-        public bool? Include_Optional { get; set; }
+        public bool? IncludeOptional { get; set; }
     }
 
     public class HolidayImportResponse
@@ -102,7 +102,7 @@ namespace back_end.Dtos
     {
         [JsonPropertyName("province_code")]
         [Required]
-        public string Province_Code { get; set; } = string.Empty;
+        public string ProvinceCode { get; set; } = string.Empty;
 
         // Nullable so a missing date is a 400, not 0001-01-01
         [JsonPropertyName("date")]
