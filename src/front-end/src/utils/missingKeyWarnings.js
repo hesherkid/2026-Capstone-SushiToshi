@@ -29,6 +29,9 @@ export const warnOnMissingKeys = (data, label) => {
     get(target, key, receiver) {
       const value = Reflect.get(target, key, receiver);
       if (typeof key !== "string" || IGNORED_KEYS.has(key)) return value;
+      // A frozen property (e.g. rows MUI's DataGrid froze) must come back exactly as it is, or the browser throws
+      const own = Object.getOwnPropertyDescriptor(target, key);
+      if (own && !own.configurable && !own.writable) return value;
       // items[0] on an empty list is normal, not a missing key
       if (Array.isArray(target) && /^\d+$/.test(key)) return warnOnMissingKeys(value, label);
       if (!(key in target)) {

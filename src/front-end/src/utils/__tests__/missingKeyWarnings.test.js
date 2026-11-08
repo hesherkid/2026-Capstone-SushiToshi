@@ -57,6 +57,14 @@ describe("warnOnMissingKeys", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it("returns frozen items as they are instead of throwing", () => {
+    const row = { table_id: 1 };
+    const rows = warnOnMissingKeys(Object.freeze([row]), nextLabel());
+
+    expect(rows[0]).toBe(row);
+    expect(rows.map((r) => r.table_id)).toEqual([1]);
+  });
+
   it("leaves strings, numbers and files alone", () => {
     const file = new Blob(["png"]);
 
