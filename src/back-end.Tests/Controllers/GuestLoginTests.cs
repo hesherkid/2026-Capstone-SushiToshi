@@ -12,7 +12,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using back_end.Configurations;
-using back_end.controllers;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
@@ -116,7 +115,7 @@ public class GuestLoginTests : IDisposable
         foreach (var _ in Enumerable.Range(0, 2))
         {
             var (_, token) = await SignInAsGuest();
-            var sessions = new DiningSessionController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+            var sessions = new DiningSessionController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DiningSessionController>>().Object, new LocationAccessService(_context))
             {
                 ControllerContext = new ControllerContext
                 {

@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using back_end.Controllers;
-using back_end.controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -92,7 +91,7 @@ public class StaffLocationLockTests : IDisposable
         new(_context, new Mock<ILogger<TableEntityController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
 
     private DiningSessionController Sessions(int userId, UserRoles role) =>
-        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
+        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DiningSessionController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
 
     private OrderController Orders(int userId, UserRoles role) =>
         new(_context, new Mock<ILogger<OrderController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
@@ -100,8 +99,8 @@ public class StaffLocationLockTests : IDisposable
     private ServiceRequestController ServiceRequests(int userId, UserRoles role) =>
         new(_context, new Mock<ILogger<ServiceRequestController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
 
-    private DashBoardController Dashboard(int userId, UserRoles role) =>
-        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
+    private DashboardController Dashboard(int userId, UserRoles role) =>
+        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashboardController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
 
     private MenuAssignmentController MenuAssignments(int userId, UserRoles role) =>
         new(_context, new Mock<ILogger<MenuAssignmentController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
@@ -150,7 +149,7 @@ public class StaffLocationLockTests : IDisposable
     [Fact]
     public async Task Dashboard_GivesStaffTheirOwnLocation_WhenAnotherIsAskedFor()
     {
-        var result = await Dashboard(StaffId, UserRoles.Staff).GetDashBoardSessions(locationId: Southside);
+        var result = await Dashboard(StaffId, UserRoles.Staff).GetDashboardSessions(locationId: Southside);
 
         var sessions = (result as OkObjectResult)!.Value as IEnumerable<DashBoardSessionsDTO>;
         sessions!.Select(s => s.Location_Id).Should().OnlyContain(id => id == Northside);
@@ -219,7 +218,7 @@ public class StaffLocationLockTests : IDisposable
     [Fact]
     public async Task CloseSession_ForbidsStaffAtAnotherLocation()
     {
-        var result = await Sessions(StaffId, UserRoles.Staff).close_dining_session(SouthSession);
+        var result = await Sessions(StaffId, UserRoles.Staff).CloseDiningSession(SouthSession);
 
         ShouldBeForbidden(result);
         (await _context.DiningSessions.FindAsync(SouthSession))!.Ended_At.Should().BeNull();
@@ -266,7 +265,7 @@ public class StaffLocationLockTests : IDisposable
     public async Task UpdateMenuAssignment_ForbidsStaffChangingEveryLocation()
     {
         var result = await MenuAssignments(StaffId, UserRoles.Staff)
-            .Update_Menu_Item_Assignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: null);
+            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: null);
 
         ShouldBeForbidden(result);
     }
@@ -275,7 +274,7 @@ public class StaffLocationLockTests : IDisposable
     public async Task UpdateMenuAssignment_ForbidsStaffAtAnotherLocation()
     {
         var result = await MenuAssignments(StaffId, UserRoles.Staff)
-            .Update_Menu_Item_Assignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: Southside);
+            .UpdateMenuItemAssignment(1, 1, new MenuAssignmentUpdateDTO { Price = 9.99m }, locationId: Southside);
 
         ShouldBeForbidden(result);
     }

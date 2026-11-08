@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using back_end.controllers;
+using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -142,7 +142,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CreateBill_ValidRequest_CreatesAnOpenBill()
     {
-        var bill = OkValue<BillResponse>(await Bills().Create_Bill(TableSession, Guests(adults: 1, children: 1)));
+        var bill = OkValue<BillResponse>(await Bills().CreateBill(TableSession, Guests(adults: 1, children: 1)));
 
         bill.Session_Id.Should().Be(TableSession);
         bill.Bill_Name.Should().Be("Kim");
@@ -156,7 +156,7 @@ public class BillControllerTests : IDisposable
     public async Task CreateBill_TableGroup_UsesEverySeat()
     {
         // 6 guests fit into two 4-seat tables but not one
-        var bill = OkValue<BillResponse>(await Bills().Create_Bill(GroupSession, Guests(adults: 6)));
+        var bill = OkValue<BillResponse>(await Bills().CreateBill(GroupSession, Guests(adults: 6)));
 
         bill.Table_Numbers.Should().BeEquivalentTo(new[] { 10, 11 });
     }
@@ -164,7 +164,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CreateBill_UnknownSession_Returns404()
     {
-        var result = await Bills().Create_Bill(999, Guests(adults: 1));
+        var result = await Bills().CreateBill(999, Guests(adults: 1));
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }
@@ -172,7 +172,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CreateBill_StaffAtAnotherLocation_Returns403()
     {
-        var result = await Bills(StaffElsewhere).Create_Bill(TableSession, Guests(adults: 1));
+        var result = await Bills(StaffElsewhere).CreateBill(TableSession, Guests(adults: 1));
 
         ShouldBeOtherLocation(result);
     }
@@ -180,7 +180,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CreateBill_EndedSession_Returns400()
     {
-        var result = await Bills().Create_Bill(EndedSession, Guests(adults: 1));
+        var result = await Bills().CreateBill(EndedSession, Guests(adults: 1));
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -188,7 +188,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CreateBill_SessionWithNoTable_Returns400()
     {
-        var result = await Bills().Create_Bill(NoTableSession, Guests(adults: 1));
+        var result = await Bills().CreateBill(NoTableSession, Guests(adults: 1));
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -196,7 +196,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CreateBill_NoGuests_Returns400()
     {
-        var result = await Bills().Create_Bill(TableSession, Guests());
+        var result = await Bills().CreateBill(TableSession, Guests());
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -207,7 +207,7 @@ public class BillControllerTests : IDisposable
     [InlineData("   ")]
     public async Task CreateBill_MissingName_Returns400(string? name)
     {
-        var result = await Bills().Create_Bill(TableSession, Guests(adults: 1, name: name));
+        var result = await Bills().CreateBill(TableSession, Guests(adults: 1, name: name));
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -216,7 +216,7 @@ public class BillControllerTests : IDisposable
     public async Task CreateBill_StaffCanGoOverTableCapacity()
     {
         // Table 6 seats 4 and bill already has 2: the party pulled up extra chairs
-        var result = await Bills().Create_Bill(TableSession, Guests(adults: 3));
+        var result = await Bills().CreateBill(TableSession, Guests(adults: 3));
 
         result.Should().BeOfType<OkObjectResult>();
         _context.Bills.Count(b => b.Session_Id == TableSession).Should().Be(2);
@@ -225,7 +225,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task GetBills_UnknownSession_Returns404()
     {
-        var result = await Bills().Get_Bills(999);
+        var result = await Bills().GetBills(999);
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }
@@ -233,7 +233,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task GetBills_TableInTheGroup_IsAccepted()
     {
-        var result = await Bills().Get_Bills(GroupSession, _table_id: 11);
+        var result = await Bills().GetBills(GroupSession, tableId: 11);
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -241,7 +241,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task GetBills_TableNotInTheSession_Returns400()
     {
-        var result = await Bills().Get_Bills(TableSession, _table_id: 11);
+        var result = await Bills().GetBills(TableSession, tableId: 11);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -249,7 +249,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task GetBill_ReturnsTheBill()
     {
-        var bill = OkValue<BillResponse>(await Bills().Get_Bill(TableSession, LeeBill));
+        var bill = OkValue<BillResponse>(await Bills().GetBill(TableSession, LeeBill));
 
         bill.Bill_Id.Should().Be(LeeBill);
         bill.Bill_Name.Should().Be("Lee");
@@ -259,7 +259,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task GetBill_SeatedGuest_CanSeeIt()
     {
-        var result = await Bills(SeatedGuest, "Customer").Get_Bill(TableSession, LeeBill);
+        var result = await Bills(SeatedGuest, "Customer").GetBill(TableSession, LeeBill);
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -267,7 +267,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task GetBill_GuestWhoLeftTheTable_IsForbidden()
     {
-        var result = await Bills(GuestWhoLeft, "Customer").Get_Bill(TableSession, LeeBill);
+        var result = await Bills(GuestWhoLeft, "Customer").GetBill(TableSession, LeeBill);
 
         result.Should().BeOfType<ForbidResult>();
     }
@@ -276,7 +276,7 @@ public class BillControllerTests : IDisposable
     public async Task GetBill_BillFromAnotherSession_Returns404()
     {
         // Bill exists, but not in session 200
-        var result = await Bills().Get_Bill(GroupSession, LeeBill);
+        var result = await Bills().GetBill(GroupSession, LeeBill);
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }
@@ -286,7 +286,7 @@ public class BillControllerTests : IDisposable
     {
         AddOrder(801, LeeBill, TableSession, OrderStatus.Delivered);
 
-        var bill = OkValue<BillResponse>(await Bills().Close_Bill(TableSession, LeeBill));
+        var bill = OkValue<BillResponse>(await Bills().CloseBill(TableSession, LeeBill));
 
         bill.Status.Should().Be("Closed");
         bill.Closed_At.Should().NotBeNull();
@@ -298,7 +298,7 @@ public class BillControllerTests : IDisposable
     {
         AddOrder(801, LeeBill, TableSession, OrderStatus.Pending);
 
-        var result = await Bills().Close_Bill(TableSession, LeeBill);
+        var result = await Bills().CloseBill(TableSession, LeeBill);
 
         result.Should().BeOfType<BadRequestObjectResult>();
         Bill(LeeBill).Status.Should().Be(BillStatus.Open);
@@ -311,7 +311,7 @@ public class BillControllerTests : IDisposable
         Bill(LeeBill).Status = BillStatus.Closed;
         _context.SaveChanges();
 
-        var result = await Bills().Close_Bill(TableSession, LeeBill);
+        var result = await Bills().CloseBill(TableSession, LeeBill);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -319,7 +319,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CloseBill_UnknownBill_Returns404()
     {
-        var result = await Bills().Close_Bill(TableSession, 999);
+        var result = await Bills().CloseBill(TableSession, 999);
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }
@@ -327,7 +327,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CloseBill_StaffAtAnotherLocation_Returns403()
     {
-        var result = await Bills().Close_Bill(OtherLocationSession, OtherLocationBill);
+        var result = await Bills().CloseBill(OtherLocationSession, OtherLocationBill);
 
         ShouldBeOtherLocation(result);
         Bill(OtherLocationBill).Status.Should().Be(BillStatus.Open);
@@ -341,7 +341,7 @@ public class BillControllerTests : IDisposable
         AddOrder(811, LeeBill, TableSession, OrderStatus.Pending);
         AddOrder(813, 902, TableSession, OrderStatus.Pending);
 
-        var bill = OkValue<BillResponse>(await Bills().Cancel_Bill(TableSession, LeeBill));
+        var bill = OkValue<BillResponse>(await Bills().CancelBill(TableSession, LeeBill));
 
         bill.Status.Should().Be("Cancelled");
         bill.Closed_At.Should().NotBeNull();
@@ -358,7 +358,7 @@ public class BillControllerTests : IDisposable
         AddOrder(811, LeeBill, TableSession, OrderStatus.Pending);
         AddOrder(812, LeeBill, TableSession, status);
 
-        var result = await Bills().Cancel_Bill(TableSession, LeeBill);
+        var result = await Bills().CancelBill(TableSession, LeeBill);
 
         result.Should().BeOfType<BadRequestObjectResult>();
         Bill(LeeBill).Status.Should().Be(BillStatus.Open);
@@ -374,7 +374,7 @@ public class BillControllerTests : IDisposable
         Bill(LeeBill).Status = status;
         _context.SaveChanges();
 
-        var result = await Bills().Cancel_Bill(TableSession, LeeBill);
+        var result = await Bills().CancelBill(TableSession, LeeBill);
 
         result.Should().BeOfType<BadRequestObjectResult>();
         Bill(LeeBill).Status.Should().Be(status);
@@ -383,7 +383,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CancelBill_UnknownBill_Returns404()
     {
-        var result = await Bills().Cancel_Bill(TableSession, 999);
+        var result = await Bills().CancelBill(TableSession, 999);
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }
@@ -391,7 +391,7 @@ public class BillControllerTests : IDisposable
     [Fact]
     public async Task CancelBill_StaffAtAnotherLocation_Returns403()
     {
-        var result = await Bills().Cancel_Bill(OtherLocationSession, OtherLocationBill);
+        var result = await Bills().CancelBill(OtherLocationSession, OtherLocationBill);
 
         ShouldBeOtherLocation(result);
     }
@@ -478,7 +478,7 @@ public class BillControllerTests : IDisposable
     public async Task CreateBill_NegativeGuestCount_ReturnsBadRequest()
     {
         // The old check let this through, negative counts should be rejected
-        var result = await Bills().Create_Bill(TableSession, Guests(adults: -1, children: 2));
+        var result = await Bills().CreateBill(TableSession, Guests(adults: -1, children: 2));
 
         result.Should().BeOfType<BadRequestObjectResult>();
         _context.Bills.Count(b => b.Session_Id == TableSession).Should().Be(1);

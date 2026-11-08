@@ -82,7 +82,7 @@ public class TableOrdersTests : IDisposable
     [Fact]
     public async Task Customers_CantAskForAnotherBillsOrders()
     {
-        var result = await ControllerFor(Friend).GetOrderBySession(269, bill_id: 333);
+        var result = await ControllerFor(Friend).GetOrderBySession(269, billId: 333);
 
         result.Result.Should().BeOfType<ForbidResult>();
     }
@@ -102,7 +102,7 @@ public class TableOrdersTests : IDisposable
     [Fact]
     public async Task Staff_CanFilterTableOrdersByBill()
     {
-        var orders = Orders(await ControllerFor(30, "Staff").GetOrderBySession(269, bill_id: 333));
+        var orders = Orders(await ControllerFor(30, "Staff").GetOrderBySession(269, billId: 333));
 
         orders.EnumerateArray().Select(o => o.GetProperty("orderId").GetInt32()).Should().Equal(901);
     }

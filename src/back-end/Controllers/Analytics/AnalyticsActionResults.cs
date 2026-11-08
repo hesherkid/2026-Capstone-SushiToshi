@@ -1,7 +1,7 @@
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
     internal static class AnalyticsActionResults
     {

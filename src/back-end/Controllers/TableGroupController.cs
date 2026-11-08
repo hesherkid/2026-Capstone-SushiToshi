@@ -190,15 +190,15 @@ namespace back_end.Controllers
 
 
     [Authorize(Policy = "staffOnly")]
-    [HttpGet("{table_group_id}")]
-    public async Task<IActionResult> GetTableGroup(int table_group_id)
+    [HttpGet("{tableGroupId}")]
+    public async Task<IActionResult> GetTableGroup(int tableGroupId)
     {
       try
       {
         var tableGroup = await _context.TableGroups
             .Include(tg => tg.Tables)
             .Include(tg => tg.DiningSessions.Where(ds => ds.Ended_At == null))
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == table_group_id);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
         {
@@ -239,13 +239,13 @@ namespace back_end.Controllers
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("{table_group_id}")]
-    public async Task<IActionResult> UpdateTableGroup(int table_group_id, [FromBody] TableGroupUpdateDTO groupData)
+    [HttpPut("{tableGroupId}")]
+    public async Task<IActionResult> UpdateTableGroup(int tableGroupId, [FromBody] TableGroupUpdateDTO groupData)
     {
       try
       {
         var tableGroup = await _context.TableGroups
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == table_group_id);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
         {
@@ -263,7 +263,7 @@ namespace back_end.Controllers
         {
           var existingGroup = await _context.TableGroups
               .FirstOrDefaultAsync(tg => tg.Group_Name == groupData.Group_Name &&
-                                         tg.TableGroup_Id != table_group_id);
+                                         tg.TableGroup_Id != tableGroupId);
 
           if (existingGroup != null)
           {
@@ -279,7 +279,7 @@ namespace back_end.Controllers
           if (!groupData.Is_Active.Value)
           {
             var isInActiveSession = await _context.DiningSessions
-                .AnyAsync(ds => ds.TableGroup_Id == table_group_id && ds.Ended_At == null);
+                .AnyAsync(ds => ds.TableGroup_Id == tableGroupId && ds.Ended_At == null);
 
             if (isInActiveSession)
             {
@@ -307,15 +307,15 @@ namespace back_end.Controllers
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpDelete("{table_group_id}")]
-    public async Task<IActionResult> DeleteTableGroup(int table_group_id)
+    [HttpDelete("{tableGroupId}")]
+    public async Task<IActionResult> DeleteTableGroup(int tableGroupId)
     {
       try
       {
         var tableGroup = await _context.TableGroups
             .Include(tg => tg.Tables)
             .Include(tg => tg.DiningSessions)
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == table_group_id);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
         {
@@ -362,14 +362,14 @@ namespace back_end.Controllers
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("{table_group_id}/tables/{table_id}")]
-    public async Task<IActionResult> AddTableToGroup(int table_group_id, int table_id)
+    [HttpPost("{tableGroupId}/tables/{tableId}")]
+    public async Task<IActionResult> AddTableToGroup(int tableGroupId, int tableId)
     {
       try
       {
         var tableGroup = await _context.TableGroups
             .Include(tg => tg.Tables)
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == table_group_id);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
         {
@@ -382,7 +382,7 @@ namespace back_end.Controllers
         }
 
         var table = await _context.Tables
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table == null)
         {
@@ -395,33 +395,33 @@ namespace back_end.Controllers
           return BadRequest($"Table and table group must belong to the same location. Table is at location {table.Location_Id}, group is at location {tableGroup.Location_Id}");
         }
 
-        if (table.TableGroup_Id.HasValue && table.TableGroup_Id.Value != table_group_id)
+        if (table.TableGroup_Id.HasValue && table.TableGroup_Id.Value != tableGroupId)
         {
           return BadRequest($"Table is already assigned to another group (Group ID: {table.TableGroup_Id})");
         }
 
-        if (table.TableGroup_Id == table_group_id)
+        if (table.TableGroup_Id == tableGroupId)
         {
           return BadRequest("Table is already in this group");
         }
 
         var isTableInActiveSession = await _context.DiningSessions
-            .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.Table_Id == tableId && ds.Ended_At == null);
 
         if (isTableInActiveSession)
         {
           return BadRequest("Cannot add table to group while it's in an active session");
         }
 
-        table.TableGroup_Id = table_group_id;
+        table.TableGroup_Id = tableGroupId;
         _context.Tables.Update(table);
         await _context.SaveChangesAsync();
 
         return Ok(new
         {
           message = "Table added to group successfully",
-          tableGroup_Id = table_group_id,
-          table_Id = table_id
+          tableGroup_Id = tableGroupId,
+          table_Id = tableId
         });
       }
       catch (Exception ex)
@@ -432,14 +432,14 @@ namespace back_end.Controllers
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpDelete("{table_group_id}/tables/{table_id}")]
-    public async Task<IActionResult> RemoveTableFromGroup(int table_group_id, int table_id)
+    [HttpDelete("{tableGroupId}/tables/{tableId}")]
+    public async Task<IActionResult> RemoveTableFromGroup(int tableGroupId, int tableId)
     {
       try
       {
         var table = await _context.Tables
             .Include(t => t.TableGroup)
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table == null)
         {
@@ -451,14 +451,14 @@ namespace back_end.Controllers
           return LocationResults.OtherLocation();
         }
 
-        if (table.TableGroup_Id != table_group_id)
+        if (table.TableGroup_Id != tableGroupId)
         {
           return BadRequest("Table is not in this group");
         }
 
         // Check if the table group is in an active session
         var isGroupInActiveSession = await _context.DiningSessions
-            .AnyAsync(ds => ds.TableGroup_Id == table_group_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.TableGroup_Id == tableGroupId && ds.Ended_At == null);
 
         if (isGroupInActiveSession)
         {
@@ -472,7 +472,7 @@ namespace back_end.Controllers
         return Ok(new
         {
           message = "Table removed from group successfully",
-          table_Id = table_id
+          table_Id = tableId
         });
       }
       catch (Exception ex)
@@ -483,13 +483,13 @@ namespace back_end.Controllers
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("{table_group_id}/toggle-status")]
-    public async Task<IActionResult> ToggleTableGroupStatus(int table_group_id)
+    [HttpPost("{tableGroupId}/toggle-status")]
+    public async Task<IActionResult> ToggleTableGroupStatus(int tableGroupId)
     {
       try
       {
         var tableGroup = await _context.TableGroups
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == table_group_id);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
         {
@@ -505,7 +505,7 @@ namespace back_end.Controllers
         if (tableGroup.Is_Active)
         {
           var isInActiveSession = await _context.DiningSessions
-              .AnyAsync(ds => ds.TableGroup_Id == table_group_id && ds.Ended_At == null);
+              .AnyAsync(ds => ds.TableGroup_Id == tableGroupId && ds.Ended_At == null);
 
           if (isInActiveSession)
           {
@@ -531,13 +531,13 @@ namespace back_end.Controllers
     }
 
     [Authorize]
-    [HttpGet("{table_group_id}/active-session")]
-    public async Task<IActionResult> CheckTableGroupActiveSession(int table_group_id)
+    [HttpGet("{tableGroupId}/active-session")]
+    public async Task<IActionResult> CheckTableGroupActiveSession(int tableGroupId)
     {
       try
       {
         var tableGroup = await _context.TableGroups
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == table_group_id);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
         {
@@ -550,7 +550,7 @@ namespace back_end.Controllers
         }
 
         var isInActiveSession = await _context.DiningSessions
-            .AnyAsync(ds => ds.TableGroup_Id == table_group_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.TableGroup_Id == tableGroupId && ds.Ended_At == null);
 
         if (isInActiveSession)
         {

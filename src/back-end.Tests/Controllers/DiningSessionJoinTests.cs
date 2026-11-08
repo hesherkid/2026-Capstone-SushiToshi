@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using back_end.controllers;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
@@ -61,7 +60,7 @@ public class DiningSessionJoinTests : IDisposable
     public void Dispose() => _context.Dispose();
 
     private DiningSessionController ControllerAs(int? userId, string role = "Customer") =>
-        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DashBoardController>>().Object, new LocationAccessService(_context))
+        new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DiningSessionController>>().Object, new LocationAccessService(_context))
         {
             ControllerContext = new ControllerContext
             {
@@ -176,7 +175,7 @@ public class DiningSessionJoinTests : IDisposable
     [Fact]
     public void CreateSession_IsStaffOnly()
     {
-        var method = typeof(DiningSessionController).GetMethod(nameof(DiningSessionController.create_dining_session))!;
+        var method = typeof(DiningSessionController).GetMethod(nameof(DiningSessionController.CreateDiningSession))!;
         var authorize = method
             .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
@@ -190,7 +189,7 @@ public class DiningSessionJoinTests : IDisposable
     [InlineData(103)]  // table's group already has a session
     public async Task CreateSession_RefusesBusyTables(int tableId)
     {
-        var result = await ControllerAs(1, "Staff").create_dining_session(new CreateSessionRequestDTO
+        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDTO
         {
             Menu_Id = 1,
             Location_Id = LocationId,
@@ -205,7 +204,7 @@ public class DiningSessionJoinTests : IDisposable
     [Fact]
     public async Task CreateSession_StartsASessionOnAFreeTableWithoutAddingParticipants()
     {
-        var result = await ControllerAs(1, "Staff").create_dining_session(new CreateSessionRequestDTO
+        var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDTO
         {
             Menu_Id = 1,
             Location_Id = LocationId,

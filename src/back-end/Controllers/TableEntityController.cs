@@ -28,7 +28,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Creates a new table.
     /// </summary>
-    /// <param name="table_data">The table payload including table number, seat count, active flag, and optional QR code URL.</param>
+    /// <param name="tableData">The table payload including table number, seat count, active flag, and optional QR code URL.</param>
     /// <remarks>
     /// Returns <c>201 Created</c> with the created table and a <c>Location</c> header pointing to <see cref="GetTable(int)"/>.
     /// Table numbers must be unique.
@@ -41,28 +41,28 @@ namespace back_end.Controllers
     /// <response code="500">An unexpected error occurred while creating the table.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost()]
-    public async Task<IActionResult> CreateTable(TableEntityCreateDTO table_data)
+    public async Task<IActionResult> CreateTable(TableEntityCreateDTO tableData)
     {
       try
       {
         // Validate location exists
         var location = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == table_data.Location_Id);
+            .FirstOrDefaultAsync(l => l.Location_Id == tableData.Location_Id);
 
         if (location == null)
         {
           return BadRequest("Location does not exist");
         }
 
-        if (!await _locationAccess.CanAccessLocationAsync(User, table_data.Location_Id))
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableData.Location_Id))
         {
           return LocationResults.OtherLocation();
         }
 
         // Check if table number already exists at this location
         var existingTable = await _context.Tables
-            .FirstOrDefaultAsync(t => t.table_number == table_data.Table_Number &&
-                                      t.Location_Id == table_data.Location_Id);
+            .FirstOrDefaultAsync(t => t.table_number == tableData.Table_Number &&
+                                      t.Location_Id == tableData.Location_Id);
 
         if (existingTable != null)
         {
@@ -71,11 +71,11 @@ namespace back_end.Controllers
 
         var newTable = new TableEntity
         {
-          table_number = table_data.Table_Number,
-          QR_Code = table_data.Qr_Code_Url ?? string.Empty,
-          seat_count = table_data.Seat_Count,
-          is_active = table_data.Is_Active,
-          Location_Id = table_data.Location_Id
+          table_number = tableData.Table_Number,
+          QR_Code = tableData.Qr_Code_Url ?? string.Empty,
+          seat_count = tableData.Seat_Count,
+          is_active = tableData.Is_Active,
+          Location_Id = tableData.Location_Id
         };
 
         _context.Tables.Add(newTable);
@@ -175,23 +175,23 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves a table by its unique identifier.
     /// </summary>
-    /// <param name="table_id">The unique identifier of the table to retrieve.</param>
+    /// <param name="tableId">The unique identifier of the table to retrieve.</param>
     /// <remarks>
     /// Returns the table’s complete record, including its number, seat count, active state, and QR code information.
     /// Requires authorization.
     /// </remarks>
     /// <response code="200">The table was found and returned successfully.</response>
-    /// <response code="404">No table exists with the specified <paramref name="table_id"/>.</response>
+    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
     /// <response code="500">An unexpected error occurred while retrieving the table.</response>
     [Authorize]
-    [HttpGet("{table_id}")]
-    public async Task<IActionResult> GetTable(int table_id)
+    [HttpGet("{tableId}")]
+    public async Task<IActionResult> GetTable(int tableId)
     {
       try
       {
         var table = await _context.Tables
             .Include(t => t.TableGroup)
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table is null)
         {
@@ -215,8 +215,8 @@ namespace back_end.Controllers
     /// <summary>
     /// Updates a table by its identifier.
     /// </summary>
-    /// <param name="table_id">The unique identifier of the table to update.</param>
-    /// <param name="table_data">Fields to update for the table (partial updates supported).</param>
+    /// <param name="tableId">The unique identifier of the table to update.</param>
+    /// <param name="tableData">Fields to update for the table (partial updates supported).</param>
     /// <remarks>
     /// This endpoint performs a <em>partial</em> update using <c>PUT</c> for convenience:
     /// only the non-null properties in <c>TableEntityUpdateDTO</c> are applied.
@@ -226,17 +226,17 @@ namespace back_end.Controllers
     /// </remarks>
     /// <response code="200">The table was updated successfully.</response>
     /// <response code="400">Invalid request body or no updatable fields provided.</response>
-    /// <response code="404">No table exists with the specified <paramref name="table_id"/>.</response>
+    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
     /// <response code="409">A different table already uses the requested table number.</response>
     /// <response code="500">An unexpected error occurred while updating the table.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("{table_id}")]
-    public async Task<IActionResult> UpdateTable(int table_id, TableEntityUpdateDTO table_data)
+    [HttpPut("{tableId}")]
+    public async Task<IActionResult> UpdateTable(int tableId, TableEntityUpdateDTO tableData)
     {
       try
       {
         var table = await _context.Tables
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table is null)
         {
@@ -249,31 +249,31 @@ namespace back_end.Controllers
         }
 
         // Check if table number is being changed
-        if (table_data.Table_Number.HasValue && table.table_number != table_data.Table_Number)
+        if (tableData.Table_Number.HasValue && table.table_number != tableData.Table_Number)
         {
           var existingTable = await _context.Tables
-              .FirstOrDefaultAsync(t => t.table_number == table_data.Table_Number && t.Table_Id != table_id);
+              .FirstOrDefaultAsync(t => t.table_number == tableData.Table_Number && t.Table_Id != tableId);
 
           if (existingTable != null)
           {
             return BadRequest("Table number already exists");
           }
-          table.table_number = table_data.Table_Number.Value;
+          table.table_number = tableData.Table_Number.Value;
         }
 
-        if (table_data.Seat_Count.HasValue)
+        if (tableData.Seat_Count.HasValue)
         {
-          table.seat_count = table_data.Seat_Count.Value;
+          table.seat_count = tableData.Seat_Count.Value;
         }
 
-        if (table_data.Is_Active.HasValue)
+        if (tableData.Is_Active.HasValue)
         {
-          table.is_active = table_data.Is_Active.Value;
+          table.is_active = tableData.Is_Active.Value;
         }
 
-        if (table_data.Qr_Code_Url != null)
+        if (tableData.Qr_Code_Url != null)
         {
-          table.QR_Code = table_data.Qr_Code_Url;
+          table.QR_Code = tableData.Qr_Code_Url;
         }
 
         _context.Tables.Update(table);
@@ -290,25 +290,25 @@ namespace back_end.Controllers
     /// <summary>
     /// Deletes a table by its identifier.
     /// </summary>
-    /// <param name="table_id">The unique identifier of the table to delete.</param>
+    /// <param name="tableId">The unique identifier of the table to delete.</param>
     /// <remarks>
     /// Returns <c>204 No Content</c> on successful deletion.  
     /// If the table is associated with an active dining session (<c>Ended_At == null</c>), deletion is blocked and a <c>409 Conflict</c> is returned.
     /// </remarks>
     /// <response code="204">The table was deleted successfully.</response>
-    /// <response code="404">No table exists with the specified <paramref name="table_id"/>.</response>
+    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
     /// <response code="403">Only admins can delete tables.</response>
     /// <response code="409">The table cannot be deleted because it is currently in use.</response>
     /// <response code="500">An unexpected error occurred while deleting the table.</response>
     [Authorize(Policy = "adminOnly")]
-    [HttpDelete("{table_id}")]
-    public async Task<IActionResult> DeleteTable(int table_id)
+    [HttpDelete("{tableId}")]
+    public async Task<IActionResult> DeleteTable(int tableId)
     {
       try
       {
         var table = await _context.Tables
             .Include(t => t.TableGroup)
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table is null)
         {
@@ -317,7 +317,7 @@ namespace back_end.Controllers
 
         // Check if table is in an active session (directly assigned)
         var activeSessionDirect = await _context.DiningSessions
-            .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.Table_Id == tableId && ds.Ended_At == null);
 
         if (activeSessionDirect)
         {
@@ -326,7 +326,7 @@ namespace back_end.Controllers
 
         // Check if table is in an ended session (directly assigned)
         var inactiveSessionDirect = await _context.DiningSessions
-            .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At != null);
+            .AnyAsync(ds => ds.Table_Id == tableId && ds.Ended_At != null);
 
         if (inactiveSessionDirect)
         {
@@ -359,7 +359,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Toggles a table's active status.
     /// </summary>
-    /// <param name="table_id">The unique identifier of the table.</param>
+    /// <param name="tableId">The unique identifier of the table.</param>
     /// <remarks>
     /// - If the table is <c>inactive</c>, this endpoint **activates** it.  
     /// - If the table is <c>active</c>, this endpoint attempts to **deactivate** it.  
@@ -367,18 +367,18 @@ namespace back_end.Controllers
     /// Returns the new status in the response body.
     /// </remarks>
     /// <response code="200">The table status was toggled; response includes the current status.</response>
-    /// <response code="404">No table exists with the specified <paramref name="table_id"/>.</response>
+    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
     /// <response code="409">The table cannot be deactivated because it is currently in use.</response>
     /// <response code="500">An unexpected error occurred while toggling the table status.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("{table_id}/toggle-status")]
-    public async Task<IActionResult> ToggleTableStatus(int table_id)
+    [HttpPost("{tableId}/toggle-status")]
+    public async Task<IActionResult> ToggleTableStatus(int tableId)
     {
       try
       {
         var table = await _context.Tables
             .Include(t => t.TableGroup)
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table is null)
         {
@@ -392,7 +392,7 @@ namespace back_end.Controllers
 
         // Check if table is in an active session (directly assigned)
         var activeSessionDirect = await _context.DiningSessions
-            .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.Table_Id == tableId && ds.Ended_At == null);
 
         if (activeSessionDirect)
         {
@@ -428,7 +428,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Checks whether a table currently has an active dining session.
     /// </summary>
-    /// <param name="table_id">The unique identifier of the table.</param>
+    /// <param name="tableId">The unique identifier of the table.</param>
     /// <remarks>
     /// Returns <c>success=true</c> if the table has **no** active session (available), otherwise <c>success=false</c>.
     /// An active session is defined as a <c>DiningSession</c> where <c>Ended_At == null</c> and the session includes the given table.
@@ -437,14 +437,14 @@ namespace back_end.Controllers
     /// <response code="403">The user is not authorized to perform this action.</response>
     /// <response code="500">An unexpected error occurred while checking availability.</response>
     [Authorize]
-    [HttpPost("{table_id}/active-session")]
-    public async Task<IActionResult> CheckTableActiveSession(int table_id)
+    [HttpPost("{tableId}/active-session")]
+    public async Task<IActionResult> CheckTableActiveSession(int tableId)
     {
       try
       {
         var table = await _context.Tables
             .Include(t => t.TableGroup)
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table == null)
         {
@@ -458,7 +458,7 @@ namespace back_end.Controllers
 
         // Check if table is directly assigned to an active session
         var activeSessionDirect = await _context.DiningSessions
-            .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.Table_Id == tableId && ds.Ended_At == null);
 
         if (activeSessionDirect)
         {
@@ -487,13 +487,13 @@ namespace back_end.Controllers
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("{table_id}/assign-to-group/{table_group_id}")]
-    public async Task<IActionResult> AssignTableToGroup(int table_id, int table_group_id)
+    [HttpPost("{tableId}/assign-to-group/{tableGroupId}")]
+    public async Task<IActionResult> AssignTableToGroup(int tableId, int tableGroupId)
     {
       try
       {
         var table = await _context.Tables
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table == null)
         {
@@ -506,7 +506,7 @@ namespace back_end.Controllers
         }
 
         var tableGroup = await _context.TableGroups
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == table_group_id);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
         {
@@ -520,14 +520,14 @@ namespace back_end.Controllers
         }
 
         var activeSession = await _context.DiningSessions
-            .AnyAsync(ds => ds.Table_Id == table_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.Table_Id == tableId && ds.Ended_At == null);
 
         if (activeSession)
         {
           return BadRequest("Cannot assign table to group while it's in an active session");
         }
 
-        table.TableGroup_Id = table_group_id;
+        table.TableGroup_Id = tableGroupId;
         _context.Tables.Update(table);
         await _context.SaveChangesAsync();
 
@@ -541,14 +541,14 @@ namespace back_end.Controllers
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpDelete("{table_id}/remove-from-group")]
-    public async Task<IActionResult> RemoveTableFromGroup(int table_id)
+    [HttpDelete("{tableId}/remove-from-group")]
+    public async Task<IActionResult> RemoveTableFromGroup(int tableId)
     {
       try
       {
         var table = await _context.Tables
             .Include(t => t.TableGroup)
-            .FirstOrDefaultAsync(t => t.Table_Id == table_id);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableId);
 
         if (table == null)
         {

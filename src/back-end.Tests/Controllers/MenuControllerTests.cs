@@ -216,7 +216,7 @@ public class MenuControllerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _controller.Create_Menu_Item(new MenuItemCreateDTO { Name = "Salmon", Category_Id = 1 });
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDTO { Name = "Salmon", Category_Id = 1 });
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -232,7 +232,7 @@ public class MenuControllerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _controller.Create_Menu_Item(new MenuItemCreateDTO
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDTO
         {
             Name = "Spicy Tuna",
             Category_Id = 1,
@@ -336,7 +336,7 @@ public class MenuControllerTests : IDisposable
     public async Task UpdateMenu_PartialUpdate_ChangesOnlySentFields()
     {
         // Act
-        var result = await _controller.Update_Menu(MainMenu, new MenuUpdateDTO { Is_Active = false });
+        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDTO { Is_Active = false });
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -354,7 +354,7 @@ public class MenuControllerTests : IDisposable
         SeedMenuItems();
 
         // Act
-        var result = await _controller.Update_Menu(MainMenu, new MenuUpdateDTO { Name = "Old Menu" });
+        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDTO { Name = "Old Menu" });
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -365,7 +365,7 @@ public class MenuControllerTests : IDisposable
     public async Task DeleteMenu_Existing_RemovesIt()
     {
         // Act
-        var result = await _controller.Delete_Menu(MainMenu);
+        var result = await _controller.DeleteMenu(MainMenu);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -380,7 +380,7 @@ public class MenuControllerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _controller.Delete_Menu(MainMenu);
+        var result = await _controller.DeleteMenu(MainMenu);
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -396,7 +396,7 @@ public class MenuControllerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _controller.Delete_Menu(MainMenu);
+        var result = await _controller.DeleteMenu(MainMenu);
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -407,7 +407,7 @@ public class MenuControllerTests : IDisposable
     public async Task CreateMenu_ReturnsMenuResponseDto()
     {
         // Act
-        var result = await _controller.Create_Menu(new MenuCreateDTO { Name = "Dinner" });
+        var result = await _controller.CreateMenu(new MenuCreateDTO { Name = "Dinner" });
 
         // Assert
         var dto = ((OkObjectResult)result).Value.Should().BeOfType<MenuResponseDTO>().Subject;
@@ -417,10 +417,10 @@ public class MenuControllerTests : IDisposable
     }
 
     [Theory]
-    [InlineData(nameof(MenuController.Create_Menu), "adminOnly")]
-    [InlineData(nameof(MenuController.Create_Menu_Item), "staffOnly")]
-    [InlineData(nameof(MenuController.Update_Menu), "adminOnly")]
-    [InlineData(nameof(MenuController.Delete_Menu), "adminOnly")]
+    [InlineData(nameof(MenuController.CreateMenu), "adminOnly")]
+    [InlineData(nameof(MenuController.CreateMenuItem), "staffOnly")]
+    [InlineData(nameof(MenuController.UpdateMenu), "adminOnly")]
+    [InlineData(nameof(MenuController.DeleteMenu), "adminOnly")]
     public void WriteEndpoints_RequirePolicy(string methodName, string policy)
     {
         // Act

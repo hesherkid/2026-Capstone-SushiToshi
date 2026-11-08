@@ -93,7 +93,7 @@ namespace back_end.Controllers
     [ProducesResponseType(typeof(Locations), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Create_Location(
+    public async Task<IActionResult> CreateLocation(
         LocationCreateDTO createLocation
     )
     {
@@ -124,7 +124,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves a specific location by its ID.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
+    /// <param name="locationId">The unique identifier of the location</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the <see cref="Location"/> object.
     /// Returns HTTP 200 (OK) with the location details on success.
@@ -141,17 +141,17 @@ namespace back_end.Controllers
     ///
     /// Returns the complete location details for the specified ID.
     /// </remarks>
-    [HttpGet("{location_id}")]
+    [HttpGet("{locationId}")]
     [ProducesResponseType(typeof(Locations), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> get_locations(
-        int location_id
+    public async Task<IActionResult> GetLocations(
+        int locationId
     )
     {
       try
       {
-        var location = await _context.Locations.Where(l => l.Location_Id == location_id).FirstOrDefaultAsync();
+        var location = await _context.Locations.Where(l => l.Location_Id == locationId).FirstOrDefaultAsync();
         if (location == null)
         {
           return NotFound("Location was not Found");
@@ -171,8 +171,8 @@ namespace back_end.Controllers
     /// <summary>
     /// Updates an existing location's information.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location to update</param>
-    /// <param name="location_update">The updated location data</param>
+    /// <param name="locationId">The unique identifier of the location to update</param>
+    /// <param name="locationUpdate">The updated location data</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the updated location object.
     /// Returns HTTP 200 (OK) with the updated location on success.
@@ -199,53 +199,53 @@ namespace back_end.Controllers
     /// All fields in the request body are optional - only provided fields will be updated.
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
-    [HttpPut("{location_id}")]
+    [HttpPut("{locationId}")]
     [ProducesResponseType(typeof(Locations), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Update_Location(
-        int location_id,
-        LocationUpdateDTO location_update
+    public async Task<IActionResult> UpdateLocation(
+        int locationId,
+        LocationUpdateDTO locationUpdate
     )
     {
       try
       {
-        var location = await _context.Locations.Where(l => l.Location_Id == location_id).FirstOrDefaultAsync();
+        var location = await _context.Locations.Where(l => l.Location_Id == locationId).FirstOrDefaultAsync();
         if (location == null)
         {
           return NotFound("Location to be updated was not found.");
         }
-        if (!string.IsNullOrEmpty(location_update.Name))
+        if (!string.IsNullOrEmpty(locationUpdate.Name))
         {
-          location.Name = location_update.Name;
+          location.Name = locationUpdate.Name;
         }
-        if (!string.IsNullOrEmpty(location_update.Address_One))
+        if (!string.IsNullOrEmpty(locationUpdate.Address_One))
         {
-          location.Address_Primary = location_update.Address_One;
+          location.Address_Primary = locationUpdate.Address_One;
         }
-        if (!string.IsNullOrEmpty(location_update.Address_Two))
+        if (!string.IsNullOrEmpty(locationUpdate.Address_Two))
         {
-          location.Address_Secondary = location_update.Address_Two;
+          location.Address_Secondary = locationUpdate.Address_Two;
         }
-        if (!string.IsNullOrEmpty(location_update.City))
+        if (!string.IsNullOrEmpty(locationUpdate.City))
         {
-          location.City = location_update.City;
+          location.City = locationUpdate.City;
         }
-        if (!string.IsNullOrEmpty(location_update.Province))
+        if (!string.IsNullOrEmpty(locationUpdate.Province))
         {
-          location.Province = location_update.Province;
+          location.Province = locationUpdate.Province;
         }
-        if (!string.IsNullOrEmpty(location_update.Province_Code))
+        if (!string.IsNullOrEmpty(locationUpdate.Province_Code))
         {
-          location.Province_Code = location_update.Province_Code;
+          location.Province_Code = locationUpdate.Province_Code;
         }
-        if (!string.IsNullOrEmpty(location_update.Postal_Code))
+        if (!string.IsNullOrEmpty(locationUpdate.Postal_Code))
         {
-          location.Postal_Code = location_update.Postal_Code;
+          location.Postal_Code = locationUpdate.Postal_Code;
         }
-        if (!string.IsNullOrEmpty(location_update.Phone_Number))
+        if (!string.IsNullOrEmpty(locationUpdate.Phone_Number))
         {
-          location.Phone_Number = location_update.Phone_Number;
+          location.Phone_Number = locationUpdate.Phone_Number;
         }
 
         _context.Update(location);
@@ -261,7 +261,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Deletes a location from the system.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location to delete</param>
+    /// <param name="locationId">The unique identifier of the location to delete</param>
     /// <returns>
     /// An <see cref="IActionResult"/> indicating the result of the operation.
     /// Returns HTTP 200 (OK) with a success message when the location is deleted.
@@ -280,17 +280,17 @@ namespace back_end.Controllers
     /// This may also remove associated menu-location relationships depending on cascade settings.
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
-    [HttpDelete("{location_id}")]
+    [HttpDelete("{locationId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Delete_Location(int location_id)
+    public async Task<IActionResult> DeleteLocation(int locationId)
     {
       try
       {
         var deleteLocation = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == location_id);
+            .FirstOrDefaultAsync(l => l.Location_Id == locationId);
 
         if (deleteLocation == null)
         {
@@ -299,7 +299,7 @@ namespace back_end.Controllers
 
         // Check for active dining sessions
         var hasActiveSessions = await _context.DiningSessions
-            .AnyAsync(ds => ds.Location_Id == location_id && ds.Ended_At == null);
+            .AnyAsync(ds => ds.Location_Id == locationId && ds.Ended_At == null);
 
         if (hasActiveSessions)
         {
@@ -308,7 +308,7 @@ namespace back_end.Controllers
 
         // Check for tables
         var hasTables = await _context.Tables
-            .AnyAsync(t => t.Location_Id == location_id);
+            .AnyAsync(t => t.Location_Id == locationId);
 
         if (hasTables)
         {
@@ -317,7 +317,7 @@ namespace back_end.Controllers
 
         // Check for table groups
         var hasTableGroups = await _context.TableGroups
-            .AnyAsync(tg => tg.Location_Id == location_id);
+            .AnyAsync(tg => tg.Location_Id == locationId);
 
         if (hasTableGroups)
         {
@@ -326,11 +326,11 @@ namespace back_end.Controllers
 
         // Anyone working here moves to another location they're assigned to, or to none.
         // (Their assignment to this location is deleted with it.)
-        var workingHere = await _context.Users.Where(u => u.Location_id == location_id).ToListAsync();
+        var workingHere = await _context.Users.Where(u => u.Location_id == locationId).ToListAsync();
         foreach (var user in workingHere)
         {
           user.Location_id = await _context.StaffLocations
-              .Where(sl => sl.User_Id == user.User_id && sl.Location_Id != location_id)
+              .Where(sl => sl.User_Id == user.User_id && sl.Location_Id != locationId)
               .OrderBy(sl => sl.Location_Id)
               .Select(sl => (int?)sl.Location_Id)
               .FirstOrDefaultAsync();
@@ -351,7 +351,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Associates a menu with a specific location.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
+    /// <param name="locationId">The unique identifier of the location</param>
     /// <param name="menuLocationCreate">The menu location data containing the menu ID</param>
     /// <returns>
     /// An <see cref="IActionResult"/> indicating the result of the operation.
@@ -376,26 +376,26 @@ namespace back_end.Controllers
     /// The menu and location must both exist before creating the association.
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
-    [HttpPost("{location_id}/menus")]
+    [HttpPost("{locationId}/menus")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Add_Menu_To_Location(
-       int location_id,
+    public async Task<IActionResult> AddMenuToLocation(
+       int locationId,
        MenuLocationCreateDTO menuLocationCreate
    )
     {
       try
       {
-        var location = _context.Locations.Where(l => l.Location_Id == location_id).FirstOrDefault();
+        var location = _context.Locations.Where(l => l.Location_Id == locationId).FirstOrDefault();
         if (location == null)
         {
           return NotFound("Location was not found");
         }
         _context.MenuLocations.Add(new MenuLocations
         {
-          Location_Id = location_id,
+          Location_Id = locationId,
           Menu_Id = menuLocationCreate.Menu_id
         });
         await _context.SaveChangesAsync();
@@ -416,8 +416,8 @@ namespace back_end.Controllers
     /// <summary>
     /// Removes a menu from a specific location.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
-    /// <param name="menu_id">The unique identifier of the menu</param>
+    /// <param name="locationId">The unique identifier of the location</param>
+    /// <param name="menuId">The unique identifier of the menu</param>
     /// <returns>
     /// An <see cref="IActionResult"/> indicating the result of the operation.
     /// Returns HTTP 200 (OK) with a success message when the menu is removed from the location.
@@ -436,18 +436,18 @@ namespace back_end.Controllers
     /// The menu itself is not deleted, only its assignment to this location.
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
-    [HttpDelete("{location_id}/menus/{menu_id}")]
+    [HttpDelete("{locationId}/menus/{menuId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Remove_Menu_From_Location(
-       int location_id,
-       int menu_id
+    public async Task<IActionResult> RemoveMenuFromLocation(
+       int locationId,
+       int menuId
    )
     {
       try
       {
-        var menuDeletion = await _context.MenuLocations.Where(ml => ml.Location_Id == location_id && ml.Menu_Id == menu_id).FirstOrDefaultAsync();
+        var menuDeletion = await _context.MenuLocations.Where(ml => ml.Location_Id == locationId && ml.Menu_Id == menuId).FirstOrDefaultAsync();
         if (menuDeletion == null)
         {
           return NotFound("Menu Location was not found.");
@@ -466,7 +466,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves all menu IDs associated with a specific location.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
+    /// <param name="locationId">The unique identifier of the location</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a collection of menu IDs.
     /// Returns HTTP 200 (OK) with the list of menu IDs on success.
@@ -483,23 +483,23 @@ namespace back_end.Controllers
     ///
     /// Returns an array of menu IDs associated with the specified location.
     /// </remarks>
-    [HttpGet("{location_id}/menus")]
+    [HttpGet("{locationId}/menus")]
     [ProducesResponseType(typeof(IEnumerable<int>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> list_location_menus(
-        int location_id
+    public async Task<IActionResult> ListLocationMenus(
+        int locationId
     )
     {
       try
       {
-        var location = await _context.Locations.Where(l => l.Location_Id == location_id).FirstOrDefaultAsync();
+        var location = await _context.Locations.Where(l => l.Location_Id == locationId).FirstOrDefaultAsync();
         if (location == null)
         {
           return NotFound("Location was not found.");
         }
         var menuIds = await _context.MenuLocations
-            .Where(ml => ml.Location_Id == location_id)
+            .Where(ml => ml.Location_Id == locationId)
             .Select(ml => ml.Menu_Id)  // Only select the Menu_Id
             .ToListAsync();
 
@@ -514,23 +514,23 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves all tables for a specific location.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
+    /// <param name="locationId">The unique identifier of the location</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a collection of tables.
     /// Returns HTTP 200 (OK) with the list of tables on success.
     /// Returns HTTP 404 (Not Found) if the location doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
-    [HttpGet("{location_id}/tables")]
+    [HttpGet("{locationId}/tables")]
     [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLocationTables(int location_id)
+    public async Task<IActionResult> GetLocationTables(int locationId)
     {
       try
       {
         var location = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == location_id);
+            .FirstOrDefaultAsync(l => l.Location_Id == locationId);
 
         if (location == null)
         {
@@ -539,7 +539,7 @@ namespace back_end.Controllers
 
         var tables = await _context.Tables
             .Include(t => t.TableGroup)
-            .Where(t => t.Location_Id == location_id)
+            .Where(t => t.Location_Id == locationId)
             .OrderBy(t => t.table_number)
             .Select(t => new
             {
@@ -565,23 +565,23 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves all table groups for a specific location.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
+    /// <param name="locationId">The unique identifier of the location</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a collection of table groups.
     /// Returns HTTP 200 (OK) with the list of table groups on success.
     /// Returns HTTP 404 (Not Found) if the location doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
-    [HttpGet("{location_id}/table-groups")]
+    [HttpGet("{locationId}/table-groups")]
     [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLocationTableGroups(int location_id)
+    public async Task<IActionResult> GetLocationTableGroups(int locationId)
     {
       try
       {
         var location = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == location_id);
+            .FirstOrDefaultAsync(l => l.Location_Id == locationId);
 
         if (location == null)
         {
@@ -590,7 +590,7 @@ namespace back_end.Controllers
 
         var tableGroups = await _context.TableGroups
             .Include(tg => tg.Tables)
-            .Where(tg => tg.Location_Id == location_id)
+            .Where(tg => tg.Location_Id == locationId)
             .OrderBy(tg => tg.Group_Name)
             .Select(tg => new
             {
@@ -621,7 +621,7 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves all dining sessions for a specific location.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
+    /// <param name="locationId">The unique identifier of the location</param>
     /// <param name="activeOnly">Optional filter to show only active sessions</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a collection of dining sessions.
@@ -629,16 +629,16 @@ namespace back_end.Controllers
     /// Returns HTTP 404 (Not Found) if the location doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
-    [HttpGet("{location_id}/dining-sessions")]
+    [HttpGet("{locationId}/dining-sessions")]
     [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLocationDiningSessions(int location_id, [FromQuery] bool? activeOnly)
+    public async Task<IActionResult> GetLocationDiningSessions(int locationId, [FromQuery] bool? activeOnly)
     {
       try
       {
         var location = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == location_id);
+            .FirstOrDefaultAsync(l => l.Location_Id == locationId);
 
         if (location == null)
         {
@@ -650,7 +650,7 @@ namespace back_end.Controllers
             .Include(ds => ds.TableGroup)
                 .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Participants)
-            .Where(ds => ds.Location_Id == location_id);
+            .Where(ds => ds.Location_Id == locationId);
 
         if (activeOnly.HasValue)
         {
@@ -692,23 +692,23 @@ namespace back_end.Controllers
     /// <summary>
     /// Gets summary statistics for a specific location.
     /// </summary>
-    /// <param name="location_id">The unique identifier of the location</param>
+    /// <param name="locationId">The unique identifier of the location</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing location statistics.
     /// Returns HTTP 200 (OK) with the statistics on success.
     /// Returns HTTP 404 (Not Found) if the location doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
-    [HttpGet("{location_id}/statistics")]
+    [HttpGet("{locationId}/statistics")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLocationStatistics(int location_id)
+    public async Task<IActionResult> GetLocationStatistics(int locationId)
     {
       try
       {
         var location = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == location_id);
+            .FirstOrDefaultAsync(l => l.Location_Id == locationId);
 
         if (location == null)
         {
@@ -716,30 +716,30 @@ namespace back_end.Controllers
         }
 
         var totalTables = await _context.Tables
-            .CountAsync(t => t.Location_Id == location_id);
+            .CountAsync(t => t.Location_Id == locationId);
 
         var activeTables = await _context.Tables
-            .CountAsync(t => t.Location_Id == location_id && t.is_active);
+            .CountAsync(t => t.Location_Id == locationId && t.is_active);
 
         var totalTableGroups = await _context.TableGroups
-            .CountAsync(tg => tg.Location_Id == location_id);
+            .CountAsync(tg => tg.Location_Id == locationId);
 
         var activeTableGroups = await _context.TableGroups
-            .CountAsync(tg => tg.Location_Id == location_id && tg.Is_Active);
+            .CountAsync(tg => tg.Location_Id == locationId && tg.Is_Active);
 
         var activeSessions = await _context.DiningSessions
-            .CountAsync(ds => ds.Location_Id == location_id && ds.Ended_At == null);
+            .CountAsync(ds => ds.Location_Id == locationId && ds.Ended_At == null);
 
         var totalSessions = await _context.DiningSessions
-            .CountAsync(ds => ds.Location_Id == location_id);
+            .CountAsync(ds => ds.Location_Id == locationId);
 
         var totalSeats = await _context.Tables
-            .Where(t => t.Location_Id == location_id)
+            .Where(t => t.Location_Id == locationId)
             .SumAsync(t => t.seat_count);
 
         return Ok(new
         {
-          location_Id = location_id,
+          location_Id = locationId,
           location_Name = location.Name,
           tables = new
           {

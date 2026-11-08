@@ -9,18 +9,18 @@ using back_end.Services;
 using Microsoft.AspNetCore.Authorization;
 
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
-  public class DashBoardController : Controller
+  public class DashboardController : Controller
   {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
-    private readonly ILogger<DashBoardController> _logger;
+    private readonly ILogger<DashboardController> _logger;
     private readonly ILocationAccessService _locationAccess;
 
-    public DashBoardController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger, ILocationAccessService locationAccess)
+    public DashboardController(ApplicationDbContext context, IConfiguration config, ILogger<DashboardController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _config = config;
@@ -92,7 +92,7 @@ namespace back_end.controllers
     [ProducesResponseType(typeof(List<DashBoardSessionsDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDashBoardSessions([FromQuery] int? locationId)
+    public async Task<IActionResult> GetDashboardSessions([FromQuery] int? locationId)
     {
       try
       {
@@ -124,15 +124,15 @@ namespace back_end.controllers
           return NoContent();
         }
 
-        var dashBoardSessions = new List<DashBoardSessionsDTO>();
+        var dashboardSessions = new List<DashBoardSessionsDTO>();
         foreach (var session in sessions)
         {
-          bool has_open_bill = session.Bills.Any(b => b.Status == BillStatus.Open);
-          bool Is_Closable = !has_open_bill;
+          bool hasOpenBill = session.Bills.Any(b => b.Status == BillStatus.Open);
+          bool isClosable = !hasOpenBill;
 
-          var active_participants = session.Participants.Count(p => p.Left_At == null);
+          var activeParticipants = session.Participants.Count(p => p.Left_At == null);
 
-          var dashBoard_session = new DashBoardSessionsDTO
+          var dashboardSession = new DashBoardSessionsDTO
           {
             Session_Id = session.Session_Id,
             Menu_Id = session.Menu_Id,
@@ -143,7 +143,7 @@ namespace back_end.controllers
             First_Order_At = session.First_Order_At,
             Table_Numbers = GetTableNumbers(session),
             Seat_Count = BillLinks.TableCapacity(session),
-            Active_Participants = active_participants,
+            Active_Participants = activeParticipants,
             Bills = session.Bills.Select(b => new DashBoardBillDTO
             {
               Bill_Id = b.Bill_Id,
@@ -167,11 +167,11 @@ namespace back_end.controllers
                 .Select(p => new DashBoardPersonDTO { Participant_Id = p.Participant_Id, User_Name = p.User_Name, Bill_Id = p.Bill_Id })
                 .ToList(),
             Bill_Count = session.Bills.Count(),
-            Is_Closable = Is_Closable
+            Is_Closable = isClosable
           };
-          dashBoardSessions.Add(dashBoard_session);
+          dashboardSessions.Add(dashboardSession);
         }
-        return Ok(dashBoardSessions);
+        return Ok(dashboardSessions);
       }
       catch (Exception ex)
       {
@@ -211,7 +211,7 @@ namespace back_end.controllers
     [HttpGet("summary")]
     [ProducesResponseType(typeof(DashBoardSummaryDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDashBoardSummary([FromQuery] int? locationId)
+    public async Task<IActionResult> GetDashboardSummary([FromQuery] int? locationId)
     {
       try
       {
@@ -232,12 +232,12 @@ namespace back_end.controllers
           query = query.Where(ds => ds.Location_Id == locationId.Value);
         }
 
-        var active_sessions = await query.ToListAsync();
+        var activeSessions = await query.ToListAsync();
 
-        int total_active_sessions = active_sessions.Count();
+        int totalActiveSessions = activeSessions.Count();
 
         // Count total tables in use - sum of individual tables and tables in groups
-        int total_tables_in_use = active_sessions.Sum(session => GetTableCount(session));
+        int totalTablesInUse = activeSessions.Sum(session => GetTableCount(session));
 
         // Build query for active bills
         var billsQuery = _context.Bills
@@ -255,7 +255,7 @@ namespace back_end.controllers
           billsQuery = billsQuery.Where(x => x.session.Location_Id == locationId.Value);
         }
 
-        int total_active_bills = await billsQuery.CountAsync();
+        int totalActiveBills = await billsQuery.CountAsync();
 
         // Build query for active participants
         var participantsQuery = _context.SessionParticipants
@@ -273,7 +273,7 @@ namespace back_end.controllers
           participantsQuery = participantsQuery.Where(x => x.session.Location_Id == locationId.Value);
         }
 
-        int total_active_participants = await participantsQuery.CountAsync();
+        int totalActiveParticipants = await participantsQuery.CountAsync();
 
         // Get location name if filtering by location
         string? locationName = null;
@@ -288,10 +288,10 @@ namespace back_end.controllers
         {
           Location_Id = locationId,
           Location_Name = locationName,
-          Total_Active_Sessions = total_active_sessions,
-          Total_Tables_In_Use = total_tables_in_use,
-          Total_Active_Bills = total_active_bills,
-          Total_ActiveParticipants = total_active_participants
+          Total_Active_Sessions = totalActiveSessions,
+          Total_Tables_In_Use = totalTablesInUse,
+          Total_Active_Bills = totalActiveBills,
+          Total_ActiveParticipants = totalActiveParticipants
         };
 
         return Ok(summary);

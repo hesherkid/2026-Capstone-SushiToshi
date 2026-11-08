@@ -11,7 +11,7 @@ using back_end.Helpers;
 using back_end.Services;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
@@ -19,10 +19,10 @@ namespace back_end.controllers
   {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
-    private readonly ILogger<DashBoardController> _logger;
+    private readonly ILogger<DiningSessionController> _logger;
     private readonly ILocationAccessService _locationAccess;
 
-    public DiningSessionController(ApplicationDbContext context, IConfiguration config, ILogger<DashBoardController> logger, ILocationAccessService locationAccess)
+    public DiningSessionController(ApplicationDbContext context, IConfiguration config, ILogger<DiningSessionController> logger, ILocationAccessService locationAccess)
     {
       _context = context;
       _config = config;
@@ -87,7 +87,7 @@ namespace back_end.controllers
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> create_dining_session(
+    public async Task<IActionResult> CreateDiningSession(
         [FromBody] CreateSessionRequestDTO sessionData)
 
     {
@@ -226,7 +226,7 @@ namespace back_end.controllers
     [HttpGet("get_list_dining_sessions")]
     [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> list_dining_sessions([FromQuery] ListDiningSessionsRequestDTO act)
+    public async Task<IActionResult> ListDiningSessions([FromQuery] ListDiningSessionsRequestDTO act)
     {
       try
       {
@@ -250,7 +250,7 @@ namespace back_end.controllers
 
         var sessions = await query.OrderByDescending(q => q.Started_At).ToListAsync();
 
-        var Response = sessions.Select(session => new DiningSessionResponseDTO
+        var response = sessions.Select(session => new DiningSessionResponseDTO
         {
           Session_Id = session.Session_Id,
           Menu_Id = session.Menu_Id,
@@ -261,7 +261,7 @@ namespace back_end.controllers
           Active_Participants = session.Participants.Count(p => p.Left_At == null)
         }).ToList();
 
-        return Ok(Response);
+        return Ok(response);
       }
       catch (Exception ex)
       {
@@ -287,7 +287,7 @@ namespace back_end.controllers
     /// <summary>
     /// Retrieves detailed information about a specific dining session.
     /// </summary>
-    /// <param name="session_id">The unique identifier of the dining session</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a <see cref="DiningSessionDetailDTO"/> object with session details.
     /// Returns HTTP 200 (OK) with the session details on success.
@@ -309,8 +309,8 @@ namespace back_end.controllers
     /// - Order and bill statistics
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpGet("get_location/{session_id}")]
-    public async Task<IActionResult> get_dining_session(int session_id)
+    [HttpGet("get_location/{sessionId}")]
+    public async Task<IActionResult> GetDiningSession(int sessionId)
     {
       try
       {
@@ -320,21 +320,21 @@ namespace back_end.controllers
             .Include(s => s.TableGroup)
                 .ThenInclude(tg => tg!.Tables)
             .Include(s => s.Orders)
-            .FirstOrDefaultAsync(s => s.Session_Id == session_id);
+            .FirstOrDefaultAsync(s => s.Session_Id == sessionId);
 
         if (session == null)
         {
-          return BadRequest($"Session:{session_id} Does not Exist");
+          return BadRequest($"Session:{sessionId} Does not Exist");
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
 
-        var participants = _context.SessionParticipants.Where(sp => sp.Session_Id == session_id);
-        int active_participants = await participants.CountAsync(sp => sp.Left_At == null);
-        int total_participants = await participants.CountAsync();
+        var participants = _context.SessionParticipants.Where(sp => sp.Session_Id == sessionId);
+        int activeParticipants = await participants.CountAsync(sp => sp.Left_At == null);
+        int totalParticipants = await participants.CountAsync();
 
         foreach (var returnedBill in session.Bills)
         {
@@ -349,16 +349,16 @@ namespace back_end.controllers
           Ended_at = session.Ended_At,
           First_Order_Time = session.First_Order_At,
           Table_Numbers = GetTableNumbers(session),
-          Active_Participants = active_participants,
+          Active_Participants = activeParticipants,
           Orders_Count = session.Orders.Count(),
           Bills_Count = session.Bills.Count(),
           Active_Bill_Count = session.Bills.Count(b => b.Status == BillStatus.Open),
-          Total_participant = total_participants
+          Total_participant = totalParticipants
         });
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error retrieving dining session {SessionId}", session_id);
+        _logger.LogError(ex, "Error retrieving dining session {SessionId}", sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
@@ -366,7 +366,7 @@ namespace back_end.controllers
     /// <summary>
     /// Adds a table to an existing dining session.
     /// </summary>
-    /// <param name="session_id">The unique identifier of the dining session</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="tableData">The table assignment data containing the table ID</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDTO"/> object.
@@ -395,12 +395,12 @@ namespace back_end.controllers
     /// - Table must not be assigned to another active session
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("{session_id}/tables")]
+    [HttpPost("{sessionId}/tables")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> add_table_to_dining_session(int session_id, [FromBody] TableAssignmentDTO tableData)
+    public async Task<IActionResult> AddTableToDiningSession(int sessionId, [FromBody] TableAssignmentDTO tableData)
     {
       try
       {
@@ -408,21 +408,21 @@ namespace back_end.controllers
             .Include(d => d.Table)
             .Include(d => d.TableGroup)
             .Include(d => d.Bills)
-            .FirstOrDefaultAsync(s => s.Session_Id == session_id);
+            .FirstOrDefaultAsync(s => s.Session_Id == sessionId);
 
         if (session == null)
         {
-          return NotFound($"Session: {session_id} not found");
+          return NotFound($"Session: {sessionId} not found");
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)
         {
-          return BadRequest($"Cannot modify an ended session: {session_id}");
+          return BadRequest($"Cannot modify an ended session: {sessionId}");
         }
 
         if (session.Bills.Any())
@@ -452,7 +452,7 @@ namespace back_end.controllers
         // Busy if the table, or a table group it belongs to, already has an open session
         bool tableBusy = await _context.DiningSessions
              .AnyAsync(d => d.Ended_At == null &&
-                   d.Session_Id != session_id &&
+                   d.Session_Id != sessionId &&
                    (d.Table_Id == table.Table_Id ||
                     (table.TableGroup_Id != null && d.TableGroup_Id == table.TableGroup_Id)));
 
@@ -484,14 +484,14 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error adding table {TableId} to dining session {SessionId}", tableData.Table_Id, session_id);
+        _logger.LogError(ex, "Error adding table {TableId} to dining session {SessionId}", tableData.Table_Id, sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("{session_id}/table-groups")]
-    public async Task<IActionResult> add_table_group_to_dining_session(int session_id, [FromBody] TableGroupAssignmentDTO tableGroupData)
+    [HttpPost("{sessionId}/table-groups")]
+    public async Task<IActionResult> AddTableGroupToDiningSession(int sessionId, [FromBody] TableGroupAssignmentDTO tableGroupData)
     {
       try
       {
@@ -499,21 +499,21 @@ namespace back_end.controllers
             .Include(d => d.Table)
             .Include(d => d.TableGroup)
             .Include(d => d.Bills)
-            .FirstOrDefaultAsync(s => s.Session_Id == session_id);
+            .FirstOrDefaultAsync(s => s.Session_Id == sessionId);
 
         if (session == null)
         {
-          return NotFound($"Session: {session_id} not found");
+          return NotFound($"Session: {sessionId} not found");
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)
         {
-          return BadRequest($"Cannot modify an ended session: {session_id}");
+          return BadRequest($"Cannot modify an ended session: {sessionId}");
         }
 
         if (session.Bills.Any())
@@ -544,7 +544,7 @@ namespace back_end.controllers
         var tableIds = tableGroup.Tables.Select(t => t.Table_Id).ToList();
         var checkIfTablesInActiveSession = await _context.DiningSessions
             .AnyAsync(d => d.Ended_At == null &&
-                          d.Session_Id != session_id &&
+                          d.Session_Id != sessionId &&
                           (d.Table_Id.HasValue && tableIds.Contains(d.Table_Id.Value) ||
                            d.TableGroup_Id.HasValue && d.TableGroup!.Tables.Any(t => tableIds.Contains(t.Table_Id))));
 
@@ -578,7 +578,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error adding table group {TableGroupId} to dining session {SessionId}", tableGroupData.TableGroup_Id, session_id);
+        _logger.LogError(ex, "Error adding table group {TableGroupId} to dining session {SessionId}", tableGroupData.TableGroup_Id, sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
@@ -586,8 +586,8 @@ namespace back_end.controllers
     /// <summary>
     /// Removes a table from a dining session.
     /// </summary>
-    /// <param name="session_id">The unique identifier of the dining session</param>
-    /// <param name="table_id">The unique identifier of the table to remove</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
+    /// <param name="tableId">The unique identifier of the table to remove</param>
     /// <returns>
     /// An <see cref="IActionResult"/> indicating the result of the operation.
     /// Returns HTTP 200 (OK) with a success message when the table is removed.
@@ -609,22 +609,22 @@ namespace back_end.controllers
     /// Session must not have any open bills
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpDelete("{session_id}/Tables/{table_id}")]
-    public async Task<IActionResult> remove_table_from_session(int session_id, int table_id)
+    [HttpDelete("{sessionId}/Tables/{tableId}")]
+    public async Task<IActionResult> RemoveTableFromSession(int sessionId, int tableId)
     {
       try
       {
         var session = await _context.DiningSessions
             .Include(ds => ds.Bills)
             .Include(ds => ds.Table)
-            .FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
 
         if (session == null)
         {
-          return NotFound($"Session was not found for session: {session_id}");
+          return NotFound($"Session was not found for session: {sessionId}");
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
@@ -632,7 +632,7 @@ namespace back_end.controllers
         // Added for table turn over analytics, so we can't modify ended sessions
         if (session.Ended_At != null)
         {
-          return BadRequest($"Cannot modify an ended session: {session_id}");
+          return BadRequest($"Cannot modify an ended session: {sessionId}");
         }
 
         // Only check the status of the Bill
@@ -642,7 +642,7 @@ namespace back_end.controllers
         }
 
         var table = await _context.Tables
-            .FirstOrDefaultAsync(te => te.Table_Id == table_id);
+            .FirstOrDefaultAsync(te => te.Table_Id == tableId);
 
         if (table == null)
         {
@@ -650,7 +650,7 @@ namespace back_end.controllers
         }
 
         // Check if this table is assigned to the session
-        if (session.Table_Id == table_id)
+        if (session.Table_Id == tableId)
         {
           session.Table_Id = null;
           session.Table = null;
@@ -659,40 +659,40 @@ namespace back_end.controllers
         }
         else
         {
-          return NotFound($"Table was not found in the session: {session_id}");
+          return NotFound($"Table was not found in the session: {sessionId}");
         }
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error removing table {TableId} from dining session {SessionId}", table_id, session_id);
+        _logger.LogError(ex, "Error removing table {TableId} from dining session {SessionId}", tableId, sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
     [Authorize(Policy = "staffOnly")]
-    [HttpDelete("{session_id}/table-groups/{table_group_id}")]
-    public async Task<IActionResult> remove_table_group_from_session(int session_id, int table_group_id)
+    [HttpDelete("{sessionId}/table-groups/{tableGroupId}")]
+    public async Task<IActionResult> RemoveTableGroupFromSession(int sessionId, int tableGroupId)
     {
       try
       {
         var session = await _context.DiningSessions
             .Include(ds => ds.Bills)
             .Include(ds => ds.TableGroup)
-            .FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
 
         if (session == null)
         {
-          return NotFound($"Session was not found for session: {session_id}");
+          return NotFound($"Session was not found for session: {sessionId}");
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)
         {
-          return BadRequest($"Cannot modify an ended session: {session_id}");
+          return BadRequest($"Cannot modify an ended session: {sessionId}");
         }
 
         // Only check the status of the Bill
@@ -702,7 +702,7 @@ namespace back_end.controllers
         }
 
         // Check if this table group is assigned to the session
-        if (session.TableGroup_Id == table_group_id)
+        if (session.TableGroup_Id == tableGroupId)
         {
           session.TableGroup_Id = null;
           session.TableGroup = null;
@@ -711,12 +711,12 @@ namespace back_end.controllers
         }
         else
         {
-          return NotFound($"Table group was not found in the session: {session_id}");
+          return NotFound($"Table group was not found in the session: {sessionId}");
         }
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error removing table group {TableGroupId} from dining session {SessionId}", table_group_id, session_id);
+        _logger.LogError(ex, "Error removing table group {TableGroupId} from dining session {SessionId}", tableGroupId, sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
@@ -792,7 +792,7 @@ namespace back_end.controllers
     /// <summary>
     /// Retrieves the menu ID associated with a specific dining session.
     /// </summary>
-    /// <param name="session_id">The unique identifier of the dining session</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <returns>
     /// An <see cref="ActionResult"/> containing a <see cref="SessionMenuResponseDTO"/> object with the menu ID.
     /// Returns HTTP 200 (OK) with the menu ID on success.
@@ -813,24 +813,24 @@ namespace back_end.controllers
     /// Staff and admins can ask about any table; customers (guests included) only about the
     /// table they're seated at, the same rule as the session's bills, orders and limits.
     /// </remarks>
-    [HttpGet("session-menu/{session_id}")]
+    [HttpGet("session-menu/{sessionId}")]
     [Authorize]
     [ProducesResponseType(typeof(SessionMenuResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<SessionMenuResponseDTO>> get_session_menu_id(int session_id)
+    public async Task<ActionResult<SessionMenuResponseDTO>> GetSessionMenuId(int sessionId)
     {
       try
       {
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return Forbid();
         }
 
         var session = await _context.DiningSessions
-            .FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
 
         if (session == null)
         {
@@ -845,7 +845,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error retrieving menu for dining session {SessionId}", session_id);
+        _logger.LogError(ex, "Error retrieving menu for dining session {SessionId}", sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
@@ -853,7 +853,7 @@ namespace back_end.controllers
     /// <summary>
     /// Closes an active dining session by setting the end timestamp.
     /// </summary>
-    /// <param name="session_id">The unique identifier of the dining session to close</param>
+    /// <param name="sessionId">The unique identifier of the dining session to close</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDTO"/> object.
     /// Returns HTTP 200 (OK) with the updated session details on success.
@@ -880,7 +880,7 @@ namespace back_end.controllers
     /// - No order items may be Pending or Processing (items on cancelled orders are ignored)
     /// - Session must not have any open bills
     /// </remarks>
-    [HttpPut("{session_id}/close")]
+    [HttpPut("{sessionId}/close")]
     [Authorize(Roles = "Admin,Staff")]
     [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -888,7 +888,7 @@ namespace back_end.controllers
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> close_dining_session(int session_id)
+    public async Task<IActionResult> CloseDiningSession(int sessionId)
     {
       try
       {
@@ -898,25 +898,25 @@ namespace back_end.controllers
             .Include(ds => ds.TableGroup)
                 .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Participants)
-            .FirstOrDefaultAsync(ds => ds.Session_Id == session_id);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
 
         if (session == null)
         {
-          return NotFound($"Session: {session_id} not found");
+          return NotFound($"Session: {sessionId} not found");
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
 
         if (session.Ended_At != null)
         {
-          return BadRequest($"Session: {session_id} is already closed");
+          return BadRequest($"Session: {sessionId} is already closed");
         }
 
         var unfinishedItems = await _context.SessionOrders
-            .Where(o => o.session_id == session_id && o.Status != OrderStatus.Cancelled)
+            .Where(o => o.session_id == sessionId && o.Status != OrderStatus.Cancelled)
             .SelectMany(o => o.OrderItems)
             .Where(oi => oi.Order_Item_Status == OrderStatus.Pending ||
                          oi.Order_Item_Status == OrderStatus.Processing)
@@ -945,7 +945,7 @@ namespace back_end.controllers
 
         // The table is done, all requests still pending are done with it.
         var openRequests = await _context.ServiceRequests
-            .Where(sr => sr.Session_Id == session_id && sr.Status == ServiceRequestStatus.Pending)
+            .Where(sr => sr.Session_Id == sessionId && sr.Status == ServiceRequestStatus.Pending)
             .ToListAsync();
 
         foreach (var request in openRequests)
@@ -970,7 +970,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error closing dining session {SessionId}", session_id);
+        _logger.LogError(ex, "Error closing dining session {SessionId}", sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }

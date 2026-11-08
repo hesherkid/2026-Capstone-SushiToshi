@@ -64,15 +64,15 @@ namespace back_end.Controllers
 
         // PUT: /api/customers/5/status
         // Deactivate or reactivate a customer. Inactive accounts can't log in.
-        [HttpPut("{user_id:int}/status")]
+        [HttpPut("{userId:int}/status")]
         public async Task<ActionResult<UserResponseDTO>> UpdateCustomerStatus(
-            int user_id,
+            int userId,
             [FromBody] AccountStatusUpdateDTO request)
         {
             if (request.Status != UserStatus.Active && request.Status != UserStatus.Inactive)
                 return BadRequest("Status must be Active or Inactive");
 
-            var user = await FindCustomer(user_id);
+            var user = await FindCustomer(userId);
             if (user == null) return NotFound("Customer not found");
 
             user.Status = request.Status;
@@ -83,10 +83,10 @@ namespace back_end.Controllers
         // DELETE: /api/customers/5
         // Orders, session history and service requests still reference the user, so the row is kept
         // but anonymised: personal details and sign-in methods are removed and it's marked Deleted.
-        [HttpDelete("{user_id:int}")]
-        public async Task<IActionResult> DeleteCustomer(int user_id)
+        [HttpDelete("{userId:int}")]
+        public async Task<IActionResult> DeleteCustomer(int userId)
         {
-            var user = await FindCustomer(user_id);
+            var user = await FindCustomer(userId);
             if (user == null) return NotFound("Customer not found");
 
             user.Email = $"deleted-{user.User_id}@deleted.invalid";
@@ -99,7 +99,7 @@ namespace back_end.Controllers
             user.Status = UserStatus.Deleted;
 
             // Outstanding email verification / password reset links stop working
-            var tokens = _context.AuthActionTokens.Where(t => t.UserId == user_id);
+            var tokens = _context.AuthActionTokens.Where(t => t.UserId == userId);
             _context.AuthActionTokens.RemoveRange(tokens);
 
             await _context.SaveChangesAsync();
@@ -107,9 +107,9 @@ namespace back_end.Controllers
         }
 
         // Customer accounts only, excluding ones already deleted
-        private Task<User?> FindCustomer(int user_id) =>
+        private Task<User?> FindCustomer(int userId) =>
             _context.Users.FirstOrDefaultAsync(u =>
-                u.User_id == user_id &&
+                u.User_id == userId &&
                 u.Role == UserRoles.Customer &&
                 u.Status != UserStatus.Deleted);
     }

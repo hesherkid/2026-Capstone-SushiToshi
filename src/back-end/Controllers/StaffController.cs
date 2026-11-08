@@ -40,11 +40,11 @@ namespace back_end.Controllers
         [HttpPost]
         [Authorize(Policy = "adminOnly")]
         public async Task<ActionResult<UserResponseDTO>> CreateStaff(
-            [FromBody] CreateStaffDTO user_data
+            [FromBody] CreateStaffDTO userData
         )
         {
             Locations location = new();
-            UserRoles? role = user_data.Role;
+            UserRoles? role = userData.Role;
 
             if (role != UserRoles.Staff && role != UserRoles.Admin)
                 return BadRequest("Role must be either staff or admin");
@@ -52,10 +52,10 @@ namespace back_end.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            string? email = user_data.Email?.Trim().ToLowerInvariant();
+            string? email = userData.Email?.Trim().ToLowerInvariant();
             bool emailExists = email != null && await _context.Users.AnyAsync(u => u.Email.ToLower() == email);
 
-            if (string.IsNullOrWhiteSpace(user_data.First_name) || string.IsNullOrWhiteSpace(user_data.Last_name))
+            if (string.IsNullOrWhiteSpace(userData.First_name) || string.IsNullOrWhiteSpace(userData.Last_name))
                 return BadRequest("First name and last name are required");
 
             if (string.IsNullOrWhiteSpace(email))
@@ -63,10 +63,10 @@ namespace back_end.Controllers
             else if (emailExists)
                 return Conflict("Email already registered");
 
-            if (string.IsNullOrWhiteSpace(user_data.Password))
+            if (string.IsNullOrWhiteSpace(userData.Password))
                 return BadRequest("Password is required");
 
-            if (user_data.Location_Id is int locationId
+            if (userData.Location_Id is int locationId
                 && !await _context.Locations.AnyAsync(l => l.Location_Id == locationId))
                 return BadRequest("Location not found");
 
@@ -75,24 +75,24 @@ namespace back_end.Controllers
             User entity = new()
             {
                 Email = email,
-                Password_hash = BCrypt.Net.BCrypt.HashPassword(user_data.Password, workFactor: 12),
-                First_name = user_data.First_name.Trim(),
-                Last_name = user_data.Last_name.Trim(),
+                Password_hash = BCrypt.Net.BCrypt.HashPassword(userData.Password, workFactor: 12),
+                First_name = userData.First_name.Trim(),
+                Last_name = userData.Last_name.Trim(),
                 Role = (UserRoles)role,
-                Status = user_data.Status,
+                Status = userData.Status,
                 Is_email_confirmed = true,
                 Created_at = now,
                 Last_Interaction_at = now,
-                Location_id = user_data.Location_Id
+                Location_id = userData.Location_Id
             };
 
             // Staff can switch only between assigned locations, so assign the one they start at too
             if (entity.Role == UserRoles.Staff)
             {
-                var locationIds = user_data.Location_Ids ?? [];
-                if (user_data.Location_Id is int startingLocationId) locationIds = [.. locationIds, startingLocationId];
+                var locationIds = userData.Location_Ids ?? [];
+                if (userData.Location_Id is int startingLocationId) locationIds = [.. locationIds, startingLocationId];
 
-                var error = await AssignLocationsAsync(entity, locationIds, user_data.Location_Id);
+                var error = await AssignLocationsAsync(entity, locationIds, userData.Location_Id);
                 if (error != null) return BadRequest(error);
             }
 
@@ -101,7 +101,7 @@ namespace back_end.Controllers
 
             return CreatedAtAction(
                 nameof(GetStaff),
-                new { user_id = entity.User_id },
+                new { userId = entity.User_id },
                 ToResponse(entity)
             );
         }
@@ -156,12 +156,12 @@ namespace back_end.Controllers
 
         // GET: /api/staff/5
         // Get details of a specific staff/admin user.
-        [HttpGet("{user_id:int}")]
+        [HttpGet("{userId:int}")]
         [Authorize(Policy = "staffOnly")]
-        public async Task<ActionResult<UserResponseDTO>> GetStaff(int user_id)
+        public async Task<ActionResult<UserResponseDTO>> GetStaff(int userId)
         {
             var u = await _context.Users.AsNoTracking()
-                .Where(x => x.User_id == user_id &&
+                .Where(x => x.User_id == userId &&
                             (x.Role == UserRoles.Staff || x.Role == UserRoles.Admin))
                 .FirstOrDefaultAsync();
 
@@ -171,49 +171,49 @@ namespace back_end.Controllers
 
         // PUT: /api/staff/5
         // Update a staff/admin user's details.
-        [HttpPut("{user_id:int}")]
+        [HttpPut("{userId:int}")]
         [Authorize(Policy = "adminOnly")]
-        public async Task<ActionResult<UserResponseDTO>> UpdateStaff(int user_id, [FromBody] StaffMemberUpdateDTO user_data)
+        public async Task<ActionResult<UserResponseDTO>> UpdateStaff(int userId, [FromBody] StaffMemberUpdateDTO userData)
         {
             // Staff and admin accounts only, so this can't turn a customer into staff
-            var user = await FindStaff(user_id);
+            var user = await FindStaff(userId);
 
             if (user == null) return NotFound("Staff user not found");
 
             // Stops an admin locking themselves out by demoting or deactivating their own account
-            bool isSelf = ClaimsHelpers.GetUserId(User) == user_id.ToString();
-            if (isSelf && (user_data.Role != user.Role || user_data.Status != user.Status))
+            bool isSelf = ClaimsHelpers.GetUserId(User) == userId.ToString();
+            if (isSelf && (userData.Role != user.Role || userData.Status != user.Status))
             {
                 return BadRequest("You can't change the role or status of your own account");
             }
 
-            if (!string.IsNullOrWhiteSpace(user_data.Email))
+            if (!string.IsNullOrWhiteSpace(userData.Email))
             {
-                var newEmail = user_data.Email.Trim().ToLowerInvariant();
+                var newEmail = userData.Email.Trim().ToLowerInvariant();
                 if (!newEmail.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
                 {
-                    var exists = await _context.Users.AnyAsync(u => u.Email.ToLower() == newEmail && u.User_id != user_id);
+                    var exists = await _context.Users.AnyAsync(u => u.Email.ToLower() == newEmail && u.User_id != userId);
                     if (exists) return Conflict("Email already registered");
                     user.Email = newEmail;
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(user_data.FirstName)) user.First_name = user_data.FirstName.Trim();
-            if (!string.IsNullOrWhiteSpace(user_data.LastName)) user.Last_name = user_data.LastName.Trim();
+            if (!string.IsNullOrWhiteSpace(userData.FirstName)) user.First_name = userData.FirstName.Trim();
+            if (!string.IsNullOrWhiteSpace(userData.LastName)) user.Last_name = userData.LastName.Trim();
 
 
-            if (user_data.Role != UserRoles.Staff && user_data.Role != UserRoles.Admin)
+            if (userData.Role != UserRoles.Staff && userData.Role != UserRoles.Admin)
             {
                 return BadRequest("Role must be either staff or admin");
             }
 
-            user.Role = user_data.Role;
-            user.Status = user_data.Status;
+            user.Role = userData.Role;
+            user.Status = userData.Status;
 
             // Admins can work at every location, so only staff have assigned locations
-            if (user.Role == UserRoles.Staff && user_data.Location_Ids != null)
+            if (user.Role == UserRoles.Staff && userData.Location_Ids != null)
             {
-                var error = await AssignLocationsAsync(user, user_data.Location_Ids);
+                var error = await AssignLocationsAsync(user, userData.Location_Ids);
                 if (error != null) return BadRequest(error);
             }
 
@@ -223,18 +223,18 @@ namespace back_end.Controllers
 
         // PUT: /api/staff/5/status
         // Deactivate or reactivate a staff/admin account by Admin only. Inactive accounts can't log in.
-        [HttpPut("{user_id:int}/status")]
+        [HttpPut("{userId:int}/status")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserResponseDTO>> UpdateStaffStatus(int user_id, [FromBody] AccountStatusUpdateDTO request)
+        public async Task<ActionResult<UserResponseDTO>> UpdateStaffStatus(int userId, [FromBody] AccountStatusUpdateDTO request)
         {
             if (request.Status != UserStatus.Active && request.Status != UserStatus.Inactive)
                 return BadRequest("Status must be Active or Inactive");
 
             // Stops an admin locking themselves out
-            if (ClaimsHelpers.GetUserId(User) == user_id.ToString())
+            if (ClaimsHelpers.GetUserId(User) == userId.ToString())
                 return BadRequest("You can't change the status of your own account");
 
-            var user = await FindStaff(user_id);
+            var user = await FindStaff(userId);
             if (user == null) return NotFound("Staff user not found");
 
             user.Status = request.Status;
@@ -242,11 +242,11 @@ namespace back_end.Controllers
             return Ok(ToResponse(user));
         }
 
-        private Task<User?> FindStaff(int user_id) =>
+        private Task<User?> FindStaff(int userId) =>
             _context.Users
                 .Include(u => u.AssignedLocations)
                 .FirstOrDefaultAsync(u =>
-                    u.User_id == user_id &&
+                    u.User_id == userId &&
                     (u.Role == UserRoles.Staff || u.Role == UserRoles.Admin));
 
         // Replaces a staff member's assigned locations (AssignedLocations must be loaded).
@@ -279,21 +279,21 @@ namespace back_end.Controllers
 
         // POST: /api/staff/5/change-password
         // Change a staff user's password by Admin only.
-        [HttpPost("{user_id:int}/change-password")]
+        [HttpPost("{userId:int}/change-password")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserResponseDTO>> ChangeStaffPassword(int user_id, [FromBody] StaffMemberChangePasswordDTO password_data)
+        public async Task<ActionResult<UserResponseDTO>> ChangeStaffPassword(int userId, [FromBody] StaffMemberChangePasswordDTO passwordData)
         {
             var user = await _context.Users
-                .Where(x => x.User_id == user_id &&
+                .Where(x => x.User_id == userId &&
                             (x.Role == UserRoles.Staff || x.Role == UserRoles.Admin))
                 .FirstOrDefaultAsync();
 
             if (user == null) return NotFound("Staff user not found");
 
-            var ok = BCrypt.Net.BCrypt.Verify(password_data.Current_password, user.Password_hash);
+            var ok = BCrypt.Net.BCrypt.Verify(passwordData.Current_password, user.Password_hash);
             if (!ok) return BadRequest("Incorrect current password");
 
-            user.Password_hash = BCrypt.Net.BCrypt.HashPassword(password_data.New_password, workFactor: 12);
+            user.Password_hash = BCrypt.Net.BCrypt.HashPassword(passwordData.New_password, workFactor: 12);
             user.Last_Interaction_at = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -302,12 +302,12 @@ namespace back_end.Controllers
 
         // POST: /api/staff/5/reset-password
         // Reset a staff user's password by Admin only.
-        [HttpPost("{user_id:int}/reset-password")]
+        [HttpPost("{userId:int}/reset-password")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserResponseDTO>> ResetStaffPassword(int user_id, [FromBody] ResetPasswordRequestDTO request)
+        public async Task<ActionResult<UserResponseDTO>> ResetStaffPassword(int userId, [FromBody] ResetPasswordRequestDTO request)
         {
             var user = await _context.Users
-                .Where(x => x.User_id == user_id &&
+                .Where(x => x.User_id == userId &&
                             (x.Role == UserRoles.Staff || x.Role == UserRoles.Admin))
                 .FirstOrDefaultAsync();
 
@@ -321,10 +321,10 @@ namespace back_end.Controllers
         }
 
 
-        [HttpPut("update-user-location/{location_id}")]
+        [HttpPut("update-user-location/{locationId}")]
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> UpdateStaffLocation(
-            int location_id
+            int locationId
         )
         {
             try
@@ -340,16 +340,16 @@ namespace back_end.Controllers
                 {
                     return BadRequest("Issue in Processing a user request for location change");
                 }
-                if (!await _context.Locations.AnyAsync(l => l.Location_Id == location_id))
+                if (!await _context.Locations.AnyAsync(l => l.Location_Id == locationId))
                 {
                     return NotFound("Location not found");
                 }
                 // Staff can switch only between the locations an admin assigned them; admins anywhere
-                if (!await _locationAccess.CanSwitchToLocationAsync(User, location_id))
+                if (!await _locationAccess.CanSwitchToLocationAsync(User, locationId))
                 {
                     return StatusCode(StatusCodes.Status403Forbidden, ILocationAccessService.NotAssignedMessage);
                 }
-                user.Location_id = location_id;
+                user.Location_id = locationId;
                 _context.Update(user);
                 await _context.SaveChangesAsync();
                 return Ok("User Location was updated. ");

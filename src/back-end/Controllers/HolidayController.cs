@@ -130,14 +130,14 @@ namespace back_end.Controllers
         /// <summary>
         /// Changes a holiday's date or name. Its status stays the same.
         /// </summary>
-        [HttpPut("{holiday_id}")]
+        [HttpPut("{holidayId}")]
         [ProducesResponseType(typeof(HolidayResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public Task<IActionResult> Update(int holiday_id, HolidayUpdateRequest request) =>
+        public Task<IActionResult> Update(int holidayId, HolidayUpdateRequest request) =>
           Run("updating a holiday", async () =>
           {
-              var holiday = await _holidays.UpdateAsync(holiday_id, request.Date!.Value, request.Name);
+              var holiday = await _holidays.UpdateAsync(holidayId, request.Date!.Value, request.Name);
               return holiday == null
             ? NotFound(new { message = "Holiday was not found" })
             : Ok(ToResponse(holiday));
@@ -146,12 +146,12 @@ namespace back_end.Controllers
         /// <summary>
         /// Deletes a holiday. Unlike rejecting, loading the year again would bring it back as Pending.
         /// </summary>
-        [HttpDelete("{holiday_id}")]
+        [HttpDelete("{holidayId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public Task<IActionResult> Delete(int holiday_id) =>
+        public Task<IActionResult> Delete(int holidayId) =>
           Run("deleting a holiday", async () =>
-            await _holidays.DeleteAsync(holiday_id)
+            await _holidays.DeleteAsync(holidayId)
               ? NoContent()
               : NotFound(new { message = "Holiday was not found" }));
 

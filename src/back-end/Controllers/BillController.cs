@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
 using back_end.Services;
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
@@ -46,8 +46,8 @@ namespace back_end.controllers
     /// <summary>
     /// Creates a new bill for a dining session.
     /// </summary>
-    /// <param name="_session_id">The unique identifier of the dining session</param>
-    /// <param name="bill_data">The bill creation data including guest counts and bill name</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
+    /// <param name="billData">The bill creation data including guest counts and bill name</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the created <see cref="BillResponse"/> object.
     /// Returns HTTP 200 (OK) with the created bill details on success.
@@ -86,12 +86,12 @@ namespace back_end.controllers
     /// ordered on another open bill can't start a new one (staff can move them).
     /// </remarks>
     [Authorize]
-    [HttpPost("create_Bill/{_session_id}")]
+    [HttpPost("create_Bill/{sessionId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Create_Bill(int _session_id, CreateBill bill_data)
+    public async Task<IActionResult> CreateBill(int sessionId, CreateBill billData)
     {
       try
       {
@@ -99,7 +99,7 @@ namespace back_end.controllers
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
                 .ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(ds => ds.Session_Id == _session_id);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
 
         if (session == null)
         {
@@ -122,7 +122,7 @@ namespace back_end.controllers
         {
           var userId = int.TryParse(ClaimsHelpers.GetUserId(User), out var parsed) ? parsed : 0;
           seat = await _context.SessionParticipants.FirstOrDefaultAsync(sp =>
-              sp.Session_Id == _session_id && sp.User_Id == userId && sp.Left_At == null);
+              sp.Session_Id == sessionId && sp.User_Id == userId && sp.Left_At == null);
           if (seat == null)
           {
             return Forbid();
@@ -140,18 +140,18 @@ namespace back_end.controllers
           return BadRequest(new { message = "Cannot create a bill for a session that has no table or table group assigned" });
         }
 
-        if (bill_data.Adult_Count < 0 || bill_data.Senior_Count < 0 || bill_data.Child_Count < 0 || bill_data.Tot_Count < 0)
+        if (billData.Adult_Count < 0 || billData.Senior_Count < 0 || billData.Child_Count < 0 || billData.Tot_Count < 0)
         {
           return BadRequest(new { message = "Guest counts can't be negative." });
         }
 
         // Validate Bill_Name is required
-        if (string.IsNullOrWhiteSpace(bill_data.Bill_Name))
+        if (string.IsNullOrWhiteSpace(billData.Bill_Name))
         {
           return BadRequest(new { message = "Bill_Name is required." });
         }
 
-        int totalCount = bill_data.Adult_Count + bill_data.Senior_Count + bill_data.Child_Count + bill_data.Tot_Count;
+        int totalCount = billData.Adult_Count + billData.Senior_Count + billData.Child_Count + billData.Tot_Count;
 
         if (totalCount == 0)
         {
@@ -166,7 +166,7 @@ namespace back_end.controllers
           // Check total guest count across open bills in this session
           var existingBillsGuestCount = await _context.Bills
               .Where(b =>
-                  b.Session_Id == _session_id &&
+                  b.Session_Id == sessionId &&
                   b.Status == BillStatus.Open
               )
               .SumAsync(b => b.Total_Count);
@@ -181,46 +181,46 @@ namespace back_end.controllers
           }
         }
 
-        var NewBill = new Billing
+        var newBill = new Billing
         {
-          Session_Id = _session_id,
-          Bill_Name = bill_data.Bill_Name!, // safe after validation
-          Senior_Count = bill_data.Senior_Count,
-          Adult_Count = bill_data.Adult_Count,
-          Child_Count = bill_data.Child_Count,
-          Tot_Count = bill_data.Tot_Count,
+          Session_Id = sessionId,
+          Bill_Name = billData.Bill_Name!, // safe after validation
+          Senior_Count = billData.Senior_Count,
+          Adult_Count = billData.Adult_Count,
+          Child_Count = billData.Child_Count,
+          Tot_Count = billData.Tot_Count,
           Total_Count = totalCount,
           Status = BillStatus.Open,
           Started_By_Guest = seat != null
         };
 
-        _context.Bills.Add(NewBill);
+        _context.Bills.Add(newBill);
         if (seat != null)
         {
-          seat.Bill = NewBill;
+          seat.Bill = newBill;
         }
         await _context.SaveChangesAsync();
-        await _context.Entry(NewBill).ReloadAsync();
+        await _context.Entry(newBill).ReloadAsync();
 
         return Ok(new BillResponse
         {
-          Bill_Id = NewBill.Bill_Id,
-          Session_Id = NewBill.Session_Id,
-          Bill_Name = NewBill.Bill_Name,
-          Senior_Count = NewBill.Senior_Count,
-          Adult_Count = NewBill.Adult_Count,
-          Child_Count = NewBill.Child_Count,
-          Tot_Count = NewBill.Tot_Count,
-          Total_Count = NewBill.Total_Count,
-          Status = NewBill.Status.ToString(),
-          Created_At = NewBill.Created_At,
-          Closed_At = NewBill.Closed_At,
+          Bill_Id = newBill.Bill_Id,
+          Session_Id = newBill.Session_Id,
+          Bill_Name = newBill.Bill_Name,
+          Senior_Count = newBill.Senior_Count,
+          Adult_Count = newBill.Adult_Count,
+          Child_Count = newBill.Child_Count,
+          Tot_Count = newBill.Tot_Count,
+          Total_Count = newBill.Total_Count,
+          Status = newBill.Status.ToString(),
+          Created_At = newBill.Created_At,
+          Closed_At = newBill.Closed_At,
           Table_Numbers = GetTableNumbers(session)
         });
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error creating bill for session {SessionId}", _session_id);
+        _logger.LogError(ex, "Error creating bill for session {SessionId}", sessionId);
         return StatusCode(500, new { message = "Error creating bill" });
       }
     }
@@ -228,8 +228,8 @@ namespace back_end.controllers
     /// <summary>
     /// Retrieves all bills for a specific dining session, optionally filtered by table.
     /// </summary>
-    /// <param name="_session_id">The unique identifier of the dining session</param>
-    /// <param name="_table_id">Optional table ID to filter bills by a specific table</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
+    /// <param name="tableId">Optional table ID to filter bills by a specific table</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a collection of <see cref="BillResponse"/> objects.
     /// Returns HTTP 200 (OK) with the list of bills on success.
@@ -252,13 +252,13 @@ namespace back_end.controllers
     ///
     /// Bills are ordered by creation date (newest first).
     /// </remarks>
-    [HttpGet("get_bills/{_session_id}")]
+    [HttpGet("get_bills/{sessionId}")]
     [Authorize]
-    public async Task<IActionResult> Get_Bills(int _session_id, int? _table_id = null)
+    public async Task<IActionResult> GetBills(int sessionId, [FromQuery(Name = "_table_id")] int? tableId = null)
     {
       try
       {
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return Forbid();
         }
@@ -267,41 +267,41 @@ namespace back_end.controllers
             .Include(ds => ds.Table)
             .Include(ds => ds.TableGroup)
                 .ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(ds => ds.Session_Id == _session_id);
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
 
         if (session == null)
         {
           return NotFound(new { message = "Session was not found" });
         }
 
-        var billQuery = _context.Bills.Where(b => b.Session_Id == _session_id);
+        var billQuery = _context.Bills.Where(b => b.Session_Id == sessionId);
 
         // Customers only see their own bill; other parties' bills are private
         if (!SessionAccess.IsStaff(User))
         {
-          var myBillId = await SessionAccess.MyBillIdAsync(_context, User, _session_id);
+          var myBillId = await SessionAccess.MyBillIdAsync(_context, User, sessionId);
           billQuery = billQuery.Where(b => b.Bill_Id == myBillId);
         }
 
         // If table_id is specified, validate it belongs to the session
-        if (_table_id.HasValue)
+        if (tableId.HasValue)
         {
           bool tableInSession = false;
 
           // Check if it's the directly assigned table
-          if (session.Table_Id == _table_id.Value)
+          if (session.Table_Id == tableId.Value)
           {
             tableInSession = true;
           }
           // Check if it's in the table group
-          else if (session.TableGroup?.Tables.Any(t => t.Table_Id == _table_id.Value) == true)
+          else if (session.TableGroup?.Tables.Any(t => t.Table_Id == tableId.Value) == true)
           {
             tableInSession = true;
           }
 
           if (!tableInSession)
           {
-            return BadRequest(new { message = $"Table with ID {_table_id.Value} is not associated with session {_session_id}" });
+            return BadRequest(new { message = $"Table with ID {tableId.Value} is not associated with session {sessionId}" });
           }
         }
 
@@ -329,7 +329,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error getting bill for session {SessionId}", _session_id);
+        _logger.LogError(ex, "Error getting bill for session {SessionId}", sessionId);
         return StatusCode(500, new { message = "Error getting bill" });
       }
     }
@@ -337,8 +337,8 @@ namespace back_end.controllers
     /// <summary>
     /// Retrieves detailed information about a specific bill.
     /// </summary>
-    /// <param name="_session_id">The unique identifier of the dining session</param>
-    /// <param name="_bill_id">The unique identifier of the bill</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
+    /// <param name="billId">The unique identifier of the bill</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the <see cref="BillResponse"/> object.
     /// Returns HTTP 200 (OK) with the bill details on success.
@@ -355,13 +355,13 @@ namespace back_end.controllers
     ///
     /// Returns complete bill information including guest counts, status, and timestamps.
     /// </remarks>
-    [HttpGet("get_bill/{_bill_id}")]
+    [HttpGet("get_bill/{billId}")]
     [Authorize]
-    public async Task<IActionResult> Get_Bill(int _session_id, int _bill_id)
+    public async Task<IActionResult> GetBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
     {
       try
       {
-        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
+        if (!await SessionAccess.CanUseBillAsync(_context, User, sessionId, billId))
         {
           return Forbid();
         }
@@ -372,7 +372,7 @@ namespace back_end.controllers
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.TableGroup)
                     .ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
 
         if (bill == null)
         {
@@ -398,7 +398,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error getting bill for session {SessionId}", _session_id);
+        _logger.LogError(ex, "Error getting bill for session {SessionId}", sessionId);
         return StatusCode(500, new { message = "Error getting bill" });
       }
     }
@@ -422,21 +422,21 @@ namespace back_end.controllers
     /// <response code="403">The table is at another location.</response>
     /// <response code="404">The bill or session was not found.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("guest_counts/{_bill_id}")]
+    [HttpPut("guest_counts/{billId}")]
     [ProducesResponseType(typeof(BillResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update_Guest_Counts(int _session_id, int _bill_id, UpdateGuestCountsDTO counts)
+    public async Task<IActionResult> UpdateGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, UpdateGuestCountsDTO counts)
     {
       try
       {
         // So nobody can close the bill, or change its count, while this saves
-        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+        await using var billLock = await BillLock.LockAsync(_context, billId);
         var bill = await _context.Bills
             .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
         if (bill == null)
         {
           return NotFound(new { message = "Bill or session was not found" });
@@ -481,7 +481,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error changing guest counts on bill {BillId}", _bill_id);
+        _logger.LogError(ex, "Error changing guest counts on bill {BillId}", billId);
         return StatusCode(500, new { message = "Error changing guest counts" });
       }
     }
@@ -503,19 +503,19 @@ namespace back_end.controllers
     /// <response code="403">The table is at another location.</response>
     /// <response code="404">The bill or session was not found.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("lock_guest_counts/{_bill_id}")]
+    [HttpPut("lock_guest_counts/{billId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Lock_Guest_Counts(int _session_id, int _bill_id, LockGuestCountsDTO request)
+    public async Task<IActionResult> LockGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, LockGuestCountsDTO request)
     {
       try
       {
         // So a guest's change can't save in between
-        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+        await using var billLock = await BillLock.LockAsync(_context, billId);
         var bill = await _context.Bills
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
         if (bill == null)
         {
           return NotFound(new { message = "Bill or session was not found" });
@@ -542,7 +542,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error locking guest counts on bill {BillId}", _bill_id);
+        _logger.LogError(ex, "Error locking guest counts on bill {BillId}", billId);
         return StatusCode(500, new { message = "Error locking guest counts" });
       }
     }
@@ -566,24 +566,24 @@ namespace back_end.controllers
     /// <response code="403">The table is at another location.</response>
     /// <response code="404">The bill or session was not found.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("merge/{_bill_id}")]
+    [HttpPut("merge/{billId}")]
     [ProducesResponseType(typeof(BillResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Merge_Bill(int _session_id, int _bill_id, MergeBillDTO request)
+    public async Task<IActionResult> MergeBill([FromQuery(Name = "_session_id")] int sessionId, int billId, MergeBillDTO request)
     {
       try
       {
-        if (request.Into_Bill_Id == _bill_id)
+        if (request.Into_Bill_Id == billId)
         {
           return BadRequest(new { message = "Pick another bill to merge into." });
         }
 
         // Nobody can order onto, close or change either bill while everything moves
-        await using var billLock = await BillLock.LockAsync(_context, _bill_id, request.Into_Bill_Id);
+        await using var billLock = await BillLock.LockAsync(_context, billId, request.Into_Bill_Id);
         var from = await _context.Bills
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
         if (from == null)
         {
           return NotFound(new { message = "Bill or session was not found" });
@@ -597,7 +597,7 @@ namespace back_end.controllers
             .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
             .FirstOrDefaultAsync(b => b.Bill_Id == request.Into_Bill_Id);
-        if (into == null || into.Session_Id != _session_id)
+        if (into == null || into.Session_Id != sessionId)
         {
           return BadRequest(new { message = "That bill isn't at this table." });
         }
@@ -616,7 +616,7 @@ namespace back_end.controllers
 
         // Everyone who was on it, including people who have left, so nothing points at the cancelled bill
         var seats = await _context.SessionParticipants
-            .Where(sp => sp.Session_Id == _session_id && sp.Bill_Id == from.Bill_Id)
+            .Where(sp => sp.Session_Id == sessionId && sp.Bill_Id == from.Bill_Id)
             .ToListAsync();
         seats.ForEach(sp => sp.Bill_Id = into.Bill_Id);
 
@@ -653,7 +653,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error merging bill {BillId} into {IntoBillId}", _bill_id, request.Into_Bill_Id);
+        _logger.LogError(ex, "Error merging bill {BillId} into {IntoBillId}", billId, request.Into_Bill_Id);
         return StatusCode(500, new { message = "Error merging bills" });
       }
     }
@@ -661,8 +661,8 @@ namespace back_end.controllers
     /// <summary>
     /// Closes an open bill after verifying all orders are completed.
     /// </summary>
-    /// <param name="_session_id">The unique identifier of the dining session</param>
-    /// <param name="_bill_id">The unique identifier of the bill to close</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
+    /// <param name="billId">The unique identifier of the bill to close</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the closed <see cref="BillResponse"/> object.
     /// Returns HTTP 200 (OK) with the closed bill details on success.
@@ -685,13 +685,13 @@ namespace back_end.controllers
     /// - All orders associated with the bill must be completed (no pending orders)
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("close_bill/{_bill_id}")]
-    public async Task<IActionResult> Close_Bill(int _session_id, int _bill_id)
+    [HttpPut("close_bill/{billId}")]
+    public async Task<IActionResult> CloseBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
     {
       try
       {
         // Waits for an order being placed on this bill, so the pending order check below sees it
-        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+        await using var billLock = await BillLock.LockAsync(_context, billId);
 
         var bill = await _context.Bills
             .Include(b => b.DiningSession)
@@ -699,7 +699,7 @@ namespace back_end.controllers
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.TableGroup)
                     .ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
 
         if (bill == null)
         {
@@ -722,7 +722,7 @@ namespace back_end.controllers
         }
 
         var pendingOrders = await _context.SessionOrders
-            .Where(o => o.Bill_Id == _bill_id && o.Status == OrderStatus.Pending)
+            .Where(o => o.Bill_Id == billId && o.Status == OrderStatus.Pending)
             .ToListAsync();
 
         if (pendingOrders.Any())
@@ -732,7 +732,7 @@ namespace back_end.controllers
 
         // Freeze this bill's prices, so later pricing changes don't alter a closed bill
         var pricing = await _pricingService.GetPricingAsync(bill.DiningSession.Location_Id, bill.Created_At);
-        var partySize = await PartySizeAsync(_session_id);
+        var partySize = await PartySizeAsync(sessionId);
         BillPriceSnapshot.Freeze(bill, pricing, BillCalculator.GratuityRateFor(pricing, partySize));
 
         bill.Status = BillStatus.Closed;
@@ -760,7 +760,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error closing bill {BillId} for session {SessionId}", _bill_id, _session_id);
+        _logger.LogError(ex, "Error closing bill {BillId} for session {SessionId}", billId, sessionId);
         return StatusCode(500, new { message = "Error closing bill" });
       }
     }
@@ -768,40 +768,40 @@ namespace back_end.controllers
     /// <summary>
     /// The table's leftover fee: the default amount, and each open bill's current share.
     /// </summary>
-    /// <param name="_session_id">The dining session (table)</param>
+    /// <param name="sessionId">The dining session (table)</param>
     /// <response code="200">The default fee, the current total and each open bill's share</response>
     /// <response code="404">If the session doesn't exist</response>
     /// <response code="500">If there was an error retrieving the leftover fee</response>
     /// <remarks>
     /// Used to fill in the "Add leftover fee" dialog before staff apply it.
     /// </remarks>
-    [HttpGet("leftover_fee/{_session_id}")]
+    [HttpGet("leftover_fee/{sessionId}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLeftoverFee(int _session_id)
+    public async Task<IActionResult> GetLeftoverFee(int sessionId)
     {
       try
       {
-        var locationId = await SessionLocationAsync(_session_id);
+        var locationId = await SessionLocationAsync(sessionId);
         if (locationId == null)
         {
           return NotFound(new { message = "Session was not found" });
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
 
-        var openBills = await OpenBillsAsync(_session_id);
+        var openBills = await OpenBillsAsync(sessionId);
         var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
-        return Ok(LeftoverFeeResult(_session_id, openBills, pricing.LeftoverFee));
+        return Ok(LeftoverFeeResult(sessionId, openBills, pricing.LeftoverFee));
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error getting leftover fee for session {SessionId}", _session_id);
+        _logger.LogError(ex, "Error getting leftover fee for session {SessionId}", sessionId);
         return StatusCode(500, new { message = "Error getting leftover fee" });
       }
     }
@@ -809,7 +809,7 @@ namespace back_end.controllers
     /// <summary>
     /// Applies a leftover fee to the table, split evenly across its open bills.
     /// </summary>
-    /// <param name="_session_id">The dining session (table)</param>
+    /// <param name="sessionId">The dining session (table)</param>
     /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
     /// <response code="200">The fee was applied; returns each open bill's share</response>
     /// <response code="400">If the amount is negative or the table has no open bills</response>
@@ -825,25 +825,25 @@ namespace back_end.controllers
     /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
     /// The fee is taxed with the rest of the bill.
     /// </remarks>
-    [HttpPut("leftover_fee/{_session_id}")]
+    [HttpPut("leftover_fee/{sessionId}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ApplyLeftoverFee(int _session_id, [FromBody] LeftoverFeeRequest request)
+    public async Task<IActionResult> ApplyLeftoverFee(int sessionId, [FromBody] LeftoverFeeRequest request)
     {
       try
       {
-        if (!await _context.DiningSessions.AnyAsync(s => s.Session_Id == _session_id))
+        if (!await _context.DiningSessions.AnyAsync(s => s.Session_Id == sessionId))
         {
           return NotFound(new { message = "Session was not found" });
         }
 
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, _session_id))
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
           return LocationResults.OtherLocation();
         }
-        var locationId = await SessionLocationAsync(_session_id);
+        var locationId = await SessionLocationAsync(sessionId);
         if (locationId == null)
         {
           return NotFound(new { message = "Session was not found" });
@@ -856,7 +856,7 @@ namespace back_end.controllers
           return BadRequest(new { message = "The leftover fee can't be negative." });
         }
 
-        var openBills = await OpenBillsAsync(_session_id);
+        var openBills = await OpenBillsAsync(sessionId);
         if (openBills.Count == 0)
         {
           return BadRequest(new { message = "This table has no open bills to add a leftover fee to." });
@@ -870,13 +870,13 @@ namespace back_end.controllers
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Leftover fee {Amount:F2} applied to session {SessionId} across {Count} bills",
-            amount, _session_id, openBills.Count);
+            amount, sessionId, openBills.Count);
 
-        return Ok(LeftoverFeeResult(_session_id, openBills, defaultFee));
+        return Ok(LeftoverFeeResult(sessionId, openBills, defaultFee));
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error applying leftover fee to session {SessionId}", _session_id);
+        _logger.LogError(ex, "Error applying leftover fee to session {SessionId}", sessionId);
         return StatusCode(500, new { message = "Error applying leftover fee" });
       }
     }
@@ -923,20 +923,20 @@ namespace back_end.controllers
     /// <response code="400">The bill isn't open.</response>
     /// <response code="403">The caller isn't on this bill.</response>
     /// <response code="404">The bill or session was not found.</response>
-    [HttpPost("request_bill/{_bill_id}")]
+    [HttpPost("request_bill/{billId}")]
     [Authorize]
-    public async Task<IActionResult> Request_Bill(int _session_id, int _bill_id)
+    public async Task<IActionResult> RequestBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
     {
       try
       {
-        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
+        if (!await SessionAccess.CanUseBillAsync(_context, User, sessionId, billId))
         {
           return Forbid();
         }
 
         var bill = await _context.Bills
             .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
         if (bill == null)
         {
           return NotFound(new { message = "Bill or session was not found" });
@@ -978,7 +978,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error requesting bill {BillId} for session {SessionId}", _bill_id, _session_id);
+        _logger.LogError(ex, "Error requesting bill {BillId} for session {SessionId}", billId, sessionId);
         return StatusCode(500, new { message = "Error requesting bill" });
       }
     }
@@ -986,8 +986,8 @@ namespace back_end.controllers
     /// <summary>
     /// Cancels an open bill and all associated pending orders.
     /// </summary>
-    /// <param name="_session_id">The unique identifier of the dining session</param>
-    /// <param name="_bill_id">The unique identifier of the bill to cancel</param>
+    /// <param name="sessionId">The unique identifier of the dining session</param>
+    /// <param name="billId">The unique identifier of the bill to cancel</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing the cancelled <see cref="BillResponse"/> object.
     /// Returns HTTP 200 (OK) with the cancelled bill details on success.
@@ -1010,19 +1010,19 @@ namespace back_end.controllers
     /// The bill's closed_at timestamp is set to the current UTC time.
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("cancel_bill/{_bill_id}")]
-    public async Task<IActionResult> Cancel_Bill(int _session_id, int _bill_id)
+    [HttpPost("cancel_bill/{billId}")]
+    public async Task<IActionResult> CancelBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
     {
       try
       {
-        await using var billLock = await BillLock.LockAsync(_context, _bill_id);
+        await using var billLock = await BillLock.LockAsync(_context, billId);
         var bill = await _context.Bills
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession)
                 .ThenInclude(ds => ds.TableGroup)
                     .ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
 
         if (bill == null)
         {
@@ -1041,7 +1041,7 @@ namespace back_end.controllers
 
         // Food that's being made or has gone out still has to be paid for, and a cancelled bill is never charged
         var madeOrders = await _context.SessionOrders
-            .CountAsync(o => o.Bill_Id == _bill_id && (o.Status == OrderStatus.Processing || o.Status == OrderStatus.Delivered));
+            .CountAsync(o => o.Bill_Id == billId && (o.Status == OrderStatus.Processing || o.Status == OrderStatus.Delivered));
         if (madeOrders > 0)
         {
           return BadRequest(new
@@ -1052,7 +1052,7 @@ namespace back_end.controllers
         }
 
         var pendingOrders = await _context.SessionOrders
-            .Where(o => o.Bill_Id == _bill_id && (o.Status == OrderStatus.Pending))
+            .Where(o => o.Bill_Id == billId && (o.Status == OrderStatus.Pending))
             .ToListAsync();
 
         if (pendingOrders.Any())
@@ -1089,7 +1089,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error cancelling bill {BillId} for session {SessionId}", _bill_id, _session_id);
+        _logger.LogError(ex, "Error cancelling bill {BillId} for session {SessionId}", billId, sessionId);
         return StatusCode(500, new { message = "Error cancelling bill" });
       }
     }
@@ -1189,17 +1189,17 @@ namespace back_end.controllers
     /// <summary>
     /// Retrieves a detailed bill summary with pricing breakdown for payment.
     /// </summary>
-    [HttpGet("summary/{_bill_id}")]
+    [HttpGet("summary/{billId}")]
     [ProducesResponseType(typeof(BillSummaryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [Authorize]
-    public async Task<IActionResult> GetBillSummary(int _session_id, int _bill_id)
+    public async Task<IActionResult> GetBillSummary([FromQuery(Name = "_session_id")] int sessionId, int billId)
     {
       try
       {
         // Staff, or customers on this bill (see SessionAccess)
-        if (!await SessionAccess.CanUseBillAsync(_context, User, _session_id, _bill_id))
+        if (!await SessionAccess.CanUseBillAsync(_context, User, sessionId, billId))
         {
           return Forbid();
         }
@@ -1208,7 +1208,7 @@ namespace back_end.controllers
             .Include(b => b.DiningSession.Table)
             .Include(b => b.DiningSession.TableGroup)
                 .ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(b => b.Bill_Id == _bill_id && b.Session_Id == _session_id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
 
         if (bill == null)
         {
@@ -1225,7 +1225,7 @@ namespace back_end.controllers
 
         // Charged lines for this bill (cancelled orders and cancelled items are excluded).
         // Prices are snapshots on each order line, so later price changes don't alter old bills.
-        var chargedLines = await BillTotalQuery.ChargedLines(_context, _bill_id)
+        var chargedLines = await BillTotalQuery.ChargedLines(_context, billId)
           .Include(oi => oi.MenuItem)
           .ToListAsync();
 
@@ -1247,7 +1247,7 @@ namespace back_end.controllers
         decimal subtotal = baseChargesSubtotal + addOnSubtotal + overLimitSubtotal + leftoverCharge;
 
         // A closed bill keeps the gratuity it closed with, even if the table's party size changes later
-        var partySize = await PartySizeAsync(_session_id);
+        var partySize = await PartySizeAsync(sessionId);
         var gratuityRate = frozen?.GratuityRate ?? BillCalculator.GratuityRateFor(pricing, partySize);
         var totals = BillCalculator.Totals(subtotal, gratuityRate, pricing.TaxRate);
 
@@ -1303,7 +1303,7 @@ namespace back_end.controllers
         };
 
         _logger.LogInformation(
-            $"Generated {pricing.PricingType} bill summary for Bill {_bill_id}: " +
+            $"Generated {pricing.PricingType} bill summary for Bill {billId}: " +
             $"Total ${totals.Total:F2} (Base: ${baseChargesSubtotal:F2}, Add-ons: ${addOnSubtotal:F2}, " +
             $"Over-limit: ${overLimitSubtotal:F2}, Leftovers: ${leftoverCharge:F2}, " +
             $"Gratuity: ${totals.Gratuity:F2}, GST: ${totals.Tax:F2})");
@@ -1313,7 +1313,7 @@ namespace back_end.controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error calculating bill summary for Bill {BillId}", _bill_id);
+        _logger.LogError(ex, "Error calculating bill summary for Bill {BillId}", billId);
         return StatusCode(500, new { message = "Error calculating bill summary" });
       }
     }

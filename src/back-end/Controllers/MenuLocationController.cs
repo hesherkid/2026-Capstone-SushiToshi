@@ -23,33 +23,33 @@ namespace back_end.Controllers
             _env = env;
         }
  [Authorize(Policy = "adminOnly")]
-        [HttpPut("menu/{menu_id}/location/{location_id}")]
+        [HttpPut("menu/{menuId}/location/{locationId}")]
         public async Task<IActionResult> AddLocationToMenu(
-            [FromRoute] int menu_id = -1,
-            [FromRoute] int location_id = -1
+            [FromRoute] int menuId = -1,
+            [FromRoute] int locationId = -1
         )
         {
             try
             {
-                if (menu_id <= 0 || location_id <= 0)
+                if (menuId <= 0 || locationId <= 0)
                 {
                     return BadRequest("menu_id and location_id must be positive integers.");
                 }
-                if (!_context.Menus.Any(m => menu_id == m.Menu_id))
+                if (!_context.Menus.Any(m => menuId == m.Menu_id))
                 {
                     return NotFound("The menu location was not found");
                 }
-                if (!_context.Locations.Any(l => l.Location_Id == location_id))
+                if (!_context.Locations.Any(l => l.Location_Id == locationId))
                 {
                     return NotFound("The location was not found.");
                 }
-                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml => ml.Menu_Id == menu_id && ml.Location_Id == location_id);
+                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml => ml.Menu_Id == menuId && ml.Location_Id == locationId);
                 if (menuLocation is null)
                 {
                     menuLocation = new MenuLocations
                     {
-                        Menu_Id = menu_id,
-                        Location_Id = location_id
+                        Menu_Id = menuId,
+                        Location_Id = locationId
                     };
                     _context.MenuLocations.Add(menuLocation);
                     await _context.SaveChangesAsync();
@@ -64,29 +64,29 @@ namespace back_end.Controllers
             }
         }
  [Authorize(Policy = "adminOnly")]        
-        [HttpDelete("menu/{menu_id}/location/{location_id}")]
+        [HttpDelete("menu/{menuId}/location/{locationId}")]
         public async Task<IActionResult> DeleteLocationToMenu(
-        [FromRoute] int menu_id,
-        [FromRoute] int location_id
+        [FromRoute] int menuId,
+        [FromRoute] int locationId
         ){
             try
             {
-                if (menu_id < 1)
+                if (menuId < 1)
                 {
                     return BadRequest("No menu location");
                 }
-                if(location_id <1)
+                if(locationId <1)
                 {
                     return BadRequest("Menu location is Missing");
                 }
                 
-                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml => ml.Menu_Id == menu_id && ml.Location_Id == location_id);
+                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml => ml.Menu_Id == menuId && ml.Location_Id == locationId);
                 if (menuLocation is null)
                 {
                     return NotFound("Menu and Menu Location were not found");
 
                 };
-                if (_context.OrderItems.Any(oi => oi.Menu_Id == menu_id && (oi.Order_Item_Status == OrderStatus.Pending || oi.Order_Item_Status == OrderStatus.Processing)))
+                if (_context.OrderItems.Any(oi => oi.Menu_Id == menuId && (oi.Order_Item_Status == OrderStatus.Pending || oi.Order_Item_Status == OrderStatus.Processing)))
                 {
                     return BadRequest("Could not process request, there are open orders on this menu location.");
                 }
@@ -95,10 +95,10 @@ namespace back_end.Controllers
                 return Ok("Menu location was Removed");
                 
             }
-            catch (Exception Error)
+            catch (Exception error)
             {
-                _logger.LogError(Error, "Can not Assign a menu location");
-                return BadRequest(Error);
+                _logger.LogError(error, "Can not Assign a menu location");
+                return BadRequest(error);
             }
                 
         

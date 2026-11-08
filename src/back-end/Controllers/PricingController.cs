@@ -115,52 +115,52 @@ namespace back_end.Controllers
         /// <summary>
         /// The pricing a location uses: its own if it has one, otherwise the default ("source" says which).
         /// </summary>
-        [HttpGet("locations/{location_id}")]
+        [HttpGet("locations/{locationId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetLocation(int location_id)
+        public async Task<IActionResult> GetLocation(int locationId)
         {
-            if (!await LocationExistsAsync(location_id))
+            if (!await LocationExistsAsync(locationId))
             {
                 return NotFound(new { message = "Location was not found" });
             }
-            return Ok(ToResponse(await _pricingService.GetEffectiveProfileAsync(location_id)));
+            return Ok(ToResponse(await _pricingService.GetEffectiveProfileAsync(locationId)));
         }
 
         /// <summary>
         /// Gives a location its own pricing, or replaces it. Same body as PUT /api/pricing/default.
         /// </summary>
-        [HttpPut("locations/{location_id}")]
+        [HttpPut("locations/{locationId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateLocation(int location_id, PricingProfileRequest request)
+        public async Task<IActionResult> UpdateLocation(int locationId, PricingProfileRequest request)
         {
             try
             {
-                if (!await LocationExistsAsync(location_id))
+                if (!await LocationExistsAsync(locationId))
                 {
                     return NotFound(new { message = "Location was not found" });
                 }
 
-                var profile = await LoadProfileAsync(location_id);
+                var profile = await LoadProfileAsync(locationId);
                 if (profile == null)
                 {
-                    profile = new PricingProfile { Location_Id = location_id };
+                    profile = new PricingProfile { Location_Id = locationId };
                     _context.PricingProfiles.Add(profile);
                 }
 
                 Apply(profile, request);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Location {LocationId} pricing updated", location_id);
+                _logger.LogInformation("Location {LocationId} pricing updated", locationId);
                 return Ok(ToResponse(profile));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating pricing for location {LocationId}", location_id);
+                _logger.LogError(ex, "Error updating pricing for location {LocationId}", locationId);
                 return StatusCode(500, new { message = "Error updating location pricing" });
             }
         }
@@ -168,13 +168,13 @@ namespace back_end.Controllers
         /// <summary>
         /// Removes a location's own pricing so it uses the default again. Returns the default pricing.
         /// </summary>
-        [HttpDelete("locations/{location_id}")]
+        [HttpDelete("locations/{locationId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteLocation(int location_id)
+        public async Task<IActionResult> DeleteLocation(int locationId)
         {
-            var profile = await LoadProfileAsync(location_id);
+            var profile = await LoadProfileAsync(locationId);
             if (profile == null)
             {
                 return NotFound(new { message = "This location already uses the default pricing." });
@@ -183,8 +183,8 @@ namespace back_end.Controllers
             _context.PricingProfiles.Remove(profile);   // its rates are removed by the cascade
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Location {LocationId} pricing removed; using default", location_id);
-            return Ok(ToResponse(await _pricingService.GetEffectiveProfileAsync(location_id)));
+            _logger.LogInformation("Location {LocationId} pricing removed; using default", locationId);
+            return Ok(ToResponse(await _pricingService.GetEffectiveProfileAsync(locationId)));
         }
 
         /// <summary>
@@ -193,13 +193,13 @@ namespace back_end.Controllers
         /// <remarks>
         ///     GET /api/pricing/locations/1/preview?date=2026-12-25
         /// </remarks>
-        [HttpGet("locations/{location_id}/preview")]
+        [HttpGet("locations/{locationId}/preview")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(PricingPreviewResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Preview(int location_id, [FromQuery] DateOnly? date)
+        public async Task<IActionResult> Preview(int locationId, [FromQuery] DateOnly? date)
         {
-            if (!await LocationExistsAsync(location_id))
+            if (!await LocationExistsAsync(locationId))
             {
                 return NotFound(new { message = "Location was not found" });
             }
@@ -209,10 +209,10 @@ namespace back_end.Controllers
             var noonUtc = TimeZoneInfo.ConvertTimeToUtc(
               day.ToDateTime(new TimeOnly(12, 0)), AnalyticsDateRange.RestaurantTimeZone);
 
-            var pricing = await _pricingService.GetPricingAsync(location_id, noonUtc);
+            var pricing = await _pricingService.GetPricingAsync(locationId, noonUtc);
             return Ok(new PricingPreviewResponse
             {
-                Location_Id = location_id,
+                Location_Id = locationId,
                 Date = day,
                 Pricing_Type = pricing.PricingType,
                 Pricing_Source = pricing.PricingSource,

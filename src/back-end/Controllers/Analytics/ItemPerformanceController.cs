@@ -3,7 +3,7 @@ using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace back_end.controllers
+namespace back_end.Controllers
 {
     [ApiController]
     [Route("api/analytics")] // literal, not [controller]: the URL stays /api/analytics/item-performance
