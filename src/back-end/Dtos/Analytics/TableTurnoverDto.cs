@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace back_end.Dtos
+namespace back_end.Dtos.Analytics
 {
     public class TableTurnoverResponseDto
     {

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace back_end.Dtos;
+namespace back_end.Dtos.Auth;
 
 public sealed class VerifyEmailDto
 {
