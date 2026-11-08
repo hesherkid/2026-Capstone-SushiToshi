@@ -261,9 +261,9 @@ public class OrderLimitEnforcementTests : IDisposable
 
         var summary = (result as OkObjectResult)!.Value as BillSummaryResponse;
         summary.Should().NotBeNull();
-        summary!.AddOn_Subtotal.Should().Be(2.00m);       // 2 x Toro $1
-        summary.OverLimit_Subtotal.Should().Be(5.00m);    // 1 extra hot stone x $5
-        summary.OverLimit_Items.Should().ContainSingle(i => i.Item_Name == "Hot Stone Steak" && i.Quantity == 1);
+        summary!.AddOnSubtotal.Should().Be(2.00m);       // 2 x Toro $1
+        summary.OverLimitSubtotal.Should().Be(5.00m);    // 1 extra hot stone x $5
+        summary.OverLimitItems.Should().ContainSingle(i => i.ItemName == "Hot Stone Steak" && i.Quantity == 1);
         summary.Subtotal.Should().Be(7.00m);              // base prices are 0 in this test
     }
 
@@ -280,7 +280,7 @@ public class OrderLimitEnforcementTests : IDisposable
 
         var summary = ((await Bills().GetBillSummary(SessionId, BillId)) as OkObjectResult)!.Value as BillSummaryResponse;
 
-        summary!.AddOn_Subtotal.Should().Be(0m);
+        summary!.AddOnSubtotal.Should().Be(0m);
     }
 
     // GET session/{id}/limits: what the menu uses to stop guests before the server would

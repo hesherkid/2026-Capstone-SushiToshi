@@ -139,18 +139,18 @@ namespace back_end.Controllers
           return BadRequest(new { message = "Cannot create a bill for a session that has no table or table group assigned" });
         }
 
-        if (billData.Adult_Count < 0 || billData.Senior_Count < 0 || billData.Child_Count < 0 || billData.Tot_Count < 0)
+        if (billData.AdultCount < 0 || billData.SeniorCount < 0 || billData.ChildCount < 0 || billData.TotCount < 0)
         {
           return BadRequest(new { message = "Guest counts can't be negative." });
         }
 
         // Validate Bill_Name is required
-        if (string.IsNullOrWhiteSpace(billData.Bill_Name))
+        if (string.IsNullOrWhiteSpace(billData.BillName))
         {
           return BadRequest(new { message = "Bill_Name is required." });
         }
 
-        int totalCount = billData.Adult_Count + billData.Senior_Count + billData.Child_Count + billData.Tot_Count;
+        int totalCount = billData.AdultCount + billData.SeniorCount + billData.ChildCount + billData.TotCount;
 
         if (totalCount == 0)
         {
@@ -183,11 +183,11 @@ namespace back_end.Controllers
         var newBill = new Billing
         {
           Session_Id = sessionId,
-          Bill_Name = billData.Bill_Name!, // safe after validation
-          Senior_Count = billData.Senior_Count,
-          Adult_Count = billData.Adult_Count,
-          Child_Count = billData.Child_Count,
-          Tot_Count = billData.Tot_Count,
+          Bill_Name = billData.BillName!, // safe after validation
+          Senior_Count = billData.SeniorCount,
+          Adult_Count = billData.AdultCount,
+          Child_Count = billData.ChildCount,
+          Tot_Count = billData.TotCount,
           Total_Count = totalCount,
           Status = BillStatus.Open,
           Started_By_Guest = seat != null
@@ -203,18 +203,18 @@ namespace back_end.Controllers
 
         return Ok(new BillResponse
         {
-          Bill_Id = newBill.Bill_Id,
-          Session_Id = newBill.Session_Id,
-          Bill_Name = newBill.Bill_Name,
-          Senior_Count = newBill.Senior_Count,
-          Adult_Count = newBill.Adult_Count,
-          Child_Count = newBill.Child_Count,
-          Tot_Count = newBill.Tot_Count,
-          Total_Count = newBill.Total_Count,
+          BillId = newBill.Bill_Id,
+          SessionId = newBill.Session_Id,
+          BillName = newBill.Bill_Name,
+          SeniorCount = newBill.Senior_Count,
+          AdultCount = newBill.Adult_Count,
+          ChildCount = newBill.Child_Count,
+          TotCount = newBill.Tot_Count,
+          TotalCount = newBill.Total_Count,
           Status = newBill.Status.ToString(),
-          Created_At = newBill.Created_At,
-          Closed_At = newBill.Closed_At,
-          Table_Numbers = GetTableNumbers(session)
+          CreatedAt = newBill.Created_At,
+          ClosedAt = newBill.Closed_At,
+          TableNumbers = GetTableNumbers(session)
         });
       }
       catch (Exception ex)
@@ -309,19 +309,19 @@ namespace back_end.Controllers
 
         var billResponses = bills.Select(bill => new BillResponse
         {
-          Bill_Id = bill.Bill_Id,
-          Session_Id = bill.Session_Id,
-          Bill_Name = bill.Bill_Name ?? string.Empty,
-          Senior_Count = bill.Senior_Count,
-          Adult_Count = bill.Adult_Count,
-          Child_Count = bill.Child_Count,
-          Tot_Count = bill.Tot_Count,
-          Total_Count = bill.Total_Count,
+          BillId = bill.Bill_Id,
+          SessionId = bill.Session_Id,
+          BillName = bill.Bill_Name ?? string.Empty,
+          SeniorCount = bill.Senior_Count,
+          AdultCount = bill.Adult_Count,
+          ChildCount = bill.Child_Count,
+          TotCount = bill.Tot_Count,
+          TotalCount = bill.Total_Count,
           Status = bill.Status.ToString(),
-          Created_At = bill.Created_At,
-          Closed_At = bill.Closed_At,
-          Requested_At = bill.Requested_At,
-          Table_Numbers = GetTableNumbers(session)
+          CreatedAt = bill.Created_At,
+          ClosedAt = bill.Closed_At,
+          RequestedAt = bill.Requested_At,
+          TableNumbers = GetTableNumbers(session)
         }).ToList();
 
         return Ok(billResponses);
@@ -380,19 +380,19 @@ namespace back_end.Controllers
 
         return Ok(new BillResponse
         {
-          Bill_Id = bill.Bill_Id,
-          Session_Id = bill.Session_Id,
-          Bill_Name = bill.Bill_Name ?? string.Empty,
-          Senior_Count = bill.Senior_Count,
-          Adult_Count = bill.Adult_Count,
-          Child_Count = bill.Child_Count,
-          Tot_Count = bill.Tot_Count,
-          Total_Count = bill.Total_Count,
+          BillId = bill.Bill_Id,
+          SessionId = bill.Session_Id,
+          BillName = bill.Bill_Name ?? string.Empty,
+          SeniorCount = bill.Senior_Count,
+          AdultCount = bill.Adult_Count,
+          ChildCount = bill.Child_Count,
+          TotCount = bill.Tot_Count,
+          TotalCount = bill.Total_Count,
           Status = bill.Status.ToString(),
-          Created_At = bill.Created_At,
-          Closed_At = bill.Closed_At,
-          Requested_At = bill.Requested_At,
-          Table_Numbers = GetTableNumbers(bill.DiningSession)
+          CreatedAt = bill.Created_At,
+          ClosedAt = bill.Closed_At,
+          RequestedAt = bill.Requested_At,
+          TableNumbers = GetTableNumbers(bill.DiningSession)
         });
       }
       catch (Exception ex)
@@ -464,18 +464,18 @@ namespace back_end.Controllers
 
         return Ok(new BillResponse
         {
-          Bill_Id = bill.Bill_Id,
-          Session_Id = bill.Session_Id,
-          Bill_Name = bill.Bill_Name,
-          Senior_Count = bill.Senior_Count,
-          Adult_Count = bill.Adult_Count,
-          Child_Count = bill.Child_Count,
-          Tot_Count = bill.Tot_Count,
-          Total_Count = bill.Total_Count,
+          BillId = bill.Bill_Id,
+          SessionId = bill.Session_Id,
+          BillName = bill.Bill_Name,
+          SeniorCount = bill.Senior_Count,
+          AdultCount = bill.Adult_Count,
+          ChildCount = bill.Child_Count,
+          TotCount = bill.Tot_Count,
+          TotalCount = bill.Total_Count,
           Status = bill.Status.ToString(),
-          Created_At = bill.Created_At,
-          Closed_At = bill.Closed_At,
-          Table_Numbers = GetTableNumbers(bill.DiningSession)
+          CreatedAt = bill.Created_At,
+          ClosedAt = bill.Closed_At,
+          TableNumbers = GetTableNumbers(bill.DiningSession)
         });
       }
       catch (Exception ex)
@@ -635,19 +635,19 @@ namespace back_end.Controllers
 
         return Ok(new BillResponse
         {
-          Bill_Id = into.Bill_Id,
-          Session_Id = into.Session_Id,
-          Bill_Name = into.Bill_Name,
-          Senior_Count = into.Senior_Count,
-          Adult_Count = into.Adult_Count,
-          Child_Count = into.Child_Count,
-          Tot_Count = into.Tot_Count,
-          Total_Count = into.Total_Count,
+          BillId = into.Bill_Id,
+          SessionId = into.Session_Id,
+          BillName = into.Bill_Name,
+          SeniorCount = into.Senior_Count,
+          AdultCount = into.Adult_Count,
+          ChildCount = into.Child_Count,
+          TotCount = into.Tot_Count,
+          TotalCount = into.Total_Count,
           Status = into.Status.ToString(),
-          Created_At = into.Created_At,
-          Closed_At = into.Closed_At,
-          Requested_At = into.Requested_At,
-          Table_Numbers = GetTableNumbers(into.DiningSession)
+          CreatedAt = into.Created_At,
+          ClosedAt = into.Closed_At,
+          RequestedAt = into.Requested_At,
+          TableNumbers = GetTableNumbers(into.DiningSession)
         });
       }
       catch (Exception ex)
@@ -742,19 +742,19 @@ namespace back_end.Controllers
 
         return Ok(new BillResponse
         {
-          Bill_Id = bill.Bill_Id,
-          Session_Id = bill.Session_Id,
-          Bill_Name = bill.Bill_Name ?? string.Empty,
-          Senior_Count = bill.Senior_Count,
-          Adult_Count = bill.Adult_Count,
-          Child_Count = bill.Child_Count,
-          Tot_Count = bill.Tot_Count,
-          Total_Count = bill.Total_Count,
+          BillId = bill.Bill_Id,
+          SessionId = bill.Session_Id,
+          BillName = bill.Bill_Name ?? string.Empty,
+          SeniorCount = bill.Senior_Count,
+          AdultCount = bill.Adult_Count,
+          ChildCount = bill.Child_Count,
+          TotCount = bill.Tot_Count,
+          TotalCount = bill.Total_Count,
           Status = bill.Status.ToString(),
-          Created_At = bill.Created_At,
-          Closed_At = bill.Closed_At,
-          Requested_At = bill.Requested_At,
-          Table_Numbers = GetTableNumbers(bill.DiningSession)
+          CreatedAt = bill.Created_At,
+          ClosedAt = bill.Closed_At,
+          RequestedAt = bill.Requested_At,
+          TableNumbers = GetTableNumbers(bill.DiningSession)
         });
       }
       catch (Exception ex)
@@ -899,14 +899,14 @@ namespace back_end.Controllers
 
     private static LeftoverFeeResponse LeftoverFeeResult(int sessionId, List<Billing> openBills, decimal defaultFee) => new()
     {
-      Session_Id = sessionId,
-      Default_Fee = defaultFee,
+      SessionId = sessionId,
+      DefaultFee = defaultFee,
       Amount = openBills.Sum(b => b.Leftover_Charge),
       Bills = openBills.Select(b => new LeftoverFeeBillShare
       {
-        Bill_Id = b.Bill_Id,
-        Bill_Name = b.Bill_Name ?? string.Empty,
-        Leftover_Charge = b.Leftover_Charge,
+        BillId = b.Bill_Id,
+        BillName = b.Bill_Name ?? string.Empty,
+        LeftoverCharge = b.Leftover_Charge,
       }).ToList(),
     };
 
@@ -1071,19 +1071,19 @@ namespace back_end.Controllers
 
         return Ok(new BillResponse
         {
-          Bill_Id = bill.Bill_Id,
-          Session_Id = bill.Session_Id,
-          Bill_Name = bill.Bill_Name ?? string.Empty,
-          Senior_Count = bill.Senior_Count,
-          Adult_Count = bill.Adult_Count,
-          Child_Count = bill.Child_Count,
-          Tot_Count = bill.Tot_Count,
-          Total_Count = bill.Total_Count,
+          BillId = bill.Bill_Id,
+          SessionId = bill.Session_Id,
+          BillName = bill.Bill_Name ?? string.Empty,
+          SeniorCount = bill.Senior_Count,
+          AdultCount = bill.Adult_Count,
+          ChildCount = bill.Child_Count,
+          TotCount = bill.Tot_Count,
+          TotalCount = bill.Total_Count,
           Status = bill.Status.ToString(),
-          Created_At = bill.Created_At,
-          Closed_At = bill.Closed_At,
-          Requested_At = bill.Requested_At,
-          Table_Numbers = GetTableNumbers(bill.DiningSession)
+          CreatedAt = bill.Created_At,
+          ClosedAt = bill.Closed_At,
+          RequestedAt = bill.Requested_At,
+          TableNumbers = GetTableNumbers(bill.DiningSession)
         });
       }
       catch (Exception ex)
@@ -1161,19 +1161,19 @@ namespace back_end.Controllers
 
         var billResponses = bills.Select(bill => new BillResponse
         {
-          Bill_Id = bill.Bill_Id,
-          Session_Id = bill.Session_Id,
-          Bill_Name = bill.Bill_Name ?? string.Empty,
-          Senior_Count = bill.Senior_Count,
-          Adult_Count = bill.Adult_Count,
-          Child_Count = bill.Child_Count,
-          Tot_Count = bill.Tot_Count,
-          Total_Count = bill.Total_Count,
+          BillId = bill.Bill_Id,
+          SessionId = bill.Session_Id,
+          BillName = bill.Bill_Name ?? string.Empty,
+          SeniorCount = bill.Senior_Count,
+          AdultCount = bill.Adult_Count,
+          ChildCount = bill.Child_Count,
+          TotCount = bill.Tot_Count,
+          TotalCount = bill.Total_Count,
           Status = bill.Status.ToString(),
-          Created_At = bill.Created_At,
-          Closed_At = bill.Closed_At,
-          Requested_At = bill.Requested_At,
-          Table_Numbers = GetTableNumbers(bill.DiningSession)
+          CreatedAt = bill.Created_At,
+          ClosedAt = bill.Closed_At,
+          RequestedAt = bill.Requested_At,
+          TableNumbers = GetTableNumbers(bill.DiningSession)
         }).ToList();
 
         return Ok(billResponses);
@@ -1240,8 +1240,8 @@ namespace back_end.Controllers
           .Select(oi => ToBillItem(oi, oi.Quantity, oi.Price_At_Time))
           .ToList();
 
-        decimal addOnSubtotal = addOnItems.Sum(item => item.Line_Total);
-        decimal overLimitSubtotal = overLimitItems.Sum(item => item.Line_Total);
+        decimal addOnSubtotal = addOnItems.Sum(item => item.LineTotal);
+        decimal overLimitSubtotal = overLimitItems.Sum(item => item.LineTotal);
         decimal leftoverCharge = bill.Leftover_Charge;   // this bill's share of the table's leftover fee
         decimal subtotal = baseChargesSubtotal + addOnSubtotal + overLimitSubtotal + leftoverCharge;
 
@@ -1253,52 +1253,52 @@ namespace back_end.Controllers
 
         var summary = new BillSummaryResponse
         {
-          Bill_Id = bill.Bill_Id,
-          Session_Id = bill.Session_Id,
-          Bill_Name = bill.Bill_Name ?? string.Empty,
+          BillId = bill.Bill_Id,
+          SessionId = bill.Session_Id,
+          BillName = bill.Bill_Name ?? string.Empty,
 
           // Guest counts
-          Adult_Count = bill.Adult_Count,
-          Senior_Count = bill.Senior_Count,
-          Child_Count = bill.Child_Count,
-          Tot_Count = bill.Tot_Count,
-          Total_Count = bill.Total_Count,
+          AdultCount = bill.Adult_Count,
+          SeniorCount = bill.Senior_Count,
+          ChildCount = bill.Child_Count,
+          TotCount = bill.Tot_Count,
+          TotalCount = bill.Total_Count,
 
           // Base pricing (day-specific)
-          Adult_Base_Price = pricing.AdultBasePrice,
-          Senior_Base_Price = pricing.SeniorBasePrice,
-          Child_Base_Price = pricing.ChildBasePrice,
-          Toddler_Base_Price = pricing.ToddlerBasePrice,
-          Base_Charges_Subtotal = baseChargesSubtotal,
+          AdultBasePrice = pricing.AdultBasePrice,
+          SeniorBasePrice = pricing.SeniorBasePrice,
+          ChildBasePrice = pricing.ChildBasePrice,
+          ToddlerBasePrice = pricing.ToddlerBasePrice,
+          BaseChargesSubtotal = baseChargesSubtotal,
 
           // Add-ons
-          AddOn_Items = addOnItems,
-          AddOn_Subtotal = addOnSubtotal,
+          AddOnItems = addOnItems,
+          AddOnSubtotal = addOnSubtotal,
 
           // Over-limit and leftover charges
-          OverLimit_Items = overLimitItems,
-          OverLimit_Subtotal = overLimitSubtotal,
-          Leftover_Charge = leftoverCharge,
+          OverLimitItems = overLimitItems,
+          OverLimitSubtotal = overLimitSubtotal,
+          LeftoverCharge = leftoverCharge,
 
           // Totals
           Subtotal = subtotal,
-          Party_Size = partySize,
-          Gratuity_Rate = gratuityRate,
-          Gratuity_Amount = totals.Gratuity,
-          Gratuity_Min_Party_Size = pricing.GratuityMinPartySize,
-          Tax_Rate = pricing.TaxRate,
-          Tax_Amount = totals.Tax,
-          Total_Amount = totals.Total,
+          PartySize = partySize,
+          GratuityRate = gratuityRate,
+          GratuityAmount = totals.Gratuity,
+          GratuityMinPartySize = pricing.GratuityMinPartySize,
+          TaxRate = pricing.TaxRate,
+          TaxAmount = totals.Tax,
+          TotalAmount = totals.Total,
 
           // Status
           Status = bill.Status.ToString(),
-          Pricing_Type = pricing.PricingType,
-          Holiday_Name = pricing.HolidayName,
-          Prices_Locked = frozen != null,
-          Created_At = bill.Created_At,
-          Closed_At = bill.Closed_At,
-          Requested_At = bill.Requested_At,
-          Table_Numbers = GetTableNumbers(bill.DiningSession)
+          PricingType = pricing.PricingType,
+          HolidayName = pricing.HolidayName,
+          PricesLocked = frozen != null,
+          CreatedAt = bill.Created_At,
+          ClosedAt = bill.Closed_At,
+          RequestedAt = bill.Requested_At,
+          TableNumbers = GetTableNumbers(bill.DiningSession)
         };
 
         _logger.LogInformation(
@@ -1319,12 +1319,12 @@ namespace back_end.Controllers
 
     private static BillAddOnItem ToBillItem(OrderItems oi, int quantity, decimal pricePerUnit) => new BillAddOnItem
     {
-      Order_Item_Id = oi.Order_Item_Id,
-      Item_Id = oi.Item_Id,
-      Item_Name = oi.MenuItem?.Name ?? string.Empty,
+      OrderItemId = oi.Order_Item_Id,
+      ItemId = oi.Item_Id,
+      ItemName = oi.MenuItem?.Name ?? string.Empty,
       Quantity = quantity,
-      Price_Per_Unit = pricePerUnit,
-      Line_Total = quantity * pricePerUnit,
+      PricePerUnit = pricePerUnit,
+      LineTotal = quantity * pricePerUnit,
       Status = oi.Order_Item_Status.ToString()
     };
   }

@@ -93,7 +93,7 @@ namespace back_end.Tests.Controllers
             var response = await Apply(null);
 
             response.Amount.Should().Be(10.00m);
-            response.Default_Fee.Should().Be(10.00m);
+            response.DefaultFee.Should().Be(10.00m);
             ChargeOn(1).Should().Be(3.34m);
             ChargeOn(2).Should().Be(3.33m);
             ChargeOn(3).Should().Be(3.33m);
@@ -158,10 +158,10 @@ namespace back_end.Tests.Controllers
 
             var summary = ((await Bills().GetBillSummary(SessionId, 1)) as OkObjectResult)!.Value as BillSummaryResponse;
 
-            summary!.Leftover_Charge.Should().Be(5.00m);
+            summary!.LeftoverCharge.Should().Be(5.00m);
             summary.Subtotal.Should().Be(5.00m);       // base prices are 0 in this test
-            summary.Tax_Amount.Should().Be(0.25m);     // 5% of the fee
-            summary.Total_Amount.Should().Be(5.25m);
+            summary.TaxAmount.Should().Be(0.25m);     // 5% of the fee
+            summary.TotalAmount.Should().Be(5.25m);
         }
     }
 }
