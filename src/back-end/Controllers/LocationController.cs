@@ -25,7 +25,7 @@ namespace back_end.Controllers
     /// Retrieves all locations from the database.
     /// </summary>
     /// <returns>
-    /// An <see cref="ActionResult"/> containing a collection of <see cref="Locations"/> objects.
+    /// An <see cref="ActionResult"/> containing a collection of <see cref="LocationResponseDto"/> objects.
     /// Returns HTTP 200 (OK) with the list of all locations on success.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
@@ -41,16 +41,16 @@ namespace back_end.Controllers
     //GET api/location
     //Get all locations
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<Locations>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<LocationResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
 
 
-    public async Task<ActionResult<IEnumerable<Locations>>> GetAllLocations()
+    public async Task<ActionResult<IEnumerable<LocationResponseDto>>> GetAllLocations()
     {
       try
       {
-        var location = await _context.Locations.OrderBy(l => l.Location_Id).ToListAsync();
-        return Ok(location);
+        var locations = await _context.Locations.OrderBy(l => l.Location_Id).ToListAsync();
+        return Ok(locations.Select(LocationResponseDto.From).ToList());
       }
       catch (Exception ex)
       {
@@ -102,13 +102,13 @@ namespace back_end.Controllers
         var newLocation = new Locations
         {
           Name = createLocation.Name,
-          Address_Primary = createLocation.Address_One,
-          Address_Secondary = createLocation.Address_Two,
+          Address_Primary = createLocation.AddressOne,
+          Address_Secondary = createLocation.AddressTwo,
           City = createLocation.City,
           Province = createLocation.Province,
-          Province_Code = createLocation.Province_Code ?? "AB",
-          Postal_Code = createLocation.Postal_Code,
-          Phone_Number = createLocation.Phone_Number
+          Province_Code = createLocation.ProvinceCode ?? "AB",
+          Postal_Code = createLocation.PostalCode,
+          Phone_Number = createLocation.PhoneNumber
         };
         _context.Locations.Add(newLocation);
         await _context.SaveChangesAsync();
@@ -142,7 +142,7 @@ namespace back_end.Controllers
     /// Returns the complete location details for the specified ID.
     /// </remarks>
     [HttpGet("{locationId}")]
-    [ProducesResponseType(typeof(Locations), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LocationResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetLocations(
@@ -156,7 +156,7 @@ namespace back_end.Controllers
         {
           return NotFound("Location was not Found");
         }
-        return Ok(location);
+        return Ok(LocationResponseDto.From(location));
 
 
       }
@@ -200,7 +200,7 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
     [HttpPut("{locationId}")]
-    [ProducesResponseType(typeof(Locations), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LocationResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateLocation(
@@ -219,13 +219,13 @@ namespace back_end.Controllers
         {
           location.Name = locationUpdate.Name;
         }
-        if (!string.IsNullOrEmpty(locationUpdate.Address_One))
+        if (!string.IsNullOrEmpty(locationUpdate.AddressOne))
         {
-          location.Address_Primary = locationUpdate.Address_One;
+          location.Address_Primary = locationUpdate.AddressOne;
         }
-        if (!string.IsNullOrEmpty(locationUpdate.Address_Two))
+        if (!string.IsNullOrEmpty(locationUpdate.AddressTwo))
         {
-          location.Address_Secondary = locationUpdate.Address_Two;
+          location.Address_Secondary = locationUpdate.AddressTwo;
         }
         if (!string.IsNullOrEmpty(locationUpdate.City))
         {
@@ -235,22 +235,22 @@ namespace back_end.Controllers
         {
           location.Province = locationUpdate.Province;
         }
-        if (!string.IsNullOrEmpty(locationUpdate.Province_Code))
+        if (!string.IsNullOrEmpty(locationUpdate.ProvinceCode))
         {
-          location.Province_Code = locationUpdate.Province_Code;
+          location.Province_Code = locationUpdate.ProvinceCode;
         }
-        if (!string.IsNullOrEmpty(locationUpdate.Postal_Code))
+        if (!string.IsNullOrEmpty(locationUpdate.PostalCode))
         {
-          location.Postal_Code = locationUpdate.Postal_Code;
+          location.Postal_Code = locationUpdate.PostalCode;
         }
-        if (!string.IsNullOrEmpty(locationUpdate.Phone_Number))
+        if (!string.IsNullOrEmpty(locationUpdate.PhoneNumber))
         {
-          location.Phone_Number = locationUpdate.Phone_Number;
+          location.Phone_Number = locationUpdate.PhoneNumber;
         }
 
         _context.Update(location);
         await _context.SaveChangesAsync();
-        return Ok(location);
+        return Ok(LocationResponseDto.From(location));
       }
       catch (Exception ex)
       {
@@ -396,7 +396,7 @@ namespace back_end.Controllers
         _context.MenuLocations.Add(new MenuLocations
         {
           Location_Id = locationId,
-          Menu_Id = menuLocationCreate.Menu_id
+          Menu_Id = menuLocationCreate.MenuId
         });
         await _context.SaveChangesAsync();
         return Ok("Menu Location was Added Successfully ");
@@ -543,13 +543,13 @@ namespace back_end.Controllers
             .OrderBy(t => t.table_number)
             .Select(t => new
             {
-              table_Id = t.Table_Id,
+              table_id = t.Table_Id,
               table_number = t.table_number,
               seat_count = t.seat_count,
               is_active = t.is_active,
               qr_code = t.QR_Code,
-              tableGroup_Id = t.TableGroup_Id,
-              tableGroup_Name = t.TableGroup != null ? t.TableGroup.Group_Name : null
+              table_group_id = t.TableGroup_Id,
+              table_group_name = t.TableGroup != null ? t.TableGroup.Group_Name : null
             })
             .ToListAsync();
 
@@ -594,15 +594,15 @@ namespace back_end.Controllers
             .OrderBy(tg => tg.Group_Name)
             .Select(tg => new
             {
-              tableGroup_Id = tg.TableGroup_Id,
-              group_Name = tg.Group_Name,
-              is_Active = tg.Is_Active,
-              created_At = tg.Created_At,
-              table_Count = tg.Tables.Count,
-              total_Seats = tg.Tables.Sum(t => t.seat_count),
+              table_group_id = tg.TableGroup_Id,
+              group_name = tg.Group_Name,
+              is_active = tg.Is_Active,
+              created_at = tg.Created_At,
+              table_count = tg.Tables.Count,
+              total_seats = tg.Tables.Sum(t => t.seat_count),
               tables = tg.Tables.Select(t => new
               {
-                table_Id = t.Table_Id,
+                table_id = t.Table_Id,
                 table_number = t.table_number,
                 seat_count = t.seat_count
               }).ToList()
@@ -668,15 +668,15 @@ namespace back_end.Controllers
             .OrderByDescending(ds => ds.Started_At)
             .Select(ds => new
             {
-              session_Id = ds.Session_Id,
-              menu_Id = ds.Menu_Id,
-              started_At = ds.Started_At,
-              ended_At = ds.Ended_At,
-              first_Order_At = ds.First_Order_At,
-              table_Numbers = ds.Table != null
+              session_id = ds.Session_Id,
+              menu_id = ds.Menu_Id,
+              started_at = ds.Started_At,
+              ended_at = ds.Ended_At,
+              first_order_at = ds.First_Order_At,
+              table_numbers = ds.Table != null
                     ? new List<int> { ds.Table.table_number }
                     : ds.TableGroup!.Tables.Select(t => t.table_number).ToList(),
-              active_Participants = ds.Participants.Count
+              active_participants = ds.Participants.Count
             })
             .ToListAsync();
 
@@ -739,15 +739,15 @@ namespace back_end.Controllers
 
         return Ok(new
         {
-          location_Id = locationId,
-          location_Name = location.Name,
+          location_id = locationId,
+          location_name = location.Name,
           tables = new
           {
             total = totalTables,
             active = activeTables,
             inactive = totalTables - activeTables
           },
-          tableGroups = new
+          table_groups = new
           {
             total = totalTableGroups,
             active = activeTableGroups,
@@ -759,7 +759,7 @@ namespace back_end.Controllers
             active = activeSessions,
             completed = totalSessions - activeSessions
           },
-          total_Seats = totalSeats
+          total_seats = totalSeats
         });
       }
       catch (Exception ex)

@@ -48,44 +48,44 @@ if (typeof window.ResizeObserver === "undefined") {
 
 const tables = [
   {
-    table_Id: 1,
+    table_id: 1,
     table_number: 1,
     seat_count: 4,
     is_active: true,
-    tableGroup_Id: null,
+    table_group_id: null,
   },
   {
-    table_Id: 2,
+    table_id: 2,
     table_number: 2,
     seat_count: 2,
     is_active: true,
-    tableGroup_Id: null,
+    table_group_id: null,
   },
   {
-    table_Id: 3,
+    table_id: 3,
     table_number: 3,
     seat_count: 6,
     is_active: false,
-    tableGroup_Id: null,
+    table_group_id: null,
   },
   {
-    table_Id: 4,
+    table_id: 4,
     table_number: 4,
     seat_count: 4,
     is_active: true,
-    tableGroup_Id: 10,
+    table_group_id: 10,
   },
 ];
 const groups = [
   {
-    tableGroup_Id: 10,
-    group_Name: "Patio",
-    is_Active: true,
-    tables: [{ table_Id: 4, table_number: 4, seat_count: 4, is_active: true }],
+    table_group_id: 10,
+    group_name: "Patio",
+    is_active: true,
+    tables: [{ table_id: 4, table_number: 4, seat_count: 4, is_active: true }],
   },
 ];
 // Table 2 is in a session, table 3 is inactive
-const emptyTables = [{ table_Id: 1 }, { table_Id: 4 }];
+const emptyTables = [{ table_id: 1 }, { table_id: 4 }];
 
 const mockApiData = () => {
   api.get.mockImplementation((url) => {

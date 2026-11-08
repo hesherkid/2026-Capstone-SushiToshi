@@ -22,11 +22,11 @@ jest.mock("@/utils/storage", () => ({
 
 const responses = {
   "/Location": [
-    { location_Id: 1, name: "Downtown" },
-    { location_Id: 2, name: "Uptown" },
+    { location_id: 1, name: "Downtown" },
+    { location_id: 2, name: "Uptown" },
   ],
   "/Menu": [{ menu_id: 10, name: "Dinner" }],
-  "/TableEntity/empty": [{ table_Id: 5, table_number: 3, seat_count: 4, tableGroup_Id: null }],
+  "/TableEntity/empty": [{ table_id: 5, table_number: 3, seat_count: 4, table_group_id: null }],
   "/TableGroup/available": [],
 };
 

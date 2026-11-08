@@ -44,8 +44,8 @@ describe("Staff management form", () => {
 
 describe("Staff management form locations", () => {
   const locations = [
-    { location_Id: 1, name: "Downtown" },
-    { location_Id: 2, name: "Southside" },
+    { location_id: 1, name: "Downtown" },
+    { location_id: 2, name: "Southside" },
   ];
   const sue = {
     email: "sue@example.com",

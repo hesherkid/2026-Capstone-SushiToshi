@@ -8,6 +8,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
+using back_end.Dtos;
 
 namespace back_end.Tests.Controllers;
 
@@ -69,7 +70,7 @@ public class LocationControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var locations = okResult!.Value as List<Locations>;
+        var locations = okResult!.Value as List<LocationResponseDto>;
 
         locations.Should().NotBeNull();
         locations!.Should().HaveCount(2);
@@ -105,7 +106,7 @@ public class LocationControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var locations = okResult!.Value as List<Locations>;
+        var locations = okResult!.Value as List<LocationResponseDto>;
 
         locations.Should().NotBeNull();
         locations!.Should().BeEmpty();
@@ -120,12 +121,12 @@ public class LocationControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var locations = okResult!.Value as List<Locations>;
+        var locations = okResult!.Value as List<LocationResponseDto>;
 
         locations.Should().NotBeNull();
         locations!.Should().HaveCount(2);
         // Verify locations are returned (order depends on implementation)
-        locations.Should().AllSatisfy(l => l.Location_Id.Should().BeGreaterThan(0));
+        locations.Should().AllSatisfy(l => l.LocationId.Should().BeGreaterThan(0));
     }
 
     public void Dispose()

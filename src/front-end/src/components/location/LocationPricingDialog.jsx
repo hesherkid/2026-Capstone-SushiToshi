@@ -41,7 +41,7 @@ const today = () => {
  * default prices; switching it off (after saving) asks first, then goes back to the default.
  */
 const LocationPricingDialog = ({ open, location, onClose }) => {
-  const locationId = location?.location_Id;
+  const locationId = location?.location_id;
   const [profile, setProfile] = useState(null);
   const [useOwn, setUseOwn] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);

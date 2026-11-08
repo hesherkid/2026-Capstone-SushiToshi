@@ -59,7 +59,7 @@ export const getTableColumns = (actions, { canDelete = false } = {}) => [
     minWidth: 80,
   },
   {
-    field: "group_Name",
+    field: "group_name",
     headerName: "Group",
     flex: 1,
     minWidth: 120,
@@ -85,11 +85,11 @@ export const getTableColumns = (actions, { canDelete = false } = {}) => [
         },
         {
           label: "Remove from group",
-          ariaLabel: `Remove from group ${row.group_Name}: ${table}`,
+          ariaLabel: `Remove from group ${row.group_name}: ${table}`,
           icon: Unlink,
           onClick: () => actions.removeTableFromGroup(row),
           color: "warning",
-          hidden: !row.tableGroup_Id || inSession,
+          hidden: !row.table_group_id || inSession,
         },
         {
           label: "Delete table",
@@ -108,7 +108,7 @@ export const getTableColumns = (actions, { canDelete = false } = {}) => [
 
 export const getGroupColumns = (actions) => [
   {
-    field: "group_Name",
+    field: "group_name",
     headerName: "Group",
     flex: 1.5,
     minWidth: 140,
@@ -146,19 +146,19 @@ export const getGroupColumns = (actions) => [
         },
         {
           label: "Add table",
-          ariaLabel: `Add table to group ${row.group_Name}`,
+          ariaLabel: `Add table to group ${row.group_name}`,
           icon: Plus,
           onClick: () => actions.addTableToGroup(row),
         },
         {
-          label: row.is_Active ? "Deactivate" : "Activate",
-          icon: row.is_Active ? PowerOff : Power,
+          label: row.is_active ? "Deactivate" : "Activate",
+          icon: row.is_active ? PowerOff : Power,
           onClick: () => actions.toggleGroup(row),
           hidden: inSession,
         },
         {
           label: "Delete group",
-          ariaLabel: `Delete group ${row.group_Name}`,
+          ariaLabel: `Delete group ${row.group_name}`,
           icon: Trash2,
           onClick: () => actions.deleteGroup(row),
           color: "error",
@@ -169,7 +169,7 @@ export const getGroupColumns = (actions) => [
     {
       width: 180,
       getRowName: (row) => {
-        row.group_Name;
+        row.group_name;
       },
     },
   ),

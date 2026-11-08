@@ -17,7 +17,7 @@ const AddTableToGroupDialog = ({ open, group }) => {
     if (open && group) {
       // Ungrouped tables that are active and not in a session
       setAvailableTables(
-        tables.filter((t) => !t.tableGroup_Id && t.status === TABLE_STATUS.AVAILABLE)
+        tables.filter((t) => !t.table_group_id && t.status === TABLE_STATUS.AVAILABLE)
       );
     }
   }, [open, group, tables]);
@@ -32,7 +32,7 @@ const AddTableToGroupDialog = ({ open, group }) => {
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.post(`/TableGroup/${group.tableGroup_Id}/tables/${selectedTableId}`);
+      await api.post(`/TableGroup/${group.table_group_id}/tables/${selectedTableId}`);
       await refreshData();
       handleClose();
     } catch (err) {
@@ -47,7 +47,7 @@ const AddTableToGroupDialog = ({ open, group }) => {
       open={open}
       onClose={handleClose}
       title="Add Table to Group"
-      subtitle={group?.group_Name}
+      subtitle={group?.group_name}
       error={error}
       onErrorClose={() => setError(null)}
       onSubmit={handleSubmit}
@@ -69,7 +69,7 @@ const AddTableToGroupDialog = ({ open, group }) => {
           onChange={(e) => setSelectedTableId(e.target.value)}
         >
           {availableTables.map((table) => (
-            <MenuItem key={table.table_Id} value={table.table_Id}>
+            <MenuItem key={table.table_id} value={table.table_id}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 Table {table.table_number}
                 <Chip label={`${table.seat_count} seats`} size="small" variant="outlined" />

@@ -74,7 +74,7 @@ const StaffManagementForm = ({
   };
 
   const locationName = (id) =>
-    locations.find((location) => location.location_Id === id)?.name ?? id;
+    locations.find((location) => location.location_id === id)?.name ?? id;
 
   const isValid = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -184,7 +184,7 @@ const StaffManagementForm = ({
             )}
           >
             {locations.map((location) => (
-              <MenuItem key={location.location_Id} value={location.location_Id}>
+              <MenuItem key={location.location_id} value={location.location_id}>
                 {location.name}
               </MenuItem>
             ))}

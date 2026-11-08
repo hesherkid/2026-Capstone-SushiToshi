@@ -17,7 +17,7 @@ const AddLocationsToMenu = ({ menu, onClose, availableLocations = [] }) => {
     const arr = Array.isArray(availableLocations) ? availableLocations : [];
     return arr
       .map((loc) => ({
-        id: String(loc?.location_Id ?? loc?.location_id ?? ""), // tolerate either casing
+        id: String(loc?.location_id ?? ""),
         name: loc?.name ?? "",
       }))
       .filter((x) => x.id && x.name);

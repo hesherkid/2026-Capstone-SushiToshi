@@ -13,9 +13,9 @@ const getWorkingLocation = () => {
 };
 
 const emptyForm = () => ({
-  table_Number: "",
+  table_number: "",
   seat_count: "",
-  location_Id: getWorkingLocation(),
+  location_id: getWorkingLocation(),
 });
 
 const NewTableDialog = ({ open }) => {
@@ -36,7 +36,7 @@ const NewTableDialog = ({ open }) => {
   // Tables can only be added at the working location; the list is only open without one
   const workingLocation = getWorkingLocation();
   const locationOptions = workingLocation
-    ? availableLocations.filter((location) => location.location_Id === workingLocation)
+    ? availableLocations.filter((location) => location.location_id === workingLocation)
     : availableLocations;
 
   const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
@@ -52,11 +52,11 @@ const NewTableDialog = ({ open }) => {
     setError(null);
     try {
       await api.post("/TableEntity", {
-        Table_Number: parseInt(formData.table_Number),
-        Seat_Count: parseInt(formData.seat_count),
-        Qr_Code_Url: "",
-        Is_Active: true,
-        Location_Id: formData.location_Id,
+        table_number: parseInt(formData.table_number),
+        seat_count: parseInt(formData.seat_count),
+        qr_code_url: "",
+        is_active: true,
+        location_id: formData.location_id,
       });
       await refreshData();
       handleClose();
@@ -83,12 +83,12 @@ const NewTableDialog = ({ open }) => {
         select
         label="Location"
         required
-        value={locationOptions.length ? formData.location_Id : ""}
-        onChange={set("location_Id")}
+        value={locationOptions.length ? formData.location_id : ""}
+        onChange={set("location_id")}
         disabled={Boolean(workingLocation)}
       >
         {locationOptions.map((location) => (
-          <MenuItem key={location.location_Id} value={location.location_Id}>
+          <MenuItem key={location.location_id} value={location.location_id}>
             {location.name}
           </MenuItem>
         ))}
@@ -98,8 +98,8 @@ const NewTableDialog = ({ open }) => {
         type="number"
         required
         autoFocus
-        value={formData.table_Number}
-        onChange={set("table_Number")}
+        value={formData.table_number}
+        onChange={set("table_number")}
         slotProps={{ htmlInput: { min: 1 } }}
       />
       <TextField

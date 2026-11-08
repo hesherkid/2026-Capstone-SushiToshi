@@ -54,17 +54,7 @@ const LocationManagement = () => {
       const response = await api.get("/Location");
       const data = Array.isArray(response.data) ? response.data : [];
 
-      // GET /Location returns the Locations entity; rename its fields to the ones LocationForm uses
-      const normalized = data.map((r) => ({
-        ...r,
-        address_one: r.address_Primary,
-        address_two: r.address_Secondary,
-        postal_code: r.postal_Code,
-        province_code: r.province_Code,
-        phone_number: r.phone_Number,
-      }));
-
-      setLocations(normalized);
+      setLocations(data);
     } catch (err) {
       console.error("Error fetching data:", err);
       setError(serverMessage(err, "Couldn't load the locations."));
@@ -79,13 +69,13 @@ const LocationManagement = () => {
     try {
       const [allMenus, ...assigned] = await Promise.all([
         api.get("/Menu"),
-        ...locationList.map((l) => api.get(`/Location/${l.location_Id}/menus`)),
+        ...locationList.map((l) => api.get(`/Location/${l.location_id}/menus`)),
       ]);
       const nameById = Object.fromEntries((allMenus.data ?? []).map((m) => [m.menu_id, m.name]));
       setMenuNames(
         Object.fromEntries(
           locationList.map((l, i) => [
-            l.location_Id,
+            l.location_id,
             (assigned[i].data ?? []).map((id) => nameById[id]).filter(Boolean),
           ]),
         ),
@@ -134,7 +124,7 @@ const LocationManagement = () => {
   const handleDeleteConfirm = async () => {
     setDeleteError(null);
     try {
-      await api.delete(`/Location/${locationToDelete.location_Id}`);
+      await api.delete(`/Location/${locationToDelete.location_id}`);
       await fetchLocations();
       setLocationToDelete(null);
     } catch (err) {
@@ -150,7 +140,7 @@ const LocationManagement = () => {
       if (formMode === "create") {
         await api.post("/Location", formData);
       } else {
-        await api.put(`/Location/${selectedLocation.location_Id}`, formData);
+        await api.put(`/Location/${selectedLocation.location_id}`, formData);
       }
       await fetchLocations();
       setIsFormOpen(false);
@@ -162,7 +152,7 @@ const LocationManagement = () => {
   };
 
   const columns = [
-    { field: "location_Id", headerName: "ID", width: 90 },
+    { field: "location_id", headerName: "ID", width: 90 },
     // Name, address and menus share the spare width, so no one column ends in a wide gap
     { field: "name", headerName: "Name", flex: 1, minWidth: 160 },
     { field: "address_one", headerName: "Address 1", flex: 1.2, minWidth: 180 },
@@ -173,10 +163,10 @@ const LocationManagement = () => {
       minWidth: 140,
       sortable: false,
       // Joined so the quick search and filters can match a menu's name
-      valueGetter: (value, row) => menuNames && (menuNames[row.location_Id] ?? []).join(", "),
+      valueGetter: (value, row) => menuNames && (menuNames[row.location_id] ?? []).join(", "),
       renderCell: ({ row }) => {
         if (!menuNames) return null;
-        const names = menuNames[row.location_Id] ?? [];
+        const names = menuNames[row.location_id] ?? [];
         if (names.length === 0) return <Chip label="No menus" size="small" color="warning" variant="outlined" />;
         // One per line; the row grows to fit (see getRowHeight below)
         return (
@@ -194,7 +184,7 @@ const LocationManagement = () => {
       width: 130,
       // A location missing from the list is new, and new locations use the default
       valueGetter: (value, row) =>
-        pricingSources && (pricingSources[row.location_Id] === "Location" ? "Custom" : "Default"),
+        pricingSources && (pricingSources[row.location_id] === "Location" ? "Custom" : "Default"),
       renderCell: ({ value, row }) =>
         value && (
           <Chip
@@ -242,7 +232,7 @@ const LocationManagement = () => {
         rows: locations,
         columns,
         loading,
-        getRowId: (row) => row.location_Id,
+        getRowId: (row) => row.location_id,
         // Taller rows for locations with several menus
         getRowHeight: () => "auto",
         sx: { "& .MuiDataGrid-cell": { minHeight: 52 } },
