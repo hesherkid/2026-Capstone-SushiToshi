@@ -75,7 +75,7 @@ public class TagControllerTests : IDisposable
 
         tags.Should().NotBeNull();
         tags!.Should().HaveCount(3);
-        tags.Select(t => t.Tag_Id).Should().Equal(1, 2, 3);
+        tags.Select(t => t.TagId).Should().Equal(1, 2, 3);
     }
 
     [Fact]
@@ -88,12 +88,9 @@ public class TagControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
 
-        var value = okResult!.Value;
-        value.Should().NotBeNull();
-
-        dynamic tag = value!;
-        ((int)tag.Tag_Id).Should().Be(1);
-        ((string)tag.Tag_Name).Should().Be("Vegetarian");
+        var tag = okResult!.Value.Should().BeOfType<TagBaseDto>().Subject;
+        tag.TagId.Should().Be(1);
+        tag.TagName.Should().Be("Vegetarian");
     }
 
     [Fact]
@@ -114,7 +111,7 @@ public class TagControllerTests : IDisposable
 
         // Assert
         var tags = (result as OkObjectResult)!.Value as List<TagBaseDto>;
-        tags!.Should().OnlyContain(t => System.Text.RegularExpressions.Regex.IsMatch(t.Tag_Color, "^#[0-9A-Fa-f]{6}$"));
+        tags!.Should().OnlyContain(t => System.Text.RegularExpressions.Regex.IsMatch(t.TagColor, "^#[0-9A-Fa-f]{6}$"));
     }
 
     [Fact]
@@ -138,7 +135,7 @@ public class TagControllerTests : IDisposable
     public async Task CreateTag_NewName_ReturnsCreatedPointingAtGetTagById()
     {
         // Act
-        var result = await _controller.CreateTag(new TagBaseDto { Tag_Name = "Vegan", Tag_Color = "#A0E0A0" });
+        var result = await _controller.CreateTag(new TagBaseDto { TagName = "Vegan", TagColor = "#A0E0A0" });
 
         // Assert
         var created = result.Should().BeOfType<CreatedAtActionResult>().Subject;
@@ -150,7 +147,7 @@ public class TagControllerTests : IDisposable
     public async Task CreateTag_DuplicateName_ReturnsConflict()
     {
         // Act
-        var result = await _controller.CreateTag(new TagBaseDto { Tag_Name = "Spicy", Tag_Color = "#A0E0A0" });
+        var result = await _controller.CreateTag(new TagBaseDto { TagName = "Spicy", TagColor = "#A0E0A0" });
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -162,7 +159,7 @@ public class TagControllerTests : IDisposable
     public async Task UpdateTag_NameUsedByAnotherTag_ReturnsConflictAndKeepsName()
     {
         // Act
-        var result = await _controller.UpdateTag(1, new TagUpdateDto { Tag_Name = "Spicy" });
+        var result = await _controller.UpdateTag(1, new TagUpdateDto { TagName = "Spicy" });
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -174,7 +171,7 @@ public class TagControllerTests : IDisposable
     public async Task UpdateTag_KeepingItsOwnName_ReturnsOk()
     {
         // Act
-        var result = await _controller.UpdateTag(2, new TagUpdateDto { Tag_Name = "Spicy", Tag_Color = "#CC0000" });
+        var result = await _controller.UpdateTag(2, new TagUpdateDto { TagName = "Spicy", TagColor = "#CC0000" });
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -185,7 +182,7 @@ public class TagControllerTests : IDisposable
     public async Task UpdateTag_ColorOnly_DoesNotCheckTheName()
     {
         // Act
-        var result = await _controller.UpdateTag(1, new TagUpdateDto { Tag_Color = "#123456" });
+        var result = await _controller.UpdateTag(1, new TagUpdateDto { TagColor = "#123456" });
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -196,7 +193,7 @@ public class TagControllerTests : IDisposable
     public async Task UpdateTag_InvalidId_ReturnsNotFound()
     {
         // Act
-        var result = await _controller.UpdateTag(999, new TagUpdateDto { Tag_Name = "Anything" });
+        var result = await _controller.UpdateTag(999, new TagUpdateDto { TagName = "Anything" });
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
