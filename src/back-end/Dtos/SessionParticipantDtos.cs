@@ -7,73 +7,73 @@ namespace back_end.Dtos
     public class SessionParticipantResponseDto
     {
         [JsonPropertyName("participant")]
-        public int Participant_Id { get; set; }
+        public int ParticipantId { get; set; }
         [JsonPropertyName("session_id")]
-        public int Session_Id { get; set; }
+        public int SessionId { get; set; }
         [JsonPropertyName("user_id")]
-        public int? User_Id { get; set; }
+        public int? UserId { get; set; }
         [JsonPropertyName("user_name")]
-        public string? User_Name { get; set; }
+        public string? UserName { get; set; }
         [JsonPropertyName("joined_at")]
-        public DateTime Joined_At { get; set; }
+        public DateTime JoinedAt { get; set; }
         [JsonPropertyName("Left_At")]
-        public DateTime? Left_At { get; set; }
+        public DateTime? LeftAt { get; set; }
     }
 
     // A bill at the table, as a guest choosing one sees it: names and party size only, no totals
     public class TableBillChoiceDto
     {
         [JsonPropertyName("bill_id")]
-        public int Bill_Id { get; set; }
+        public int BillId { get; set; }
         [JsonPropertyName("bill_name")]
-        public string Bill_Name { get; set; } = string.Empty;
+        public string BillName { get; set; } = string.Empty;
         [JsonPropertyName("total_count")]
-        public int Total_Count { get; set; }
+        public int TotalCount { get; set; }
         [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
         [JsonPropertyName("requested_at")]
-        public DateTime? Requested_At { get; set; }
+        public DateTime? RequestedAt { get; set; }
         // How many people at the table are on it, so a guest can see when its count looks short
         [JsonPropertyName("people_count")]
-        public int People_Count { get; set; }
+        public int PeopleCount { get; set; }
     }
 
     // The guest's own bill: also its counts by kind of guest, so they can update them
     public class MyBillDto : TableBillChoiceDto
     {
         [JsonPropertyName("adult_count")]
-        public int Adult_Count { get; set; }
+        public int AdultCount { get; set; }
         [JsonPropertyName("senior_count")]
-        public int Senior_Count { get; set; }
+        public int SeniorCount { get; set; }
         [JsonPropertyName("child_count")]
-        public int Child_Count { get; set; }
+        public int ChildCount { get; set; }
         [JsonPropertyName("tot_count")]
-        public int Tot_Count { get; set; }
+        public int TotCount { get; set; }
         // Staff locked the counts after checking them; only staff can change them now
         [JsonPropertyName("counts_locked")]
-        public bool Counts_Locked { get; set; }
+        public bool CountsLocked { get; set; }
     }
 
     public class MyBillResponseDto
     {
         // The bill this guest is on, or null if they still need to pick or start one
         [JsonPropertyName("my_bill")]
-        public MyBillDto? My_Bill { get; set; }
+        public MyBillDto? MyBill { get; set; }
 
         // Why they can't move to another bill themselves (staff can), or null if they can
         [JsonPropertyName("change_blocked_reason")]
-        public string? Change_Blocked_Reason { get; set; }
+        public string? ChangeBlockedReason { get; set; }
 
         // The table's open bills they could join
         [JsonPropertyName("open_bills")]
-        public List<TableBillChoiceDto> Open_Bills { get; set; } = new();
+        public List<TableBillChoiceDto> OpenBills { get; set; } = new();
     }
 
     public class ChooseBillDto
     {
         [Required]
         [JsonPropertyName("bill_id")]
-        public int Bill_Id { get; set; }
+        public int BillId { get; set; }
     }
 
     // Staff moving someone at the table onto another bill
@@ -81,21 +81,21 @@ namespace back_end.Dtos
     {
         [Required]
         [JsonPropertyName("bill_id")]
-        public int Bill_Id { get; set; }
+        public int BillId { get; set; }
 
         // Take the orders they placed on their old bill with them
         [JsonPropertyName("move_orders")]
-        public bool Move_Orders { get; set; } = true;
+        public bool MoveOrders { get; set; } = true;
 
         // Take guest_count of this kind of guest off their old bill's count and add them to the new one's,
         // e.g. 4 adults when one phone stands for a party of 4. Null leaves both counts alone.
         [RegularExpression("^(adult|senior|child|toddler)$")]
         [JsonPropertyName("guest_type")]
-        public string? Guest_Type { get; set; }
+        public string? GuestType { get; set; }
 
         [Range(1, 50)]
         [JsonPropertyName("guest_count")]
-        public int Guest_Count { get; set; } = 1;
+        public int GuestCount { get; set; } = 1;
     }
 
     // Staff merging one bill into another at the same table
@@ -103,7 +103,7 @@ namespace back_end.Dtos
     {
         [Required]
         [JsonPropertyName("into_bill_id")]
-        public int Into_Bill_Id { get; set; }
+        public int IntoBillId { get; set; }
     }
 
     // Staff locking a bill's guest counts so guests can't change them, or unlocking them
@@ -118,16 +118,16 @@ namespace back_end.Dtos
     {
         [Range(0, 50)]
         [JsonPropertyName("adult_count")]
-        public int Adult_Count { get; set; }
+        public int AdultCount { get; set; }
         [Range(0, 50)]
         [JsonPropertyName("senior_count")]
-        public int Senior_Count { get; set; }
+        public int SeniorCount { get; set; }
         [Range(0, 50)]
         [JsonPropertyName("child_count")]
-        public int Child_Count { get; set; }
+        public int ChildCount { get; set; }
         [Range(0, 50)]
         [JsonPropertyName("tot_count")]
-        public int Tot_Count { get; set; }
+        public int TotCount { get; set; }
     }
     
 }

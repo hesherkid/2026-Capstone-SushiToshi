@@ -58,21 +58,21 @@ namespace back_end.Controllers
     ///
     ///     POST /api/diningsession/Create_Dinning_Session?assignmentType=table
     ///     {
-    ///         "menu_Id": 123,
+    ///         "menu_id": 123,
     ///         "location_Id": 1,
     ///         "table_Id": 456
     ///     }
     ///
     ///     POST /api/diningsession/Create_Dinning_Session?assignmentType=table_group
     ///     {
-    ///         "menu_Id": 123,
+    ///         "menu_id": 123,
     ///         "location_Id": 1,
     ///         "tableGroup_Id": 789
     ///     }
     ///
     ///     POST /api/diningsession/Create_Dinning_Session
     ///     {
-    ///         "menu_Id": 123,
+    ///         "menu_id": 123,
     ///         "location_Id": 1
     ///     }
     ///
@@ -92,7 +92,7 @@ namespace back_end.Controllers
     {
       try
       {
-        var menu = await _context.Menus.Where(m => m.Menu_id == sessionData.Menu_Id).FirstOrDefaultAsync();
+        var menu = await _context.Menus.Where(m => m.Menu_id == sessionData.MenuId).FirstOrDefaultAsync();
         if (menu == null) return BadRequest("Menu Does not Exist");
 
         var location = await _context.Locations.Where(l => l.Location_Id == sessionData.Location_Id).FirstOrDefaultAsync();
@@ -164,7 +164,7 @@ namespace back_end.Controllers
 
         var newSession = new DiningSession
         {
-          Menu_Id = sessionData.Menu_Id,
+          Menu_Id = sessionData.MenuId,
           Location_Id = sessionData.Location_Id,
           Table_Id = tableId,
           TableGroup_Id = tableGroupId,
@@ -383,7 +383,7 @@ namespace back_end.Controllers
     ///
     ///     POST /api/diningsession/123/tables
     ///     {
-    ///         "table_Id": 456
+    ///         "table_id": 456
     ///     }
     ///
     /// Adds a table to an active dining session.
@@ -435,11 +435,11 @@ namespace back_end.Controllers
         }
 
         var table = await _context.Tables
-            .FirstOrDefaultAsync(t => t.Table_Id == tableData.Table_Id && t.is_active);
+            .FirstOrDefaultAsync(t => t.Table_Id == tableData.TableId && t.is_active);
 
         if (table == null)
         {
-          return BadRequest($"Table: {tableData.Table_Id} not found or inactive");
+          return BadRequest($"Table: {tableData.TableId} not found or inactive");
         }
 
         // Validate that table belongs to same location as session
@@ -483,7 +483,7 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error adding table {TableId} to dining session {SessionId}", tableData.Table_Id, sessionId);
+        _logger.LogError(ex, "Error adding table {TableId} to dining session {SessionId}", tableData.TableId, sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }

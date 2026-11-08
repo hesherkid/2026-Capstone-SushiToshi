@@ -244,7 +244,7 @@ public class MenuControllerTests : IDisposable
         dto.Status.Should().Be(MenuItemStatus.Available);
         dto.Description.Should().BeEmpty();
         dto.Tags.Select(t => t.Name).Should().BeEquivalentTo(["Raw", "Spicy"]);
-        _context.MenuItemTags.Count(t => t.Menu_item_id == dto.Item_Id).Should().Be(2);
+        _context.MenuItemTags.Count(t => t.Menu_item_id == dto.ItemId).Should().Be(2);
     }
 
     [Fact]
@@ -340,10 +340,10 @@ public class MenuControllerTests : IDisposable
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var dto = (MenuResponseDto)((OkObjectResult)result).Value!;
-        dto.Is_Active.Should().BeFalse();
+        dto.IsActive.Should().BeFalse();
         dto.Name.Should().Be("Main Menu");
-        dto.Start_Time.Should().Be(new TimeOnly(8, 0));
-        dto.End_Time.Should().Be(new TimeOnly(22, 0));
+        dto.StartTime.Should().Be(new TimeOnly(8, 0));
+        dto.EndTime.Should().Be(new TimeOnly(22, 0));
     }
 
     [Fact]
@@ -411,8 +411,8 @@ public class MenuControllerTests : IDisposable
         // Assert
         var dto = ((OkObjectResult)result).Value.Should().BeOfType<MenuResponseDto>().Subject;
         dto.Name.Should().Be("Dinner");
-        dto.Is_Active.Should().BeTrue();
-        dto.Menu_Id.Should().BePositive();
+        dto.IsActive.Should().BeTrue();
+        dto.MenuId.Should().BePositive();
     }
 
     [Theory]

@@ -103,9 +103,9 @@ namespace back_end.Controllers
               .OrderBy(l => l.Location_Id)
               .Select(l => new LocationPricingSummary
               {
-                  Location_Id = l.Location_Id,
-                  Location_Name = l.Name,
-                  Province_Code = l.Province_Code,
+                  LocationId = l.Location_Id,
+                  LocationName = l.Name,
+                  ProvinceCode = l.Province_Code,
                   Source = l.PricingProfile != null ? "Location" : "Default",
               })
               .ToListAsync();
@@ -212,19 +212,19 @@ namespace back_end.Controllers
             var pricing = await _pricingService.GetPricingAsync(locationId, noonUtc);
             return Ok(new PricingPreviewResponse
             {
-                Location_Id = locationId,
+                LocationId = locationId,
                 Date = day,
-                Pricing_Type = pricing.PricingType,
-                Pricing_Source = pricing.PricingSource,
-                Holiday_Name = pricing.HolidayName,
-                Adult_Price = pricing.AdultBasePrice,
-                Senior_Price = pricing.SeniorBasePrice,
-                Child_Price = pricing.ChildBasePrice,
-                Toddler_Price = pricing.ToddlerBasePrice,
-                Tax_Rate = pricing.TaxRate,
-                Gratuity_Rate = pricing.GratuityRate,
-                Gratuity_Min_Party_Size = pricing.GratuityMinPartySize,
-                Leftover_Fee = pricing.LeftoverFee,
+                PricingType = pricing.PricingType,
+                PricingSource = pricing.PricingSource,
+                HolidayName = pricing.HolidayName,
+                AdultPrice = pricing.AdultBasePrice,
+                SeniorPrice = pricing.SeniorBasePrice,
+                ChildPrice = pricing.ChildBasePrice,
+                ToddlerPrice = pricing.ToddlerBasePrice,
+                TaxRate = pricing.TaxRate,
+                GratuityRate = pricing.GratuityRate,
+                GratuityMinPartySize = pricing.GratuityMinPartySize,
+                LeftoverFee = pricing.LeftoverFee,
             });
         }
 
@@ -239,28 +239,28 @@ namespace back_end.Controllers
 
         private static void Apply(PricingProfile profile, PricingProfileRequest request)
         {
-            profile.Tax_Rate = Math.Round(request.Tax_Rate, 4);
-            profile.Gratuity_Rate = Math.Round(request.Gratuity_Rate, 4);
-            profile.Gratuity_Min_Party_Size = request.Gratuity_Min_Party_Size;
-            profile.Leftover_Fee = Math.Round(request.Leftover_Fee, 2);
-            profile.Apply_Holiday_Pricing = request.Apply_Holiday_Pricing;
+            profile.Tax_Rate = Math.Round(request.TaxRate, 4);
+            profile.Gratuity_Rate = Math.Round(request.GratuityRate, 4);
+            profile.Gratuity_Min_Party_Size = request.GratuityMinPartySize;
+            profile.Leftover_Fee = Math.Round(request.LeftoverFee, 2);
+            profile.Apply_Holiday_Pricing = request.ApplyHolidayPricing;
 
             // Monday first, so the stored value reads naturally
-            profile.Weekend_Days = request.Weekend_Days.OrderBy(d => ((int)d + 6) % 7).ToList();
+            profile.Weekend_Days = request.WeekendDays.OrderBy(d => ((int)d + 6) % 7).ToList();
 
             // Update rates in place so each day type keeps its row
             foreach (var requested in request.Rates)
             {
-                var rate = profile.Rates.FirstOrDefault(r => r.Day_Type == requested.Day_Type);
+                var rate = profile.Rates.FirstOrDefault(r => r.Day_Type == requested.DayType);
                 if (rate == null)
                 {
-                    rate = new PricingRate { Day_Type = requested.Day_Type };
+                    rate = new PricingRate { Day_Type = requested.DayType };
                     profile.Rates.Add(rate);
                 }
-                rate.Adult_Price = Math.Round(requested.Adult_Price, 2);
-                rate.Senior_Price = Math.Round(requested.Senior_Price, 2);
-                rate.Child_Price = Math.Round(requested.Child_Price, 2);
-                rate.Toddler_Price = Math.Round(requested.Toddler_Price, 2);
+                rate.Adult_Price = Math.Round(requested.AdultPrice, 2);
+                rate.Senior_Price = Math.Round(requested.SeniorPrice, 2);
+                rate.Child_Price = Math.Round(requested.ChildPrice, 2);
+                rate.Toddler_Price = Math.Round(requested.ToddlerPrice, 2);
             }
 
             profile.Updated_At = DateTime.UtcNow;
@@ -268,25 +268,25 @@ namespace back_end.Controllers
 
         private static PricingProfileResponse ToResponse(PricingProfile profile) => new()
         {
-            Pricing_Profile_Id = profile.Pricing_Profile_Id,
-            Location_Id = profile.Location_Id,
+            PricingProfileId = profile.Pricing_Profile_Id,
+            LocationId = profile.Location_Id,
             Source = profile.Location_Id == null ? "Default" : "Location",
-            Tax_Rate = profile.Tax_Rate,
-            Gratuity_Rate = profile.Gratuity_Rate,
-            Gratuity_Min_Party_Size = profile.Gratuity_Min_Party_Size,
-            Leftover_Fee = profile.Leftover_Fee,
-            Weekend_Days = profile.Weekend_Days,
-            Apply_Holiday_Pricing = profile.Apply_Holiday_Pricing,
-            Updated_At = profile.Updated_At,
+            TaxRate = profile.Tax_Rate,
+            GratuityRate = profile.Gratuity_Rate,
+            GratuityMinPartySize = profile.Gratuity_Min_Party_Size,
+            LeftoverFee = profile.Leftover_Fee,
+            WeekendDays = profile.Weekend_Days,
+            ApplyHolidayPricing = profile.Apply_Holiday_Pricing,
+            UpdatedAt = profile.Updated_At,
             Rates = profile.Rates
             .OrderBy(r => r.Day_Type)
             .Select(r => new PricingRateDto
             {
-                Day_Type = r.Day_Type,
-                Adult_Price = r.Adult_Price,
-                Senior_Price = r.Senior_Price,
-                Child_Price = r.Child_Price,
-                Toddler_Price = r.Toddler_Price,
+                DayType = r.Day_Type,
+                AdultPrice = r.Adult_Price,
+                SeniorPrice = r.Senior_Price,
+                ChildPrice = r.Child_Price,
+                ToddlerPrice = r.Toddler_Price,
             })
             .ToList(),
         };

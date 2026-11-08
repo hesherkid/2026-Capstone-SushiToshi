@@ -5,127 +5,127 @@ namespace back_end.Dtos
   public class CreateBill
   {
     [JsonPropertyName("bill_name")]
-    public string? Bill_Name { get; set; }
+    public string? BillName { get; set; }
     [JsonPropertyName("senior_count")]
-    public int Senior_Count { get; set; }
+    public int SeniorCount { get; set; }
 
     [JsonPropertyName("adult_count")]
-    public int Adult_Count { get; set; }
+    public int AdultCount { get; set; }
 
     [JsonPropertyName("child_count")]
-    public int Child_Count { get; set; }
+    public int ChildCount { get; set; }
 
     [JsonPropertyName("tot_count")]
-    public int Tot_Count { get; set; }
+    public int TotCount { get; set; }
 
     [JsonPropertyName("total_count")]
-    public int? Total_Count { get; set; }
+    public int? TotalCount { get; set; }
   }
 
   public class BillResponse
   {
     [JsonPropertyName("bill_id")]
-    public int Bill_Id { get; set; }
+    public int BillId { get; set; }
 
     [JsonPropertyName("session_id")]
-    public int Session_Id { get; set; }
+    public int SessionId { get; set; }
 
     [JsonPropertyName("bill_name")]
-    public string Bill_Name { get; set; } = string.Empty;
+    public string BillName { get; set; } = string.Empty;
 
     [JsonPropertyName("senior_count")]
-    public int Senior_Count { get; set; }
+    public int SeniorCount { get; set; }
 
     [JsonPropertyName("adult_count")]
-    public int Adult_Count { get; set; }
+    public int AdultCount { get; set; }
 
     [JsonPropertyName("child_count")]
-    public int Child_Count { get; set; }
+    public int ChildCount { get; set; }
 
     [JsonPropertyName("tot_count")]
-    public int Tot_Count { get; set; } // toddler
+    public int TotCount { get; set; } // toddler
 
     [JsonPropertyName("total_count")]
-    public int Total_Count { get; set; }
+    public int TotalCount { get; set; }
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
 
     [JsonPropertyName("created_at")]
-    public DateTime Created_At { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     [JsonPropertyName("closed_at")]
-    public DateTime? Closed_At { get; set; }
+    public DateTime? ClosedAt { get; set; }
 
     // Set once the guests ask for the bill; ordering on it stops
     [JsonPropertyName("requested_at")]
-    public DateTime? Requested_At { get; set; }
+    public DateTime? RequestedAt { get; set; }
 
     [JsonPropertyName("table_numbers")]
-    public List<int> Table_Numbers { get; set; } = new List<int>();
+    public List<int> TableNumbers { get; set; } = new List<int>();
   }
 
   public class BillSummaryResponse
   {
     [JsonPropertyName("bill_id")]
-    public int Bill_Id { get; set; }
+    public int BillId { get; set; }
 
     [JsonPropertyName("session_id")]
-    public int Session_Id { get; set; }
+    public int SessionId { get; set; }
 
     [JsonPropertyName("bill_name")]
-    public string Bill_Name { get; set; } = string.Empty;
+    public string BillName { get; set; } = string.Empty;
 
     // Guest counts
     [JsonPropertyName("adult_count")]
-    public int Adult_Count { get; set; }
+    public int AdultCount { get; set; }
 
     [JsonPropertyName("senior_count")]
-    public int Senior_Count { get; set; }
+    public int SeniorCount { get; set; }
 
     [JsonPropertyName("child_count")]
-    public int Child_Count { get; set; }
+    public int ChildCount { get; set; }
 
     [JsonPropertyName("tot_count")]
-    public int Tot_Count { get; set; }
+    public int TotCount { get; set; }
 
     [JsonPropertyName("total_count")]
-    public int Total_Count { get; set; }
+    public int TotalCount { get; set; }
 
     // Base pricing breakdown
     [JsonPropertyName("adult_base_price")]
-    public decimal Adult_Base_Price { get; set; }
+    public decimal AdultBasePrice { get; set; }
 
     [JsonPropertyName("senior_base_price")]
-    public decimal Senior_Base_Price { get; set; }
+    public decimal SeniorBasePrice { get; set; }
 
     [JsonPropertyName("child_base_price")]
-    public decimal Child_Base_Price { get; set; }
+    public decimal ChildBasePrice { get; set; }
 
     [JsonPropertyName("toddler_base_price")]
-    public decimal Toddler_Base_Price { get; set; }
+    public decimal ToddlerBasePrice { get; set; }
 
     [JsonPropertyName("base_charges_subtotal")]
-    public decimal Base_Charges_Subtotal { get; set; }
+    public decimal BaseChargesSubtotal { get; set; }
 
     // Add-on items
     [JsonPropertyName("addon_items")]
-    public List<BillAddOnItem> AddOn_Items { get; set; } = new List<BillAddOnItem>();
+    public List<BillAddOnItem> AddOnItems { get; set; } = new List<BillAddOnItem>();
 
     [JsonPropertyName("addon_subtotal")]
-    public decimal AddOn_Subtotal { get; set; }
+    public decimal AddOnSubtotal { get; set; }
 
     [JsonPropertyName("overlimit_items")]
-    public List<BillAddOnItem> OverLimit_Items { get; set; } = new List<BillAddOnItem>();
+    public List<BillAddOnItem> OverLimitItems { get; set; } = new List<BillAddOnItem>();
 
     [JsonPropertyName("overlimit_subtotal")]
-    public decimal OverLimit_Subtotal { get; set; }
+    public decimal OverLimitSubtotal { get; set; }
 
     [JsonPropertyName("leftover_items")]
-    public List<BillAddOnItem> Leftover_Items { get; set; } = new List<BillAddOnItem>();
+    public List<BillAddOnItem> LeftoverItems { get; set; } = new List<BillAddOnItem>();
 
     [JsonPropertyName("leftover_charge")]
-    public decimal Leftover_Charge { get; set; }
+    public decimal LeftoverCharge { get; set; }
 
     // Totals
     [JsonPropertyName("subtotal")]
@@ -133,76 +133,76 @@ namespace back_end.Dtos
 
     // Guests at the whole table (every bill in the session); decides the gratuity
     [JsonPropertyName("party_size")]
-    public int Party_Size { get; set; }
+    public int PartySize { get; set; }
 
     // 0 unless the party is big enough
     [JsonPropertyName("gratuity_rate")]
-    public decimal Gratuity_Rate { get; set; }
+    public decimal GratuityRate { get; set; }
 
     [JsonPropertyName("gratuity_amount")]
-    public decimal Gratuity_Amount { get; set; }
+    public decimal GratuityAmount { get; set; }
 
     // Guests it takes for the gratuity to apply (0 = never), so the bill can explain it
     [JsonPropertyName("gratuity_min_party_size")]
-    public int Gratuity_Min_Party_Size { get; set; }
+    public int GratuityMinPartySize { get; set; }
 
     // GST, on the subtotal and any gratuity
     [JsonPropertyName("tax_rate")]
-    public decimal Tax_Rate { get; set; }
+    public decimal TaxRate { get; set; }
 
     [JsonPropertyName("tax_amount")]
-    public decimal Tax_Amount { get; set; }
+    public decimal TaxAmount { get; set; }
 
     [JsonPropertyName("total_amount")]
-    public decimal Total_Amount { get; set; }
+    public decimal TotalAmount { get; set; }
 
     // Status
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
 
     [JsonPropertyName("created_at")]
-    public DateTime Created_At { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     [JsonPropertyName("closed_at")]
-    public DateTime? Closed_At { get; set; }
+    public DateTime? ClosedAt { get; set; }
 
     // Set once the guests ask for the bill; ordering on it stops
     [JsonPropertyName("requested_at")]
-    public DateTime? Requested_At { get; set; }
+    public DateTime? RequestedAt { get; set; }
 
     [JsonPropertyName("table_numbers")]
-    public List<int> Table_Numbers { get; set; } = new List<int>();
+    public List<int> TableNumbers { get; set; } = new List<int>();
 
     [JsonPropertyName("pricing_type")]
-    public string Pricing_Type { get; set; } = string.Empty;  // "Weekday", "Weekend", or "Holiday"
+    public string PricingType { get; set; } = string.Empty;  // "Weekday", "Weekend", or "Holiday"
     // e.g. "Canada Day" when Pricing_Type is "Holiday"
     [JsonPropertyName("holiday_name")]
-    public string? Holiday_Name { get; set; }
+    public string? HolidayName { get; set; }
 
     // True once the bill has closed: its prices no longer follow pricing changes
     [JsonPropertyName("prices_locked")]
-    public bool Prices_Locked { get; set; }
+    public bool PricesLocked { get; set; }
   }
 
   public class BillAddOnItem
   {
     [JsonPropertyName("order_item_id")]
-    public int Order_Item_Id { get; set; }
+    public int OrderItemId { get; set; }
 
     [JsonPropertyName("item_id")]
-    public int Item_Id { get; set; }
+    public int ItemId { get; set; }
 
     [JsonPropertyName("item_name")]
-    public string Item_Name { get; set; } = string.Empty;
+    public string ItemName { get; set; } = string.Empty;
 
     [JsonPropertyName("quantity")]
     public int Quantity { get; set; }
 
     [JsonPropertyName("price_per_unit")]
-    public decimal Price_Per_Unit { get; set; }
+    public decimal PricePerUnit { get; set; }
 
     [JsonPropertyName("line_total")]
-    public decimal Line_Total { get; set; }
+    public decimal LineTotal { get; set; }
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
@@ -217,11 +217,11 @@ namespace back_end.Dtos
   public class LeftoverFeeResponse
   {
     [JsonPropertyName("session_id")]
-    public int Session_Id { get; set; }
+    public int SessionId { get; set; }
 
     // The default the dialog starts with (from pricing)
     [JsonPropertyName("default_fee")]
-    public decimal Default_Fee { get; set; }
+    public decimal DefaultFee { get; set; }
 
     // The table's current fee: the open bills' shares added up
     [JsonPropertyName("amount")]
@@ -234,12 +234,12 @@ namespace back_end.Dtos
   public class LeftoverFeeBillShare
   {
     [JsonPropertyName("bill_id")]
-    public int Bill_Id { get; set; }
+    public int BillId { get; set; }
 
     [JsonPropertyName("bill_name")]
-    public string Bill_Name { get; set; } = string.Empty;
+    public string BillName { get; set; } = string.Empty;
 
     [JsonPropertyName("leftover_charge")]
-    public decimal Leftover_Charge { get; set; }
+    public decimal LeftoverCharge { get; set; }
   }
 }

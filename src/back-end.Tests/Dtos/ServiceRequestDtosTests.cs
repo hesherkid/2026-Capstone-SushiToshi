@@ -87,17 +87,17 @@ public class ServiceRequestDtosTests
         var now = DateTime.UtcNow;
         var dto = new ServiceRequestResponseDto
         {
-            Request_Id = 1,
-            Session_Id = 5,
-            Table_Id = 3,
-            Requested_By = 123,
-            Claimed_By = 456,
+            RequestId = 1,
+            SessionId = 5,
+            TableId = 3,
+            RequestedBy = 123,
+            ClaimedBy = 456,
             Notes = "Need water",
             Status = ServiceRequestStatus.Claimed,
-            Created_At = now,
-            Claimed_At = now.AddMinutes(2),
-            Completed_at = null,
-            Table_Number = 5
+            CreatedAt = now,
+            ClaimedAt = now.AddMinutes(2),
+            CompletedAt = null,
+            TableNumber = 5
         };
 
         // Act
@@ -106,16 +106,16 @@ public class ServiceRequestDtosTests
 
         // Assert
         deserialized.Should().NotBeNull();
-        deserialized!.Request_Id.Should().Be(1);
-        deserialized.Session_Id.Should().Be(5);
-        deserialized.Table_Id.Should().Be(3);
-        deserialized.Requested_By.Should().Be(123);
-        deserialized.Claimed_By.Should().Be(456);
+        deserialized!.RequestId.Should().Be(1);
+        deserialized.SessionId.Should().Be(5);
+        deserialized.TableId.Should().Be(3);
+        deserialized.RequestedBy.Should().Be(123);
+        deserialized.ClaimedBy.Should().Be(456);
         deserialized.Status.Should().Be(ServiceRequestStatus.Claimed);
-        deserialized.Created_At.Should().Be(now);
-        deserialized.Claimed_At.Should().Be(now.AddMinutes(2));
-        deserialized.Completed_at.Should().BeNull();
-        deserialized.Table_Number.Should().Be(5);
+        deserialized.CreatedAt.Should().Be(now);
+        deserialized.ClaimedAt.Should().Be(now.AddMinutes(2));
+        deserialized.CompletedAt.Should().BeNull();
+        deserialized.TableNumber.Should().Be(5);
     }
 
     [Fact]
@@ -125,11 +125,11 @@ public class ServiceRequestDtosTests
         var dto = new ServiceRequestResponseDto();
 
         // Assert
-        dto.Requested_By.Should().Be(0);
-        dto.Claimed_By.Should().BeNull();
+        dto.RequestedBy.Should().Be(0);
+        dto.ClaimedBy.Should().BeNull();
         dto.Notes.Should().BeNull();
-        dto.Claimed_At.Should().BeNull();
-        dto.Completed_at.Should().BeNull();
+        dto.ClaimedAt.Should().BeNull();
+        dto.CompletedAt.Should().BeNull();
     }
 
     [Fact]
@@ -138,14 +138,14 @@ public class ServiceRequestDtosTests
         // Arrange
         var dto = new ServiceRequestResponseDto
         {
-            Request_Id = 1,
-            Session_Id = 2,
-            Table_Id = 3,
-            Requested_By = 123,
-            Claimed_By = 456,
+            RequestId = 1,
+            SessionId = 2,
+            TableId = 3,
+            RequestedBy = 123,
+            ClaimedBy = 456,
             Status = ServiceRequestStatus.Pending,
-            Created_At = DateTime.UtcNow,
-            Table_Number = 5
+            CreatedAt = DateTime.UtcNow,
+            TableNumber = 5
         };
 
         // Act
@@ -176,13 +176,13 @@ public class ServiceRequestDtosTests
         // Arrange
         var dto = new ServiceRequestResponseDto
         {
-            Request_Id = 1,
-            Session_Id = 1,
-            Table_Id = 1,
-            Requested_By = 1,
+            RequestId = 1,
+            SessionId = 1,
+            TableId = 1,
+            RequestedBy = 1,
             Status = status,
-            Created_At = DateTime.UtcNow,
-            Table_Number = 1
+            CreatedAt = DateTime.UtcNow,
+            TableNumber = 1
         };
 
         // Act
@@ -200,17 +200,17 @@ public class ServiceRequestDtosTests
         // Arrange — a new, unclaimed request
         var dto = new ServiceRequestResponseDto
         {
-            Request_Id = 1,
-            Session_Id = 1,
-            Table_Id = 1,
-            Requested_By = 123,
-            Claimed_By = null,
+            RequestId = 1,
+            SessionId = 1,
+            TableId = 1,
+            RequestedBy = 123,
+            ClaimedBy = null,
             Notes = null,
             Status = ServiceRequestStatus.Pending,
-            Created_At = DateTime.UtcNow,
-            Claimed_At = null,
-            Completed_at = null,
-            Table_Number = 1
+            CreatedAt = DateTime.UtcNow,
+            ClaimedAt = null,
+            CompletedAt = null,
+            TableNumber = 1
         };
 
         // Act
@@ -219,10 +219,10 @@ public class ServiceRequestDtosTests
 
         // Assert
         deserialized.Should().NotBeNull();
-        deserialized!.Requested_By.Should().Be(123);
-        deserialized.Claimed_By.Should().BeNull();
+        deserialized!.RequestedBy.Should().Be(123);
+        deserialized.ClaimedBy.Should().BeNull();
         deserialized.Notes.Should().BeNull();
-        deserialized.Claimed_At.Should().BeNull();
-        deserialized.Completed_at.Should().BeNull();
+        deserialized.ClaimedAt.Should().BeNull();
+        deserialized.CompletedAt.Should().BeNull();
     }
 }

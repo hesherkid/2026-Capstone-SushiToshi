@@ -48,20 +48,20 @@ namespace back_end.Controllers
                 {
                     Name = itemData.Name,
                     Description = itemData.Description ?? string.Empty,
-                    Start_time = itemData.Start_Time ?? new TimeOnly(0, 0, 1),
-                    End_time = itemData.End_Time ?? new TimeOnly(23, 59, 59),
-                    Is_active = itemData.Is_Active
+                    Start_time = itemData.StartTime ?? new TimeOnly(0, 0, 1),
+                    End_time = itemData.EndTime ?? new TimeOnly(23, 59, 59),
+                    Is_active = itemData.IsActive
                 };
                 _context.Add(newMenu);
                 await _context.SaveChangesAsync();
                 return Ok(new MenuResponseDto
                 {
-                    Menu_Id = newMenu.Menu_id,
+                    MenuId = newMenu.Menu_id,
                     Name = newMenu.Name,
                     Description = newMenu.Description,
-                    Start_Time = newMenu.Start_time,
-                    End_Time = newMenu.End_time,
-                    Is_Active = newMenu.Is_active
+                    StartTime = newMenu.Start_time,
+                    EndTime = newMenu.End_time,
+                    IsActive = newMenu.Is_active
                 });
             }
             catch (Exception ex)
@@ -155,7 +155,7 @@ namespace back_end.Controllers
 
                 return Ok(new MenuItemResponseDto
                 {
-                    Item_Id = newItem.item_id,
+                    ItemId = newItem.item_id,
                     Name = newItem.Name,
                     Description = newItem.Description,
                     Category_Id = newItem.Category_id,
@@ -163,9 +163,9 @@ namespace back_end.Controllers
                     Status = newItem.Status,
                     Tags = newItem.MenuItemTags.Select(t => new FullTagResponseDto
                     {
-                        Tag_Id = t.Tag.tag_id,
+                        TagId = t.Tag.tag_id,
                         Name = t.Tag.tag_name,
-                        Color_Code = t.Tag.tag_color
+                        ColorCode = t.Tag.tag_color
                     }).ToList(),
 
                 });
@@ -501,12 +501,12 @@ namespace back_end.Controllers
                 await _context.SaveChangesAsync();
                 return Ok(new MenuResponseDto
                 {
-                    Menu_Id = menu.Menu_id,
+                    MenuId = menu.Menu_id,
                     Name = menu.Name,
                     Description = menu.Description,
-                    Start_Time = menu.Start_time,
-                    End_Time = menu.End_time,
-                    Is_Active = menu.Is_active
+                    StartTime = menu.Start_time,
+                    EndTime = menu.End_time,
+                    IsActive = menu.Is_active
                 });
             }
             catch (Exception ex)

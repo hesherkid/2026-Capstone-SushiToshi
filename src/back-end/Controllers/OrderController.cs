@@ -90,7 +90,7 @@ namespace back_end.Controllers
         {
             // Combine duplicate item IDs so per-order limits can't be bypassed by splitting a request
             var requested = items
-                .GroupBy(i => i.Item_Id)
+                .GroupBy(i => i.ItemId)
                 .Select(g => (ItemId: g.Key, Quantity: g.Sum(i => i.Quantity)))
                 .ToList();
             var itemIds = requested.Select(r => r.ItemId).ToList();
@@ -228,12 +228,12 @@ namespace back_end.Controllers
                     var limits = ItemLimits(a);
                     return new ItemOrderLimitDto
                     {
-                        Item_Id = a.Item_Id,
-                        Category_Id = a.MenuItem.Category_id,
-                        Per_Order = OrderLimitRules.PerOrderCap(limits),
-                        Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
-                        Free_Left = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
-                        Extra_Price = a.Price,
+                        ItemId = a.Item_Id,
+                        CategoryId = a.MenuItem.Category_id,
+                        PerOrder = OrderLimitRules.PerOrderCap(limits),
+                        SessionLeft = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
+                        FreeLeft = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
+                        ExtraPrice = a.Price,
                     };
                 }).ToList(),
                 Categories = assignments
@@ -244,10 +244,10 @@ namespace back_end.Controllers
                         var limits = CategoryLimits(c);
                         return new CategoryOrderLimitDto
                         {
-                            Category_Id = c.Category_id,
-                            Per_Order = OrderLimitRules.PerOrderCap(limits),
-                            Session_Left = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
-                            Free_Left = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
+                            CategoryId = c.Category_id,
+                            PerOrder = OrderLimitRules.PerOrderCap(limits),
+                            SessionLeft = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
+                            FreeLeft = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
                         };
                     }).ToList(),
             };
@@ -277,8 +277,8 @@ namespace back_end.Controllers
         ///
         ///     POST /api/order
         ///     {
-        ///         "session_Id": 123,
-        ///         "bill_Id": 456,
+        ///         "session_id": 123,
+        ///         "bill_id": 456,
         ///         "items": [
         ///             { "item_id": 10, "quantity": 1 },
         ///             { "item_id": 66, "quantity": 2 }
@@ -307,9 +307,9 @@ namespace back_end.Controllers
                 }
 
                 // Waits for a close of this bill in progress, so the bill read below is current
-                await using var billLock = await BillLock.LockAsync(_context, orderData.Bill_Id);
+                await using var billLock = await BillLock.LockAsync(_context, orderData.BillId);
 
-                var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == orderData.Session_Id);
+                var session = await _context.DiningSessions.FirstOrDefaultAsync(ds => ds.Session_Id == orderData.SessionId);
                 if (session is null)
                 {
                     return NotFound("Dinning Session was not found in the current context");
@@ -321,7 +321,7 @@ namespace back_end.Controllers
                     return Forbid();
                 }
 
-                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == orderData.Bill_Id && b.Session_Id == session.Session_Id);
+                var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == orderData.BillId && b.Session_Id == session.Session_Id);
                 if (bill is null)
                 {
                     return NotFound("Bill Was not found for the current session order Create Bill");
@@ -364,8 +364,8 @@ namespace back_end.Controllers
 
                 var newOrder = new SessionOrder
                 {
-                    session_id = orderData.Session_Id,
-                    Bill_Id = orderData.Bill_Id,
+                    session_id = orderData.SessionId,
+                    Bill_Id = orderData.BillId,
                     User_Id = userId,
                     User_Name = userName,
                     Status = OrderStatus.Pending,
@@ -388,15 +388,15 @@ namespace back_end.Controllers
                     Created_At = newOrder.Created_At,
                     OrderItems = plan.Lines.Select(l => new OrderItemResponseDto
                     {
-                        Order_Item_Id = l.Order_Item_Id,
-                        Order_Id = newOrder.Order_Id,
-                        Menu_Id = l.Menu_Id,
-                        Item_Id = l.Item_Id,
+                        OrderItemId = l.Order_Item_Id,
+                        OrderId = newOrder.Order_Id,
+                        MenuId = l.Menu_Id,
+                        ItemId = l.Item_Id,
                         Quantity = l.Quantity,
-                        Price_At_Time = l.Price_At_Time,
+                        PriceAtTime = l.Price_At_Time,
                         Status = l.Order_Item_Status,
                         Name = plan.NamesById.GetValueOrDefault(l.Item_Id),
-                        Charge_Reason = l.Charge_Reason.ToString()
+                        ChargeReason = l.Charge_Reason.ToString()
                     }).ToList()
                 });
             }
@@ -482,12 +482,12 @@ namespace back_end.Controllers
                     Created_At = order.Created_At,
                     OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
-                        Order_Item_Id = oi.Order_Item_Id,
-                        Order_Id = oi.Order_Key,
-                        Menu_Id = oi.Menu_Id,
-                        Item_Id = oi.Item_Id,
+                        OrderItemId = oi.Order_Item_Id,
+                        OrderId = oi.Order_Key,
+                        MenuId = oi.Menu_Id,
+                        ItemId = oi.Item_Id,
                         Quantity = oi.Quantity,
-                        Price_At_Time = oi.Price_At_Time,
+                        PriceAtTime = oi.Price_At_Time,
                         Status = oi.Order_Item_Status,
                         Name = oi.MenuItem?.Name
                     }).ToList()
@@ -660,14 +660,14 @@ namespace back_end.Controllers
                 await _context.SaveChangesAsync();
                 var response = new OrderItemResponseDto
                 {
-                    Order_Item_Id = item.Order_Item_Id,
-                    Order_Id = item.Order_Key,
-                    Menu_Id = item.Menu_Id,
-                    Item_Id = item.Item_Id,
+                    OrderItemId = item.Order_Item_Id,
+                    OrderId = item.Order_Key,
+                    MenuId = item.Menu_Id,
+                    ItemId = item.Item_Id,
                     Quantity = item.Quantity,
-                    Price_At_Time = item.Price_At_Time,
+                    PriceAtTime = item.Price_At_Time,
                     Status = item.Order_Item_Status,
-                    Completed_At = item.Completed_At,
+                    CompletedAt = item.Completed_At,
                 };
                 return Ok(response);
             }
@@ -736,14 +736,14 @@ namespace back_end.Controllers
                     Completed_At = order.Completed_At,
                     OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
-                        Order_Item_Id = oi.Order_Item_Id,
-                        Order_Id = oi.Order_Key,
-                        Menu_Id = oi.Menu_Id,
-                        Item_Id = oi.Item_Id,
+                        OrderItemId = oi.Order_Item_Id,
+                        OrderId = oi.Order_Key,
+                        MenuId = oi.Menu_Id,
+                        ItemId = oi.Item_Id,
                         Quantity = oi.Quantity,
-                        Price_At_Time = oi.Price_At_Time,
+                        PriceAtTime = oi.Price_At_Time,
                         Status = oi.Order_Item_Status,
-                        Completed_At = oi.Completed_At,
+                        CompletedAt = oi.Completed_At,
                         Name = oi.MenuItem?.Name
                     }).ToList()
                 });
@@ -847,14 +847,14 @@ namespace back_end.Controllers
                     Completed_At = order.Completed_At,
                     OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
-                        Order_Item_Id = oi.Order_Item_Id,
-                        Order_Id = oi.Order_Key,
-                        Menu_Id = oi.Menu_Id,
-                        Item_Id = oi.Item_Id,
+                        OrderItemId = oi.Order_Item_Id,
+                        OrderId = oi.Order_Key,
+                        MenuId = oi.Menu_Id,
+                        ItemId = oi.Item_Id,
                         Quantity = oi.Quantity,
-                        Price_At_Time = oi.Price_At_Time,
+                        PriceAtTime = oi.Price_At_Time,
                         Status = oi.Order_Item_Status,
-                        Completed_At = oi.Completed_At,
+                        CompletedAt = oi.Completed_At,
                         Name = oi.MenuItem?.Name
                     }).ToList()
                 });
@@ -1102,17 +1102,17 @@ namespace back_end.Controllers
                 }
 
                 // Update price if provided (staff only)
-                if (updateData.Price_At_Time.HasValue)
+                if (updateData.PriceAtTime.HasValue)
                 {
                     if (!isStaff)
                     {
                         return Forbid("Only staff can modify prices");
                     }
-                    if (updateData.Price_At_Time.Value < 0)
+                    if (updateData.PriceAtTime.Value < 0)
                     {
                         return BadRequest("Price cannot be negative");
                     }
-                    orderItem.Price_At_Time = updateData.Price_At_Time.Value;
+                    orderItem.Price_At_Time = updateData.PriceAtTime.Value;
                 }
 
                 // Update status if provided
@@ -1148,14 +1148,14 @@ namespace back_end.Controllers
 
                 return Ok(new OrderItemResponseDto
                 {
-                    Order_Item_Id = orderItem.Order_Item_Id,
-                    Order_Id = orderItem.Order_Key,
-                    Menu_Id = orderItem.Menu_Id,
-                    Item_Id = orderItem.Item_Id,
+                    OrderItemId = orderItem.Order_Item_Id,
+                    OrderId = orderItem.Order_Key,
+                    MenuId = orderItem.Menu_Id,
+                    ItemId = orderItem.Item_Id,
                     Quantity = orderItem.Quantity,
-                    Price_At_Time = orderItem.Price_At_Time,
+                    PriceAtTime = orderItem.Price_At_Time,
                     Status = orderItem.Order_Item_Status,
-                    Completed_At = orderItem.Completed_At,
+                    CompletedAt = orderItem.Completed_At,
                     Name = orderItem.MenuItem?.Name
                 });
             }

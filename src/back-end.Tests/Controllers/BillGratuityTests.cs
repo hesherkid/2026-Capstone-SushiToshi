@@ -99,12 +99,12 @@ public class BillGratuityTests : IDisposable
         var summary = await Summary();
 
         summary.Subtotal.Should().Be(180m);
-        summary.Party_Size.Should().Be(5);
-        summary.Gratuity_Rate.Should().Be(0m);
-        summary.Gratuity_Amount.Should().Be(0m);
-        summary.Tax_Rate.Should().Be(0.05m);
-        summary.Tax_Amount.Should().Be(9m);
-        summary.Total_Amount.Should().Be(189m);
+        summary.PartySize.Should().Be(5);
+        summary.GratuityRate.Should().Be(0m);
+        summary.GratuityAmount.Should().Be(0m);
+        summary.TaxRate.Should().Be(0.05m);
+        summary.TaxAmount.Should().Be(9m);
+        summary.TotalAmount.Should().Be(189m);
     }
 
     [Fact]
@@ -115,13 +115,13 @@ public class BillGratuityTests : IDisposable
         var summary = await Summary();
 
         summary.Subtotal.Should().Be(200m);
-        summary.Party_Size.Should().Be(6);
-        summary.Gratuity_Rate.Should().Be(0.18m);
-        summary.Gratuity_Amount.Should().Be(36m);
-        summary.Gratuity_Min_Party_Size.Should().Be(6);
+        summary.PartySize.Should().Be(6);
+        summary.GratuityRate.Should().Be(0.18m);
+        summary.GratuityAmount.Should().Be(36m);
+        summary.GratuityMinPartySize.Should().Be(6);
         // A mandatory gratuity is taxable: 5% of $236
-        summary.Tax_Amount.Should().Be(11.80m);
-        summary.Total_Amount.Should().Be(247.80m);
+        summary.TaxAmount.Should().Be(11.80m);
+        summary.TotalAmount.Should().Be(247.80m);
     }
 
     [Fact]
@@ -132,8 +132,8 @@ public class BillGratuityTests : IDisposable
 
         var summary = await Summary();
 
-        summary.Party_Size.Should().Be(6);
-        summary.Gratuity_Amount.Should().Be(21.60m);   // 18% of $120
+        summary.PartySize.Should().Be(6);
+        summary.GratuityAmount.Should().Be(21.60m);   // 18% of $120
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class BillGratuityTests : IDisposable
 
         var summary = await Summary();
 
-        summary.Party_Size.Should().Be(3);
-        summary.Gratuity_Amount.Should().Be(0m);
+        summary.PartySize.Should().Be(3);
+        summary.GratuityAmount.Should().Be(0m);
     }
 }

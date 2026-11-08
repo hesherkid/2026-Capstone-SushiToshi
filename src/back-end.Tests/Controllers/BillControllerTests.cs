@@ -121,7 +121,7 @@ public class BillControllerTests : IDisposable
         result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
 
     private static CreateBill Guests(int adults = 0, int seniors = 0, int children = 0, int tots = 0, string? name = "Kim") =>
-        new() { Bill_Name = name, Adult_Count = adults, Senior_Count = seniors, Child_Count = children, Tot_Count = tots };
+        new() { BillName = name, AdultCount = adults, SeniorCount = seniors, ChildCount = children, TotCount = tots };
 
     private Billing Bill(int billId) => _context.Bills.Single(b => b.Bill_Id == billId);
 
@@ -144,12 +144,12 @@ public class BillControllerTests : IDisposable
     {
         var bill = OkValue<BillResponse>(await Bills().CreateBill(TableSession, Guests(adults: 1, children: 1)));
 
-        bill.Session_Id.Should().Be(TableSession);
-        bill.Bill_Name.Should().Be("Kim");
-        bill.Total_Count.Should().Be(2);
+        bill.SessionId.Should().Be(TableSession);
+        bill.BillName.Should().Be("Kim");
+        bill.TotalCount.Should().Be(2);
         bill.Status.Should().Be("Open");
-        bill.Table_Numbers.Should().Equal(6);
-        _context.Bills.Should().Contain(b => b.Bill_Id == bill.Bill_Id && b.Status == BillStatus.Open);
+        bill.TableNumbers.Should().Equal(6);
+        _context.Bills.Should().Contain(b => b.Bill_Id == bill.BillId && b.Status == BillStatus.Open);
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public class BillControllerTests : IDisposable
         // 6 guests fit into two 4-seat tables but not one
         var bill = OkValue<BillResponse>(await Bills().CreateBill(GroupSession, Guests(adults: 6)));
 
-        bill.Table_Numbers.Should().BeEquivalentTo(new[] { 10, 11 });
+        bill.TableNumbers.Should().BeEquivalentTo(new[] { 10, 11 });
     }
 
     [Fact]
@@ -251,9 +251,9 @@ public class BillControllerTests : IDisposable
     {
         var bill = OkValue<BillResponse>(await Bills().GetBill(TableSession, LeeBill));
 
-        bill.Bill_Id.Should().Be(LeeBill);
-        bill.Bill_Name.Should().Be("Lee");
-        bill.Table_Numbers.Should().Equal(6);
+        bill.BillId.Should().Be(LeeBill);
+        bill.BillName.Should().Be("Lee");
+        bill.TableNumbers.Should().Equal(6);
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public class BillControllerTests : IDisposable
         var bill = OkValue<BillResponse>(await Bills().CloseBill(TableSession, LeeBill));
 
         bill.Status.Should().Be("Closed");
-        bill.Closed_At.Should().NotBeNull();
+        bill.ClosedAt.Should().NotBeNull();
         Bill(LeeBill).Status.Should().Be(BillStatus.Closed);
     }
 
@@ -344,7 +344,7 @@ public class BillControllerTests : IDisposable
         var bill = OkValue<BillResponse>(await Bills().CancelBill(TableSession, LeeBill));
 
         bill.Status.Should().Be("Cancelled");
-        bill.Closed_At.Should().NotBeNull();
+        bill.ClosedAt.Should().NotBeNull();
         _context.SessionOrders.Single(o => o.Order_Id == 811).Status.Should().Be(OrderStatus.Cancelled);
         _context.SessionOrders.Single(o => o.Order_Id == 813).Status.Should().Be(OrderStatus.Pending);
     }
@@ -402,7 +402,7 @@ public class BillControllerTests : IDisposable
         var result = await Bills(SeatedGuest, "Customer").GetActiveBills();
 
         var bills = result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<List<BillResponse>>().Which;
-        bills.Should().ContainSingle().Which.Bill_Id.Should().Be(LeeBill);
+        bills.Should().ContainSingle().Which.BillId.Should().Be(LeeBill);
     }
 
     [Fact]
@@ -446,16 +446,16 @@ public class BillControllerTests : IDisposable
 
         var summary = OkValue<BillSummaryResponse>(await Bills().GetBillSummary(TableSession, LeeBill));
 
-        summary.Base_Charges_Subtotal.Should().Be(60m);                // 2 adults x $30
-        summary.AddOn_Items.Should().ContainSingle().Which.Line_Total.Should().Be(14m);
-        summary.OverLimit_Items.Should().ContainSingle().Which.Item_Name.Should().Be("Hot Stone Wagyu");
-        summary.OverLimit_Subtotal.Should().Be(12m);
-        summary.Leftover_Charge.Should().Be(5m);
+        summary.BaseChargesSubtotal.Should().Be(60m);                // 2 adults x $30
+        summary.AddOnItems.Should().ContainSingle().Which.LineTotal.Should().Be(14m);
+        summary.OverLimitItems.Should().ContainSingle().Which.ItemName.Should().Be("Hot Stone Wagyu");
+        summary.OverLimitSubtotal.Should().Be(12m);
+        summary.LeftoverCharge.Should().Be(5m);
         summary.Subtotal.Should().Be(91m);                             // 60 + 14 + 12 + 5
-        summary.Gratuity_Amount.Should().Be(0m);
-        summary.Tax_Amount.Should().Be(4.55m);                         // 5% GST
-        summary.Total_Amount.Should().Be(95.55m);
-        summary.Prices_Locked.Should().BeFalse();
+        summary.GratuityAmount.Should().Be(0m);
+        summary.TaxAmount.Should().Be(4.55m);                         // 5% GST
+        summary.TotalAmount.Should().Be(95.55m);
+        summary.PricesLocked.Should().BeFalse();
     }
 
     [Fact]

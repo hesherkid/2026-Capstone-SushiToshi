@@ -1,0 +1,133 @@
+back_end.Dtos.AccountStatusUpdateDto: status
+back_end.Dtos.Analytics.AnalyticsFilterOptionDto: id, name
+back_end.Dtos.Analytics.AnalyticsFiltersDto: categories, tags
+back_end.Dtos.Analytics.AnalyticsLocationDto: id, name
+back_end.Dtos.Analytics.AnalyticsRangeDto: days, from, preset, time_zone, to
+back_end.Dtos.Analytics.AnalyticsTagDto: color, name, tag_id
+back_end.Dtos.Analytics.BrowsingBehaviorResponseDto: filters, items, least_viewed, location, low_conversion_high_views, most_viewed, never_viewed, range, summary, top_viewed_and_ordered, top_viewed_not_ordered, unavailable_views, viewed_not_ordered
+back_end.Dtos.Analytics.BrowsingItemDto: average_view_seconds, average_view_seconds_not_ordered, average_view_seconds_ordered, category_id, category_name, conversion_rate, currently_available, item_id, name, ordering_sessions, short_views, status, tags, total_view_seconds, unavailable_views, units_ordered_after_view, view_rank, viewing_sessions, views
+back_end.Dtos.Analytics.BrowsingSummaryDto: average_view_seconds, average_view_seconds_not_ordered, average_view_seconds_ordered, conversion_rate, items_considered, items_never_viewed, items_viewed, min_view_seconds, min_views, session_item_orders, session_item_views, short_views_excluded, total_view_seconds, total_views, unavailable_views, viewing_sessions
+back_end.Dtos.Analytics.DurationSummaryDto: average_minutes, count, median_minutes
+back_end.Dtos.Analytics.ItemPerformanceDto: add_on_days, add_on_share, add_on_units, category_id, category_name, currently_available, item_id, name, rank, share_of_units, status, tags, units_sold
+back_end.Dtos.Analytics.ItemPerformanceResponseDto: add_ons, best, filters, items, location, range, summary, worst, zero_sales
+back_end.Dtos.Analytics.ItemPerformanceSummaryDto: items_considered, items_with_sales, items_with_zero_sales, total_add_on_units, total_units_sold
+back_end.Dtos.Analytics.ItemTimingDto: average_minutes, category_id, category_name, deliveries, item_id, median_minutes, name, rank, tags
+back_end.Dtos.Analytics.OrderTimingResponseDto: average_orders_per_session, fastest_items, filters, gap_between_orders, location, orders_by_hour, peak_hour, pending_to_processing, processing_to_completed, range, session_duration, slowest_items, summary, time_to_first_order
+back_end.Dtos.Analytics.OrderTimingSummaryDto: items_ranked, min_deliveries, orders_missing_approval_time, orders_placed, sessions_open, sessions_over_time_limit, sessions_started, time_limit_minutes
+back_end.Dtos.Analytics.OrderingHourDto: hour, label, orders
+back_end.Dtos.Analytics.PartySizeDurationDto: duration, over_time_limit, party_size, sessions
+back_end.Dtos.Analytics.SeatingHourDto: guests, hour, label, seatings
+back_end.Dtos.Analytics.TableTurnoverResponseDto: duration_by_party_size, location, peak_by_guests, peak_by_seatings, range, seatings_by_hour, summary, turnover_gap
+back_end.Dtos.Analytics.TableTurnoverSummaryDto: guests_seated, max_gap_minutes, sessions_open, sessions_over_time_limit, sessions_seated, sessions_without_party_size, time_limit_minutes
+back_end.Dtos.Analytics.TurnoverGapDto: gaps_over_limit, groups, overlapping_sessions, tables
+back_end.Dtos.Auth.ForgotPasswordDto: email
+back_end.Dtos.Auth.GoogleTokenDto: idToken
+back_end.Dtos.Auth.LoginDto: email, password
+back_end.Dtos.Auth.RegisterDto: email, first_name, last_name, password
+back_end.Dtos.Auth.ResendVerificationDto: email
+back_end.Dtos.Auth.ResetPasswordDto: newPassword, token
+back_end.Dtos.Auth.VerifyEmailDto: token
+back_end.Dtos.BillAddOnItem: item_id, item_name, line_total, order_item_id, price_per_unit, quantity, status
+back_end.Dtos.BillResponse: adult_count, bill_id, bill_name, child_count, closed_at, created_at, requested_at, senior_count, session_id, status, table_numbers, tot_count, total_count
+back_end.Dtos.BillSummaryResponse: addon_items, addon_subtotal, adult_base_price, adult_count, base_charges_subtotal, bill_id, bill_name, child_base_price, child_count, closed_at, created_at, gratuity_amount, gratuity_min_party_size, gratuity_rate, holiday_name, leftover_charge, leftover_items, overlimit_items, overlimit_subtotal, party_size, prices_locked, pricing_type, requested_at, senior_base_price, senior_count, session_id, status, subtotal, table_numbers, tax_amount, tax_rate, toddler_base_price, tot_count, total_amount, total_count
+back_end.Dtos.CategoryOrderLimitDto: category_id, free_left, per_order, session_left
+back_end.Dtos.CategoryResponse: adult_limit, category_id, category_name, child_limit, description, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
+back_end.Dtos.ChooseBillDto: bill_id
+back_end.Dtos.CreateBill: adult_count, bill_name, child_count, senior_count, tot_count, total_count
+back_end.Dtos.CreateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
+back_end.Dtos.CreateSessionRequestDto: assignmentType, location_Id, menu_id, tableGroup_Id, table_Id
+back_end.Dtos.CreateStaffDto: email, first_name, last_name, location_id, location_ids, password, role, status
+back_end.Dtos.DashboardBillDto: adult_Count, bill_Id, bill_Name, child_Count, counts_Changed_By_Guest, counts_Locked, created_At, people_On_Bill, requested_At, senior_Count, started_By_Guest, status, tot_Count, total_Guests
+back_end.Dtos.DashboardPersonDto: bill_Id, participant_Id, user_Name
+back_end.Dtos.DashboardSessionsDto: active_Participants, bill_Count, bills, ended_At, first_Order_At, is_Closable, location_Id, location_Name, menu_Id, people, seat_Count, session_Id, started_At, table_Numbers
+back_end.Dtos.DashboardSummaryDto: location_Id, location_Name, total_ActiveParticipants, total_Active_Bills, total_Active_Sessions, total_Tables_In_Use
+back_end.Dtos.DiningSessionDetailDto: active_Bill_Count, active_Participants, bills_Count, ended_at, first_Order_Time, location_Id, location_Name, menu_Id, orders_Count, session_Id, started_at, table_Numbers, total_participant
+back_end.Dtos.DiningSessionResponseDto: active_Participants, ended_at, first_Order_Time, location_Id, location_Name, menu_Id, session_Id, started_at, table_Numbers
+back_end.Dtos.FullTagResponseDto: color_code, name, tag_id
+back_end.Dtos.HolidayCreateRequest: date, name, province_code
+back_end.Dtos.HolidayImportRequest: include_optional, province_code, year
+back_end.Dtos.HolidayImportResponse: added, holidays, skipped
+back_end.Dtos.HolidayOptionsResponse: default_province, include_optional, provinces, year_from, year_to
+back_end.Dtos.HolidayResponse: date, holiday_id, imported_at, name, observed_date, province_code, reviewed_at, reviewed_by, source, status
+back_end.Dtos.HolidayReviewRequest: ids
+back_end.Dtos.HolidayReviewResponse: updated
+back_end.Dtos.HolidayUpdateRequest: date, name
+back_end.Dtos.ItemOrderLimitDto: category_id, extra_price, free_left, item_id, per_order, session_left
+back_end.Dtos.JoinTableSessionDto: location_Id, table_Number
+back_end.Dtos.JoinTableSessionResponseDto: already_Joined, menu_Id, participant_Id, session_Id, table_Numbers
+back_end.Dtos.LeftoverFeeBillShare: bill_id, bill_name, leftover_charge
+back_end.Dtos.LeftoverFeeRequest: amount
+back_end.Dtos.LeftoverFeeResponse: amount, bills, default_fee, session_id
+back_end.Dtos.ListDiningSessionsRequestDto: activeOnly
+back_end.Dtos.LocationBaseDto: address_One, address_Two, city, name, phone_Number, postal_Code, province, province_Code
+back_end.Dtos.LocationCreateDto: address_One, address_Two, city, name, phone_Number, postal_Code, province, province_Code
+back_end.Dtos.LocationOptionDto: location_id, name
+back_end.Dtos.LocationPricingSummary: location_id, location_name, province_code, source
+back_end.Dtos.LocationResponseDto: address_One, address_Two, city, location_Id, name, phone_Number, postal_Code, province, province_Code
+back_end.Dtos.LocationUpdateDto: address_One, address_Two, city, name, phone_Number, postal_Code, province, province_Code
+back_end.Dtos.LockGuestCountsDto: locked
+back_end.Dtos.MenuAssignmentCreate: adult_Limit, child_Limit, is_Add_on, item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, senior_Limit, status, tot_Limit
+back_end.Dtos.MenuAssignmentResponse: is_Add_On, item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, status, tot_Limit
+back_end.Dtos.MenuAssignmentUpdateDto: adult_Limit, child_Limit, is_Add_on, over_Limit_Behavior, per_Order_Limit, price, senior_Limit, status, tot_Limit
+back_end.Dtos.MenuBaseDto: description, end_time, is_active, name, start_time
+back_end.Dtos.MenuCreateDto: description, end_time, is_active, name, start_time
+back_end.Dtos.MenuItemAssignmentBaseDto: item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, tot_Limit
+back_end.Dtos.MenuItemBaseDto: category_Id, description, item_Image_Url, name, status
+back_end.Dtos.MenuItemCreateDto: category_Id, description, item_Image_Url, name, status, tag_Ids
+back_end.Dtos.MenuItemDetailDto: category_Name, current_Price, tag_Names, total_Orders
+back_end.Dtos.MenuItemDetailResponseDto: category_id, category_name, description, is_add_on, item_id, item_image_url, menu_id, name, price, status
+back_end.Dtos.MenuItemResponseDto: category_Id, created_at, description, item_Image_Url, item_id, name, status, tags, updated_at
+back_end.Dtos.MenuItemUpdateDto: category_Id, description, item_Image_Url, name, status, tag_Ids
+back_end.Dtos.MenuItemViewCreateDto: item_id, session_id, view_seconds
+back_end.Dtos.MenuLocationCreateDto: menu_id
+back_end.Dtos.MenuResponseDto: description, end_time, is_active, menu_id, name, start_time
+back_end.Dtos.MenuUpdateDto: description, end_Time, is_Active, name, start_Time
+back_end.Dtos.MergeBillDto: into_bill_id
+back_end.Dtos.MoveGuestDto: bill_id, guest_count, guest_type, move_orders
+back_end.Dtos.MyBillDto: adult_count, bill_id, bill_name, child_count, counts_locked, people_count, requested_at, senior_count, status, tot_count, total_count
+back_end.Dtos.MyBillResponseDto: change_blocked_reason, my_bill, open_bills
+back_end.Dtos.MyLocationsDto: all_locations, current_location, locations
+back_end.Dtos.OrderCreateDto: bill_id, items, session_id
+back_end.Dtos.OrderItemCreateDto: item_id, menu_id, order_id, price_at_time, quantity, status
+back_end.Dtos.OrderItemInsertResponse: item_id, menu_id, order_id, order_item_id, price_at_time, quantity, status
+back_end.Dtos.OrderItemResponseDto: charge_reason, completed_at, item_id, menu_id, name, order_id, order_item_id, price_at_time, quantity, status
+back_end.Dtos.OrderItemUpdateDto: price_at_time, quantity, status
+back_end.Dtos.OrderLimitLeftDto: free_left, per_order, session_left
+back_end.Dtos.OrderResponseDto: bill_Id, completed_At, created_At, orderItems, order_Id, pendingItemsCount, session_Id, status, user_Id, user_Name
+back_end.Dtos.PagedUserResponseDto: items, page, page_size, total
+back_end.Dtos.PasswordChangeDto: current_password, new_password
+back_end.Dtos.PastVisitBillDto: bill_id, bill_name, guest_count, total
+back_end.Dtos.PastVisitDto: bills, ended_at, items, location_name, session_id, started_at, table_numbers
+back_end.Dtos.PastVisitItemDto: item_id, name, quantity
+back_end.Dtos.PricingPreviewResponse: adult_price, child_price, date, gratuity_min_party_size, gratuity_rate, holiday_name, leftover_fee, location_id, pricing_source, pricing_type, senior_price, tax_rate, toddler_price
+back_end.Dtos.PricingProfileRequest: apply_holiday_pricing, gratuity_min_party_size, gratuity_rate, leftover_fee, rates, tax_rate, weekend_days
+back_end.Dtos.PricingProfileResponse: apply_holiday_pricing, gratuity_min_party_size, gratuity_rate, leftover_fee, location_id, pricing_profile_id, rates, source, tax_rate, updated_at, weekend_days
+back_end.Dtos.PricingRateDto: adult_price, child_price, day_type, senior_price, toddler_price
+back_end.Dtos.ResetPasswordRequestDto: new_password
+back_end.Dtos.ServiceRequestCreateDto: notes
+back_end.Dtos.ServiceRequestResponseDto: claimed_at, claimed_by, completed_at, created_at, notes, request_id, requested_by, session_id, status, table_id, table_number
+back_end.Dtos.SessionIdResponseDto: session_Id
+back_end.Dtos.SessionMenuResponseDto: location_Id, menu_Id
+back_end.Dtos.SessionOrderLimitsDto: categories, items
+back_end.Dtos.SessionParticipantResponseDto: Left_At, joined_at, participant, session_id, user_id, user_name
+back_end.Dtos.StaffMemberChangePasswordDto: current_password, password
+back_end.Dtos.StaffMemberUpdateDto: created_at, email, first_name, is_email_confirmed, last_name, last_transaction_at, location, location_ids, role, status, user_id
+back_end.Dtos.StaffResponseDto: created_at, email, first_name, is_email_confirmed, last_name, last_transaction_at, location, location_id, location_ids, locations, role, status, user_id
+back_end.Dtos.StaffUserUpdateDto: email, first_name, last_name, location, role
+back_end.Dtos.TableAssignmentDto: table_id
+back_end.Dtos.TableBillChoiceDto: bill_id, bill_name, people_count, requested_at, status, total_count
+back_end.Dtos.TableEntityBaseDto: is_active, location_Id, qr_Code_Url, seat_count, table_number
+back_end.Dtos.TableEntityCreateDto: is_active, location_Id, qr_Code_Url, seat_count, table_number
+back_end.Dtos.TableEntityResponseDto: is_active, location_Id, qr_Code_Url, seat_count, table_id, table_number
+back_end.Dtos.TableEntityUpdateDto: is_active, qr_Code_Url, seat_count, table_number
+back_end.Dtos.TableGroupAssignmentDto: tableGroup_Id
+back_end.Dtos.TableGroupCreateDto: group_Name, is_Active, location_Id
+back_end.Dtos.TableGroupUpdateDto: group_Name, is_Active
+back_end.Dtos.TagBaseDto: tag_color, tag_id, tag_name
+back_end.Dtos.TagResponseDto: name, tag_id
+back_end.Dtos.TagUpdateDto: tag_color, tag_name
+back_end.Dtos.UpdateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
+back_end.Dtos.UpdateGuestCountsDto: adult_count, child_count, senior_count, tot_count
+back_end.Dtos.UserCreateDto: email, first_name, last_name, password, role, status
+back_end.Dtos.UserResponseDto: created_at, email, first_name, is_email_confirmed, last_Interaction_at, last_name, role, status, user_id
+back_end.Dtos.UserUpdateDto: email, first_name, last_name, new_password, role, status

@@ -70,10 +70,10 @@ namespace back_end.Dtos
 
     public class PagedUserResponseDto
     {
-        public int page { get; set; }
+        public int Page { get; set; }
         public int page_size { get; set; }
-        public int total { get; set; }
-        public List<UserResponseDto> items { get; set; } = new();
+        public int Total { get; set; }
+        public List<UserResponseDto> Items { get; set; } = new();
     }
 
 

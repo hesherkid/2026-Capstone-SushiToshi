@@ -86,8 +86,8 @@ public class CategoryControllerTests : IDisposable
         var category = okResult!.Value as CategoryResponse;
 
         category.Should().NotBeNull();
-        category!.Category_Id.Should().Be(1);
-        category.Category_Name.Should().Be("Appetizers");
+        category!.CategoryId.Should().Be(1);
+        category.CategoryName.Should().Be("Appetizers");
     }
 
     [Fact]
@@ -107,12 +107,12 @@ public class CategoryControllerTests : IDisposable
         {
             Name = "Sashimi",
             Description = "Raw fish",
-            Adult_Limit = 2,
-            Child_Limit = 1,
-            Senior_Limit = 2,
-            Toddler_Limit = 1,
-            Per_Order_Limit = 30,
-            Over_Limit_Behavior = OverLimitBehavior.Charge
+            AdultLimit = 2,
+            ChildLimit = 1,
+            SeniorLimit = 2,
+            ToddlerLimit = 1,
+            PerOrderLimit = 30,
+            OverLimitBehavior = OverLimitBehavior.Charge
         };
 
         var result = await _controller.CreateCategory(request);
@@ -121,14 +121,14 @@ public class CategoryControllerTests : IDisposable
         var dto = (result as OkObjectResult)!.Value as CategoryResponse;
 
         dto.Should().NotBeNull();
-        dto!.Category_Id.Should().BePositive();
-        dto.Category_Name.Should().Be("Sashimi");
-        dto.Adult_Limit.Should().Be(2);
-        dto.Child_Limit.Should().Be(1);
-        dto.Senior_Limit.Should().Be(2);
-        dto.Toddler_Limit.Should().Be(1);
-        dto.Per_Order_Limit.Should().Be(30);
-        dto.Over_Limit_Behavior.Should().Be(OverLimitBehavior.Charge);
+        dto!.CategoryId.Should().BePositive();
+        dto.CategoryName.Should().Be("Sashimi");
+        dto.AdultLimit.Should().Be(2);
+        dto.ChildLimit.Should().Be(1);
+        dto.SeniorLimit.Should().Be(2);
+        dto.ToddlerLimit.Should().Be(1);
+        dto.PerOrderLimit.Should().Be(30);
+        dto.OverLimitBehavior.Should().Be(OverLimitBehavior.Charge);
     }
 
     [Fact]
