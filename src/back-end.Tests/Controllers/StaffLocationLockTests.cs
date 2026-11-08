@@ -158,7 +158,7 @@ public class StaffLocationLockTests : IDisposable
         var result = await ServiceRequests(StaffId, UserRoles.Staff).GetAllPendingServiceRequests();
 
         var requests = (result.Result as OkObjectResult)!.Value as IEnumerable<ServiceRequestResponseDto>;
-        requests!.Select(r => r.Session_Id).Should().Equal(NorthSession);
+        requests!.Select(r => r.SessionId).Should().Equal(NorthSession);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class StaffLocationLockTests : IDisposable
         var result = await ServiceRequests(AdminId, UserRoles.Admin).GetAllPendingServiceRequests();
 
         var requests = (result.Result as OkObjectResult)!.Value as IEnumerable<ServiceRequestResponseDto>;
-        requests!.Select(r => r.Session_Id).Should().BeEquivalentTo(new[] { NorthSession, SouthSession });
+        requests!.Select(r => r.SessionId).Should().BeEquivalentTo(new[] { NorthSession, SouthSession });
     }
 
     // Creating: staff can't create things at another location

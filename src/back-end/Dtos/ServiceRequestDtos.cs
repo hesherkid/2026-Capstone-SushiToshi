@@ -15,27 +15,27 @@ namespace back_end.Dtos
     public class ServiceRequestResponseDto
     {
         [JsonPropertyName("request_id")]
-        public int Request_Id { get; set; }
+        public int RequestId { get; set; }
         [JsonPropertyName("session_id")]
-        public int Session_Id { get; set; }
+        public int SessionId { get; set; }
         [JsonPropertyName("table_id")]
-        public int Table_Id { get; set; }
+        public int TableId { get; set; }
         [JsonPropertyName("requested_by")]
-        public int Requested_By { get; set; }
+        public int RequestedBy { get; set; }
         [JsonPropertyName("claimed_by")]
-        public int? Claimed_By { get; set; }
+        public int? ClaimedBy { get; set; }
         [JsonPropertyName("notes")]
         public string? Notes { get; set; }
         [JsonPropertyName("status")]
         public ServiceRequestStatus Status { get; set; }
         [JsonPropertyName("created_at")]
-        public DateTime Created_At { get; set; }
+        public DateTime CreatedAt { get; set; }
         [JsonPropertyName("claimed_at")]
-        public DateTime? Claimed_At { get; set; }
+        public DateTime? ClaimedAt { get; set; }
         [JsonPropertyName("completed_at")]
-        public DateTime? Completed_at    { get; set; }
+        public DateTime? CompletedAt    { get; set; }
         [JsonPropertyName("table_number")]
-        public int Table_Number{ get; set; }
+        public int TableNumber{ get; set; }
             
             
 
