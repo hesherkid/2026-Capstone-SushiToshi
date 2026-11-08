@@ -11,7 +11,7 @@ namespace back_end.Dtos
     public class StaffResponseDto
     {
         [JsonPropertyName("created_at")]
-        public DateTime Created_At { get; set; }
+        public DateTime CreatedAt { get; set; }
 
         [JsonPropertyName("email")]
         public string? Email { get; set; }
@@ -33,18 +33,18 @@ namespace back_end.Dtos
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public UserStatus Status { get; set; }
         [JsonPropertyName("user_id")]
-        public int User_Id { get; set; }
+        public int UserId { get; set; }
 
         [JsonPropertyName("location")]
         public string? Location { get; set; }
 
         // The location they're working at now; null when they have none
         [JsonPropertyName("location_id")]
-        public int? Location_Id { get; set; }
+        public int? LocationId { get; set; }
 
         // The locations an admin has assigned them to
         [JsonPropertyName("location_ids")]
-        public List<int> Location_Ids { get; set; } = new();
+        public List<int> LocationIds { get; set; } = new();
 
         [JsonPropertyName("locations")]
         public List<string> Locations { get; set; } = new();
@@ -58,11 +58,11 @@ namespace back_end.Dtos
 
         [MaxLength(100)]
         [JsonPropertyName("first_name")]
-        public string? First_name { get; set; }
+        public string? FirstName { get; set; }
 
         [MaxLength(100)]
         [JsonPropertyName("last_name")]
-        public string? Last_name { get; set; }
+        public string? LastName { get; set; }
 
         // allow moving between Staff/Admin only
         [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -80,14 +80,14 @@ namespace back_end.Dtos
 
         [MaxLength(100)]
         [JsonPropertyName("first_name")]
-        public string? First_name { get; set; }
+        public string? FirstName { get; set; }
         [MinLength(8), MaxLength(200)]
         [JsonPropertyName("password")]
         public string? Password { get; set; }
 
         [MaxLength(100)]
         [JsonPropertyName("last_name")]
-        public string? Last_name { get; set; }
+        public string? LastName { get; set; }
 
         // allow moving between Staff/Admin only
         [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -98,28 +98,28 @@ namespace back_end.Dtos
         public UserStatus Status { get; set; }
 
         [JsonPropertyName("location_id")]
-        public int? Location_Id { get; set; }
+        public int? LocationId { get; set; }
 
         // Locations staff may work at; location_id, if given, is the one they start at
         [JsonPropertyName("location_ids")]
-        public List<int>? Location_Ids { get; set; }
+        public List<int>? LocationIds { get; set; }
     }
 
     public class StaffMemberChangePasswordDto
     {
         [Required, MinLength(8), MaxLength(200)]
         [JsonPropertyName("password")]
-        public string New_password { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
 
         [Required, MinLength(8), MaxLength(200)]
         [JsonPropertyName("current_password")]
-        public string Current_password { get; set; } = string.Empty;
+        public string CurrentPassword { get; set; } = string.Empty;
     }
     
     public class StaffMemberUpdateDto
     {
                 [JsonPropertyName("created_at")]
-        public DateTime Created_At { get; set; }
+        public DateTime CreatedAt { get; set; }
 
         [JsonPropertyName("email")]
         public string? Email { get; set; }
@@ -141,14 +141,14 @@ namespace back_end.Dtos
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public UserStatus Status { get; set; }
         [JsonPropertyName("user_id")]
-        public int User_Id { get; set; }
+        public int UserId { get; set; }
 
         [JsonPropertyName("location")]
         public string? Location { get; set; }
 
         // Locations staff may work at. Null leaves them unchanged
         [JsonPropertyName("location_ids")]
-        public List<int>? Location_Ids { get; set; }
+        public List<int>? LocationIds { get; set; }
     }
 
     // The signed-in user's locations, for the app bar's location picker
@@ -156,7 +156,7 @@ namespace back_end.Dtos
     {
         // The location they're working at now; null when they have none
         [JsonPropertyName("current_location")]
-        public LocationOptionDto? Current_Location { get; set; }
+        public LocationOptionDto? CurrentLocation { get; set; }
 
         // Staff: the locations an admin assigned them. Admins: every location
         [JsonPropertyName("locations")]
@@ -164,13 +164,13 @@ namespace back_end.Dtos
 
         // Admins can work at any location
         [JsonPropertyName("all_locations")]
-        public bool All_Locations { get; set; }
+        public bool AllLocations { get; set; }
     }
 
     public class LocationOptionDto
     {
         [JsonPropertyName("location_id")]
-        public int Location_Id { get; set; }
+        public int LocationId { get; set; }
 
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
