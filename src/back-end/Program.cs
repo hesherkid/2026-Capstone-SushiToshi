@@ -67,8 +67,7 @@ builder.Services.AddScoped<IAuthTokenService, AuthTokenService>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        ApiJsonOptions.Apply(options.JsonSerializerOptions);
 
         // In development, a request body with a key the DTO doesn't have gets a 400 naming the key,
         // instead of the value silently binding to 0 or null. Set Json:RejectUnknownKeys to false to turn it off
