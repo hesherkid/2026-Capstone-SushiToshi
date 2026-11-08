@@ -449,14 +449,14 @@ namespace back_end.Controllers
           return BadRequest(new { message = $"Only open bills can be changed (this bill is {bill.Status})." });
         }
 
-        int total = counts.Adult_Count + counts.Senior_Count + counts.Child_Count + counts.Tot_Count;
+        int total = counts.AdultCount + counts.SeniorCount + counts.ChildCount + counts.TotCount;
         var problem = await BillLinks.GuestCountProblemAsync(_context, bill, total, byStaff: true);
         if (problem != null)
         {
           return BadRequest(new { message = problem });
         }
 
-        BillLinks.SetCounts(bill, counts.Adult_Count, counts.Senior_Count, counts.Child_Count, counts.Tot_Count);
+        BillLinks.SetCounts(bill, counts.AdultCount, counts.SeniorCount, counts.ChildCount, counts.TotCount);
         bill.Started_By_Guest = false;
         bill.Counts_Changed_By_Guest = false;
         await _context.SaveChangesAsync();
@@ -574,13 +574,13 @@ namespace back_end.Controllers
     {
       try
       {
-        if (request.Into_Bill_Id == billId)
+        if (request.IntoBillId == billId)
         {
           return BadRequest(new { message = "Pick another bill to merge into." });
         }
 
         // Nobody can order onto, close or change either bill while everything moves
-        await using var billLock = await BillLock.LockAsync(_context, billId, request.Into_Bill_Id);
+        await using var billLock = await BillLock.LockAsync(_context, billId, request.IntoBillId);
         var from = await _context.Bills
             .FirstOrDefaultAsync(b => b.Bill_Id == billId && b.Session_Id == sessionId);
         if (from == null)
@@ -595,7 +595,7 @@ namespace back_end.Controllers
         var into = await _context.Bills
             .Include(b => b.DiningSession).ThenInclude(ds => ds.Table)
             .Include(b => b.DiningSession).ThenInclude(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
-            .FirstOrDefaultAsync(b => b.Bill_Id == request.Into_Bill_Id);
+            .FirstOrDefaultAsync(b => b.Bill_Id == request.IntoBillId);
         if (into == null || into.Session_Id != sessionId)
         {
           return BadRequest(new { message = "That bill isn't at this table." });
@@ -652,7 +652,7 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error merging bill {BillId} into {IntoBillId}", billId, request.Into_Bill_Id);
+        _logger.LogError(ex, "Error merging bill {BillId} into {IntoBillId}", billId, request.IntoBillId);
         return StatusCode(500, new { message = "Error merging bills" });
       }
     }

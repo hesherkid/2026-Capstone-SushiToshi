@@ -133,22 +133,22 @@ namespace back_end.Controllers
         var myBill = bills.FirstOrDefault(b => b.Bill_Id == seat.Bill_Id);
         return Ok(new MyBillResponseDto
         {
-            My_Bill = myBill is null ? null : new MyBillDto
+            MyBill = myBill is null ? null : new MyBillDto
             {
-                Bill_Id = myBill.Bill_Id,
-                Bill_Name = myBill.Bill_Name,
-                Total_Count = myBill.Total_Count,
+                BillId = myBill.Bill_Id,
+                BillName = myBill.Bill_Name,
+                TotalCount = myBill.Total_Count,
                 Status = myBill.Status.ToString(),
-                Requested_At = myBill.Requested_At,
-                People_Count = PeopleOn(myBill),
-                Adult_Count = myBill.Adult_Count,
-                Senior_Count = myBill.Senior_Count,
-                Child_Count = myBill.Child_Count,
-                Tot_Count = myBill.Tot_Count,
-                Counts_Locked = myBill.Counts_Locked,
+                RequestedAt = myBill.Requested_At,
+                PeopleCount = PeopleOn(myBill),
+                AdultCount = myBill.Adult_Count,
+                SeniorCount = myBill.Senior_Count,
+                ChildCount = myBill.Child_Count,
+                TotCount = myBill.Tot_Count,
+                CountsLocked = myBill.Counts_Locked,
             },
-            Change_Blocked_Reason = await BillLinks.CantLeaveReasonAsync(_context, seat),
-            Open_Bills = bills.Where(b => b.Status == BillStatus.Open).Select(b => Choice(b, PeopleOn(b))).ToList(),
+            ChangeBlockedReason = await BillLinks.CantLeaveReasonAsync(_context, seat),
+            OpenBills = bills.Where(b => b.Status == BillStatus.Open).Select(b => Choice(b, PeopleOn(b))).ToList(),
         });
     }
 
@@ -180,12 +180,12 @@ namespace back_end.Controllers
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "You aren't seated at this table." });
         }
 
-        if (seat.Bill_Id == request.Bill_Id)
+        if (seat.Bill_Id == request.BillId)
         {
             return await GetMyBill(sessionId);
         }
 
-        var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == request.Bill_Id);
+        var bill = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == request.BillId);
         var cantJoin = BillLinks.CantJoinReason(bill, sessionId)
             ?? await BillLinks.CantLeaveReasonAsync(_context, seat);
         if (cantJoin != null)
@@ -193,7 +193,7 @@ namespace back_end.Controllers
             return BadRequest(new { message = cantJoin });
         }
 
-        seat.Bill_Id = request.Bill_Id;
+        seat.Bill_Id = request.BillId;
         await _context.SaveChangesAsync();
         return await GetMyBill(sessionId);
     }
@@ -252,14 +252,14 @@ namespace back_end.Controllers
             return BadRequest(new { message = "Your server has confirmed your party. Ask your server if you need your party adjusted." });
         }
 
-        int total = request.Adult_Count + request.Senior_Count + request.Child_Count + request.Tot_Count;
+        int total = request.AdultCount + request.SeniorCount + request.ChildCount + request.TotCount;
         var problem = await BillLinks.GuestCountProblemAsync(_context, bill, total);
         if (problem != null)
         {
             return BadRequest(new { message = total == 0 ? problem : $"{problem} Ask your server if more of your party is coming." });
         }
 
-        if (BillLinks.SetCounts(bill, request.Adult_Count, request.Senior_Count, request.Child_Count, request.Tot_Count))
+        if (BillLinks.SetCounts(bill, request.AdultCount, request.SeniorCount, request.ChildCount, request.TotCount))
         {
             bill.Counts_Changed_By_Guest = true;
             await _context.SaveChangesAsync();
@@ -307,16 +307,16 @@ namespace back_end.Controllers
         {
             return NotFound(new { message = "That person isn't at this table." });
         }
-        if (seat.Bill_Id == request.Bill_Id)
+        if (seat.Bill_Id == request.BillId)
         {
             return Ok(new { bill_id = seat.Bill_Id, orders_moved = 0, counts_moved = false });
         }
 
         var fromBillId = seat.Bill_Id;
         // Nobody can close either bill, or order onto the old one, while their orders move
-        await using var billLock = await BillLock.LockAsync(_context, fromBillId is int fromId ? new[] { fromId, request.Bill_Id } : new[] { request.Bill_Id });
+        await using var billLock = await BillLock.LockAsync(_context, fromBillId is int fromId ? new[] { fromId, request.BillId } : new[] { request.BillId });
 
-        var to = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == request.Bill_Id);
+        var to = await _context.Bills.FirstOrDefaultAsync(b => b.Bill_Id == request.BillId);
         if (to == null || to.Session_Id != sessionId)
         {
             return BadRequest(new { message = "That bill isn't at this table." });
@@ -329,7 +329,7 @@ namespace back_end.Controllers
         var from = fromBillId is int id ? await _context.Bills.FirstAsync(b => b.Bill_Id == id) : null;
 
         var orders = new List<SessionOrder>();
-        if (request.Move_Orders && from != null && seat.User_Id != null)
+        if (request.MoveOrders && from != null && seat.User_Id != null)
         {
             orders = await _context.SessionOrders
                 .Where(o => o.Bill_Id == from.Bill_Id && o.User_Id == seat.User_Id && o.Status != OrderStatus.Cancelled)
@@ -343,14 +343,14 @@ namespace back_end.Controllers
 
         // The guests leave the old bill's count and join the new one's, so the table's total stays the same
         var countsMoved = false;
-        if (request.Guest_Type != null && from != null)
+        if (request.GuestType != null && from != null)
         {
             if (from.Status != BillStatus.Open)
             {
                 return BadRequest(new { message = $"{from.Bill_Name} is already {from.Status.ToString().ToLower()}, so its guest count can't change." });
             }
-            var n = request.Guest_Count;
-            var (adults, seniors, children, toddlers) = request.Guest_Type switch
+            var n = request.GuestCount;
+            var (adults, seniors, children, toddlers) = request.GuestType switch
             {
                 "adult" => (n, 0, 0, 0),
                 "senior" => (0, n, 0, 0),
@@ -360,7 +360,7 @@ namespace back_end.Controllers
             if (from.Adult_Count < adults || from.Senior_Count < seniors ||
                 from.Child_Count < children || from.Tot_Count < toddlers)
             {
-                return BadRequest(new { message = $"{from.Bill_Name} doesn't have {n} {GuestTypePlural(request.Guest_Type, n)} to move." });
+                return BadRequest(new { message = $"{from.Bill_Name} doesn't have {n} {GuestTypePlural(request.GuestType, n)} to move." });
             }
             if (from.Total_Count - n < 1)
             {
@@ -398,12 +398,12 @@ namespace back_end.Controllers
 
     private static TableBillChoiceDto Choice(Billing bill, int peopleCount) => new()
     {
-        Bill_Id = bill.Bill_Id,
-        Bill_Name = bill.Bill_Name,
-        Total_Count = bill.Total_Count,
+        BillId = bill.Bill_Id,
+        BillName = bill.Bill_Name,
+        TotalCount = bill.Total_Count,
         Status = bill.Status.ToString(),
-        Requested_At = bill.Requested_At,
-        People_Count = peopleCount,
+        RequestedAt = bill.Requested_At,
+        PeopleCount = peopleCount,
     };
 
     }
