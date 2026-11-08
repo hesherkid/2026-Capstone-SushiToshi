@@ -14,11 +14,11 @@ namespace back_end.Dtos{
         [JsonPropertyName("description")]
         public string? Description { get; set; }
         [JsonPropertyName("start_time")]
-        public TimeOnly? Start_Time { get; set; }
+        public TimeOnly? StartTime { get; set; }
         [JsonPropertyName("end_time")]
-        public TimeOnly? End_Time { get; set; }
+        public TimeOnly? EndTime { get; set; }
         [JsonPropertyName("is_active")]
-        public bool Is_Active { get; set; } = true;
+        public bool IsActive { get; set; } = true;
 
     }
 
@@ -40,31 +40,31 @@ namespace back_end.Dtos{
     public class MenuResponseDto : MenuBaseDto
     {
         [JsonPropertyName("menu_id")]
-        public int Menu_Id { get; set; }
+        public int MenuId { get; set; }
     }
     
     public class MenuItemDetailResponseDto
     {
         [JsonPropertyName("menu_id")]
-        public int Menu_Id { get; set; } 
+        public int MenuId { get; set; } 
         [JsonPropertyName("item_id")]
-        public int Item_Id { get; set; }
+        public int ItemId { get; set; }
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
         [JsonPropertyName("description")]
         public string? Description { get; set; } 
         [JsonPropertyName("category_id")]
-        public int Category_Id { get; set; }
+        public int CategoryId { get; set; }
         [JsonPropertyName("category_name")]
-        public string Category_Name { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = string.Empty;
         [JsonPropertyName("price")]
         public decimal Price { get; set; }
         [JsonPropertyName("is_add_on")]
-        public bool Is_Add_On { get; set; }
+        public bool IsAddOn { get; set; }
         [JsonPropertyName("status")]
         public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
         [JsonPropertyName("item_image_url")]
-        public string? Item_Image_Url { get; set; } 
+        public string? ItemImageUrl { get; set; } 
 
     }
 }

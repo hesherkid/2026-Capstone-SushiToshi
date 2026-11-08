@@ -102,12 +102,12 @@ namespace back_end.Controllers
                     Category_Id = newMenuItem.Category_id,
                     Item_Image_Url = newMenuItem.image_url,
                     Status = newMenuItem.Status,
-                    Item_Id = newMenuItem.item_id,
+                    ItemId = newMenuItem.item_id,
                     Tags = newMenuItem.MenuItemTags.Select(t => new FullTagResponseDto
                     {
-                        Tag_Id = t.Tag.tag_id,
+                        TagId = t.Tag.tag_id,
                         Name = t.Tag.tag_name,
-                        Color_Code = t.Tag.tag_color
+                        ColorCode = t.Tag.tag_color
                     }).ToList(),
                 });
             }
@@ -209,7 +209,7 @@ namespace back_end.Controllers
 
                 var result = allItems.Select(item => new MenuItemResponseDto
                 {
-                    Item_Id = item.item_id,
+                    ItemId = item.item_id,
                     Name = item.Name,
                     Description = item.Description,
                     Category_Id = item.Category_id,
@@ -218,9 +218,9 @@ namespace back_end.Controllers
 
                     Tags = item.MenuItemTags.Select(mit => new FullTagResponseDto
                     {
-                        Tag_Id = mit.Tag.tag_id,
+                        TagId = mit.Tag.tag_id,
                         Name = mit.Tag.tag_name,
-                        Color_Code = mit.Tag.tag_color
+                        ColorCode = mit.Tag.tag_color
                     }).ToList()
                 }).ToList();
 
@@ -324,12 +324,12 @@ namespace back_end.Controllers
                     Category_Id = itemUpdate.Category_id,
                     Item_Image_Url = itemUpdate.image_url,
                     Status = itemUpdate.Status,
-                    Item_Id = itemUpdate.item_id,
+                    ItemId = itemUpdate.item_id,
                     Tags = itemUpdate.MenuItemTags.Select(t => new FullTagResponseDto
                     {
-                        Tag_Id = t.Tag.tag_id,
+                        TagId = t.Tag.tag_id,
                         Name = t.Tag.tag_name,
-                        Color_Code = t.Tag.tag_color
+                        ColorCode = t.Tag.tag_color
                     }).ToList()
                 });
 
@@ -713,7 +713,7 @@ namespace back_end.Controllers
                 var response = tags.Select(t => new TagResponseDto
                 {
                     Name = t.tag_name,
-                    Tag_Id = t.tag_id
+                    TagId = t.tag_id
                 }).ToList();
 
                 return Ok(response);

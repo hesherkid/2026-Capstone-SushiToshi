@@ -41,27 +41,27 @@ namespace back_end.Dtos
     public class TagResponseDto
     {
         [JsonPropertyName("tag_id")]
-        public int Tag_Id { get; set; }
+        public int TagId { get; set; }
         public string Name { get; set; } = string.Empty;
 
     }
     public class FullTagResponseDto : TagResponseDto
     {
         [JsonPropertyName("color_code")]
-        public string Color_Code { get; set; } = string.Empty;
+        public string ColorCode { get; set; } = string.Empty;
 
     }
 
     public class MenuItemResponseDto : MenuItemBaseDto
     {
         [JsonPropertyName("item_id")]
-        public int Item_Id { get; set; }
+        public int ItemId { get; set; }
         [JsonPropertyName("tags")]
         public List<FullTagResponseDto> Tags { get; set; } = [];
         [JsonPropertyName("created_at")]
-        public DateTime? Created_At { get; set; }
+        public DateTime? CreatedAt { get; set; }
         [JsonPropertyName("updated_at")]
-        public DateTime? Updated_At { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
     public class MenuItemDetailDto
     {
