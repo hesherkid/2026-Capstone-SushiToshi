@@ -38,7 +38,7 @@ namespace back_end.Dtos
     public int Active_Participants { get; set; }
   }
 
-  class DiningSessionDetailDto : DiningSessionResponseDto
+  public class DiningSessionDetailDto : DiningSessionResponseDto
   {
     public int Orders_Count { get; set; }
     public int Bills_Count { get; set; }

@@ -4,12 +4,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace back_end.Dtos
 {
-    public class CategoryDtos
-    {
-        public record CategoryCreateDto(string Name, string Description);
-        public record CategoryUpdateDto(string Name, string Description);
-    }
-
     public class CreateCategory
     {
         [JsonPropertyName("name")]
