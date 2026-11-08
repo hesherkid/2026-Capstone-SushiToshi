@@ -69,6 +69,11 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+        // In development, a request body with a key the DTO doesn't have gets a 400 naming the key,
+        // instead of the value silently binding to 0 or null. Set Json:RejectUnknownKeys to false to turn it off
+        if (builder.Configuration.GetValue("Json:RejectUnknownKeys", builder.Environment.IsDevelopment()))
+            options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
     });
 
 // Add Swagger/OpenAPI services
