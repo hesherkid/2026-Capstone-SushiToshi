@@ -103,7 +103,7 @@ public class BillLinkTests : IDisposable
         _context.SessionParticipants.AsNoTracking().Single(sp => sp.User_Id == userId && sp.Left_At == null).Bill_Id;
 
     private static List<OrderItemCreateDto> OneItem() =>
-        new() { new() { Menu_Id = 1, Item_Id = 1, Quantity = 1 } };
+        new() { new() { MenuId = 1, ItemId = 1, Quantity = 1 } };
 
     private void AnaOrderedOnLee()
     {
@@ -848,7 +848,7 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task Guests_CantOrderOntoAnotherPartysBill()
     {
-        var result = await Orders(Ana).CreateOrder(new OrderCreateDto { Session_Id = Table, Bill_Id = Park, Items = OneItem() });
+        var result = await Orders(Ana).CreateOrder(new OrderCreateDto { SessionId = Table, BillId = Park, Items = OneItem() });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
         (await _context.SessionOrders.AnyAsync()).Should().BeFalse();
@@ -857,7 +857,7 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task Guests_CantOrderBeforeTheyHaveABill()
     {
-        var result = await Orders(Ben).CreateOrder(new OrderCreateDto { Session_Id = Table, Bill_Id = Lee, Items = OneItem() });
+        var result = await Orders(Ben).CreateOrder(new OrderCreateDto { SessionId = Table, BillId = Lee, Items = OneItem() });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -866,7 +866,7 @@ public class BillLinkTests : IDisposable
     public async Task Orders_CantGoOnABillFromAnotherTable()
     {
         // Seated at table 1, sending table 2's bill
-        var result = await Orders(Ana).CreateOrder(new OrderCreateDto { Session_Id = Table, Bill_Id = OtherTableBill, Items = OneItem() });
+        var result = await Orders(Ana).CreateOrder(new OrderCreateDto { SessionId = Table, BillId = OtherTableBill, Items = OneItem() });
 
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
@@ -874,7 +874,7 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task Guests_CanOrderOnTheirOwnBill()
     {
-        var result = await Orders(Ana).CreateOrder(new OrderCreateDto { Session_Id = Table, Bill_Id = Lee, Items = OneItem() });
+        var result = await Orders(Ana).CreateOrder(new OrderCreateDto { SessionId = Table, BillId = Lee, Items = OneItem() });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }

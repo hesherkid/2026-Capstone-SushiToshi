@@ -130,7 +130,7 @@ public class OrderLimitEnforcementTests : IDisposable
     private async Task<IActionResult> Add(int orderId, params (int ItemId, int Quantity)[] items)
     {
         var result = await Orders().AddOrderItems(orderId,
-            items.Select(i => new OrderItemCreateDto { Order_Id = orderId, Menu_Id = 1, Item_Id = i.ItemId, Quantity = i.Quantity }).ToList());
+            items.Select(i => new OrderItemCreateDto { OrderId = orderId, MenuId = 1, ItemId = i.ItemId, Quantity = i.Quantity }).ToList());
         _context.ChangeTracker.Clear();
         return result;
     }
@@ -294,21 +294,21 @@ public class OrderLimitEnforcementTests : IDisposable
     {
         var limits = await Limits();
 
-        limits.Items.Single(i => i.Item_Id == SalmonNigiri).Per_Order.Should().Be(1);
-        limits.Items.Single(i => i.Item_Id == SalmonSashimi).Per_Order.Should().BeNull();
-        limits.Categories.Single(c => c.Category_Id == 2).Per_Order.Should().Be(30);
+        limits.Items.Single(i => i.ItemId == SalmonNigiri).PerOrder.Should().Be(1);
+        limits.Items.Single(i => i.ItemId == SalmonSashimi).PerOrder.Should().BeNull();
+        limits.Categories.Single(c => c.CategoryId == 2).PerOrder.Should().Be(30);
     }
 
     [Fact]
     public async Task Limits_CountDownPerPersonBlockLimitsAsTheTableOrders()
     {
         // Chop Chop: 2 per person, 2 adults = 4 for the table
-        (await Limits()).Items.Single(i => i.Item_Id == ChopChop).Session_Left.Should().Be(4);
+        (await Limits()).Items.Single(i => i.ItemId == ChopChop).SessionLeft.Should().Be(4);
 
         await Add(NewOrder(), (ChopChop, 1));
         await Add(NewOrder(), (ChopChop, 1));
 
-        (await Limits()).Items.Single(i => i.Item_Id == ChopChop).Session_Left.Should().Be(2);
+        (await Limits()).Items.Single(i => i.ItemId == ChopChop).SessionLeft.Should().Be(2);
     }
 
     [Fact]
@@ -316,8 +316,8 @@ public class OrderLimitEnforcementTests : IDisposable
     {
         var limits = await Limits();
 
-        limits.Categories.Single(c => c.Category_Id == 3).Session_Left.Should().BeNull();
-        limits.Items.Single(i => i.Item_Id == HotStoneSteak).Session_Left.Should().BeNull();
+        limits.Categories.Single(c => c.CategoryId == 3).SessionLeft.Should().BeNull();
+        limits.Items.Single(i => i.ItemId == HotStoneSteak).SessionLeft.Should().BeNull();
     }
 
     [Fact]
@@ -325,14 +325,14 @@ public class OrderLimitEnforcementTests : IDisposable
     {
         // Hot Stone: 1 per person, 2 adults = 2 free for the table, then $5 each
         var before = await Limits();
-        before.Categories.Single(c => c.Category_Id == 3).Free_Left.Should().Be(2);
-        before.Items.Single(i => i.Item_Id == HotStoneSteak).Extra_Price.Should().Be(5.00m);
+        before.Categories.Single(c => c.CategoryId == 3).FreeLeft.Should().Be(2);
+        before.Items.Single(i => i.ItemId == HotStoneSteak).ExtraPrice.Should().Be(5.00m);
 
         await Add(NewOrder(), (HotStoneSteak, 3));
 
-        (await Limits()).Categories.Single(c => c.Category_Id == 3).Free_Left.Should().Be(0);
+        (await Limits()).Categories.Single(c => c.CategoryId == 3).FreeLeft.Should().Be(0);
         // Block limits have no free units to count
-        (await Limits()).Items.Single(i => i.Item_Id == ChopChop).Free_Left.Should().BeNull();
+        (await Limits()).Items.Single(i => i.ItemId == ChopChop).FreeLeft.Should().BeNull();
     }
 
     [Fact]

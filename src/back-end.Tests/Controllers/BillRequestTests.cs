@@ -60,7 +60,7 @@ public class BillRequestTests : IDisposable
 
     // Items for a new order: one Salmon Nigiri
     private static List<OrderItemCreateDto> OneItem() =>
-        new() { new() { Menu_Id = 1, Item_Id = 1, Quantity = 1 } };
+        new() { new() { MenuId = 1, ItemId = 1, Quantity = 1 } };
 
     public void Dispose() => _context.Dispose();
 
@@ -123,7 +123,7 @@ public class BillRequestTests : IDisposable
     {
         await Bills(Guest).RequestBill(269, 332);
 
-        var result = await Orders(Guest).CreateOrder(new OrderCreateDto { Session_Id = 269, Bill_Id = 332, Items = OneItem() });
+        var result = await Orders(Guest).CreateOrder(new OrderCreateDto { SessionId = 269, BillId = 332, Items = OneItem() });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -135,7 +135,7 @@ public class BillRequestTests : IDisposable
 
         var result = await Orders(Guest).AddOrderItems(900, new List<OrderItemCreateDto>
         {
-            new() { Order_Id = 900, Menu_Id = 1, Item_Id = 1, Quantity = 1 },
+            new() { OrderId = 900, MenuId = 1, ItemId = 1, Quantity = 1 },
         });
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -147,7 +147,7 @@ public class BillRequestTests : IDisposable
     {
         await Bills(Guest).RequestBill(269, 332);
 
-        var result = await Orders(ParkGuest).CreateOrder(new OrderCreateDto { Session_Id = 269, Bill_Id = 333, Items = OneItem() });
+        var result = await Orders(ParkGuest).CreateOrder(new OrderCreateDto { SessionId = 269, BillId = 333, Items = OneItem() });
 
         result.Result.Should().NotBeOfType<BadRequestObjectResult>();
         (await _context.SessionOrders.AnyAsync(o => o.Bill_Id == 333)).Should().BeTrue();
@@ -158,7 +158,7 @@ public class BillRequestTests : IDisposable
     {
         await Bills(Guest).RequestBill(269, 332);
 
-        var result = await Orders(Server, "Staff").CreateOrder(new OrderCreateDto { Session_Id = 269, Bill_Id = 332, Items = OneItem() });
+        var result = await Orders(Server, "Staff").CreateOrder(new OrderCreateDto { SessionId = 269, BillId = 332, Items = OneItem() });
 
         result.Result.Should().NotBeOfType<BadRequestObjectResult>();
     }

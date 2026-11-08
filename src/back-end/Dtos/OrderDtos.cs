@@ -7,17 +7,17 @@ namespace back_end.Dtos
     public class OrderItemCreateDto
     {
         [JsonPropertyName("order_id")]
-        public int Order_Id { get; set; }
+        public int OrderId { get; set; }
         [JsonPropertyName("menu_id")]
-        public int Menu_Id { get; set; }
+        public int MenuId { get; set; }
         [JsonPropertyName("item_id")]
-        public int Item_Id { get; set; }
+        public int ItemId { get; set; }
 
         [JsonPropertyName("quantity")]
         public int Quantity { get; set; }
 
         [JsonPropertyName("price_at_time")]
-        public decimal Price_At_Time { get; set; }
+        public decimal PriceAtTime { get; set; }
 
         [JsonPropertyName("status")]
         public OrderStatus Status { get; set; }
@@ -27,55 +27,55 @@ namespace back_end.Dtos
     public class OrderItemResponseDto
     {
         [JsonPropertyName("order_item_id")]
-        public int Order_Item_Id { get; set; }
+        public int OrderItemId { get; set; }
 
         [JsonPropertyName("order_id")]
-        public int Order_Id { get; set; }
+        public int OrderId { get; set; }
 
         [JsonPropertyName("menu_id")]
-        public int Menu_Id { get; set; }
+        public int MenuId { get; set; }
 
         [JsonPropertyName("item_id")]
-        public int Item_Id { get; set; }
+        public int ItemId { get; set; }
 
         [JsonPropertyName("quantity")]
         public int Quantity { get; set; }
 
         [JsonPropertyName("price_at_time")]
-        public decimal Price_At_Time { get; set; }
+        public decimal PriceAtTime { get; set; }
 
         [JsonPropertyName("status")]
         public OrderStatus Status { get; set; }
         [JsonPropertyName("completed_at")]
-        public DateTime? Completed_At { get; set; }
+        public DateTime? CompletedAt { get; set; }
 
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
         // "OverLimit" for extra units charged past a limit
         [JsonPropertyName("charge_reason")]
-        public string? Charge_Reason { get; set; }
+        public string? ChargeReason { get; set; }
 
     }
     public class OrderItemInsertResponse
     {
         [JsonPropertyName("order_item_id")]
-        public int Order_Item_Id { get; set; }
+        public int OrderItemId { get; set; }
 
         [JsonPropertyName("order_id")]
-        public int Order_Id { get; set; }
+        public int OrderId { get; set; }
 
         [JsonPropertyName("menu_id")]
-        public int Menu_Id { get; set; }
+        public int MenuId { get; set; }
 
         [JsonPropertyName("item_id")]
-        public int Item_Id { get; set; }
+        public int ItemId { get; set; }
 
         [JsonPropertyName("quantity")]
         public int Quantity { get; set; }
 
         [JsonPropertyName("price_at_time")]
-        public decimal Price_At_Time { get; set; }
+        public decimal PriceAtTime { get; set; }
 
         [JsonPropertyName("status")]
         public OrderStatus Status { get; set; }
@@ -89,37 +89,37 @@ namespace back_end.Dtos
     public class OrderLimitLeftDto
     {
         [JsonPropertyName("per_order")]
-        public int? Per_Order { get; set; }
+        public int? PerOrder { get; set; }
 
         [JsonPropertyName("session_left")]
-        public int? Session_Left { get; set; }
+        public int? SessionLeft { get; set; }
 
         /// <summary>
         /// Units left before a Charge limit bills each extra; null = no Charge limit
         /// </summary>
         [JsonPropertyName("free_left")]
-        public int? Free_Left { get; set; }
+        public int? FreeLeft { get; set; }
     }
 
     public class ItemOrderLimitDto : OrderLimitLeftDto
     {
         [JsonPropertyName("item_id")]
-        public int Item_Id { get; set; }
+        public int ItemId { get; set; }
 
         [JsonPropertyName("category_id")]
-        public int Category_Id { get; set; }
+        public int CategoryId { get; set; }
 
         /// <summary>
         /// What each unit past Free_Left (the item's or its category's) costs
         /// </summary>
         [JsonPropertyName("extra_price")]
-        public decimal Extra_Price { get; set; }
+        public decimal ExtraPrice { get; set; }
     }
 
     public class CategoryOrderLimitDto : OrderLimitLeftDto
     {
         [JsonPropertyName("category_id")]
-        public int Category_Id { get; set; }
+        public int CategoryId { get; set; }
     }
 
     public class SessionOrderLimitsDto
@@ -136,17 +136,17 @@ namespace back_end.Dtos
         [JsonPropertyName("quantity")]
         public int? Quantity { get; set; }
         [JsonPropertyName("price_at_time")]
-        public decimal? Price_At_Time { get; set; }
+        public decimal? PriceAtTime { get; set; }
         [JsonPropertyName("status")]
         public string? Status { get; set; }
     }
     public class OrderCreateDto
     {
         [JsonPropertyName("session_id")]
-        public int Session_Id { get; set; }
+        public int SessionId { get; set; }
 
         [JsonPropertyName("bill_id")]
-        public int Bill_Id { get; set; }
+        public int BillId { get; set; }
 
         // Saved together with the order, so an order is never left without items
         [JsonPropertyName("items")]
