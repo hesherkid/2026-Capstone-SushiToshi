@@ -13,7 +13,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.Auth;
+using back_end.Dtos.Auth;
 using back_end.Services.Auth;
 using back_end.Services.Email;
 using BCryptNet = BCrypt.Net.BCrypt;
@@ -71,7 +71,7 @@ public class EmailLoginTests : IDisposable
         });
         await _context.SaveChangesAsync();
 
-        var result = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = "Password1!" });
+        var result = await _auth.Login(new LoginDto { UserEmail = "sam@example.com", UserPassword = "Password1!" });
 
         var json = JsonSerializer.SerializeToElement((result as OkObjectResult)!.Value);
         json.GetProperty("user").GetProperty("first_name").GetString().Should().Be("Sam");
@@ -93,7 +93,7 @@ public class EmailLoginTests : IDisposable
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var result = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = "Password1!" });
+        var result = await _auth.Login(new LoginDto { UserEmail = "sam@example.com", UserPassword = "Password1!" });
 
         var json = JsonSerializer.SerializeToElement((result as OkObjectResult)!.Value);
         var token = new JwtSecurityTokenHandler().ReadJwtToken(json.GetProperty("access_token").GetString());
@@ -118,7 +118,7 @@ public class EmailLoginTests : IDisposable
         });
         await _context.SaveChangesAsync();
 
-        var result = await _auth.Login(new LoginDTO { UserEmail = "sam@example.com", UserPassword = "Password1!" });
+        var result = await _auth.Login(new LoginDto { UserEmail = "sam@example.com", UserPassword = "Password1!" });
 
         var json = JsonSerializer.SerializeToElement((result as OkObjectResult)!.Value);
         json.GetProperty("expires_in").GetInt32().Should().Be(minutes * 60);

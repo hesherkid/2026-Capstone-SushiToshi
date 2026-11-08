@@ -11,7 +11,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.MenuItemViewDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 
 namespace back_end.Tests.Controllers;
@@ -98,7 +98,7 @@ public class MenuItemViewControllerTests : IDisposable
     }
 
     private Task<IActionResult> Record(int sessionId, int itemId, int seconds = 12) =>
-        _controller.RecordView(new MenuItemViewCreateDTO { SessionId = sessionId, ItemId = itemId, ViewSeconds = seconds });
+        _controller.RecordView(new MenuItemViewCreateDto { SessionId = sessionId, ItemId = itemId, ViewSeconds = seconds });
 
     private static int? StatusOf(IActionResult result) => (result as IStatusCodeActionResult)?.StatusCode;
 

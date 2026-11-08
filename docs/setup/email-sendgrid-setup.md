@@ -151,7 +151,7 @@ Content-Type: application/json
 {"token":"RESET_TOKEN","newPassword":"ExampleNewPassword123!"}
 ```
 
-The request bodies bind to `VerifyEmailDTO` and `ResetPasswordDTO` in `src/back-end/DTO/`. Token consumption and user updates should occur within one database transaction.
+The request bodies bind to `VerifyEmailDto` and `ResetPasswordDto` in `src/back-end/Dtos/`. Token consumption and user updates should occur within one database transaction.
 
 ## 8. API endpoints and frontend pages
 
@@ -210,7 +210,7 @@ A response such as `202 Accepted` from SendGrid means the message was **accepted
 | Link gives 404 | Use `/auth/verify-email` or `/auth/reset-password` |
 | Token rejected | Expiry, incorrect purpose, already consumed |
 | Verified user cannot log in | `Status` / admin approval as well as `Is_email_confirmed` |
-| API returns 400 / null DTO fields | Check the frontend's JSON property names against the DTOs in `src/back-end/DTO/` |
+| API returns 400 / null DTO fields | Check the frontend's JSON property names against the DTOs in `src/back-end/Dtos/` |
 
 ## 11. Production security checklist
 

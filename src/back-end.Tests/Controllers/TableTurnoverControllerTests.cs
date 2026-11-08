@@ -8,7 +8,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
@@ -116,14 +116,14 @@ public class TableTurnoverControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    private async Task<TableTurnoverResponseDTO> GetWeekAsync(int? locationId = North)
+    private async Task<TableTurnoverResponseDto> GetWeekAsync(int? locationId = North)
     {
         var result = await _controller.GetTableTurnover("custom", WeekFrom, WeekTo, locationId);
 
         result.Should().BeOfType<OkObjectResult>();
         var value = (result as OkObjectResult)!.Value;
-        value.Should().BeOfType<TableTurnoverResponseDTO>();
-        return (TableTurnoverResponseDTO)value!;
+        value.Should().BeOfType<TableTurnoverResponseDto>();
+        return (TableTurnoverResponseDto)value!;
     }
 
     [Fact]

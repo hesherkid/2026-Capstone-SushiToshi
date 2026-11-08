@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
-using back_end.DTO.LocationDTOs;
+using back_end.Dtos;
 
 namespace back_end.Controllers
 {
@@ -94,7 +94,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateLocation(
-        LocationCreateDTO createLocation
+        LocationCreateDto createLocation
     )
     {
       try
@@ -205,7 +205,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateLocation(
         int locationId,
-        LocationUpdateDTO locationUpdate
+        LocationUpdateDto locationUpdate
     )
     {
       try
@@ -383,7 +383,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddMenuToLocation(
        int locationId,
-       MenuLocationCreateDTO menuLocationCreate
+       MenuLocationCreateDto menuLocationCreate
    )
     {
       try

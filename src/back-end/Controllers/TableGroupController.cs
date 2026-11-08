@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using Microsoft.AspNetCore.Authorization;
-using back_end.DTO.TableGroupDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using back_end.Services;
 
@@ -26,7 +26,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpPost]
-    public async Task<IActionResult> CreateTableGroup([FromBody] TableGroupCreateDTO groupData)
+    public async Task<IActionResult> CreateTableGroup([FromBody] TableGroupCreateDto groupData)
     {
       try
       {
@@ -240,7 +240,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpPut("{tableGroupId}")]
-    public async Task<IActionResult> UpdateTableGroup(int tableGroupId, [FromBody] TableGroupUpdateDTO groupData)
+    public async Task<IActionResult> UpdateTableGroup(int tableGroupId, [FromBody] TableGroupUpdateDto groupData)
     {
       try
       {

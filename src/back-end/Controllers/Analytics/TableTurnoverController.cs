@@ -1,5 +1,5 @@
 using back_end.Controllers;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -50,7 +50,7 @@ namespace back_end.Controllers
         ///   negative ones (overlapping sessions) in overlapping_sessions.
         /// </remarks>
         [HttpGet("table-turnover")]
-        [ProducesResponseType(typeof(TableTurnoverResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(TableTurnoverResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

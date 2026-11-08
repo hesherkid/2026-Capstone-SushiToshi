@@ -11,8 +11,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.DiningSessionDTOs;
-using back_end.DTO.TableGroupDTOs;
+using back_end.Dtos;
 using back_end.Services;
 
 namespace back_end.Tests.Controllers;
@@ -161,8 +160,8 @@ public class DiningSessionControllerTests : IDisposable
         return request;
     }
 
-    private static DiningSessionResponseDTO Body(IActionResult result) =>
-        (DiningSessionResponseDTO)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
+    private static DiningSessionResponseDto Body(IActionResult result) =>
+        (DiningSessionResponseDto)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
 
     [Theory]
     [InlineData(OrderStatus.Pending)]
@@ -315,9 +314,9 @@ public class DiningSessionControllerTests : IDisposable
         AddSeat(SessionId, CustomerId);
         AddSeat(SessionId, OtherCustomerId, DateTime.UtcNow.AddMinutes(-5));
 
-        var result = await Controller().ListDiningSessions(new ListDiningSessionsRequestDTO { ActiveOnly = true });
+        var result = await Controller().ListDiningSessions(new ListDiningSessionsRequestDto { ActiveOnly = true });
 
-        var sessions = (IEnumerable<DiningSessionResponseDTO>)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
+        var sessions = (IEnumerable<DiningSessionResponseDto>)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
         sessions.Single().Active_Participants.Should().Be(1);
     }
 
@@ -328,7 +327,7 @@ public class DiningSessionControllerTests : IDisposable
         AddSeat(SessionId, CustomerId);
         AddSeat(SessionId, OtherCustomerId, DateTime.UtcNow.AddMinutes(-5));
 
-        var result = await Controller().AddTableToDiningSession(SessionId, new TableAssignmentDTO { Table_Id = Table2 });
+        var result = await Controller().AddTableToDiningSession(SessionId, new TableAssignmentDto { Table_Id = Table2 });
 
         Body(result).Active_Participants.Should().Be(1);
     }
@@ -340,7 +339,7 @@ public class DiningSessionControllerTests : IDisposable
         AddSeat(SessionId, CustomerId);
         AddSeat(SessionId, OtherCustomerId, DateTime.UtcNow.AddMinutes(-5));
 
-        var result = await Controller().AddTableGroupToDiningSession(SessionId, new TableGroupAssignmentDTO { TableGroup_Id = GroupId });
+        var result = await Controller().AddTableGroupToDiningSession(SessionId, new TableGroupAssignmentDto { TableGroup_Id = GroupId });
 
         Body(result).Active_Participants.Should().Be(1);
     }
@@ -351,7 +350,7 @@ public class DiningSessionControllerTests : IDisposable
         AddSession(SessionId, Table1);
         AddSession(OtherSessionId, tableId: null);
 
-        var result = await Controller().AddTableToDiningSession(OtherSessionId, new TableAssignmentDTO { Table_Id = Table1 });
+        var result = await Controller().AddTableToDiningSession(OtherSessionId, new TableAssignmentDto { Table_Id = Table1 });
 
         result.Should().BeOfType<BadRequestObjectResult>();
         (await _context.DiningSessions.FindAsync(OtherSessionId))!.Table_Id.Should().BeNull();
@@ -368,11 +367,11 @@ public class DiningSessionControllerTests : IDisposable
         {
             await controller.CloseDiningSession(SessionId),
             await controller.GetDiningSession(SessionId),
-            await controller.ListDiningSessions(new ListDiningSessionsRequestDTO { ActiveOnly = true }),
+            await controller.ListDiningSessions(new ListDiningSessionsRequestDto { ActiveOnly = true }),
             await controller.RemoveTableFromSession(SessionId, Table1),
             await controller.RemoveTableGroupFromSession(SessionId, GroupId),
-            await controller.AddTableToDiningSession(SessionId, new TableAssignmentDTO { Table_Id = Table2 }),
-            await controller.AddTableGroupToDiningSession(SessionId, new TableGroupAssignmentDTO { TableGroup_Id = GroupId }),
+            await controller.AddTableToDiningSession(SessionId, new TableAssignmentDto { Table_Id = Table2 }),
+            await controller.AddTableGroupToDiningSession(SessionId, new TableGroupAssignmentDto { TableGroup_Id = GroupId }),
         };
 
         foreach (var result in results)

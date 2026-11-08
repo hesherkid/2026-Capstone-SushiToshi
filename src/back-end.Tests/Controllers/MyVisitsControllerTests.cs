@@ -11,7 +11,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.PastVisitDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using back_end.Services;
 
@@ -145,10 +145,10 @@ public class MyVisitsControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    private async Task<List<PastVisitDTO>> Visits()
+    private async Task<List<PastVisitDto>> Visits()
     {
         var result = await _controller.GetPastVisits();
-        return (List<PastVisitDTO>)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
+        return (List<PastVisitDto>)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
     }
 
     [Fact]

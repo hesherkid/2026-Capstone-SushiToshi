@@ -8,7 +8,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
@@ -151,18 +151,18 @@ public class ItemPerformanceControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    private async Task<ItemPerformanceResponseDTO> GetWeekAsync(
+    private async Task<ItemPerformanceResponseDto> GetWeekAsync(
         int? locationId = North, int? categoryId = null, int? tagId = null, int top = 5)
     {
         var result = await _controller.GetItemPerformance("custom", WeekFrom, WeekTo, locationId, categoryId, tagId, top);
 
         result.Should().BeOfType<OkObjectResult>();
         var value = (result as OkObjectResult)!.Value;
-        value.Should().BeOfType<ItemPerformanceResponseDTO>();
-        return (ItemPerformanceResponseDTO)value!;
+        value.Should().BeOfType<ItemPerformanceResponseDto>();
+        return (ItemPerformanceResponseDto)value!;
     }
 
-    private static ItemPerformanceDTO Item(ItemPerformanceResponseDTO response, string name) =>
+    private static ItemPerformanceDto Item(ItemPerformanceResponseDto response, string name) =>
         response.Items.Single(i => i.Name == name);
 
     [Fact]
@@ -557,7 +557,7 @@ public class ItemPerformanceControllerTests : IDisposable
         var result = await _controller.GetItemPerformance(null, null, null, North, null, null);
 
         // Assert
-        var response = (result as OkObjectResult)!.Value as ItemPerformanceResponseDTO;
+        var response = (result as OkObjectResult)!.Value as ItemPerformanceResponseDto;
         response!.Range.Preset.Should().Be("last7");
         response.Range.Days.Should().Be(7);
         response.Range.TimeZone.Should().Be("America/Edmonton");

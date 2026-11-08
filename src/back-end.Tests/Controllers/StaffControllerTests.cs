@@ -10,8 +10,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.StaffDTOs;
-using back_end.DTO.UserDTOs;
+using back_end.Dtos;
 using back_end.Services;
 
 namespace back_end.Tests.Controllers;
@@ -80,7 +79,7 @@ public class StaffControllerTests : IDisposable
     [InlineData(3, UserStatus.Active)]
     public async Task UpdateStaffStatus_DeactivatesAndReactivates(int userId, UserStatus status)
     {
-        var result = await _controller.UpdateStaffStatus(userId, new AccountStatusUpdateDTO { Status = status });
+        var result = await _controller.UpdateStaffStatus(userId, new AccountStatusUpdateDto { Status = status });
 
         result.Result.Should().BeOfType<OkObjectResult>();
         (await _context.Users.FindAsync(userId))!.Status.Should().Be(status);
@@ -89,7 +88,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task UpdateStaffStatus_WontLetAnAdminDeactivateThemselves()
     {
-        var result = await _controller.UpdateStaffStatus(SignedInAdminId, new AccountStatusUpdateDTO { Status = UserStatus.Inactive });
+        var result = await _controller.UpdateStaffStatus(SignedInAdminId, new AccountStatusUpdateDto { Status = UserStatus.Inactive });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
         (await _context.Users.FindAsync(SignedInAdminId))!.Status.Should().Be(UserStatus.Active);
@@ -98,7 +97,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task UpdateStaffStatus_RejectsOtherStatuses()
     {
-        var result = await _controller.UpdateStaffStatus(2, new AccountStatusUpdateDTO { Status = UserStatus.Deleted });
+        var result = await _controller.UpdateStaffStatus(2, new AccountStatusUpdateDto { Status = UserStatus.Deleted });
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -106,7 +105,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task UpdateStaffStatus_IgnoresCustomerAccounts()
     {
-        var result = await _controller.UpdateStaffStatus(4, new AccountStatusUpdateDTO { Status = UserStatus.Inactive });
+        var result = await _controller.UpdateStaffStatus(4, new AccountStatusUpdateDto { Status = UserStatus.Inactive });
 
         result.Result.Should().BeOfType<NotFoundObjectResult>();
         (await _context.Users.FindAsync(4))!.Status.Should().Be(UserStatus.Active);
@@ -115,7 +114,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task UpdateStaff_CantTurnACustomerIntoStaff()
     {
-        var result = await _controller.UpdateStaff(4, new StaffMemberUpdateDTO
+        var result = await _controller.UpdateStaff(4, new StaffMemberUpdateDto
         {
             FirstName = "Mia",
             Role = UserRoles.Staff,
@@ -131,7 +130,7 @@ public class StaffControllerTests : IDisposable
     [InlineData(UserRoles.Admin, UserStatus.Inactive)]  // deactivate self
     public async Task UpdateStaff_WontLetAnAdminChangeTheirOwnRoleOrStatus(UserRoles role, UserStatus status)
     {
-        var result = await _controller.UpdateStaff(SignedInAdminId, new StaffMemberUpdateDTO
+        var result = await _controller.UpdateStaff(SignedInAdminId, new StaffMemberUpdateDto
         {
             FirstName = "Changed",
             Role = role,
@@ -148,7 +147,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task UpdateStaff_LetsAnAdminEditTheirOwnName()
     {
-        var result = await _controller.UpdateStaff(SignedInAdminId, new StaffMemberUpdateDTO
+        var result = await _controller.UpdateStaff(SignedInAdminId, new StaffMemberUpdateDto
         {
             FirstName = "Adele",
             Role = UserRoles.Admin,
@@ -162,7 +161,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task UpdateStaff_StillUpdatesStaffAccounts()
     {
-        var result = await _controller.UpdateStaff(2, new StaffMemberUpdateDTO
+        var result = await _controller.UpdateStaff(2, new StaffMemberUpdateDto
         {
             FirstName = "Susan",
             Role = UserRoles.Staff,
@@ -216,7 +215,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task CreateStaff_AssignsStaffToTheLocationTheyStartAt()
     {
-        var result = await _controller.CreateStaff(new CreateStaffDTO
+        var result = await _controller.CreateStaff(new CreateStaffDto
         {
             Email = "new@example.com",
             First_name = "Nina",
@@ -235,7 +234,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task CreateStaff_RejectsALocationThatDoesntExist()
     {
-        var result = await _controller.CreateStaff(new CreateStaffDTO
+        var result = await _controller.CreateStaff(new CreateStaffDto
         {
             Email = "new@example.com",
             First_name = "Nina",
@@ -252,7 +251,7 @@ public class StaffControllerTests : IDisposable
     private List<int> AssignedTo(int userId) =>
         _context.StaffLocations.Where(sl => sl.User_Id == userId).Select(sl => sl.Location_Id).OrderBy(id => id).ToList();
 
-    private static StaffMemberUpdateDTO SueWith(List<int>? locationIds) => new()
+    private static StaffMemberUpdateDto SueWith(List<int>? locationIds) => new()
     {
         FirstName = "Sue",
         Role = UserRoles.Staff,
@@ -309,7 +308,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task CreateStaff_AssignsEveryChosenLocation_AndStartsAtTheOneGiven()
     {
-        await _controller.CreateStaff(new CreateStaffDTO
+        await _controller.CreateStaff(new CreateStaffDto
         {
             Email = "new@example.com",
             First_name = "Nina",
@@ -330,7 +329,7 @@ public class StaffControllerTests : IDisposable
     {
         var result = await _controller.ListStaff();
 
-        var sue = ((result.Result as OkObjectResult)!.Value as IEnumerable<StaffResponseDTO>)!.Single(u => u.User_Id == 2);
+        var sue = ((result.Result as OkObjectResult)!.Value as IEnumerable<StaffResponseDto>)!.Single(u => u.User_Id == 2);
         sue.Location_Id.Should().Be(1);
         sue.Location_Ids.Should().Equal(1, 2);
         sue.Locations.Should().Equal("Northside", "Southside");
@@ -341,7 +340,7 @@ public class StaffControllerTests : IDisposable
     {
         SignInAs(2, UserRoles.Staff);
 
-        var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDTO;
+        var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDto;
 
         mine!.Current_Location!.Location_Id.Should().Be(1);
         mine.Locations.Select(l => l.Name).Should().Equal("Northside", "Southside");
@@ -353,7 +352,7 @@ public class StaffControllerTests : IDisposable
     {
         SignInAs(3, UserRoles.Staff);
 
-        var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDTO;
+        var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDto;
 
         mine!.Current_Location.Should().BeNull();
         mine.Locations.Should().BeEmpty();
@@ -362,7 +361,7 @@ public class StaffControllerTests : IDisposable
     [Fact]
     public async Task GetMyLocations_GivesAdminsEveryLocation()
     {
-        var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDTO;
+        var mine = ((await _controller.GetMyLocations()).Result as OkObjectResult)!.Value as MyLocationsDto;
 
         mine!.Locations.Select(l => l.Name).Should().Equal("Northside", "Southside", "Westside");
         mine.All_Locations.Should().BeTrue();

@@ -14,7 +14,7 @@ using back_end.Configurations;
 using back_end.Controllers;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.HolidayDTOs;
+using back_end.Dtos;
 using back_end.Services.Holidays;
 
 namespace back_end.Tests.Controllers

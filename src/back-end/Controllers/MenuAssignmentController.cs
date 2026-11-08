@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
-using back_end.DTO.MenuItemAssignmentDTO;
+using back_end.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
 using back_end.domain.enums;
@@ -201,7 +201,7 @@ namespace back_end.Controllers
         public async Task<IActionResult> UpdateMenuItemAssignment(
             int menuId,
             int itemId,
-            MenuAssignmentUpdateDTO updateData,
+            MenuAssignmentUpdateDto updateData,
             [FromQuery] int? locationId
         )
         {

@@ -1,7 +1,7 @@
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.MenuItemViewDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,7 +58,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> RecordView([FromBody] MenuItemViewCreateDTO request)
+        public async Task<IActionResult> RecordView([FromBody] MenuItemViewCreateDto request)
         {
             if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
             {

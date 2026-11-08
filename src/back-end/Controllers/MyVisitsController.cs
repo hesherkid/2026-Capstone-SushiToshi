@@ -1,6 +1,6 @@
 using back_end.domain.DbContexts;
 using back_end.domain.enums;
-using back_end.DTO.PastVisitDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using back_end.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -56,7 +56,7 @@ namespace back_end.Controllers
         ///   Cancelled bills are left out. Totals include gratuity and GST, worked out as on the bill.
         /// </remarks>
         [HttpGet]
-        [ProducesResponseType(typeof(List<PastVisitDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(List<PastVisitDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -105,7 +105,7 @@ namespace back_end.Controllers
                     })
                     .ToListAsync();
 
-                var visits = new List<PastVisitDTO>();
+                var visits = new List<PastVisitDto>();
                 foreach (var session in sessions)
                 {
                     var lines = myLines.Where(l => l.SessionId == session.Session_Id).ToList();
@@ -117,10 +117,10 @@ namespace back_end.Controllers
                         .OrderBy(b => b.Bill_Id)
                         .ToList();
 
-                    var billDtos = new List<PastVisitBillDTO>();
+                    var billDtos = new List<PastVisitBillDto>();
                     foreach (var bill in bills)
                     {
-                        billDtos.Add(new PastVisitBillDTO
+                        billDtos.Add(new PastVisitBillDto
                         {
                             BillId = bill.Bill_Id,
                             BillName = bill.Bill_Name,
@@ -129,7 +129,7 @@ namespace back_end.Controllers
                         });
                     }
 
-                    visits.Add(new PastVisitDTO
+                    visits.Add(new PastVisitDto
                     {
                         SessionId = session.Session_Id,
                         StartedAt = session.Started_At,
@@ -140,7 +140,7 @@ namespace back_end.Controllers
                             : session.TableGroup?.Tables.Select(t => t.table_number).OrderBy(n => n).ToList() ?? [],
                         Items = lines
                             .GroupBy(l => new { l.Item_Id, l.Name })
-                            .Select(g => new PastVisitItemDTO { ItemId = g.Key.Item_Id, Name = g.Key.Name, Quantity = g.Sum(l => l.Quantity) })
+                            .Select(g => new PastVisitItemDto { ItemId = g.Key.Item_Id, Name = g.Key.Name, Quantity = g.Sum(l => l.Quantity) })
                             .OrderByDescending(i => i.Quantity)
                             .ThenBy(i => i.Name)
                             .ToList(),

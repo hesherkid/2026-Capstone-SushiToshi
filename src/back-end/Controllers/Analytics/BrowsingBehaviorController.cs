@@ -1,4 +1,4 @@
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using back_end.Helpers;
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Authorization;
@@ -53,7 +53,7 @@ namespace back_end.Controllers
         /// - never_viewed only lists items orderable now.
         /// </remarks>
         [HttpGet("browsing-behavior")]
-        [ProducesResponseType(typeof(BrowsingBehaviorResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BrowsingBehaviorResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

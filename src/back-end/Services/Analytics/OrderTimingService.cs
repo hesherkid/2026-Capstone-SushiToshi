@@ -1,6 +1,6 @@
 using back_end.domain.DbContexts;
 using back_end.domain.enums;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using Microsoft.EntityFrameworkCore;
 
 namespace back_end.Services.Analytics
@@ -16,7 +16,7 @@ namespace back_end.Services.Analytics
 
     public interface IOrderTimingService
     {
-        Task<AnalyticsResult<OrderTimingResponseDTO>> GetAsync(OrderTimingQuery query);
+        Task<AnalyticsResult<OrderTimingResponseDto>> GetAsync(OrderTimingQuery query);
     }
 
     public sealed class OrderTimingService : IOrderTimingService
@@ -34,18 +34,18 @@ namespace back_end.Services.Analytics
             _clock = clock;
         }
 
-        public async Task<AnalyticsResult<OrderTimingResponseDTO>> GetAsync(OrderTimingQuery query)
+        public async Task<AnalyticsResult<OrderTimingResponseDto>> GetAsync(OrderTimingQuery query)
         {
-            var topError = AnalyticsQueries.ValidateTop<OrderTimingResponseDTO>(query.Top);
+            var topError = AnalyticsQueries.ValidateTop<OrderTimingResponseDto>(query.Top);
             if (topError != null) return topError;
 
             var windowResult = await AnalyticsQueries.ResolveWindowAsync(
                 _context, _clock, query.Range, query.From, query.To, query.LocationId);
-            if (!windowResult.IsOk) return windowResult.AsError<OrderTimingResponseDTO>();
+            if (!windowResult.IsOk) return windowResult.AsError<OrderTimingResponseDto>();
 
             var (period, timeZone, location) = windowResult.Value!;
 
-            var response = new OrderTimingResponseDTO
+            var response = new OrderTimingResponseDto
             {
                 Range = AnalyticsQueries.ToRangeDto(period),
                 Location = location
@@ -57,12 +57,12 @@ namespace back_end.Services.Analytics
             await AddOrdersAsync(response, period.StartUtc, period.EndUtc, query.LocationId, timeZone);
             await AddItemSpeedAsync(response, period.StartUtc, period.EndUtc, query);
 
-            return AnalyticsResult<OrderTimingResponseDTO>.Ok(response);
+            return AnalyticsResult<OrderTimingResponseDto>.Ok(response);
         }
 
 
         private async Task AddSessionsAndPacingAsync(
-            OrderTimingResponseDTO response, DateTime startUtc, DateTime endUtc, int? locationId)
+            OrderTimingResponseDto response, DateTime startUtc, DateTime endUtc, int? locationId)
         {
             var sessionsQuery = _context.DiningSessions
                 .AsNoTracking()
@@ -122,7 +122,7 @@ namespace back_end.Services.Analytics
         }
 
         private async Task AddOrdersAsync(
-            OrderTimingResponseDTO response, DateTime startUtc, DateTime endUtc, int? locationId, TimeZoneInfo timeZone)
+            OrderTimingResponseDto response, DateTime startUtc, DateTime endUtc, int? locationId, TimeZoneInfo timeZone)
         {
             var ordersQuery = _context.SessionOrders
                 .AsNoTracking()
@@ -143,7 +143,7 @@ namespace back_end.Services.Analytics
                 .ToDictionary(g => g.Key, g => g.Count());
 
             response.OrdersByHour = Enumerable.Range(0, 24)
-                .Select(hour => new OrderingHourDTO
+                .Select(hour => new OrderingHourDto
                 {
                     Hour = hour,
                     Label = $"{hour:00}:00",
@@ -171,7 +171,7 @@ namespace back_end.Services.Analytics
         }
 
         private async Task AddItemSpeedAsync(
-            OrderTimingResponseDTO response, DateTime startUtc, DateTime endUtc, OrderTimingQuery query)
+            OrderTimingResponseDto response, DateTime startUtc, DateTime endUtc, OrderTimingQuery query)
         {
             var linesQuery = _context.OrderItems
                 .AsNoTracking()
@@ -207,7 +207,7 @@ namespace back_end.Services.Analytics
                 .Select(i =>
                 {
                     var times = AnalyticsQueries.Durations(secondsByItem[i.ItemId]);
-                    return new ItemTimingDTO
+                    return new ItemTimingDto
                     {
                         ItemId = i.ItemId,
                         Name = i.Name,

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.OrdersDTOs;
+using back_end.Dtos;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
@@ -68,7 +68,7 @@ namespace back_end.Controllers
                 .ToListAsync();
 
         // Checks the items sent before anything is looked up; null when they're fine
-        private static string? ItemsPayloadError(List<OrderItemCreateDTO>? items)
+        private static string? ItemsPayloadError(List<OrderItemCreateDto>? items)
         {
             if (items == null || !items.Any())
             {
@@ -86,7 +86,7 @@ namespace back_end.Controllers
         // Prices the requested items and applies the limits, without saving anything.
         // If any item fails, Errors is set and none of the lines should be saved (all or nothing).
         // orderId is the order being added to, or null for a new order.
-        private async Task<LinePlan> PlanOrderLinesAsync(DiningSession session, int? orderId, List<OrderItemCreateDTO> items)
+        private async Task<LinePlan> PlanOrderLinesAsync(DiningSession session, int? orderId, List<OrderItemCreateDto> items)
         {
             // Combine duplicate item IDs so per-order limits can't be bypassed by splitting a request
             var requested = items
@@ -190,7 +190,7 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize]
         [HttpGet("session/{sessionId}/limits")]
-        [ProducesResponseType(typeof(SessionOrderLimitsDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(SessionOrderLimitsDto), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetSessionOrderLimits(int sessionId)
         {
             if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
@@ -221,12 +221,12 @@ namespace back_end.Controllers
             static OrderLimitRules.Limits ItemLimits(MenuItemAssignment a) => new(a.Adult_Limit, a.Child_limit,
                 a.Senior_limit, a.Tot_Limit, a.Per_Order_Limit, a.Over_Limit_Behavior);
 
-            var result = new SessionOrderLimitsDTO
+            var result = new SessionOrderLimitsDto
             {
                 Items = assignments.Select(a =>
                 {
                     var limits = ItemLimits(a);
-                    return new ItemOrderLimitDTO
+                    return new ItemOrderLimitDto
                     {
                         Item_Id = a.Item_Id,
                         Category_Id = a.MenuItem.Category_id,
@@ -242,7 +242,7 @@ namespace back_end.Controllers
                     .Select(c =>
                     {
                         var limits = CategoryLimits(c);
-                        return new CategoryOrderLimitDTO
+                        return new CategoryOrderLimitDto
                         {
                             Category_Id = c.Category_id,
                             Per_Order = OrderLimitRules.PerOrderCap(limits),
@@ -260,7 +260,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="orderData">The order creation data including session ID, bill ID and items</param>
         /// <returns>
-        /// An <see cref="ActionResult"/> containing the created <see cref="OrderResponseDTO"/> object.
+        /// An <see cref="ActionResult"/> containing the created <see cref="OrderResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the created order on success.
         /// Returns HTTP 400 (Bad Request) if there are no items, or an item is unavailable or over a limit.
         /// Returns HTTP 404 (Not Found) if the session or bill doesn't exist.
@@ -295,8 +295,8 @@ namespace back_end.Controllers
         /// </remarks>
         [HttpPost]
         [Authorize]
-        [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<SessionOrder>>> CreateOrder(OrderCreateDTO orderData)
+        [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<SessionOrder>>> CreateOrder(OrderCreateDto orderData)
         {
             try
             {
@@ -377,7 +377,7 @@ namespace back_end.Controllers
                 await _context.SaveChangesAsync();
                 if (billLock != null) await billLock.CommitAsync();
 
-                return Ok(new OrderResponseDTO
+                return Ok(new OrderResponseDto
                 {
                     Order_Id = newOrder.Order_Id,
                     Session_Id = newOrder.session_id,
@@ -386,7 +386,7 @@ namespace back_end.Controllers
                     User_Name = newOrder.User_Name,
                     Status = newOrder.Status,
                     Created_At = newOrder.Created_At,
-                    OrderItems = plan.Lines.Select(l => new OrderItemResponseDTO
+                    OrderItems = plan.Lines.Select(l => new OrderItemResponseDto
                     {
                         Order_Item_Id = l.Order_Item_Id,
                         Order_Id = newOrder.Order_Id,
@@ -412,7 +412,7 @@ namespace back_end.Controllers
         /// </summary>
         [HttpPatch("{orderId}/approve")]
         [Authorize(Policy = "staffOnly")]
-        [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ApproveOrder(int orderId)
@@ -471,7 +471,7 @@ namespace back_end.Controllers
                 _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
 
-                return Ok(new OrderResponseDTO
+                return Ok(new OrderResponseDto
                 {
                     Order_Id = order.Order_Id,
                     Session_Id = order.session_id,
@@ -480,7 +480,7 @@ namespace back_end.Controllers
                     User_Name = order.User_Name,
                     Status = order.Status,
                     Created_At = order.Created_At,
-                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDTO
+                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
                         Order_Item_Id = oi.Order_Item_Id,
                         Order_Id = oi.Order_Key,
@@ -605,7 +605,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="itemId">The unique identifier of the order item to complete</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="OrderItemResponseDTO"/> object.
+        /// An <see cref="IActionResult"/> containing the updated <see cref="OrderItemResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the completed order item on success.
         /// Returns HTTP 404 (Not Found) if the order item doesn't exist.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
@@ -623,7 +623,7 @@ namespace back_end.Controllers
         /// </remarks>
         [HttpPatch("{orderId}/items/{itemId}/complete")]
         [Authorize(Policy = "staffOnly")]
-        [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(OrderItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CompleteOrderItem(int orderId, int itemId)
@@ -658,7 +658,7 @@ namespace back_end.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-                var response = new OrderItemResponseDTO
+                var response = new OrderItemResponseDto
                 {
                     Order_Item_Id = item.Order_Item_Id,
                     Order_Id = item.Order_Key,
@@ -683,7 +683,7 @@ namespace back_end.Controllers
         /// </summary>
         [HttpPatch("{orderId}/complete")]
         [Authorize(Policy = "staffOnly")]
-        [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CompleteOrder(int orderId)
@@ -725,7 +725,7 @@ namespace back_end.Controllers
                 _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
 
-                return Ok(new OrderResponseDTO
+                return Ok(new OrderResponseDto
                 {
                     Order_Id = order.Order_Id,
                     Session_Id = order.session_id,
@@ -734,7 +734,7 @@ namespace back_end.Controllers
                     Status = order.Status,
                     Created_At = order.Created_At,
                     Completed_At = order.Completed_At,
-                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDTO
+                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
                         Order_Item_Id = oi.Order_Item_Id,
                         Order_Id = oi.Order_Key,
@@ -760,7 +760,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="orderId">The unique identifier of the order to cancel</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="OrderResponseDTO"/> object.
+        /// An <see cref="IActionResult"/> containing the updated <see cref="OrderResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the cancelled order on success.
         /// Returns HTTP 400 (Bad Request) if the order has already been delivered.
         /// Returns HTTP 404 (Not Found) if the order doesn't exist.
@@ -785,7 +785,7 @@ namespace back_end.Controllers
         /// </remarks>
         [HttpPatch("{orderId}/cancel")]
         [Authorize]
-        [ProducesResponseType(typeof(OrderResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -835,7 +835,7 @@ namespace back_end.Controllers
 
                 _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
-                return Ok(new OrderResponseDTO
+                return Ok(new OrderResponseDto
                 {
                     Order_Id = order.Order_Id,
                     Session_Id = order.session_id,
@@ -845,7 +845,7 @@ namespace back_end.Controllers
                     Status = order.Status,
                     Created_At = order.Created_At,
                     Completed_At = order.Completed_At,
-                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDTO
+                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
                         Order_Item_Id = oi.Order_Item_Id,
                         Order_Id = oi.Order_Key,
@@ -910,7 +910,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> AddOrderItems(int orderId, [FromBody] List<OrderItemCreateDTO> items)
+        public async Task<IActionResult> AddOrderItems(int orderId, [FromBody] List<OrderItemCreateDto> items)
         {
             try
             {
@@ -1008,13 +1008,13 @@ namespace back_end.Controllers
         /// </summary>
         [HttpPatch("{orderId}/items/{itemId}")]
         [Authorize(Policy = "staffOnly")]
-        [ProducesResponseType(typeof(OrderItemResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(OrderItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateOrderItem(
                    int orderId,
                    int itemId,
-                   [FromBody] OrderItemUpdateDTO updateData
+                   [FromBody] OrderItemUpdateDto updateData
                )
         {
             try
@@ -1146,7 +1146,7 @@ namespace back_end.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Ok(new OrderItemResponseDTO
+                return Ok(new OrderItemResponseDto
                 {
                     Order_Item_Id = orderItem.Order_Item_Id,
                     Order_Id = orderItem.Order_Key,

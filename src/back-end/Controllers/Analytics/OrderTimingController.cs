@@ -1,5 +1,5 @@
 using back_end.Controllers;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -55,7 +55,7 @@ namespace back_end.Controllers
         /// - Cancelled orders are left out. Times where the end is before the start are ignored.
         /// </remarks>
         [HttpGet("order-timing")]
-        [ProducesResponseType(typeof(OrderTimingResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(OrderTimingResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

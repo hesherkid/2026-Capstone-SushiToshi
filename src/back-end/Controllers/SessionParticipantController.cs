@@ -4,13 +4,11 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using System.Linq.Expressions;
-using back_end.DTO.MenuItems;
+using back_end.Dtos;
 using Microsoft.AspNetCore.Authorization;
-using back_end.DTO.MenuDTO;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using back_end.domain.Seeders;
 using System.Security.Claims;
-using back_end.DTO.SessionParticipantDTOs;
 using Swashbuckle.AspNetCore.Annotations;
 using back_end.Helpers;
 
@@ -109,7 +107,7 @@ namespace back_end.Controllers
     /// <response code="403">You aren't seated at this table.</response>
     [Authorize]
     [HttpGet("{sessionId:int}/bill")]
-    [ProducesResponseType(typeof(MyBillResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MyBillResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetMyBill(int sessionId)
     {
@@ -133,9 +131,9 @@ namespace back_end.Controllers
         int PeopleOn(Billing bill) => people.GetValueOrDefault(bill.Bill_Id);
 
         var myBill = bills.FirstOrDefault(b => b.Bill_Id == seat.Bill_Id);
-        return Ok(new MyBillResponseDTO
+        return Ok(new MyBillResponseDto
         {
-            My_Bill = myBill is null ? null : new MyBillDTO
+            My_Bill = myBill is null ? null : new MyBillDto
             {
                 Bill_Id = myBill.Bill_Id,
                 Bill_Name = myBill.Bill_Name,
@@ -171,10 +169,10 @@ namespace back_end.Controllers
     /// <response code="403">You aren't seated at this table.</response>
     [Authorize]
     [HttpPut("{sessionId:int}/bill")]
-    [ProducesResponseType(typeof(MyBillResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MyBillResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> ChooseBill(int sessionId, ChooseBillDTO request)
+    public async Task<IActionResult> ChooseBill(int sessionId, ChooseBillDto request)
     {
         var seat = await MySeatAsync(sessionId);
         if (seat is null)
@@ -220,10 +218,10 @@ namespace back_end.Controllers
     /// <response code="403">You aren't seated at this table.</response>
     [Authorize]
     [HttpPut("{sessionId:int}/bill/guests")]
-    [ProducesResponseType(typeof(MyBillResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MyBillResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> UpdateGuestCounts(int sessionId, UpdateGuestCountsDTO request)
+    public async Task<IActionResult> UpdateGuestCounts(int sessionId, UpdateGuestCountsDto request)
     {
         var seat = await MySeatAsync(sessionId);
         if (seat is null)
@@ -296,7 +294,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> MoveGuest(int sessionId, int participantId, MoveGuestDTO request)
+    public async Task<IActionResult> MoveGuest(int sessionId, int participantId, MoveGuestDto request)
     {
         if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
         {
@@ -398,7 +396,7 @@ namespace back_end.Controllers
             .FirstOrDefaultAsync(sp => sp.Session_Id == sessionId);
     }
 
-    private static TableBillChoiceDTO Choice(Billing bill, int peopleCount) => new()
+    private static TableBillChoiceDto Choice(Billing bill, int peopleCount) => new()
     {
         Bill_Id = bill.Bill_Id,
         Bill_Name = bill.Bill_Name,

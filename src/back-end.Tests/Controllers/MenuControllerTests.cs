@@ -11,8 +11,7 @@ using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using back_end.domain.enums;
-using back_end.DTO.MenuDTO;
-using back_end.DTO.MenuItems;
+using back_end.Dtos;
 
 namespace back_end.Tests.Controllers;
 
@@ -216,7 +215,7 @@ public class MenuControllerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _controller.CreateMenuItem(new MenuItemCreateDTO { Name = "Salmon", Category_Id = 1 });
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDto { Name = "Salmon", Category_Id = 1 });
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -232,7 +231,7 @@ public class MenuControllerTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _controller.CreateMenuItem(new MenuItemCreateDTO
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDto
         {
             Name = "Spicy Tuna",
             Category_Id = 1,
@@ -241,7 +240,7 @@ public class MenuControllerTests : IDisposable
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
-        var dto = (MenuItemResponseDTO)((OkObjectResult)result).Value!;
+        var dto = (MenuItemResponseDto)((OkObjectResult)result).Value!;
         dto.Status.Should().Be(MenuItemStatus.Available);
         dto.Description.Should().BeEmpty();
         dto.Tags.Select(t => t.Name).Should().BeEquivalentTo(["Raw", "Spicy"]);
@@ -336,11 +335,11 @@ public class MenuControllerTests : IDisposable
     public async Task UpdateMenu_PartialUpdate_ChangesOnlySentFields()
     {
         // Act
-        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDTO { Is_Active = false });
+        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDto { Is_Active = false });
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
-        var dto = (MenuResponseDTO)((OkObjectResult)result).Value!;
+        var dto = (MenuResponseDto)((OkObjectResult)result).Value!;
         dto.Is_Active.Should().BeFalse();
         dto.Name.Should().Be("Main Menu");
         dto.Start_Time.Should().Be(new TimeOnly(8, 0));
@@ -354,7 +353,7 @@ public class MenuControllerTests : IDisposable
         SeedMenuItems();
 
         // Act
-        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDTO { Name = "Old Menu" });
+        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDto { Name = "Old Menu" });
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
@@ -407,10 +406,10 @@ public class MenuControllerTests : IDisposable
     public async Task CreateMenu_ReturnsMenuResponseDto()
     {
         // Act
-        var result = await _controller.CreateMenu(new MenuCreateDTO { Name = "Dinner" });
+        var result = await _controller.CreateMenu(new MenuCreateDto { Name = "Dinner" });
 
         // Assert
-        var dto = ((OkObjectResult)result).Value.Should().BeOfType<MenuResponseDTO>().Subject;
+        var dto = ((OkObjectResult)result).Value.Should().BeOfType<MenuResponseDto>().Subject;
         dto.Name.Should().Be("Dinner");
         dto.Is_Active.Should().BeTrue();
         dto.Menu_Id.Should().BePositive();

@@ -3,8 +3,7 @@ using back_end.domain.DbContexts;
 using Microsoft.AspNetCore.Mvc;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.DiningSessionDTOs;
-using back_end.DTO.TableGroupDTOs;
+using back_end.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
 using back_end.Helpers;
@@ -46,7 +45,7 @@ namespace back_end.Controllers
     /// <param name="sessionData">The session creation data containing the menu ID and optional table/table group</param>
     /// <param name="assignmentType">Specifies what to assign: "table", "table_group", or "none" (default: "none")</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing the created <see cref="DiningSessionResponseDTO"/> object.
+    /// An <see cref="IActionResult"/> containing the created <see cref="DiningSessionResponseDto"/> object.
     /// Returns HTTP 200 (OK) with the created session details on success.
     /// Returns HTTP 400 (Bad Request) if validation fails or resources don't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
@@ -84,11 +83,11 @@ namespace back_end.Controllers
     [HttpPost("Create_Dinning_Session")]
     // Staff seat tables; guests join an existing session through POST /api/DiningSession/join
     [Authorize(Policy = "staffOnly")]
-    [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(DiningSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateDiningSession(
-        [FromBody] CreateSessionRequestDTO sessionData)
+        [FromBody] CreateSessionRequestDto sessionData)
 
     {
       try
@@ -176,7 +175,7 @@ namespace back_end.Controllers
         _context.Add<DiningSession>(newSession);
         await _context.SaveChangesAsync();
 
-        return Ok(new DiningSessionResponseDTO
+        return Ok(new DiningSessionResponseDto
         {
           Session_Id = newSession.Session_Id,
           Menu_Id = newSession.Menu_Id,
@@ -204,7 +203,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="act">Query parameters to filter sessions by active status</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of <see cref="DiningSessionResponseDTO"/> objects.
+    /// An <see cref="IActionResult"/> containing a collection of <see cref="DiningSessionResponseDto"/> objects.
     /// Returns HTTP 200 (OK) with the list of filtered sessions sorted by start time (newest first).
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
@@ -224,9 +223,9 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpGet("get_list_dining_sessions")]
-    [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ListDiningSessions([FromQuery] ListDiningSessionsRequestDTO act)
+    public async Task<IActionResult> ListDiningSessions([FromQuery] ListDiningSessionsRequestDto act)
     {
       try
       {
@@ -250,7 +249,7 @@ namespace back_end.Controllers
 
         var sessions = await query.OrderByDescending(q => q.Started_At).ToListAsync();
 
-        var response = sessions.Select(session => new DiningSessionResponseDTO
+        var response = sessions.Select(session => new DiningSessionResponseDto
         {
           Session_Id = session.Session_Id,
           Menu_Id = session.Menu_Id,
@@ -289,7 +288,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing a <see cref="DiningSessionDetailDTO"/> object with session details.
+    /// An <see cref="IActionResult"/> containing a <see cref="DiningSessionDetailDto"/> object with session details.
     /// Returns HTTP 200 (OK) with the session details on success.
     /// Returns HTTP 404 (Not Found) if the session doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -341,7 +340,7 @@ namespace back_end.Controllers
           _logger.LogInformation($"Bill {returnedBill.Bill_Id}, status:{returnedBill.Status}");
         }
 
-        return Ok(new DiningSessionDetailDTO
+        return Ok(new DiningSessionDetailDto
         {
           Session_Id = session.Session_Id,
           Menu_Id = session.Menu_Id,
@@ -369,7 +368,7 @@ namespace back_end.Controllers
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="tableData">The table assignment data containing the table ID</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDTO"/> object.
+    /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDto"/> object.
     /// Returns HTTP 200 (OK) with the updated session details on success.
     /// Returns HTTP 400 (Bad Request) if the session has ended, has bills, or the table is unavailable.
     /// Returns HTTP 404 (Not Found) if the session doesn't exist.
@@ -396,11 +395,11 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("{sessionId}/tables")]
-    [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(DiningSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> AddTableToDiningSession(int sessionId, [FromBody] TableAssignmentDTO tableData)
+    public async Task<IActionResult> AddTableToDiningSession(int sessionId, [FromBody] TableAssignmentDto tableData)
     {
       try
       {
@@ -466,7 +465,7 @@ namespace back_end.Controllers
 
         await _context.SaveChangesAsync();
 
-        return Ok(new DiningSessionResponseDTO
+        return Ok(new DiningSessionResponseDto
         {
           Session_Id = session.Session_Id,
           Menu_Id = session.Menu_Id,
@@ -491,7 +490,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpPost("{sessionId}/table-groups")]
-    public async Task<IActionResult> AddTableGroupToDiningSession(int sessionId, [FromBody] TableGroupAssignmentDTO tableGroupData)
+    public async Task<IActionResult> AddTableGroupToDiningSession(int sessionId, [FromBody] TableGroupAssignmentDto tableGroupData)
     {
       try
       {
@@ -560,7 +559,7 @@ namespace back_end.Controllers
 
         await _context.SaveChangesAsync();
 
-        return Ok(new DiningSessionResponseDTO
+        return Ok(new DiningSessionResponseDto
         {
           Session_Id = session.Session_Id,
           Menu_Id = session.Menu_Id,
@@ -794,7 +793,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <returns>
-    /// An <see cref="ActionResult"/> containing a <see cref="SessionMenuResponseDTO"/> object with the menu ID.
+    /// An <see cref="ActionResult"/> containing a <see cref="SessionMenuResponseDto"/> object with the menu ID.
     /// Returns HTTP 200 (OK) with the menu ID on success.
     /// Returns HTTP 404 (Not Found) if the dining session doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -815,12 +814,12 @@ namespace back_end.Controllers
     /// </remarks>
     [HttpGet("session-menu/{sessionId}")]
     [Authorize]
-    [ProducesResponseType(typeof(SessionMenuResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SessionMenuResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<SessionMenuResponseDTO>> GetSessionMenuId(int sessionId)
+    public async Task<ActionResult<SessionMenuResponseDto>> GetSessionMenuId(int sessionId)
     {
       try
       {
@@ -837,7 +836,7 @@ namespace back_end.Controllers
           return NotFound("Dining Session was not found");
         }
 
-        return Ok(new SessionMenuResponseDTO
+        return Ok(new SessionMenuResponseDto
         {
           Menu_Id = session.Menu_Id,
           Location_Id = session.Location_Id
@@ -855,7 +854,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session to close</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDTO"/> object.
+    /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDto"/> object.
     /// Returns HTTP 200 (OK) with the updated session details on success.
     /// Returns HTTP 400 (Bad Request) if the session is already closed or has open bills.
     /// Returns HTTP 404 (Not Found) if the session doesn't exist.
@@ -882,7 +881,7 @@ namespace back_end.Controllers
     /// </remarks>
     [HttpPut("{sessionId}/close")]
     [Authorize(Roles = "Admin,Staff")]
-    [ProducesResponseType(typeof(DiningSessionResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(DiningSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -957,7 +956,7 @@ namespace back_end.Controllers
 
         await _context.SaveChangesAsync();
 
-        return Ok(new DiningSessionResponseDTO
+        return Ok(new DiningSessionResponseDto
         {
           Session_Id = session.Session_Id,
           Menu_Id = session.Menu_Id,
@@ -990,10 +989,10 @@ namespace back_end.Controllers
     /// <response code="404">The table doesn't exist, or it has no active session yet.</response>
     [HttpPost("join")]
     [Authorize]
-    [ProducesResponseType(typeof(JoinTableSessionResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(JoinTableSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> JoinTableSession([FromBody] JoinTableSessionDTO request)
+    public async Task<IActionResult> JoinTableSession([FromBody] JoinTableSessionDto request)
     {
       if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))
       {
@@ -1068,7 +1067,7 @@ namespace back_end.Controllers
       await _context.SaveChangesAsync();
       if (seatLock != null) await seatLock.CommitAsync();
 
-      return Ok(new JoinTableSessionResponseDTO
+      return Ok(new JoinTableSessionResponseDto
       {
         Session_Id = session.Session_Id,
         Participant_Id = participant.Participant_Id,

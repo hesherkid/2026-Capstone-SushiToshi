@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using Microsoft.AspNetCore.Authorization;
-using back_end.DTO.TableEntityDTOs;
+using back_end.Dtos;
 using back_end.Helpers;
 using back_end.Services;
 
@@ -41,7 +41,7 @@ namespace back_end.Controllers
     /// <response code="500">An unexpected error occurred while creating the table.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost()]
-    public async Task<IActionResult> CreateTable(TableEntityCreateDTO tableData)
+    public async Task<IActionResult> CreateTable(TableEntityCreateDto tableData)
     {
       try
       {
@@ -219,7 +219,7 @@ namespace back_end.Controllers
     /// <param name="tableData">Fields to update for the table (partial updates supported).</param>
     /// <remarks>
     /// This endpoint performs a <em>partial</em> update using <c>PUT</c> for convenience:
-    /// only the non-null properties in <c>TableEntityUpdateDTO</c> are applied.
+    /// only the non-null properties in <c>TableEntityUpdateDto</c> are applied.
     /// <br/><br/>
     /// - If <c>Table_Number</c> is provided and differs from the current value, it must be unique.
     /// - Returns the updated table in the response body.
@@ -231,7 +231,7 @@ namespace back_end.Controllers
     /// <response code="500">An unexpected error occurred while updating the table.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPut("{tableId}")]
-    public async Task<IActionResult> UpdateTable(int tableId, TableEntityUpdateDTO tableData)
+    public async Task<IActionResult> UpdateTable(int tableId, TableEntityUpdateDto tableData)
     {
       try
       {

@@ -11,7 +11,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.ServiceRequestDTOs;
+using back_end.Dtos;
 
 namespace back_end.Tests.Controllers;
 
@@ -70,7 +70,7 @@ public class ServiceRequestBySessionTests : IDisposable
     {
         var result = await ControllerAs(SeatedCustomer, "Customer").GetSessionServiceRequest(7);
 
-        var requests = (result as OkObjectResult)!.Value as List<ServiceRequestResponseDTO>;
+        var requests = (result as OkObjectResult)!.Value as List<ServiceRequestResponseDto>;
         requests!.Single().Notes.Should().Be("Ready for bill: Lee");
     }
 

@@ -8,7 +8,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
@@ -169,15 +169,15 @@ public class OrderTimingControllerTests : IDisposable
         }
     }
 
-    private async Task<OrderTimingResponseDTO> GetWeekAsync(
+    private async Task<OrderTimingResponseDto> GetWeekAsync(
         int? locationId = North, int? categoryId = null, int? tagId = null, int top = 5)
     {
         var result = await _controller.GetOrderTiming("custom", WeekFrom, WeekTo, locationId, categoryId, tagId, top);
 
         result.Should().BeOfType<OkObjectResult>();
         var value = (result as OkObjectResult)!.Value;
-        value.Should().BeOfType<OrderTimingResponseDTO>();
-        return (OrderTimingResponseDTO)value!;
+        value.Should().BeOfType<OrderTimingResponseDto>();
+        return (OrderTimingResponseDto)value!;
     }
 
     [Fact]

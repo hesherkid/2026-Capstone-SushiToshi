@@ -11,7 +11,7 @@ using back_end.Helpers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.OrdersDTOs;
+using back_end.Dtos;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -158,10 +158,10 @@ public class OrderControllerTests : IDisposable
     }
 
     // Items for a new order: one Salmon Nigiri
-    private List<OrderItemCreateDTO> OneItem()
+    private List<OrderItemCreateDto> OneItem()
     {
         SeedMenuItem();
-        return new List<OrderItemCreateDTO> { new() { Menu_Id = 1, Item_Id = 1, Quantity = 1 } };
+        return new List<OrderItemCreateDto> { new() { Menu_Id = 1, Item_Id = 1, Quantity = 1 } };
     }
 
     private SessionOrder SeedOrderAt(int sessionId, int billId, OrderStatus orderStatus, params OrderStatus[] itemStatuses)
@@ -197,7 +197,7 @@ public class OrderControllerTests : IDisposable
         // Arrange
         SetupUserClaims("123", "Test User");
 
-        var orderCreateDto = new OrderCreateDTO
+        var orderCreateDto = new OrderCreateDto
         {
             Session_Id = 1,
             Bill_Id = 1,
@@ -210,7 +210,7 @@ public class OrderControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var orderResponse = okResult!.Value as OrderResponseDTO;
+        var orderResponse = okResult!.Value as OrderResponseDto;
 
         orderResponse.Should().NotBeNull();
         orderResponse!.Session_Id.Should().Be(1);
@@ -219,7 +219,7 @@ public class OrderControllerTests : IDisposable
         orderResponse.User_Name.Should().Be("Test User");
         orderResponse.Status.Should().Be(OrderStatus.Pending);
         orderResponse.OrderItems.Should().ContainSingle()
-            .Which.Should().Match<OrderItemResponseDTO>(i =>
+            .Which.Should().Match<OrderItemResponseDto>(i =>
                 i.Item_Id == 1 && i.Quantity == 1 && i.Name == "Salmon Nigiri" && i.Charge_Reason == "None");
 
         // Verify the order was saved to the database with its items
@@ -236,7 +236,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("123");
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1 });
+        var result = await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1 });
 
         // Assert
         result.Result.Should().BeOfType<BadRequestObjectResult>();
@@ -250,10 +250,10 @@ public class OrderControllerTests : IDisposable
         // Arrange: item 999 isn't on the menu
         SetupUserClaims("123");
         var items = OneItem();
-        items.Add(new OrderItemCreateDTO { Menu_Id = 1, Item_Id = 999, Quantity = 1 });
+        items.Add(new OrderItemCreateDto { Menu_Id = 1, Item_Id = 999, Quantity = 1 });
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = items });
+        var result = await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1, Items = items });
 
         // Assert: the valid item isn't saved either
         result.Result.Should().BeOfType<BadRequestObjectResult>();
@@ -270,11 +270,11 @@ public class OrderControllerTests : IDisposable
         SeedMenuItem(a => a.Per_Order_Limit = 1);
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO
+        var result = await _controller.CreateOrder(new OrderCreateDto
         {
             Session_Id = 1,
             Bill_Id = 1,
-            Items = new List<OrderItemCreateDTO> { new() { Menu_Id = 1, Item_Id = 1, Quantity = 2 } }
+            Items = new List<OrderItemCreateDto> { new() { Menu_Id = 1, Item_Id = 1, Quantity = 2 } }
         });
 
         // Assert
@@ -294,7 +294,7 @@ public class OrderControllerTests : IDisposable
         items[0].Quantity = quantity;
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = items });
+        var result = await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1, Items = items });
 
         // Assert
         result.Result.Should().BeOfType<BadRequestObjectResult>();
@@ -307,7 +307,7 @@ public class OrderControllerTests : IDisposable
         // Arrange
         SetupUserClaims("123");
 
-        var orderCreateDto = new OrderCreateDTO
+        var orderCreateDto = new OrderCreateDto
         {
             Session_Id = 999,
             Bill_Id = 1,
@@ -327,7 +327,7 @@ public class OrderControllerTests : IDisposable
         // Arrange
         SetupUserClaims("123");
 
-        var orderCreateDto = new OrderCreateDTO
+        var orderCreateDto = new OrderCreateDto
         {
             Session_Id = 1,
             Bill_Id = 999,
@@ -363,7 +363,7 @@ public class OrderControllerTests : IDisposable
         _context.Bills.Add(closedBill);
         await _context.SaveChangesAsync();
 
-        var orderCreateDto = new OrderCreateDTO
+        var orderCreateDto = new OrderCreateDto
         {
             Session_Id = 1,
             Bill_Id = 2,
@@ -385,7 +385,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("123");
         var beforeCreation = DateTime.UtcNow;
 
-        var orderCreateDto = new OrderCreateDTO
+        var orderCreateDto = new OrderCreateDto
         {
             Session_Id = 1,
             Bill_Id = 1,
@@ -410,7 +410,7 @@ public class OrderControllerTests : IDisposable
         // Arrange
         SetupUserClaims(userId.ToString(), userName);
 
-        var orderCreateDto = new OrderCreateDTO
+        var orderCreateDto = new OrderCreateDto
         {
             Session_Id = 1,
             Bill_Id = 1,
@@ -423,7 +423,7 @@ public class OrderControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var orderResponse = okResult!.Value as OrderResponseDTO;
+        var orderResponse = okResult!.Value as OrderResponseDto;
 
         orderResponse.Should().NotBeNull();
         orderResponse!.User_Id.Should().Be(userId);
@@ -439,7 +439,7 @@ public class OrderControllerTests : IDisposable
         // Act
         for (int i = 0; i < 3; i++)
         {
-            var orderCreateDto = new OrderCreateDTO
+            var orderCreateDto = new OrderCreateDto
             {
                 Session_Id = 1,
                 Bill_Id = 1,
@@ -480,10 +480,10 @@ public class OrderControllerTests : IDisposable
         };
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
+        var result = await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
 
         // Assert
-        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
+        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDto;
         order!.User_Name.Should().Be("customer@example.com");
     }
 
@@ -500,7 +500,7 @@ public class OrderControllerTests : IDisposable
 
         // Assert
         var dto = result.Should().BeOfType<OkObjectResult>().Subject
-            .Value.Should().BeOfType<OrderItemResponseDTO>().Subject;
+            .Value.Should().BeOfType<OrderItemResponseDto>().Subject;
         dto.Status.Should().Be(OrderStatus.Delivered);
         dto.Completed_At.Should().NotBeNull();
 
@@ -581,10 +581,10 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("123");
 
         // Act
-        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
+        await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
         var first = (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At;
 
-        await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
+        await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
         var after = (await _context.DiningSessions.SingleAsync(s => s.Session_Id == 1)).First_Order_At;
 
         // Assert
@@ -639,7 +639,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("123");
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 2, Bill_Id = 3, Items = OneItem() });
+        var result = await _controller.CreateOrder(new OrderCreateDto { Session_Id = 2, Bill_Id = 3, Items = OneItem() });
 
         // Assert
         result.Result.Should().BeOfType<ForbidResult>();
@@ -653,7 +653,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("789");
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
+        var result = await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
 
         // Assert
         result.Result.Should().BeOfType<ForbidResult>();
@@ -666,10 +666,10 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("42", "Server", "Staff");
 
         // Act
-        var result = await _controller.CreateOrder(new OrderCreateDTO { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
+        var result = await _controller.CreateOrder(new OrderCreateDto { Session_Id = 1, Bill_Id = 1, Items = OneItem() });
 
         // Assert
-        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDTO;
+        var order = (result.Result as OkObjectResult)!.Value as OrderResponseDto;
         order!.User_Id.Should().Be(42);
         order.User_Name.Should().Be("Server");
     }
@@ -683,7 +683,7 @@ public class OrderControllerTests : IDisposable
 
         // Act
         var result = await _controller.AddOrderItems(order.Order_Id,
-            new List<OrderItemCreateDTO> { new() { Item_Id = 1, Quantity = 1 } });
+            new List<OrderItemCreateDto> { new() { Item_Id = 1, Quantity = 1 } });
 
         // Assert
         result.Should().BeOfType<ForbidResult>();
@@ -705,7 +705,7 @@ public class OrderControllerTests : IDisposable
 
         // Act
         var result = await _controller.AddOrderItems(order.Order_Id,
-            new List<OrderItemCreateDTO> { new() { Item_Id = 1, Quantity = 1 } });
+            new List<OrderItemCreateDto> { new() { Item_Id = 1, Quantity = 1 } });
 
         // Assert
         result.Should().BeOfType<BadRequestObjectResult>();

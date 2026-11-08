@@ -8,7 +8,7 @@ using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 
 namespace back_end.Tests.Controllers;
@@ -140,18 +140,18 @@ public class BrowsingBehaviorControllerTests : IDisposable
         _context.SaveChanges();
     }
 
-    private async Task<BrowsingBehaviorResponseDTO> GetWeekAsync(
+    private async Task<BrowsingBehaviorResponseDto> GetWeekAsync(
         int? locationId = null, int? categoryId = null, int? tagId = null, int top = 5, int minViews = 10)
     {
         var result = await _controller.GetBrowsingBehavior("custom", WeekFrom, WeekTo, locationId, categoryId, tagId, top, minViews);
 
         result.Should().BeOfType<OkObjectResult>();
         var value = (result as OkObjectResult)!.Value;
-        value.Should().BeOfType<BrowsingBehaviorResponseDTO>();
-        return (BrowsingBehaviorResponseDTO)value!;
+        value.Should().BeOfType<BrowsingBehaviorResponseDto>();
+        return (BrowsingBehaviorResponseDto)value!;
     }
 
-    private static BrowsingItemDTO Item(BrowsingBehaviorResponseDTO response, string name) =>
+    private static BrowsingItemDto Item(BrowsingBehaviorResponseDto response, string name) =>
         response.Items.Single(i => i.Name == name);
 
     [Fact]

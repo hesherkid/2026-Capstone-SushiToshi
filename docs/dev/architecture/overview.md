@@ -178,7 +178,7 @@ The rules live in `Helpers/BillLinks.cs`:
 | `Controllers/`         | API endpoints, one controller per area. `Analytics/` has the four analytics report controllers             |
 | `Services/`            | Logic shared between controllers: pricing, holidays, location access, auth emails, QR codes (`QrCode/`), analytics queries (`Analytics/`) |
 | `Helpers/`             | Small pure rules, mostly static: bill calculation, order limits, leftover fees, guest accounts, claims, session access, bill links and bill locks |
-| `DTO/`                 | Request and response shapes                                                                                |
+| `Dtos/`                | Request and response shapes                                                                                |
 | `domain/Entities/`     | EF Core entity classes (the database tables)                                                               |
 | `domain/Dbcontexts/`   | `ApplicationDbContext`                                                                                     |
 | `domain/Seeders/`      | Development seed data                                                                                      |

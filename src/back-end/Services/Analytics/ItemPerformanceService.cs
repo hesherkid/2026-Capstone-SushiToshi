@@ -1,6 +1,6 @@
 using back_end.domain.DbContexts;
 using back_end.domain.enums;
-using back_end.DTO.Analytics;
+using back_end.Dtos.Analytics;
 using Microsoft.EntityFrameworkCore;
 
 namespace back_end.Services.Analytics
@@ -16,7 +16,7 @@ namespace back_end.Services.Analytics
 
     public interface IItemPerformanceService
     {
-        Task<AnalyticsResult<ItemPerformanceResponseDTO>> GetAsync(ItemPerformanceQuery query);
+        Task<AnalyticsResult<ItemPerformanceResponseDto>> GetAsync(ItemPerformanceQuery query);
     }
 
     public sealed class ItemPerformanceService : IItemPerformanceService
@@ -30,14 +30,14 @@ namespace back_end.Services.Analytics
             _clock = clock;
         }
 
-        public async Task<AnalyticsResult<ItemPerformanceResponseDTO>> GetAsync(ItemPerformanceQuery query)
+        public async Task<AnalyticsResult<ItemPerformanceResponseDto>> GetAsync(ItemPerformanceQuery query)
         {
-            var topError = AnalyticsQueries.ValidateTop<ItemPerformanceResponseDTO>(query.Top);
+            var topError = AnalyticsQueries.ValidateTop<ItemPerformanceResponseDto>(query.Top);
             if (topError != null) return topError;
 
             var windowResult = await AnalyticsQueries.ResolveWindowAsync(
                 _context, _clock, query.Range, query.From, query.To, query.LocationId);
-            if (!windowResult.IsOk) return windowResult.AsError<ItemPerformanceResponseDTO>();
+            if (!windowResult.IsOk) return windowResult.AsError<ItemPerformanceResponseDto>();
 
             var (period, timeZone, location) = windowResult.Value!;
 
@@ -104,7 +104,7 @@ namespace back_end.Services.Analytics
                     var units = sales?.Units ?? 0;
                     var addOnUnits = sales?.AddOnUnits ?? 0;
 
-                    return new ItemPerformanceDTO
+                    return new ItemPerformanceDto
                     {
                         ItemId = i.ItemId,
                         Name = i.Name,
@@ -158,11 +158,11 @@ namespace back_end.Services.Analytics
                 .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            return AnalyticsResult<ItemPerformanceResponseDTO>.Ok(new ItemPerformanceResponseDTO
+            return AnalyticsResult<ItemPerformanceResponseDto>.Ok(new ItemPerformanceResponseDto
             {
                 Range = AnalyticsQueries.ToRangeDto(period),
                 Location = location,
-                Summary = new ItemPerformanceSummaryDTO
+                Summary = new ItemPerformanceSummaryDto
                 {
                     TotalUnitsSold = totalUnits,
                     TotalAddOnUnits = rows.Sum(r => r.AddOnUnits),
