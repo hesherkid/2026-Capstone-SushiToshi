@@ -370,7 +370,7 @@ public class AdminQrCodeControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetWifiQR_ValidRequest_SetsPrivateNoCacheHeader()
+    public async Task GetWifiQr_ValidRequest_SetsPrivateNoCacheHeader()
     {
         await _controller.GetWifiQr(LocId, 1, CancellationToken.None);
 
