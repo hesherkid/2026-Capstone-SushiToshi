@@ -63,11 +63,11 @@ namespace back_end.Controllers
     ///
     ///     POST /api/bill/create_Bill/123
     ///     {
-    ///         "bill_Name": "Table 5 Bill",
-    ///         "adult_Count": 2,
-    ///         "senior_Count": 1,
-    ///         "child_Count": 0,
-    ///         "tot_Count": 3
+    ///         "bill_name": "Table 5 Bill",
+    ///         "adult_count": 2,
+    ///         "senior_count": 1,
+    ///         "child_count": 0,
+    ///         "tot_count": 3
     ///     }
     ///
     /// Creates a new bill for the specified session.

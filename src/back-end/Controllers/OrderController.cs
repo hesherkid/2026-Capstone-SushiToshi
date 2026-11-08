@@ -277,8 +277,8 @@ namespace back_end.Controllers
         ///
         ///     POST /api/order
         ///     {
-        ///         "session_Id": 123,
-        ///         "bill_Id": 456,
+        ///         "session_id": 123,
+        ///         "bill_id": 456,
         ///         "items": [
         ///             { "item_id": 10, "quantity": 1 },
         ///             { "item_id": 66, "quantity": 2 }

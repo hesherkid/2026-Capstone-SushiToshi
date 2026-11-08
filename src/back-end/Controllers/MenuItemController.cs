@@ -632,10 +632,7 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     PUT /api/menuitem/123
-        ///     {
-        ///         "menu_status": "Unavailable"
-        ///     }
+        ///     PUT /api/menuitem/123/status?menu_status=Unavailable
         ///
         /// This endpoint requires Admin or Staff role authorization.
         /// Valid status values: Available, Unavailable, Discontinued

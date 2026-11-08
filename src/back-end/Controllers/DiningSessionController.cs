@@ -58,21 +58,21 @@ namespace back_end.Controllers
     ///
     ///     POST /api/diningsession/Create_Dinning_Session?assignmentType=table
     ///     {
-    ///         "menu_Id": 123,
+    ///         "menu_id": 123,
     ///         "location_Id": 1,
     ///         "table_Id": 456
     ///     }
     ///
     ///     POST /api/diningsession/Create_Dinning_Session?assignmentType=table_group
     ///     {
-    ///         "menu_Id": 123,
+    ///         "menu_id": 123,
     ///         "location_Id": 1,
     ///         "tableGroup_Id": 789
     ///     }
     ///
     ///     POST /api/diningsession/Create_Dinning_Session
     ///     {
-    ///         "menu_Id": 123,
+    ///         "menu_id": 123,
     ///         "location_Id": 1
     ///     }
     ///
@@ -383,7 +383,7 @@ namespace back_end.Controllers
     ///
     ///     POST /api/diningsession/123/tables
     ///     {
-    ///         "table_Id": 456
+    ///         "table_id": 456
     ///     }
     ///
     /// Adds a table to an active dining session.
