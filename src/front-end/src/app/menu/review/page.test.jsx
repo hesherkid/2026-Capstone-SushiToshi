@@ -113,15 +113,11 @@ describe("Review order page", () => {
     await waitFor(() => expect(placeOrder).toBeEnabled());
     fireEvent.click(placeOrder);
 
-    // One request with the items, so a failure can't leave an empty order
+    // One request with the items, so a failure can't leave an empty order. Exactly these
+    // keys: in development the API rejects any key OrderItemCreateDto doesn't have
     await waitFor(() =>
       expect(mockCreateOrder).toHaveBeenCalledWith(42, 8, [
-        expect.objectContaining({
-          item_id: 11,
-          quantity: 2,
-          name: "Miso Soup",
-          menu_id: 7,
-        }),
+        { menu_id: 7, item_id: 11, quantity: 2, price_at_time: 0 },
       ]),
     );
     expect(mockCreateOrder).toHaveBeenCalledTimes(1);

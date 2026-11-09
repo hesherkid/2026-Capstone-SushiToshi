@@ -159,9 +159,10 @@ const ReviewOrderPage = () => {
     setPlacedExtras([]);
 
     const orderItems = orderItemsFor(cartLines, menuId);
-    sending.current = orderItems.map(({ item_id, name, quantity }) => ({
-      item_id,
-      name,
+    // What the "Order sent!" screen lists
+    sending.current = cartLines.map(({ item, quantity }) => ({
+      item_id: item.item_id,
+      name: item.name,
       quantity,
     }));
 

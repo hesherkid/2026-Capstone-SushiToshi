@@ -129,13 +129,12 @@ export const cartSubtotal = (cartLines) =>
     0,
   );
 
-// The items to send with POST /Order
+// The items to send with POST /Order. Only OrderItemCreateDto's keys: in development the
+// API rejects a request with any other key
 export const orderItemsFor = (cartLines, menuId) =>
   cartLines.map(({ item, quantity }) => ({
     menu_id: Number(menuId),
     item_id: Number(item.item_id),
     quantity: Number(quantity),
     price_at_time: item.is_add_on ? Number(item.price) || 0 : 0,
-    // Not stored; names the items in the "added to order" notification
-    name: item.name,
   }));
