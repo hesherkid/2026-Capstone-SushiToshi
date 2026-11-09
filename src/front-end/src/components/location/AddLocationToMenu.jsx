@@ -91,6 +91,8 @@ const AddLocationsToMenu = ({ menu, onClose, availableLocations = [] }) => {
     try {
       await api.delete(`MenuLocation/menu/${menu.menu_id}/location/${id}`);
     } catch (err) {
+      // Already gone (e.g. the location was deleted), so it stays off the list
+      if (err.response?.status === 404) return;
       console.error("DELETE failed:", err);
       setError(serverMessage(err, `Couldn't remove ${getLocationName(id)}.`));
       setAssignedLocations(prev); // revert

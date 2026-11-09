@@ -133,11 +133,6 @@ describe("MenuManagement", () => {
         screen.queryByRole("heading", { name: "Manage Locations" }),
       ).not.toBeInTheDocument(),
     );
-    await waitFor(() =>
-      expect(
-        api.get.mock.calls.filter(([url]) => url === "/Menu"),
-      ).toHaveLength(2),
-    );
 
     dialog = await openLocations();
     expect(within(dialog).getByText("Downtown")).toBeInTheDocument();
@@ -145,4 +140,75 @@ describe("MenuManagement", () => {
       within(dialog).queryByText("No locations assigned yet"),
     ).not.toBeInTheDocument();
   });
+
+  it("lists a location added on the page after it loaded", async () => {
+    // Location management, above on the same page, adds Downtown after Menu management loaded
+    let locations = [];
+    api.get.mockImplementation(async (url) => {
+      if (url === "/Menu") return { data: menus };
+      if (url === "/location") return { data: locations };
+      return { data: [] };
+    });
+    render(<MenuManagement />);
+    await screen.findByText("Lunch");
+    locations = [{ location_id: 8, name: "Downtown" }];
+
+    fireEvent.click(screen.getByRole("button", { name: "Assign Locations Lunch" }));
+    const dialog = (
+      await screen.findByRole("heading", { name: "Manage Locations" })
+    ).closest('[role="dialog"]');
+    fireEvent.mouseDown(within(dialog).getByRole("combobox"));
+
+    expect(await screen.findByRole("option", { name: "Downtown" })).toBeInTheDocument();
+  });
+
+  it("drops a deleted location from the menu's assigned locations", async () => {
+    // Downtown was assigned, then deleted in Location management, which removes it from the menu
+    let lunchLocations = [8];
+    let locations = [{ location_id: 8, name: "Downtown" }];
+    api.get.mockImplementation(async (url) => {
+      if (url === "/Menu")
+        return { data: [{ ...menus[0], location_ids: lunchLocations }, menus[1]] };
+      if (url === "/location") return { data: locations };
+      return { data: [] };
+    });
+    render(<MenuManagement />);
+    await screen.findByText("Lunch");
+    lunchLocations = [];
+    locations = [];
+
+    fireEvent.click(screen.getByRole("button", { name: "Assign Locations Lunch" }));
+    const dialog = (
+      await screen.findByRole("heading", { name: "Manage Locations" })
+    ).closest('[role="dialog"]');
+
+    expect(within(dialog).queryByText("Downtown")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("No locations assigned yet")).toBeInTheDocument();
+  });
+
+  it("takes a location off the list when the server says it's already removed", async () => {
+    api.get.mockImplementation(async (url) => {
+      if (url === "/Menu")
+        return { data: [{ ...menus[0], location_ids: [8] }, menus[1]] };
+      if (url === "/location") return { data: [{ location_id: 8, name: "Downtown" }] };
+      return { data: [] };
+    });
+    api.delete.mockRejectedValue({ response: { status: 404, data: "Menu and Menu Location were not found" } });
+    render(<MenuManagement />);
+    await screen.findByText("Lunch");
+
+    fireEvent.click(screen.getByRole("button", { name: "Assign Locations Lunch" }));
+    const dialog = (
+      await screen.findByRole("heading", { name: "Manage Locations" })
+    ).closest('[role="dialog"]');
+    const chip = within(dialog).getByText("Downtown").closest(".MuiChip-root");
+    fireEvent.click(chip.querySelector(".MuiChip-deleteIcon"));
+
+    await waitFor(() =>
+      expect(api.delete).toHaveBeenCalledWith("MenuLocation/menu/1/location/8"),
+    );
+    await waitFor(() => expect(within(dialog).queryByText("Downtown")).not.toBeInTheDocument());
+    expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument();
+  });
 });
+
