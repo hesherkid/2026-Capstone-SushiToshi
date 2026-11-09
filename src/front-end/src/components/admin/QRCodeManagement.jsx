@@ -252,7 +252,7 @@ export default function QRCodeManagement() {
 
       setLastGeneratedLocation(selectedLocation);
       showSnackbar(
-        `Successfully generated ${response.data.filesGenerated} QR codes for ${response.data.tableCount} tables!`,
+        `Successfully generated ${response.data.files_generated} QR codes for ${response.data.table_count} tables!`,
         "success",
       );
     } catch (error) {
