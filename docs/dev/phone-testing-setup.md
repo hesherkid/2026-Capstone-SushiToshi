@@ -171,10 +171,10 @@ Do this the first time, and any time `SessionPageUrl` or WiFi settings change. T
 1. Open Swagger at `http://localhost:5264/swagger`.
 2. Call `POST /api/Auth/login` with an admin account and copy the token.
 3. Click **Authorize** and paste the token.
-4. Call `POST /api/admin/qr/bulk?locationId=1`. This regenerates and overwrites every table's QR code.
+4. Call `POST /api/admin/qr/bulk?location_id=1`. This regenerates and overwrites every table's QR code.
 5. Optionally, get printable copies:
-   - `GET /api/admin/qr/bulk/download-pdf?locationId=1`
-   - `GET /api/admin/qr/session?locationId=1&table=1` or `GET /api/admin/qr/wifi?locationId=1&table=1` for a single code
+   - `GET /api/admin/qr/bulk/download-pdf?location_id=1`
+   - `GET /api/admin/qr/session?location_id=1&table=1` or `GET /api/admin/qr/wifi?location_id=1&table=1` for a single code
 
 **Single-code endpoints and `refresh`:** `GET /qr/wifi` and `GET /qr/session` return the **saved** image if one exists.
 
@@ -199,7 +199,7 @@ On your computer, open your **ngrok URL** (not localhost). Then open DevTools â†
 - [ ] The POST `login` request URL is `https://<your-name>.ngrok-free.dev/api/auth/login`. It should **not** be `localhost:5264`.
 - [ ] Status is `200`.
 - [ ] Scanning the QR code on your phone opens your ngrok URL at `/auth/login?locationId=...&tableNumber=...`, **not** `localhost`.
-- [ ] Optional: `GET /api/admin/qr/bulk/download-pdf?locationId=1` shows each QR with one centered "Table N" line and one "WiFi"/"Session" line.
+- [ ] Optional: `GET /api/admin/qr/bulk/download-pdf?location_id=1` shows each QR with one centered "Table N" line and one "WiFi"/"Session" line.
 - [ ] Logging in on the phone works.
 
 ---
