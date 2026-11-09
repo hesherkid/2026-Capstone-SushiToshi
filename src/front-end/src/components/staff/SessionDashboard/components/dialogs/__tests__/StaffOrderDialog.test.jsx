@@ -57,7 +57,7 @@ describe("Staff order dialog", () => {
     jest.clearAllMocks();
     mockSessions = [session()];
     mockMenu();
-    api.post.mockResolvedValue({ data: { order_Id: 1, orderItems: [] } });
+    api.post.mockResolvedValue({ data: { order_id: 1, order_items: [] } });
   });
 
   it("loads the session's menu priced for its location", async () => {
