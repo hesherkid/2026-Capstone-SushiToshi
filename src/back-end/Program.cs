@@ -64,7 +64,13 @@ builder.Services.AddScoped<IEmailService, SendGridEmailService>();
 builder.Services.AddScoped<IAuthTokenService, AuthTokenService>();
 
 // Add services to the container
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        // In development, a query parameter the action doesn't take gets a 400 naming it, like an unknown
+        // body key below. Set Query:RejectUnknownParameters to false to turn it off
+        if (builder.Configuration.GetValue("Query:RejectUnknownParameters", builder.Environment.IsDevelopment()))
+            options.Filters.Add<UnknownQueryParameterFilter>();
+    })
     .AddJsonOptions(options =>
     {
         ApiJsonOptions.Apply(options.JsonSerializerOptions);
