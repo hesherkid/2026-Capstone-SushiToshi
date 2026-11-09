@@ -1,5 +1,7 @@
 using Xunit;
+using System.Reflection;
 using FluentAssertions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +49,49 @@ public class MenuItemControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateMenuItem_DuplicateName_ReturnsConflict()
+    {
+        // Act
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDto { Name = "Salmon", CategoryId = 1 });
+
+        // Assert
+        result.Should().BeOfType<ConflictObjectResult>();
+    }
+
+    [Theory]
+    [InlineData(" ", 1)]
+    [InlineData("Spicy Tuna", 0)]
+    public async Task CreateMenuItem_BlankNameOrNoCategory_ReturnsBadRequest(string name, int categoryId)
+    {
+        // Act
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDto { Name = name, CategoryId = categoryId });
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
+        _context.MenuItems.Should().ContainSingle("only the seeded item exists");
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_WithTags_AttachesKnownTagsAndIgnoresUnknown()
+    {
+        // Act
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDto
+        {
+            Name = "Spicy Tuna",
+            CategoryId = 1,
+            TagIds = [RawTag, SpicyTag, 999]
+        });
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+        var dto = (MenuItemResponseDto)((OkObjectResult)result).Value!;
+        dto.Status.Should().Be(MenuItemStatus.Available);
+        dto.Description.Should().BeEmpty();
+        dto.Tags.Select(t => t.Name).Should().BeEquivalentTo(["Raw", "Spicy"]);
+        _context.MenuItemTags.Count(t => t.Menu_item_id == dto.ItemId).Should().Be(2);
+    }
+
+    [Fact]
     public async Task GetMenuItem_ReturnsTheItemWithItsAssignmentsAndMenuNames()
     {
         // Act
@@ -86,6 +131,24 @@ public class MenuItemControllerTests : IDisposable
         // Assert
         var dto = result.Should().BeOfType<OkObjectResult>().Subject.Value.Should().BeOfType<MenuItemResponseDto>().Subject;
         dto.Tags.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(nameof(MenuItemController.CreateMenuItem))]
+    [InlineData(nameof(MenuItemController.UpdateMenuItem))]
+    [InlineData(nameof(MenuItemController.UploadItemImage))]
+    [InlineData(nameof(MenuItemController.DeleteMenuItem))]
+    [InlineData(nameof(MenuItemController.UpdateItemStatus))]
+    [InlineData(nameof(MenuItemController.AddTagToMenuItem))]
+    [InlineData(nameof(MenuItemController.RemoveTagToMenu))]
+    public void WriteEndpoints_RequireStaff(string methodName)
+    {
+        // Act
+        var attribute = typeof(MenuItemController).GetMethod(methodName)!.GetCustomAttribute<AuthorizeAttribute>();
+
+        // Assert
+        attribute.Should().NotBeNull();
+        attribute!.Policy.Should().Be("staffOnly");
     }
 
     public void Dispose()

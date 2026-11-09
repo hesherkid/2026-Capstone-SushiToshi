@@ -106,18 +106,6 @@ namespace back_end.Dtos
             return dto;
         }
     }
-    public class MenuItemDetailDto
-    {
-        [JsonPropertyName("category_name")]
-        public string CategoryName { get; set; } = string.Empty;
-        [JsonPropertyName("tag_names")]
-        public List<string> TagNames { get; set; } = [];
-        [JsonPropertyName("current_price")]
-        public decimal? CurrentPrice { get; set; }
-        [JsonPropertyName("total_orders")]
-        public int TotalOrders { get; set; }
-
-    }
     public class MenuItemUpdateDto{
         [JsonPropertyName("name")]
         public string? Name { get; set; }

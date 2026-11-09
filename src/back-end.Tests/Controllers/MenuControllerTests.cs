@@ -208,46 +208,6 @@ public class MenuControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMenuItem_DuplicateName_ReturnsConflict()
-    {
-        // Arrange
-        _context.MenuItems.Add(new Menu_Item { item_id = Salmon, Name = "Salmon", Description = "x", Category_id = 1 });
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _controller.CreateMenuItem(new MenuItemCreateDto { Name = "Salmon", CategoryId = 1 });
-
-        // Assert
-        result.Should().BeOfType<ConflictObjectResult>();
-    }
-
-    [Fact]
-    public async Task CreateMenuItem_WithTags_AttachesKnownTagsAndIgnoresUnknown()
-    {
-        // Arrange
-        _context.Tags.AddRange(
-            new Tag { tag_id = RawTag, tag_name = "Raw", tag_color = "#FF0000" },
-            new Tag { tag_id = SpicyTag, tag_name = "Spicy", tag_color = "#FFA500" });
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _controller.CreateMenuItem(new MenuItemCreateDto
-        {
-            Name = "Spicy Tuna",
-            CategoryId = 1,
-            TagIds = [RawTag, SpicyTag, 999]
-        });
-
-        // Assert
-        result.Should().BeOfType<OkObjectResult>();
-        var dto = (MenuItemResponseDto)((OkObjectResult)result).Value!;
-        dto.Status.Should().Be(MenuItemStatus.Available);
-        dto.Description.Should().BeEmpty();
-        dto.Tags.Select(t => t.Name).Should().BeEquivalentTo(["Raw", "Spicy"]);
-        _context.MenuItemTags.Count(t => t.Menu_item_id == dto.ItemId).Should().Be(2);
-    }
-
-    [Fact]
     public async Task GetItemsByMenu_UnknownMenu_ReturnsNotFound()
     {
         // Act
@@ -431,7 +391,6 @@ public class MenuControllerTests : IDisposable
 
     [Theory]
     [InlineData(nameof(MenuController.CreateMenu), "adminOnly")]
-    [InlineData(nameof(MenuController.CreateMenuItem), "staffOnly")]
     [InlineData(nameof(MenuController.UpdateMenu), "adminOnly")]
     [InlineData(nameof(MenuController.DeleteMenu), "adminOnly")]
     public void WriteEndpoints_RequirePolicy(string methodName, string policy)

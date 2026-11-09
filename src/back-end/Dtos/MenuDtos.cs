@@ -63,28 +63,4 @@ namespace back_end.Dtos{
         };
     }
     
-    public class MenuItemDetailResponseDto
-    {
-        [JsonPropertyName("menu_id")]
-        public int MenuId { get; set; } 
-        [JsonPropertyName("item_id")]
-        public int ItemId { get; set; }
-        [JsonPropertyName("name")]
-        public string Name { get; set; } = string.Empty;
-        [JsonPropertyName("description")]
-        public string? Description { get; set; } 
-        [JsonPropertyName("category_id")]
-        public int CategoryId { get; set; }
-        [JsonPropertyName("category_name")]
-        public string CategoryName { get; set; } = string.Empty;
-        [JsonPropertyName("price")]
-        public decimal Price { get; set; }
-        [JsonPropertyName("is_add_on")]
-        public bool IsAddOn { get; set; }
-        [JsonPropertyName("status")]
-        public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
-        [JsonPropertyName("item_image_url")]
-        public string? ItemImageUrl { get; set; } 
-
-    }
 }

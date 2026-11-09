@@ -74,8 +74,6 @@ back_end.Dtos.MenuCreateDto: description, end_time, is_active, name, start_time
 back_end.Dtos.MenuItemAssignmentBaseDto: item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, tot_Limit
 back_end.Dtos.MenuItemBaseDto: category_id, description, item_image_url, name, status
 back_end.Dtos.MenuItemCreateDto: category_id, description, item_image_url, name, status, tag_ids
-back_end.Dtos.MenuItemDetailDto: category_name, current_price, tag_names, total_orders
-back_end.Dtos.MenuItemDetailResponseDto: category_id, category_name, description, is_add_on, item_id, item_image_url, menu_id, name, price, status
 back_end.Dtos.MenuItemResponseDto: category_id, created_at, description, item_id, item_image_url, name, status, tags, updated_at
 back_end.Dtos.MenuItemUpdateDto: category_id, description, item_image_url, name, status, tag_ids
 back_end.Dtos.MenuItemViewCreateDto: item_id, session_id, view_seconds
