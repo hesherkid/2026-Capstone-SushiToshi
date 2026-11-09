@@ -7,6 +7,7 @@ import {
   isLongSeating,
   parseUtcDate,
   sessionGuestCount,
+  formatGuestBreakdown,
 } from "../sessionHelpers";
 
 // Session 278 started at 04:25 UTC on 18 Oct 2026, which is 10:25 pm on 17 Oct in Edmonton (MDT, UTC-6)
@@ -86,5 +87,16 @@ describe("sessionGuestCount", () => {
     expect(sessionGuestCount({ active_participants: 2, bills: [] })).toBe(0);
     expect(sessionGuestCount({})).toBe(0);
     expect(sessionGuestCount(null)).toBe(0);
+  });
+});
+
+describe("formatGuestBreakdown", () => {
+  it("lists each kind of guest on a dashboard bill", () => {
+    expect(formatGuestBreakdown({ adult_count: 2, child_count: 1, total_guests: 3 })).toBe("2 Adults, 1 Child");
+  });
+
+  it("falls back to the bill's total_guests", () => {
+    expect(formatGuestBreakdown({ total_guests: 1 })).toBe("1 guest");
+    expect(formatGuestBreakdown({})).toBe("0 guests");
   });
 });
