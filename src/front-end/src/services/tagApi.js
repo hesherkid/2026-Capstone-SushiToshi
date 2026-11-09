@@ -7,8 +7,9 @@ export const getAllTags = () => api.get("/Tag").then((res) => res.data);
 
 export const createTag = (tag) => api.post("/Tag", tag).then((res) => res.data);
 
-export const updateTag = (tag) =>
-  api.put(`/Tag/${tag.tag_id}`, tag).then((res) => res.data);
+// The id goes in the URL only: in development the API rejects keys TagUpdateDto doesn't have
+export const updateTag = ({ tag_id, tag_name, tag_color }) =>
+  api.put(`/Tag/${tag_id}`, { tag_name, tag_color }).then((res) => res.data);
 
 export const deleteTag = (tagId) => api.delete(`/tag/${tagId}`);
 
