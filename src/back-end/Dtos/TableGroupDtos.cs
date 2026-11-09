@@ -5,7 +5,8 @@ namespace back_end.Dtos
 {
   public class TableGroupAssignmentDto
   {
-    public int TableGroup_Id { get; set; }
+    [JsonPropertyName("table_group_id")]
+    public int TableGroupId { get; set; }
   }
 
   public class TableGroupCreateDto

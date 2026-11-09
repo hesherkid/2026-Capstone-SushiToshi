@@ -59,15 +59,15 @@ export const isOpenBill = (bill) =>
 export const billNeedsGuestCheck = (bill) =>
   isOpenBill(bill) &&
   Boolean(
-    bill.started_By_Guest ||
-    bill.counts_Changed_By_Guest ||
-    bill.people_On_Bill > bill.total_Guests,
+    bill.started_by_guest ||
+    bill.counts_changed_by_guest ||
+    bill.people_on_bill > bill.total_guests,
   );
 
 // Rows are sessions from /Dashboard/sessions plus a `requestCount` from the pending service requests
 export const getSessionColumns = (actions) => [
   {
-    field: "session_Id",
+    field: "session_id",
     headerName: "Session",
     type: "number",
     align: "left",
@@ -77,7 +77,7 @@ export const getSessionColumns = (actions) => [
     valueFormatter: (value) => `#${value}`,
   },
   {
-    field: "table_Numbers",
+    field: "table_numbers",
     headerName: "Table",
     flex: 1.2,
     minWidth: 120,
@@ -105,7 +105,7 @@ export const getSessionColumns = (actions) => [
       ),
   },
   {
-    field: "started_At",
+    field: "started_at",
     headerName: "Started",
     type: "dateTime",
     flex: 1,
@@ -122,8 +122,8 @@ export const getSessionColumns = (actions) => [
     flex: 0.8,
     minWidth: 110,
     // Minutes, so the column sorts by how long tables have been seated
-    valueGetter: (value, row) => getSessionMinutes(row.started_At),
-    renderCell: ({ row }) => <SeatedFor startedAt={row.started_At} />,
+    valueGetter: (value, row) => getSessionMinutes(row.started_at),
+    renderCell: ({ row }) => <SeatedFor startedAt={row.started_at} />,
   },
   {
     field: "guests",
@@ -164,7 +164,7 @@ export const getSessionColumns = (actions) => [
             <Chip
               icon={<Users size={14} aria-hidden="true" />}
               label="Check guests"
-              aria-label={`Check guests, ${tableLabel(row.table_Numbers)}`}
+              aria-label={`Check guests, ${tableLabel(row.table_numbers)}`}
               color="warning"
               size="small"
               variant="outlined"
@@ -189,7 +189,7 @@ export const getSessionColumns = (actions) => [
         label: "New bill",
         icon: ReceiptText,
         onClick: () => actions.newBill(row),
-        hidden: !row.table_Numbers?.length,
+        hidden: !row.table_numbers?.length,
       },
       {
         label: "End session",
@@ -197,13 +197,13 @@ export const getSessionColumns = (actions) => [
         color: "error",
         onClick: () => actions.endSession(row),
         // The API won't close a session while it still has open bills
-        hidden: !row.is_Closable,
+        hidden: !row.is_closable,
       },
     ],
     {
       width: 140,
       getRowName: (row) =>
-        `#${row.session_Id}, ${tableLabel(row.table_Numbers)}`,
+        `#${row.session_id}, ${tableLabel(row.table_numbers)}`,
     },
   ),
 ];

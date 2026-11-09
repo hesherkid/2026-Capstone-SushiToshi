@@ -16,9 +16,9 @@ import {
 // Same limits as the guests' menu (the server checks them either way).
 // Loads when `session` is set, starting with an empty cart each time
 export const useStaffOrder = (session) => {
-  const sessionId = session?.session_Id;
-  const menuId = session?.menu_Id;
-  const locationId = session?.location_Id;
+  const sessionId = session?.session_id;
+  const menuId = session?.menu_id;
+  const locationId = session?.location_id;
 
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState({});
@@ -80,8 +80,8 @@ export const useStaffOrder = (session) => {
 
   const placeOrder = (billId) =>
     orderService.createOrder({
-      session_Id: sessionId,
-      bill_Id: billId,
+      session_id: sessionId,
+      bill_id: billId,
       items: orderItemsFor(cartLines, menuId),
     });
 

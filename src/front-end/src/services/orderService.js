@@ -7,8 +7,8 @@ export const orderService = {
   /**
    * Creates a new order for a dining session, saved together with its items
    * @param {Object} orderData - Order creation data
-   * @param {number} orderData.session_Id - Session ID
-   * @param {number} orderData.bill_Id - Bill ID
+   * @param {number} orderData.session_id - Session ID
+   * @param {number} orderData.bill_id - Bill ID
    * @param {Array<Object>} orderData.items - Items to order (at least one)
    * @param {number} orderData.items[].item_id - Item ID
    * @param {number} orderData.items[].quantity - Quantity
@@ -63,7 +63,7 @@ export const orderService = {
    * Adds items to an existing order
    * @param {number} orderId - Order ID
    * @param {Array<Object>} items - Array of items to add
-   * @param {number} items[].menu_Id - Menu ID
+   * @param {number} items[].menu_id - Menu ID
    * @param {number} items[].item_Id - Item ID
    * @param {number} items[].quantity - Quantity
    * @param {number} items[].price_at_time - Price at time of order

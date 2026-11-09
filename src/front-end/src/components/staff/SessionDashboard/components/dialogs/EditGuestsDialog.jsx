@@ -5,10 +5,10 @@ import { useSession } from "../../context/SessionContext";
 import { overSeatsWarning } from "../../utils/sessionHelpers";
 
 const GUEST_FIELDS = [
-  { name: "adultCount", key: "adult_Count", label: "Adults" },
-  { name: "seniorCount", key: "senior_Count", label: "Seniors" },
-  { name: "childCount", key: "child_Count", label: "Children" },
-  { name: "totCount", key: "tot_Count", label: "Toddlers (6 & Under)" },
+  { name: "adultCount", key: "adult_count", label: "Adults" },
+  { name: "seniorCount", key: "senior_count", label: "Seniors" },
+  { name: "childCount", key: "child_count", label: "Children" },
+  { name: "totCount", key: "tot_count", label: "Toddlers (6 & Under)" },
 ];
 
 // The bill's current guests. If the breakdown is missing, count them all as adults so the total still matches.
@@ -16,7 +16,7 @@ const countsOf = (bill) => {
   const hasBreakdown = GUEST_FIELDS.some(({ key }) => bill?.[key] != null);
   return Object.fromEntries(
     GUEST_FIELDS.map(({ name, key }, index) => {
-      const value = hasBreakdown ? bill[key] : index === 0 ? bill?.total_Guests : 0;
+      const value = hasBreakdown ? bill[key] : index === 0 ? bill?.total_guests : 0;
       return [name, String(value ?? 0)];
     }),
   );
@@ -29,8 +29,8 @@ const countsOf = (bill) => {
 const EditGuestsDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
   const { sessions, updateGuestCounts, isSaving } = useSession();
   // The live bill, so a guest's change since the session dialog opened shows up
-  const session = sessions.find((s) => s.session_Id === sessionId);
-  const bill = session?.bills?.find((b) => b.bill_Id === openedBill?.bill_Id) ?? openedBill;
+  const session = sessions.find((s) => s.session_id === sessionId);
+  const bill = session?.bills?.find((b) => b.bill_id === openedBill?.bill_id) ?? openedBill;
   const [counts, setCounts] = useState(countsOf(bill));
 
   useEffect(() => {
@@ -40,7 +40,7 @@ const EditGuestsDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
 
   const total = GUEST_FIELDS.reduce((sum, { name }) => sum + (Number(counts[name]) || 0), 0);
   // Allowed (extra chairs), but staff confirm it by saving anyway
-  const seatWarning = total > 0 ? overSeatsWarning(session, total, bill?.bill_Id) : null;
+  const seatWarning = total > 0 ? overSeatsWarning(session, total, bill?.bill_id) : null;
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -49,14 +49,14 @@ const EditGuestsDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
   };
 
   const handleSubmit = async () => {
-    if (await updateGuestCounts(sessionId, bill.bill_Id, counts)) onClose();
+    if (await updateGuestCounts(sessionId, bill.bill_id, counts)) onClose();
   };
 
   return (
     <FormDialog
       open={open}
       onClose={onClose}
-      title={bill ? `Edit Guests on ${bill.bill_Name}` : "Edit Guests"}
+      title={bill ? `Edit Guests on ${bill.bill_name}` : "Edit Guests"}
       subtitle="The bill charges for each guest, so check this matches the party."
       onSubmit={handleSubmit}
       submitLabel={seatWarning ? "Save Anyway" : "Save Guests"}

@@ -33,7 +33,7 @@ export const useSessionData = ({ live = false } = {}) => {
 
       // 204 means no active sessions at this location
       const active = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
-      const sessionIds = new Set(active.map((s) => s.session_Id));
+      const sessionIds = new Set(active.map((s) => s.session_id));
       const pending = (
         Array.isArray(requestsRes.data) ? requestsRes.data : []
       ).filter((r) => sessionIds.has(r.session_id));
@@ -70,7 +70,7 @@ export const useSessionData = ({ live = false } = {}) => {
     () => ({
       activeSessions: sessions.length,
       tablesInUse: sessions.reduce(
-        (sum, s) => sum + (s.table_Numbers?.length || 0),
+        (sum, s) => sum + (s.table_numbers?.length || 0),
         0,
       ),
       pendingRequests: requests.length,

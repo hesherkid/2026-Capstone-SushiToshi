@@ -64,7 +64,7 @@ export default function useRestaurantOverview({ includeOrders = false } = {}) {
         : [];
       // 204 (no active sessions) has no body. Sessions are limited to the location;
       // keep only requests from them
-      const sessionIds = new Set(activeSessions.map((s) => s.session_Id));
+      const sessionIds = new Set(activeSessions.map((s) => s.session_id));
       const pending = (Array.isArray(requestsResponse.data) ? requestsResponse.data : [])
         .filter((request) => sessionIds.has(request.session_id));
 
@@ -96,7 +96,7 @@ export default function useRestaurantOverview({ includeOrders = false } = {}) {
   }, [refresh]);
 
   const activeTables = sessions.reduce(
-    (total, session) => total + (session.table_Numbers?.length || 0),
+    (total, session) => total + (session.table_numbers?.length || 0),
     0
   );
 

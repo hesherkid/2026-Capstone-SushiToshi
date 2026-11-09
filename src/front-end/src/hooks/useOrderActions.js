@@ -50,8 +50,8 @@ export const useOrderActions = (onSuccess) => {
         "createOrder",
         async () => {
           const result = await orderService.createOrder({
-            session_Id: sessionId,
-            bill_Id: billId,
+            session_id: sessionId,
+            bill_id: billId,
             items,
           });
           return result;
