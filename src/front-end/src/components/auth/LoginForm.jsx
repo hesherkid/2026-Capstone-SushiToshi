@@ -334,7 +334,7 @@ const LoginFormContent = () => {
       }
 
       const response = await api.post("/auth/google", {
-        idToken: credentialResponse.credential,
+        id_token: credentialResponse.credential,
       });
 
       const data = response.data;

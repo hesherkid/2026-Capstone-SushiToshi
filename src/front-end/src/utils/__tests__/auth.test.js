@@ -1,5 +1,5 @@
 import api from "@/config/api";
-import { loginAsGuest, getReusableGuestToken, logoutUser } from "@/utils/auth";
+import { loginAsGuest, getReusableGuestToken, logoutUser, resetPassword } from "@/utils/auth";
 
 jest.mock("@/config/api", () => ({
   __esModule: true,
@@ -87,5 +87,18 @@ describe("logoutUser", () => {
 
     expect(localStorage.getItem("authToken")).toBeNull();
     expect(localStorage.getItem("branch-location")).toBeNull();
+  });
+});
+
+describe("resetPassword", () => {
+  it("sends the token and the new password in ResetPasswordDto's keys", async () => {
+    api.post.mockResolvedValue({ data: { message: "Password reset" } });
+
+    await resetPassword("reset-token", "new-secret-123");
+
+    expect(api.post).toHaveBeenCalledWith("/auth/reset-password", {
+      token: "reset-token",
+      new_password: "new-secret-123",
+    });
   });
 });

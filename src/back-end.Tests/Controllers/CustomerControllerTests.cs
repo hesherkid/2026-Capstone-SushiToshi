@@ -45,7 +45,7 @@ public class CustomerControllerTests : IDisposable
         var result = await _controller.ListCustomers();
 
         var customers = (result.Result as OkObjectResult)!.Value as IEnumerable<UserResponseDto>;
-        customers!.Select(c => c.User_id).Should().BeEquivalentTo(new[] { 1, 2 });
+        customers!.Select(c => c.UserId).Should().BeEquivalentTo(new[] { 1, 2 });
     }
 
     [Theory]

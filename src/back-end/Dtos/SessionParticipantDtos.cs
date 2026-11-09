@@ -16,7 +16,7 @@ namespace back_end.Dtos
         public string? UserName { get; set; }
         [JsonPropertyName("joined_at")]
         public DateTime JoinedAt { get; set; }
-        [JsonPropertyName("Left_At")]
+        [JsonPropertyName("left_at")]
         public DateTime? LeftAt { get; set; }
     }
 
