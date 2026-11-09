@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Microsoft.AspNetCore.Mvc;
+using back_end.Configurations;
 using back_end.Dtos;
 
 namespace back_end.Tests.Dtos;
@@ -17,13 +19,16 @@ public class DtoJsonKeysTests
     ///     UPDATE_DTO_JSON_KEYS=1 dotnet test --filter DtoJsonKeysTests
     /// </summary>
 
-    // The same options as AddJsonOptions in Program.cs, on top of ASP.NET's web defaults
-    private static readonly JsonSerializerOptions ApiOptions = new(JsonSerializerDefaults.Web)
+    // ASP.NET's own defaults for controllers plus the app's settings, the same as Program.cs
+    private static readonly JsonSerializerOptions ApiOptions = CreateApiOptions();
+
+    private static JsonSerializerOptions CreateApiOptions()
     {
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
-        Converters = { new JsonStringEnumConverter() },
-    };
+        var options = new JsonOptions().JsonSerializerOptions;
+        ApiJsonOptions.Apply(options);
+        options.TypeInfoResolver ??= new DefaultJsonTypeInfoResolver();
+        return options;
+    }
 
     [Fact]
     public void DtoJsonKeys_MatchBaseline()

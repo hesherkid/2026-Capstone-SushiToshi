@@ -67,12 +67,12 @@ const NewSessionDialog = ({ open, onClose }) => {
       .catch((err) => console.error("Error fetching available table groups:", err));
   }, [selectedLocation]);
 
-  const ungroupedTables = availableTables.filter((table) => table.tableGroup_Id === null);
+  const ungroupedTables = availableTables.filter((table) => table.table_group_id === null);
 
   // Sessions can only be created at the working location; the list is only open without one
   const workingLocation = getWorkingLocation();
   const locationOptions = workingLocation
-    ? availableLocations.filter((location) => location.location_Id === workingLocation)
+    ? availableLocations.filter((location) => location.location_id === workingLocation)
     : availableLocations;
 
   const handleClose = () => {
@@ -132,7 +132,7 @@ const NewSessionDialog = ({ open, onClose }) => {
         disabled={Boolean(workingLocation)}
       >
         {locationOptions.map((location) => (
-          <MenuItem key={location.location_Id} value={location.location_Id}>
+          <MenuItem key={location.location_id} value={location.location_id}>
             {location.name}
           </MenuItem>
         ))}
@@ -178,7 +178,7 @@ const NewSessionDialog = ({ open, onClose }) => {
                 <MenuItem disabled>No available tables</MenuItem>
               ) : (
                 ungroupedTables.map((table) => (
-                  <MenuItem key={table.table_Id} value={table.table_Id}>
+                  <MenuItem key={table.table_id} value={table.table_id}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       Table {table.table_number}
                       <Chip label={`${table.seat_count} seats`} size="small" variant="outlined" />
@@ -207,11 +207,11 @@ const NewSessionDialog = ({ open, onClose }) => {
                 <MenuItem disabled>No available table groups</MenuItem>
               ) : (
                 availableTableGroups.map((group) => (
-                  <MenuItem key={group.tableGroup_Id} value={group.tableGroup_Id}>
+                  <MenuItem key={group.table_group_id} value={group.table_group_id}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      {group.group_Name}
-                      <Chip label={`${group.table_Count} tables`} size="small" variant="outlined" />
-                      <Chip label={`${group.total_Seats} seats`} size="small" variant="outlined" />
+                      {group.group_name}
+                      <Chip label={`${group.table_count} tables`} size="small" variant="outlined" />
+                      <Chip label={`${group.total_seats} seats`} size="small" variant="outlined" />
                     </Box>
                   </MenuItem>
                 ))

@@ -137,7 +137,7 @@ const TableDashboardInner = () => {
           rows={filteredRows}
           columns={getTableColumns(actions, { canDelete: userRole === "admin" })}
           loading={isLoading}
-          getRowId={(row) => row.table_Id}
+          getRowId={(row) => row.table_id}
           getRowClassName={rowClassName}
           initialState={{
             sorting: { sortModel: [{ field: "table_number", sort: "asc" }] },
@@ -152,10 +152,10 @@ const TableDashboardInner = () => {
           rows={filteredRows}
           columns={getGroupColumns(actions)}
           loading={isLoading}
-          getRowId={(row) => row.tableGroup_Id}
+          getRowId={(row) => row.table_group_id}
           getRowClassName={rowClassName}
           initialState={{
-            sorting: { sortModel: [{ field: "group_Name", sort: "asc" }] },
+            sorting: { sortModel: [{ field: "group_name", sort: "asc" }] },
             pagination: { paginationModel: { pageSize: 25 } },
           }}
           localeText={{ noRowsLabel: "No table groups found" }}

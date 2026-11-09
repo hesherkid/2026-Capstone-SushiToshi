@@ -47,14 +47,14 @@ namespace back_end.Controllers
       {
         // Validate location exists
         var location = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == tableData.Location_Id);
+            .FirstOrDefaultAsync(l => l.Location_Id == tableData.LocationId);
 
         if (location == null)
         {
           return BadRequest("Location does not exist");
         }
 
-        if (!await _locationAccess.CanAccessLocationAsync(User, tableData.Location_Id))
+        if (!await _locationAccess.CanAccessLocationAsync(User, tableData.LocationId))
         {
           return LocationResults.OtherLocation();
         }
@@ -62,7 +62,7 @@ namespace back_end.Controllers
         // Check if table number already exists at this location
         var existingTable = await _context.Tables
             .FirstOrDefaultAsync(t => t.table_number == tableData.TableNumber &&
-                                      t.Location_Id == tableData.Location_Id);
+                                      t.Location_Id == tableData.LocationId);
 
         if (existingTable != null)
         {
@@ -72,15 +72,15 @@ namespace back_end.Controllers
         var newTable = new TableEntity
         {
           table_number = tableData.TableNumber,
-          QR_Code = tableData.Qr_Code_Url ?? string.Empty,
+          QR_Code = tableData.QrCodeUrl ?? string.Empty,
           seat_count = tableData.SeatCount,
           is_active = tableData.IsActive,
-          Location_Id = tableData.Location_Id
+          Location_Id = tableData.LocationId
         };
 
         _context.Tables.Add(newTable);
         await _context.SaveChangesAsync();
-        return Ok(newTable);
+        return Ok(TableEntityResponseDto.From(newTable));
       }
       catch (Exception ex)
       {
@@ -100,7 +100,7 @@ namespace back_end.Controllers
     /// <response code="500">An internal server error occurred while retrieving tables.</response>
     [Authorize]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TableEntity>>> GetAllTables([FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> GetAllTables([FromQuery] int? locationId)
     {
       try
       {
@@ -122,7 +122,7 @@ namespace back_end.Controllers
         .OrderBy(q => q.Location_Id)      // Group by location
         .ThenBy(q => q.table_number)      // Then sort by table number within location
         .ToListAsync();
-        return Ok(tables);
+        return Ok(tables.Select(TableEntityResponseDto.From).ToList());
       }
       catch (Exception ex)
       {
@@ -142,7 +142,7 @@ namespace back_end.Controllers
     /// <response code="500">An unexpected error occurred while retrieving the tables.</response>
     [Authorize]
     [HttpGet("empty")]
-    public async Task<ActionResult<IEnumerable<TableEntity>>> ListEmptyTables([FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> ListEmptyTables([FromQuery] int? locationId)
     {
       try
       {
@@ -163,7 +163,7 @@ namespace back_end.Controllers
         }
 
         var emptyTables = await query.ToListAsync();
-        return Ok(emptyTables);
+        return Ok(emptyTables.Select(TableEntityResponseDto.From).ToList());
       }
       catch (Exception ex)
       {
@@ -203,7 +203,7 @@ namespace back_end.Controllers
           return LocationResults.OtherLocation();
         }
 
-        return Ok(table);
+        return Ok(TableEntityResponseDto.From(table));
       }
       catch (Exception ex)
       {
@@ -271,14 +271,14 @@ namespace back_end.Controllers
           table.is_active = tableData.IsActive.Value;
         }
 
-        if (tableData.Qr_Code_Url != null)
+        if (tableData.QrCodeUrl != null)
         {
-          table.QR_Code = tableData.Qr_Code_Url;
+          table.QR_Code = tableData.QrCodeUrl;
         }
 
         _context.Tables.Update(table);
         await _context.SaveChangesAsync();
-        return Ok(table);
+        return Ok(TableEntityResponseDto.From(table));
       }
       catch (Exception ex)
       {
@@ -416,7 +416,7 @@ namespace back_end.Controllers
 
         _context.Tables.Update(table);
         await _context.SaveChangesAsync();
-        return Ok(table);
+        return Ok(TableEntityResponseDto.From(table));
       }
       catch (Exception ex)
       {
@@ -531,7 +531,7 @@ namespace back_end.Controllers
         _context.Tables.Update(table);
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Table assigned to group successfully", table });
+        return Ok(new { message = "Table assigned to group successfully", table = TableEntityResponseDto.From(table) });
       }
       catch (Exception ex)
       {
@@ -578,7 +578,7 @@ namespace back_end.Controllers
         _context.Tables.Update(table);
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Table removed from group successfully", table });
+        return Ok(new { message = "Table removed from group successfully", table = TableEntityResponseDto.From(table) });
       }
       catch (Exception ex)
       {

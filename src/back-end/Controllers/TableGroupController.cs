@@ -32,22 +32,22 @@ namespace back_end.Controllers
       {
         // Validate location exists
         var location = await _context.Locations
-            .FirstOrDefaultAsync(l => l.Location_Id == groupData.Location_Id);
+            .FirstOrDefaultAsync(l => l.Location_Id == groupData.LocationId);
 
         if (location == null)
         {
           return BadRequest("Location does not exist");
         }
 
-        if (!await _locationAccess.CanAccessLocationAsync(User, groupData.Location_Id))
+        if (!await _locationAccess.CanAccessLocationAsync(User, groupData.LocationId))
         {
           return LocationResults.OtherLocation();
         }
 
         // Check if group name already exists at this location
         var existingGroup = await _context.TableGroups
-            .FirstOrDefaultAsync(tg => tg.Group_Name == groupData.Group_Name &&
-                                       tg.Location_Id == groupData.Location_Id);
+            .FirstOrDefaultAsync(tg => tg.Group_Name == groupData.GroupName &&
+                                       tg.Location_Id == groupData.LocationId);
 
         if (existingGroup != null)
         {
@@ -56,9 +56,9 @@ namespace back_end.Controllers
 
         var newTableGroup = new TableGroup
         {
-          Group_Name = groupData.Group_Name,
-          Is_Active = groupData.Is_Active ?? true,
-          Location_Id = groupData.Location_Id,
+          Group_Name = groupData.GroupName,
+          Is_Active = groupData.IsActive ?? true,
+          Location_Id = groupData.LocationId,
           Created_At = DateTime.UtcNow
         };
 
@@ -68,7 +68,7 @@ namespace back_end.Controllers
         return Ok(new
         {
           message = "Table group created successfully",
-          tableGroup = newTableGroup
+          table_group = TableGroupResponseDto.From(newTableGroup)
         });
       }
       catch (Exception ex)
@@ -82,7 +82,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TableGroup>>> GetAllTableGroups([FromQuery] bool? activeOnly, [FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAllTableGroups([FromQuery] bool? activeOnly, [FromQuery] int? locationId)
     {
       try
       {
@@ -110,23 +110,7 @@ namespace back_end.Controllers
             .ThenBy(tg => tg.Group_Name)
             .ToListAsync();
 
-        var response = tableGroups.Select(tg => new
-        {
-          tableGroup_Id = tg.TableGroup_Id,
-          group_Name = tg.Group_Name,
-          is_Active = tg.Is_Active,
-          location_Id = tg.Location_Id,
-          location_Name = tg.Location?.Name,
-          created_At = tg.Created_At,
-          table_Count = tg.Tables.Count,
-          tables = tg.Tables.Select(t => new
-          {
-            table_Id = t.Table_Id,
-            table_number = t.table_number,
-            seat_count = t.seat_count,
-            is_active = t.is_active
-          }).ToList()
-        }).ToList();
+        var response = tableGroups.Select(TableGroupResponseDto.From).ToList();
 
         return Ok(response);
       }
@@ -139,7 +123,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpGet("available")]
-    public async Task<ActionResult<IEnumerable<TableGroup>>> GetAvailableTableGroups([FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAvailableTableGroups([FromQuery] int? locationId)
     {
       try
       {
@@ -162,22 +146,7 @@ namespace back_end.Controllers
             .OrderBy(tg => tg.Group_Name)
             .ToListAsync();
 
-        var response = availableGroups.Select(tg => new
-        {
-          tableGroup_Id = tg.TableGroup_Id,
-          group_Name = tg.Group_Name,
-          is_Active = tg.Is_Active,
-          location_Id = tg.Location_Id,
-          location_Name = tg.Location?.Name,
-          table_Count = tg.Tables.Count,
-          total_Seats = tg.Tables.Sum(t => t.seat_count),
-          tables = tg.Tables.Select(t => new
-          {
-            table_Id = t.Table_Id,
-            table_number = t.table_number,
-            seat_count = t.seat_count
-          }).ToList()
-        }).ToList();
+        var response = availableGroups.Select(TableGroupResponseDto.From).ToList();
 
         return Ok(response);
       }
@@ -212,16 +181,16 @@ namespace back_end.Controllers
 
         var response = new
         {
-          tableGroup_Id = tableGroup.TableGroup_Id,
-          group_Name = tableGroup.Group_Name,
-          is_Active = tableGroup.Is_Active,
-          created_At = tableGroup.Created_At,
-          table_Count = tableGroup.Tables.Count,
-          total_Seats = tableGroup.Tables.Sum(t => t.seat_count),
-          is_In_Active_Session = tableGroup.DiningSessions.Any(),
+          table_group_id = tableGroup.TableGroup_Id,
+          group_name = tableGroup.Group_Name,
+          is_active = tableGroup.Is_Active,
+          created_at = tableGroup.Created_At,
+          table_count = tableGroup.Tables.Count,
+          total_seats = tableGroup.Tables.Sum(t => t.seat_count),
+          is_in_active_session = tableGroup.DiningSessions.Any(),
           tables = tableGroup.Tables.Select(t => new
           {
-            table_Id = t.Table_Id,
+            table_id = t.Table_Id,
             table_number = t.table_number,
             seat_count = t.seat_count,
             is_active = t.is_active,
@@ -245,6 +214,8 @@ namespace back_end.Controllers
       try
       {
         var tableGroup = await _context.TableGroups
+            .Include(tg => tg.Tables)
+            .Include(tg => tg.Location)
             .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
@@ -258,11 +229,11 @@ namespace back_end.Controllers
         }
 
         // Check if group name is being changed and if new name already exists
-        if (!string.IsNullOrEmpty(groupData.Group_Name) &&
-            tableGroup.Group_Name != groupData.Group_Name)
+        if (!string.IsNullOrEmpty(groupData.GroupName) &&
+            tableGroup.Group_Name != groupData.GroupName)
         {
           var existingGroup = await _context.TableGroups
-              .FirstOrDefaultAsync(tg => tg.Group_Name == groupData.Group_Name &&
+              .FirstOrDefaultAsync(tg => tg.Group_Name == groupData.GroupName &&
                                          tg.TableGroup_Id != tableGroupId);
 
           if (existingGroup != null)
@@ -270,13 +241,13 @@ namespace back_end.Controllers
             return BadRequest("Table group with this name already exists");
           }
 
-          tableGroup.Group_Name = groupData.Group_Name;
+          tableGroup.Group_Name = groupData.GroupName;
         }
 
-        if (groupData.Is_Active.HasValue)
+        if (groupData.IsActive.HasValue)
         {
           // Check if trying to deactivate a group that's in an active session
-          if (!groupData.Is_Active.Value)
+          if (!groupData.IsActive.Value)
           {
             var isInActiveSession = await _context.DiningSessions
                 .AnyAsync(ds => ds.TableGroup_Id == tableGroupId && ds.Ended_At == null);
@@ -287,7 +258,7 @@ namespace back_end.Controllers
             }
           }
 
-          tableGroup.Is_Active = groupData.Is_Active.Value;
+          tableGroup.Is_Active = groupData.IsActive.Value;
         }
 
         _context.TableGroups.Update(tableGroup);
@@ -296,7 +267,7 @@ namespace back_end.Controllers
         return Ok(new
         {
           message = "Table group updated successfully",
-          tableGroup
+          table_group = TableGroupResponseDto.From(tableGroup)
         });
       }
       catch (Exception ex)
@@ -420,8 +391,8 @@ namespace back_end.Controllers
         return Ok(new
         {
           message = "Table added to group successfully",
-          tableGroup_Id = tableGroupId,
-          table_Id = tableId
+          table_group_id = tableGroupId,
+          table_id = tableId
         });
       }
       catch (Exception ex)
@@ -472,7 +443,7 @@ namespace back_end.Controllers
         return Ok(new
         {
           message = "Table removed from group successfully",
-          table_Id = tableId
+          table_id = tableId
         });
       }
       catch (Exception ex)
@@ -489,6 +460,8 @@ namespace back_end.Controllers
       try
       {
         var tableGroup = await _context.TableGroups
+            .Include(tg => tg.Tables)
+            .Include(tg => tg.Location)
             .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupId);
 
         if (tableGroup == null)
@@ -520,7 +493,7 @@ namespace back_end.Controllers
         return Ok(new
         {
           message = $"Table group {(tableGroup.Is_Active ? "activated" : "deactivated")} successfully",
-          tableGroup
+          table_group = TableGroupResponseDto.From(tableGroup)
         });
       }
       catch (Exception ex)

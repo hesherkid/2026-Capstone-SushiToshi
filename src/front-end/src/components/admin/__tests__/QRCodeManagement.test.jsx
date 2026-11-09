@@ -38,8 +38,8 @@ global.localStorage = localStorageMock;
 
 describe('QRCodeManagement Component', () => {
   const mockLocations = [
-    { location_Id: 1, name: 'Downtown', city: 'Edmonton' },
-    { location_Id: 2, name: 'West End', city: 'Edmonton' },
+    { location_id: 1, name: 'Downtown', city: 'Edmonton' },
+    { location_id: 2, name: 'West End', city: 'Edmonton' },
   ];
 
   beforeEach(() => {
@@ -196,8 +196,8 @@ describe('QRCodeManagement Component', () => {
 
   test('bulk generation sends correct API request', async () => {
     const mockTables = [
-      { table_Id: 1, table_number: 1, Location_Id: 1 },
-      { table_Id: 2, table_number: 2, Location_Id: 1 },
+      { table_id: 1, table_number: 1, location_id: 1 },
+      { table_id: 2, table_number: 2, location_id: 1 },
     ];
 
     api.get.mockImplementation((url) => {
@@ -383,7 +383,7 @@ describe('QRCodeManagement Component', () => {
 
   test('displays correct PDF layout information (16 QR per page)', async () => {
     const mockTables = [
-      { table_Id: 1, table_number: 1, Location_Id: 1 },
+      { table_id: 1, table_number: 1, location_id: 1 },
     ];
 
     api.get.mockImplementation((url) => {
@@ -433,7 +433,7 @@ describe('QRCodeManagement Component', () => {
 
   test('PDF download button shows correct text', async () => {
     const mockTables = [
-      { table_Id: 1, table_number: 1, Location_Id: 1 },
+      { table_id: 1, table_number: 1, location_id: 1 },
     ];
 
     api.get.mockImplementation((url) => {
@@ -482,8 +482,8 @@ describe('QRCodeManagement Component', () => {
 
   test('fetches tables when location is selected', async () => {
     const mockTables = [
-      { table_Id: 1, table_number: 1, Location_Id: 1 },
-      { table_Id: 2, table_number: 2, Location_Id: 1 },
+      { table_id: 1, table_number: 1, location_id: 1 },
+      { table_id: 2, table_number: 2, location_id: 1 },
     ];
 
     api.get.mockImplementation((url, config) => {

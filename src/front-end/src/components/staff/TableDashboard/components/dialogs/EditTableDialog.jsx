@@ -7,14 +7,14 @@ import serverMessage from "@/utils/serverMessage";
 
 const EditTableDialog = ({ open, table }) => {
   const { closeDialog, refreshData } = useTable();
-  const [formData, setFormData] = useState({ table_Number: "", seat_count: "" });
+  const [formData, setFormData] = useState({ table_number: "", seat_count: "" });
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (table) {
       setFormData({
-        table_Number: table.table_number || "",
+        table_number: table.table_number || "",
         seat_count: table.seat_count || "",
       });
     }
@@ -31,10 +31,9 @@ const EditTableDialog = ({ open, table }) => {
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.put(`/TableEntity/${table.table_Id}`, {
-        Table_Number: parseInt(formData.table_Number),
-        Seat_Count: parseInt(formData.seat_count),
-        Qr_Code_Url: table.qr_Code || "",
+      await api.put(`/TableEntity/${table.table_id}`, {
+        table_number: parseInt(formData.table_number),
+        seat_count: parseInt(formData.seat_count),
       });
       await refreshData();
       handleClose();
@@ -63,8 +62,8 @@ const EditTableDialog = ({ open, table }) => {
         type="number"
         required
         autoFocus
-        value={formData.table_Number}
-        onChange={set("table_Number")}
+        value={formData.table_number}
+        onChange={set("table_number")}
         slotProps={{ htmlInput: { min: 1 } }}
       />
       <TextField

@@ -211,7 +211,7 @@ const MenuAssignmentDialog = ({
       .then((res) =>
         setLocations(
           (Array.isArray(res.data) ? res.data : []).map((l) => ({
-            location_id: l.location_Id,
+            location_id: l.location_id,
             name: l.name,
           })),
         ),

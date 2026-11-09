@@ -112,8 +112,8 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await Tables(StaffId, UserRoles.Staff).GetAllTables(locationId: Southside);
 
-        var tables = (result.Result as OkObjectResult)!.Value as IEnumerable<TableEntity>;
-        tables!.Select(t => t.Table_Id).Should().Equal(NorthTable);
+        var tables = (result.Result as OkObjectResult)!.Value as IEnumerable<TableEntityResponseDto>;
+        tables!.Select(t => t.TableId).Should().Equal(NorthTable);
     }
 
     [Fact]
@@ -121,8 +121,8 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await Tables(StaffId, UserRoles.Staff).GetAllTables(locationId: null);
 
-        var tables = (result.Result as OkObjectResult)!.Value as IEnumerable<TableEntity>;
-        tables!.Select(t => t.Table_Id).Should().Equal(NorthTable);
+        var tables = (result.Result as OkObjectResult)!.Value as IEnumerable<TableEntityResponseDto>;
+        tables!.Select(t => t.TableId).Should().Equal(NorthTable);
     }
 
     [Fact]
@@ -130,8 +130,8 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await Tables(AdminId, UserRoles.Admin).GetAllTables(locationId: Southside);
 
-        var tables = (result.Result as OkObjectResult)!.Value as IEnumerable<TableEntity>;
-        tables!.Select(t => t.Table_Id).Should().Equal(SouthTable);
+        var tables = (result.Result as OkObjectResult)!.Value as IEnumerable<TableEntityResponseDto>;
+        tables!.Select(t => t.TableId).Should().Equal(SouthTable);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class StaffLocationLockTests : IDisposable
     {
         var result = await Tables(StaffId, UserRoles.Staff).CreateTable(new TableEntityCreateDto
         {
-            TableNumber = 2, SeatCount = 4, IsActive = true, Location_Id = Southside,
+            TableNumber = 2, SeatCount = 4, IsActive = true, LocationId = Southside,
         });
 
         ShouldBeForbidden(result);

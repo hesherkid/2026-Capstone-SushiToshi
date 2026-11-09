@@ -30,7 +30,7 @@ jest.mock("next/link", () => ({
   default: ({ href, children }) => <a href={href}>{children}</a>,
 }));
 
-const location = { location_Id: 1, name: "Downtown" };
+const location = { location_id: 1, name: "Downtown" };
 const profile = (source) => ({
   source,
   updated_at: "2026-10-24T00:00:00Z",

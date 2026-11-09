@@ -3,6 +3,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using back_end.domain;
+using back_end.domain.Entities;
 
 namespace back_end.Dtos
 {
@@ -17,9 +18,11 @@ namespace back_end.Dtos
     [JsonPropertyName("is_active")]
     public bool IsActive { get; set; } = true;
 
-    public string? Qr_Code_Url { get; set; }
+    [JsonPropertyName("qr_code_url")]
+    public string? QrCodeUrl { get; set; }
 
-    public int Location_Id { get; set; }
+    [JsonPropertyName("location_id")]
+    public int LocationId { get; set; }
   }
 
   public class TableEntityCreateDto : TableEntityBaseDto
@@ -38,13 +41,27 @@ namespace back_end.Dtos
     [JsonPropertyName("is_active")]
     public bool? IsActive { get; set; }
 
-    public string? Qr_Code_Url { get; set; }
+    [JsonPropertyName("qr_code_url")]
+    public string? QrCodeUrl { get; set; }
   }
 
   public class TableEntityResponseDto : TableEntityBaseDto
   {
     [JsonPropertyName("table_id")]
     public int TableId { get; set; }
+    [JsonPropertyName("table_group_id")]
+    public int? TableGroupId { get; set; }
+
+    public static TableEntityResponseDto From(TableEntity table) => new()
+    {
+      TableId = table.Table_Id,
+      TableNumber = table.table_number,
+      SeatCount = table.seat_count,
+      IsActive = table.is_active,
+      QrCodeUrl = table.QR_Code,
+      LocationId = table.Location_Id,
+      TableGroupId = table.TableGroup_Id,
+    };
   }
 
 }

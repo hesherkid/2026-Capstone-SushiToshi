@@ -59,12 +59,12 @@ back_end.Dtos.LeftoverFeeBillShare: bill_id, bill_name, leftover_charge
 back_end.Dtos.LeftoverFeeRequest: amount
 back_end.Dtos.LeftoverFeeResponse: amount, bills, default_fee, session_id
 back_end.Dtos.ListDiningSessionsRequestDto: activeOnly
-back_end.Dtos.LocationBaseDto: address_One, address_Two, city, name, phone_Number, postal_Code, province, province_Code
-back_end.Dtos.LocationCreateDto: address_One, address_Two, city, name, phone_Number, postal_Code, province, province_Code
+back_end.Dtos.LocationBaseDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
+back_end.Dtos.LocationCreateDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LocationOptionDto: location_id, name
 back_end.Dtos.LocationPricingSummary: location_id, location_name, province_code, source
-back_end.Dtos.LocationResponseDto: address_One, address_Two, city, location_Id, name, phone_Number, postal_Code, province, province_Code
-back_end.Dtos.LocationUpdateDto: address_One, address_Two, city, name, phone_Number, postal_Code, province, province_Code
+back_end.Dtos.LocationResponseDto: address_one, address_two, city, location_id, name, phone_number, postal_code, province, province_code
+back_end.Dtos.LocationUpdateDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LockGuestCountsDto: locked
 back_end.Dtos.MenuAssignmentCreate: adult_Limit, child_Limit, is_Add_on, item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, senior_Limit, status, tot_Limit
 back_end.Dtos.MenuAssignmentResponse: is_Add_On, item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, status, tot_Limit
@@ -116,13 +116,15 @@ back_end.Dtos.StaffResponseDto: created_at, email, first_name, is_email_confirme
 back_end.Dtos.StaffUserUpdateDto: email, first_name, last_name, location, role
 back_end.Dtos.TableAssignmentDto: table_id
 back_end.Dtos.TableBillChoiceDto: bill_id, bill_name, people_count, requested_at, status, total_count
-back_end.Dtos.TableEntityBaseDto: is_active, location_Id, qr_Code_Url, seat_count, table_number
-back_end.Dtos.TableEntityCreateDto: is_active, location_Id, qr_Code_Url, seat_count, table_number
-back_end.Dtos.TableEntityResponseDto: is_active, location_Id, qr_Code_Url, seat_count, table_id, table_number
-back_end.Dtos.TableEntityUpdateDto: is_active, qr_Code_Url, seat_count, table_number
+back_end.Dtos.TableEntityBaseDto: is_active, location_id, qr_code_url, seat_count, table_number
+back_end.Dtos.TableEntityCreateDto: is_active, location_id, qr_code_url, seat_count, table_number
+back_end.Dtos.TableEntityResponseDto: is_active, location_id, qr_code_url, seat_count, table_group_id, table_id, table_number
+back_end.Dtos.TableEntityUpdateDto: is_active, qr_code_url, seat_count, table_number
 back_end.Dtos.TableGroupAssignmentDto: tableGroup_Id
-back_end.Dtos.TableGroupCreateDto: group_Name, is_Active, location_Id
-back_end.Dtos.TableGroupUpdateDto: group_Name, is_Active
+back_end.Dtos.TableGroupCreateDto: group_name, is_active, location_id
+back_end.Dtos.TableGroupResponseDto: created_at, group_name, is_active, location_id, location_name, table_count, table_group_id, tables, total_seats
+back_end.Dtos.TableGroupTableDto: is_active, seat_count, table_id, table_number
+back_end.Dtos.TableGroupUpdateDto: group_name, is_active
 back_end.Dtos.TagBaseDto: tag_color, tag_id, tag_name
 back_end.Dtos.TagResponseDto: name, tag_id
 back_end.Dtos.TagUpdateDto: tag_color, tag_name

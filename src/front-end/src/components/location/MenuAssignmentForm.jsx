@@ -26,7 +26,7 @@ const MenuAssignmentForm = ({ location, onClose, api }) => {
     if (!location) return;
     setLoading(true);
     setError(null);
-    Promise.all([api.get("/Menu"), api.get(`/Location/${location.location_Id}/menus`)])
+    Promise.all([api.get("/Menu"), api.get(`/Location/${location.location_id}/menus`)])
       .then(([allMenusRes, assignedMenusRes]) => {
         setMenus(allMenusRes.data);
         setAssignedMenus(assignedMenusRes.data);
@@ -38,7 +38,7 @@ const MenuAssignmentForm = ({ location, onClose, api }) => {
   const handleAssign = async (menuId) => {
     setError(null);
     try {
-      await api.post(`/Location/${location.location_Id}/menus`, { menu_id: menuId });
+      await api.post(`/Location/${location.location_id}/menus`, { menu_id: menuId });
       setAssignedMenus((prev) => [...prev, menuId]);
     } catch (err) {
       setError(serverMessage(err, "Couldn't assign the menu."));
@@ -48,7 +48,7 @@ const MenuAssignmentForm = ({ location, onClose, api }) => {
   const handleUnassign = async (menuId) => {
     setError(null);
     try {
-      await api.delete(`/Location/${location.location_Id}/menus/${menuId}`);
+      await api.delete(`/Location/${location.location_id}/menus/${menuId}`);
       setAssignedMenus((prev) => prev.filter((id) => id !== menuId));
     } catch (err) {
       setError(serverMessage(err, "Couldn't remove the menu."));
