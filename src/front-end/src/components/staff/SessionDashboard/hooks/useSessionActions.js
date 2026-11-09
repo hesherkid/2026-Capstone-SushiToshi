@@ -97,7 +97,7 @@ export const useSessionActions = (onSuccess) => {
         "listDiningSessions",
         async () => {
           const res = await api.get("/DiningSession/get_list_dining_sessions", {
-            params: { ActiveOnly: activeOnly },
+            params: { active_only: activeOnly },
           });
           return res.data || [];
         },
@@ -290,7 +290,7 @@ export const useSessionActions = (onSuccess) => {
         "listEmptyTables",
         async () => {
           const params = {};
-          if (locationId) params.locationId = toInt(locationId);
+          if (locationId) params.location_id = toInt(locationId);
 
           const res = await api.get("/TableEntity/empty", { params });
           return res.data || [];
@@ -312,7 +312,7 @@ export const useSessionActions = (onSuccess) => {
         "fetchAvailableTableGroups",
         async () => {
           const params = {};
-          if (locationId) params.locationId = toInt(locationId);
+          if (locationId) params.location_id = toInt(locationId);
 
           const res = await api.get("/TableGroup/available", { params });
           return res.data || [];
@@ -382,7 +382,7 @@ export const useSessionActions = (onSuccess) => {
           if (!sid) throw new Error("Session ID is required");
 
           const params = {};
-          if (tableId) params._table_id = toInt(tableId);
+          if (tableId) params.table_id = toInt(tableId);
 
           const res = await api.get(`/Bill/get_bills/${sid}`, { params });
           return res.data || [];
@@ -404,7 +404,7 @@ export const useSessionActions = (onSuccess) => {
         validateIds({ "session ID": sid, "bill ID": bid });
 
         const res = await api.get(`/Bill/summary/${bid}`, {
-          params: { _session_id: sid },
+          params: { session_id: sid },
         });
         return res.data;
       });
@@ -425,7 +425,7 @@ export const useSessionActions = (onSuccess) => {
           validateIds({ "session ID": sid, "bill ID": bid });
 
           const res = await api.put(`/Bill/close_bill/${bid}`, null, {
-            params: { _session_id: sid },
+            params: { session_id: sid },
           });
 
           return res.data;
@@ -458,7 +458,7 @@ export const useSessionActions = (onSuccess) => {
               child_count: toInt(counts.childCount) || 0,
               tot_count: toInt(counts.totCount) || 0,
             },
-            { params: { _session_id: sid } },
+            { params: { session_id: sid } },
           );
           return res.data;
         },
@@ -484,7 +484,7 @@ export const useSessionActions = (onSuccess) => {
           const res = await api.put(
             `/Bill/lock_guest_counts/${bid}`,
             { locked: Boolean(locked) },
-            { params: { _session_id: sid } },
+            { params: { session_id: sid } },
           );
           return res.data;
         },
@@ -510,7 +510,7 @@ export const useSessionActions = (onSuccess) => {
           const res = await api.put(
             `/Bill/merge/${bid}`,
             { into_bill_id: into },
-            { params: { _session_id: sid } },
+            { params: { session_id: sid } },
           );
           return res.data;
         },

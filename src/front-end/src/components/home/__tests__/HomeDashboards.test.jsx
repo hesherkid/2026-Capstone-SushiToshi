@@ -73,7 +73,7 @@ describe("Home page dashboards", () => {
     render(<HomePage />);
 
     expect(await screen.findByRole("link", { name: "2 Active sessions" })).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledWith("/Dashboard/sessions", { params: { locationId: "2" } });
+    expect(api.get).toHaveBeenCalledWith("/Dashboard/sessions", { params: { location_id: "2" } });
     expect(api.get).not.toHaveBeenCalledWith("/DiningSession/get_list_dining_sessions", expect.anything());
   });
 

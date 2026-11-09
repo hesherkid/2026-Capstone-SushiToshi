@@ -56,7 +56,7 @@ const NewSessionDialog = ({ open, onClose }) => {
       setAvailableTableGroups([]);
       return;
     }
-    const params = { params: { locationId: selectedLocation } };
+    const params = { params: { location_id: selectedLocation } };
     api
       .get("/TableEntity/empty", params)
       .then((response) => setAvailableTables(response.data))

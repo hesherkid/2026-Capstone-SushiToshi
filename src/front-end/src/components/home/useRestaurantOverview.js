@@ -49,7 +49,7 @@ export default function useRestaurantOverview({ includeOrders = false } = {}) {
       // The app bar's location picker, like the Sessions, Tables and Orders pages. Not the
       // location on the user's account: admins usually have none, which showed 0 everywhere.
       const locationId = storage.get("branch-location");
-      const locationParams = locationId ? { locationId } : {};
+      const locationParams = locationId ? { location_id: locationId } : {};
 
       const [sessionsResponse, requestsResponse, ordersResponse] = await Promise.all([
         api.get("/Dashboard/sessions", { params: locationParams }),

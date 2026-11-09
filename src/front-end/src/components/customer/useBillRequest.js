@@ -28,7 +28,7 @@ export const useBillRequest = ({ sessionId, billId, reload, setError }) => {
     setError(null);
     try {
       // Marks the bill as requested and lets staff know
-      await api.post(`/Bill/request_bill/${billId}`, null, { params: { _session_id: sessionId } });
+      await api.post(`/Bill/request_bill/${billId}`, null, { params: { session_id: sessionId } });
       setRequestSent(true);
       await reload();
     } catch (err) {

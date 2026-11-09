@@ -121,7 +121,7 @@ describe("Table dashboard", () => {
     expect(within(rowFor("Table 4")).getByText("Patio")).toBeInTheDocument();
 
     // One status fetch for the location instead of a request per table
-    expect(api.get).toHaveBeenCalledWith("/TableEntity/empty?locationId=1");
+    expect(api.get).toHaveBeenCalledWith("/TableEntity/empty?location_id=1");
     expect(api.post).not.toHaveBeenCalled();
   });
 

@@ -62,8 +62,8 @@ export const useOrderData = ({ paused = false } = {}) => {
     if (!silent) setIsLoading(true);
     try {
       const locationId = storage.get("branch-location");
-      const params = { deliveredOpenSessionsOnly: true };
-      if (locationId) params.locationId = locationId;
+      const params = { delivered_open_sessions_only: true };
+      if (locationId) params.location_id = locationId;
       const response = await api.get("/Order/all_orders", { params });
       setOrders(
         Array.isArray(response.data) ? response.data.map(mapOrder) : [],

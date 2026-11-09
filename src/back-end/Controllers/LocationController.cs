@@ -633,7 +633,7 @@ namespace back_end.Controllers
     [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLocationDiningSessions(int locationId, [FromQuery] bool? activeOnly)
+    public async Task<IActionResult> GetLocationDiningSessions(int locationId, [FromQuery(Name = "active_only")] bool? activeOnly)
     {
       try
       {

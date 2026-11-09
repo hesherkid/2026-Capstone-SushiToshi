@@ -36,12 +36,12 @@ All endpoints require a JWT for a user with the `Admin` role (`[Authorize(Roles 
 ### 1. Get WiFi QR Code
 
 ```http
-GET /api/admin/qr/wifi?locationId={locationId}&table={tableNumber}[&refresh=true]
+GET /api/admin/qr/wifi?location_id={locationId}&table={tableNumber}[&refresh=true]
 ```
 
 **Parameters:**
 
-- `locationId` (int, required): Location ID
+- `location_id` (int, required): Location ID
 - `table` (int, required): Table number
 - `refresh` (bool, optional, default `false`): regenerate from current settings instead of returning the saved image
 
@@ -51,14 +51,14 @@ GET /api/admin/qr/wifi?locationId={locationId}&table={tableNumber}[&refresh=true
 
 ```bash
 curl -H "Authorization: Bearer {token}" \
-  "http://localhost:5264/api/admin/qr/wifi?locationId=1&table=5&refresh=true" \
+  "http://localhost:5264/api/admin/qr/wifi?location_id=1&table=5&refresh=true" \
   --output wifi_L1_T5.png
 ```
 
 ### 2. Get Session QR Code
 
 ```http
-GET /api/admin/qr/session?locationId={locationId}&table={tableNumber}[&refresh=true]
+GET /api/admin/qr/session?location_id={locationId}&table={tableNumber}[&refresh=true]
 ```
 
 **Parameters:** same as WiFi.
@@ -69,19 +69,19 @@ GET /api/admin/qr/session?locationId={locationId}&table={tableNumber}[&refresh=t
 
 ```bash
 curl -H "Authorization: Bearer {token}" \
-  "http://localhost:5264/api/admin/qr/session?locationId=1&table=5" \
+  "http://localhost:5264/api/admin/qr/session?location_id=1&table=5" \
   --output session_L1_T5.png
 ```
 
 ### 3. Bulk Generate QR Codes
 
 ```http
-POST /api/admin/qr/bulk?locationId={locationId}
+POST /api/admin/qr/bulk?location_id={locationId}
 ```
 
 **Parameters:**
 
-- `locationId` (int, required): Location ID
+- `location_id` (int, required): Location ID
   Tables are read from the database for that location (no `tableCount` parameter). Every table gets a WiFi and a session QR, and existing files are always **overwritten**.
 
 **Response:**
@@ -89,10 +89,10 @@ POST /api/admin/qr/bulk?locationId={locationId}
 ```json
 {
   "success": true,
-  "locationId": 1,
-  "tableCount": 20,
-  "filesGenerated": 40,
-  "storageLocation": "storage/qrcodes/",
+  "location_id": 1,
+  "table_count": 20,
+  "files_generated": 40,
+  "storage_location": "storage/qrcodes/",
   "files": ["wifi_L1_T1.png", "session_L1_T1.png", "..."]
 }
 ```
@@ -106,14 +106,14 @@ POST /api/admin/qr/bulk?locationId={locationId}
 
 ```bash
 curl -X POST -H "Authorization: Bearer {token}" \
-  "http://localhost:5264/api/admin/qr/bulk?locationId=1"
+  "http://localhost:5264/api/admin/qr/bulk?location_id=1"
 ```
 
 ### 4. Download All (ZIP / PDF)
 
 ```http
-GET /api/admin/qr/bulk/download-zip?locationId={locationId}
-GET /api/admin/qr/bulk/download-pdf?locationId={locationId}
+GET /api/admin/qr/bulk/download-zip?location_id={locationId}
+GET /api/admin/qr/bulk/download-pdf?location_id={locationId}
 ```
 
 - Both use the **saved** files, so run bulk generate first.
@@ -123,7 +123,7 @@ GET /api/admin/qr/bulk/download-pdf?locationId={locationId}
 ### 5. Clear Saved QR Codes
 
 ```http
-DELETE /api/admin/qr/clear?locationId={locationId}&table={tableNumber}
+DELETE /api/admin/qr/clear?location_id={locationId}&table={tableNumber}
 ```
 
 **Response:**
@@ -259,7 +259,7 @@ httpClient.DefaultRequestHeaders.Authorization =
 
 // Add &refresh=true to regenerate from current settings instead of using the saved image
 var response = await httpClient.GetAsync(
-    "http://localhost:5264/api/admin/qr/wifi?locationId=1&table=5&refresh=true");
+    "http://localhost:5264/api/admin/qr/wifi?location_id=1&table=5&refresh=true");
 
 if (response.IsSuccessStatusCode)
 {
@@ -276,7 +276,7 @@ Relative `/api/...` paths work in the frontend because Next.js forwards `/api/*`
 // Download Session QR code
 async function downloadSessionQR(locationId, table) {
   const response = await fetch(
-    `/api/admin/qr/session?locationId=${locationId}&table=${table}`,
+    `/api/admin/qr/session?location_id=${locationId}&table=${table}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -301,7 +301,7 @@ async function downloadSessionQR(locationId, table) {
 ```javascript
 // Generate QR codes for every table at a location
 async function generateAllQRCodes(locationId) {
-  const response = await fetch(`/api/admin/qr/bulk?locationId=${locationId}`, {
+  const response = await fetch(`/api/admin/qr/bulk?location_id=${locationId}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -310,7 +310,7 @@ async function generateAllQRCodes(locationId) {
 
   const result = await response.json();
   console.log(
-    `Generated ${result.filesGenerated} QR codes for ${result.tableCount} tables`,
+    `Generated ${result.files_generated} QR codes for ${result.table_count} tables`,
   );
 }
 
@@ -372,7 +372,7 @@ For a specific table:
 
 ```bash
 curl -X DELETE -H "Authorization: Bearer {token}" \
-  "http://localhost:5264/api/admin/qr/clear?locationId=1&table=5"
+  "http://localhost:5264/api/admin/qr/clear?location_id=1&table=5"
 ```
 
 For all tables, run from `src/back-end`:

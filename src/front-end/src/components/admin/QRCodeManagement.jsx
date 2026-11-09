@@ -103,7 +103,7 @@ export default function QRCodeManagement() {
   const fetchTables = async () => {
     try {
       const response = await api.get("/TableEntity", {
-        params: { locationId: selectedLocation },
+        params: { location_id: selectedLocation },
       });
       setTables(response.data || []);
     } catch (error) {
@@ -146,7 +146,7 @@ export default function QRCodeManagement() {
       const endpoint = type === "wifi" ? "/admin/qr/wifi" : "/admin/qr/session";
       const response = await api.get(endpoint, {
         params: {
-          locationId: selectedLocation,
+          location_id: selectedLocation,
           table: tableNumber,
           // Build from current settings so a WiFi or URL change shows up without clearing the cache
           refresh: true,
@@ -193,7 +193,7 @@ export default function QRCodeManagement() {
       const endpoint = type === "wifi" ? "/admin/qr/wifi" : "/admin/qr/session";
       const response = await api.get(endpoint, {
         params: {
-          locationId: selectedLocation,
+          location_id: selectedLocation,
           table: tableNumber,
           // Build from current settings so a WiFi or URL change shows up without clearing the cache
           refresh: true,
@@ -246,7 +246,7 @@ export default function QRCodeManagement() {
     try {
       const response = await api.post("/admin/qr/bulk", null, {
         params: {
-          locationId: selectedLocation,
+          location_id: selectedLocation,
         },
       });
 
@@ -277,7 +277,7 @@ export default function QRCodeManagement() {
     try {
       const response = await api.get("/admin/qr/bulk/download-zip", {
         params: {
-          locationId: lastGeneratedLocation,
+          location_id: lastGeneratedLocation,
         },
         responseType: "blob",
       });
@@ -326,7 +326,7 @@ export default function QRCodeManagement() {
     try {
       const response = await api.get("/admin/qr/bulk/download-pdf", {
         params: {
-          locationId: lastGeneratedLocation,
+          location_id: lastGeneratedLocation,
         },
         responseType: "blob",
       });
@@ -378,7 +378,7 @@ export default function QRCodeManagement() {
     try {
       await api.delete("/admin/qr/clear", {
         params: {
-          locationId: selectedLocation,
+          location_id: selectedLocation,
           table: tableNumber,
         },
       });

@@ -178,7 +178,7 @@ const AnalyticsOverview = () => {
   const requestKey = useMemo(() => {
     if (!isClient) return null;
     const params = { range: "today", top: TOP_N };
-    if (homeLocation) params.locationId = homeLocation;
+    if (homeLocation) params.location_id = homeLocation;
     return JSON.stringify({ params, refreshTick });
   }, [isClient, homeLocation, refreshTick]);
 
