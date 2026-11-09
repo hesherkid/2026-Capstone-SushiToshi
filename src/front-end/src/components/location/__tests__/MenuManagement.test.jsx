@@ -95,14 +95,14 @@ describe("MenuManagement", () => {
     api.get.mockImplementation(async (url) => {
       if (url === "/Menu")
         return {
-          data: [{ ...menus[0], menuLocations: lunchLocations }, menus[1]],
+          data: [{ ...menus[0], location_ids: lunchLocations }, menus[1]],
         };
       if (url === "/location")
         return { data: [{ location_id: 7, name: "Downtown" }] };
       return { data: [] };
     });
     api.put.mockImplementation(async () => {
-      lunchLocations = [{ location_Id: 7 }]; // saved on the server
+      lunchLocations = [7]; // saved on the server
       return { data: {} };
     });
     render(<MenuManagement />);

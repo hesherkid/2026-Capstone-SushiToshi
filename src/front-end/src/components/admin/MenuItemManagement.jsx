@@ -133,7 +133,7 @@ const MenuItemManagement = () => {
   const handleEdit = (item) => {
     setSelectedItem(item);
     setImageFile(null);
-    setImagePreview(item.item_Image_Url || "");
+    setImagePreview(item.item_image_url || "");
     setError(null);
     setFormKey((k) => k + 1);
     setDialogOpen(true);
@@ -144,7 +144,7 @@ const MenuItemManagement = () => {
     try {
       const { data } = await api.get(`/menuitem/${item.item_id}`);
 
-      if (data?.menuAssignments?.length > 0) {
+      if (data?.menu_assignments?.length > 0) {
         setError(
           "Cannot delete item - it is currently assigned to one or more menus. Remove menu assignments first.",
         );
@@ -172,7 +172,7 @@ const MenuItemManagement = () => {
 
   const columns = [
     {
-      field: "item_Image_Url",
+      field: "item_image_url",
       headerName: "Image",
       width: 100,
       sortable: false,
@@ -208,7 +208,7 @@ const MenuItemManagement = () => {
       minWidth: 200,
     },
     {
-      field: "category_Id",
+      field: "category_id",
       headerName: "Category",
       flex: 1,
       minWidth: 150,

@@ -12,8 +12,8 @@ const item = (overrides) => ({
   price: 0,
   is_add_on: false,
   category: "Nigiri",
-  categoryLimits: {},
-  itemLimits: {},
+  category_limits: {},
+  item_limits: {},
   ...overrides,
 });
 
@@ -23,7 +23,7 @@ describe("Menu item limits line", () => {
   });
 
   it("shows the item's own per-order limit", () => {
-    expect(limitText(item({ itemLimits: { perOrder: 1 } }))).toBe(
+    expect(limitText(item({ item_limits: { per_order: 1 } }))).toBe(
       "1 per order",
     );
   });
@@ -31,7 +31,7 @@ describe("Menu item limits line", () => {
   it("names the section for a category's combine per-order limit", () => {
     expect(
       limitText(
-        item({ category: "Sashimi", categoryLimits: { perOrder: 30 } }),
+        item({ category: "Sashimi", category_limits: { per_order: 30 } }),
       ),
     ).toBe("30 per order across all Sashimi");
   });
@@ -41,7 +41,7 @@ describe("Menu item limits line", () => {
       name: "Hot Stone Steak",
       category: "Hot Stone",
       price: 5,
-      categoryLimits: { adult: 1, overLimitBehavior: "Charge" },
+      category_limits: { adult: 1, over_limit_behavior: "Charge" },
     });
 
     expect(limitText(hotStone)).toBe("1 per person, then $5.00 each");
@@ -50,7 +50,7 @@ describe("Menu item limits line", () => {
   it("doesn't mention a charge when the item has no price", () => {
     expect(
       limitText(
-        item({ categoryLimits: { adult: 1, overLimitBehavior: "Charge" } }),
+        item({ category_limits: { adult: 1, over_limit_behavior: "Charge" } }),
       ),
     ).toBe("Limit 1 per person");
   });
@@ -59,8 +59,8 @@ describe("Menu item limits line", () => {
     // The item blocks at 1; the category would charge from 2, but the guest hits the item first
     const tighterItem = item({
       price: 5,
-      itemLimits: { adult: 1, overLimitBehavior: "Block" },
-      categoryLimits: { adult: 2, overLimitBehavior: "Charge" },
+      item_limits: { adult: 1, over_limit_behavior: "Block" },
+      category_limits: { adult: 2, over_limit_behavior: "Charge" },
     });
 
     expect(limitText(tighterItem)).toBe("Limit 1 per person");
@@ -68,7 +68,7 @@ describe("Menu item limits line", () => {
 
   it("joins per-order and per-person limits", () => {
     const chopChop = item({
-      itemLimits: { perOrder: 1, adult: 2, overLimitBehavior: "Block" },
+      item_limits: { per_order: 1, adult: 2, over_limit_behavior: "Block" },
     });
 
     expect(limitText(chopChop)).toBe("1 per order · Limit 2 per person");
@@ -76,7 +76,7 @@ describe("Menu item limits line", () => {
 });
 
 describe("Menu item card", () => {
-  const nigiri = item({ itemLimits: { perOrder: 1 } });
+  const nigiri = item({ item_limits: { per_order: 1 } });
 
   it("shows the limits line on the card", () => {
     render(

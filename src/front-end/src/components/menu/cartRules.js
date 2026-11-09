@@ -4,19 +4,19 @@
 // The server takes 1-99 of an item per order (OrderController.AddOrderItems)
 export const MAX_PER_ITEM = 99;
 
-// Rename the fields from /Menu/{id}/item so the item looks the same everywhere
+// The fields the menu and cart use from /Menu/{id}/item
 export const normalizeItem = (it) => ({
-  item_id: it.itemId,
+  item_id: it.item_id,
   name: it.name,
   description: it.description,
   price: it.price,
-  is_add_on: it.isAddOn,
-  item_image_url: it.imageURL,
-  category_id: it.categoryID,
+  is_add_on: it.is_add_on,
+  item_image_url: it.item_image_url,
+  category_id: it.category_id,
   category: it.category,
   tags: it.tags ?? [],
-  categoryLimits: it.categoryLimits,
-  itemLimits: it.itemLimits,
+  category_limits: it.category_limits,
+  item_limits: it.item_limits,
 });
 
 // A row from /Category

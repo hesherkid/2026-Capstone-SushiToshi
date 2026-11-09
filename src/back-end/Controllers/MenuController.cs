@@ -54,15 +54,7 @@ namespace back_end.Controllers
                 };
                 _context.Add(newMenu);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuResponseDto
-                {
-                    MenuId = newMenu.Menu_id,
-                    Name = newMenu.Name,
-                    Description = newMenu.Description,
-                    StartTime = newMenu.Start_time,
-                    EndTime = newMenu.End_time,
-                    IsActive = newMenu.Is_active
-                });
+                return Ok(MenuResponseDto.From(newMenu));
             }
             catch (Exception ex)
             {
@@ -91,9 +83,9 @@ namespace back_end.Controllers
         ///     {
         ///         "name": "Grilled Salmon",
         ///         "description": "Fresh Atlantic salmon with lemon butter sauce",
-        ///         "category_Id": 2,
-        ///         "item_Image_Url": "https://example.com/images/salmon.jpg",
-        ///         "tag_Ids": [1, 3, 5]
+        ///         "category_id": 2,
+        ///         "item_image_url": "https://example.com/images/salmon.jpg",
+        ///         "tag_ids": [1, 3, 5]
         ///     }
         ///
         /// This endpoint requires Admin or Staff role authorization.
@@ -115,8 +107,8 @@ namespace back_end.Controllers
                 if (string.IsNullOrWhiteSpace(itemData.Name))
                     return BadRequest("Name is required.");
 
-                if (itemData.Category_Id <= 0)
-                    return BadRequest("Category_Id is required.");
+                if (itemData.CategoryId <= 0)
+                    return BadRequest("category_id is required.");
 
                 var existing = await _context.MenuItems
                     .Where(mi => mi.Name == itemData.Name)
@@ -130,18 +122,18 @@ namespace back_end.Controllers
                 {
                     Name = itemData.Name!,
                     Description = itemData.Description ?? string.Empty,
-                    Category_id = itemData.Category_Id,
-                    image_url = itemData.Item_Image_Url ?? string.Empty,
+                    Category_id = itemData.CategoryId,
+                    image_url = itemData.ItemImageUrl ?? string.Empty,
                     Status = MenuItemStatus.Available,
                     // Ensure collection is initialized before adding tags (if your entity doesn’t do it)
                     MenuItemTags = new List<MenuItemTag>()
                 };
 
                 // Handle possible null Tag_Ids
-                if (itemData.Tag_Ids != null && itemData.Tag_Ids.Count > 0)
+                if (itemData.TagIds != null && itemData.TagIds.Count > 0)
                 {
                     var tags = await _context.Tags
-                        .Where(t => itemData.Tag_Ids.Contains(t.tag_id))
+                        .Where(t => itemData.TagIds.Contains(t.tag_id))
                         .ToListAsync();
 
                     foreach (var tag in tags)
@@ -153,22 +145,7 @@ namespace back_end.Controllers
                 _context.Add(newItem);
                 await _context.SaveChangesAsync();
 
-                return Ok(new MenuItemResponseDto
-                {
-                    ItemId = newItem.item_id,
-                    Name = newItem.Name,
-                    Description = newItem.Description,
-                    Category_Id = newItem.Category_id,
-                    Item_Image_Url = newItem.image_url,
-                    Status = newItem.Status,
-                    Tags = newItem.MenuItemTags.Select(t => new FullTagResponseDto
-                    {
-                        TagId = t.Tag.tag_id,
-                        Name = t.Tag.tag_name,
-                        ColorCode = t.Tag.tag_color
-                    }).ToList(),
-
-                });
+                return Ok(MenuItemResponseDto.From(newItem));
             }
             catch (Exception ex)
             {
@@ -181,7 +158,7 @@ namespace back_end.Controllers
         /// Retrieves all active menus from the database.
         /// </summary>
         /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of <see cref="Menu"/> objects.
+        /// An <see cref="ActionResult"/> containing a collection of <see cref="MenuResponseDto"/> objects.
         /// Returns HTTP 200 (OK) with the list of active menus on success.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
         /// </returns>
@@ -197,15 +174,15 @@ namespace back_end.Controllers
         //GET: api/menu
         //Get all Menus
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<Menu>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<MenuResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<Menu>>> GetAllMenu()
+        public async Task<ActionResult<IEnumerable<MenuResponseDto>>> GetAllMenu()
         {
             try
             {
-                var menu = await _context.Menus.Include(m => m.MenuLocations).ToListAsync();
+                var menus = await _context.Menus.Include(m => m.MenuLocations).ToListAsync();
 
-                return Ok(menu);
+                return Ok(menus.Select(MenuResponseDto.From).ToList());
             }
             catch (Exception ex)
             {
@@ -219,7 +196,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="id">The unique identifier of the menu</param>
         /// <returns>
-        /// An <see cref="ActionResult"/> containing the <see cref="Menu"/> object.
+        /// An <see cref="ActionResult"/> containing the <see cref="MenuResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the menu details on success.
         /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -237,18 +214,18 @@ namespace back_end.Controllers
         //GET: api/menu/{id}
         //Get a specific menu by its ID number
         [HttpGet("{id}")]
-        [ProducesResponseType(typeof(Menu), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<Menu>> GetMenuByID(int id)
+        public async Task<ActionResult<MenuResponseDto>> GetMenuByID(int id)
         {
             try
             {
-                var menu = await _context.Menus.FindAsync(id);
+                var menu = await _context.Menus.Include(m => m.MenuLocations).FirstOrDefaultAsync(m => m.Menu_id == id);
 
                 if (menu != null)
                 {
-                    return Ok(menu);
+                    return Ok(MenuResponseDto.From(menu));
                 }
 
                 return NotFound(new { message = $"Can't find menu ID: {id}" });
@@ -276,7 +253,7 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/menu/123/item
+        ///     GET /api/menu/123/item?location_id=4
         ///
         /// Returns only items with 'Available' status.
         /// Each item includes:
@@ -292,7 +269,7 @@ namespace back_end.Controllers
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<object>>> GetItemsByMenu(int menu, [FromQuery] int? locationId)
+        public async Task<ActionResult<IEnumerable<object>>> GetItemsByMenu(int menu, [FromQuery(Name = "location_id")] int? locationId)
         {
             try
             {
@@ -319,32 +296,32 @@ namespace back_end.Controllers
                     //Only takes tag name and color
                     var menuItems = itemInfo.Select(m => new
                     {
-                        itemId = m.Item_Id,
+                        item_id = m.Item_Id,
                         name = m.MenuItem.Name,
                         description = m.MenuItem.Description,
                         category = m.MenuItem.Category.Category_name,
                         price = m.Price,
-                        categoryID = m.MenuItem.Category_id,
-                        categoryLimits = new
+                        category_id = m.MenuItem.Category_id,
+                        category_limits = new
                         {
                             adult = m.MenuItem.Category.adult_limit,
                             senior = m.MenuItem.Category.senior_limit,
                             child = m.MenuItem.Category.child_limit,
                             toddler = LimitRules.EffectToddler(m.MenuItem.Category.toddler_limit, m.MenuItem.Category.child_limit),
-                            perOrder = m.MenuItem.Category.per_order_limit,
-                            overLimitBehavior = m.MenuItem.Category.over_limit_behavior,
+                            per_order = m.MenuItem.Category.per_order_limit,
+                            over_limit_behavior = m.MenuItem.Category.over_limit_behavior,
                         },
-                        itemLimits = new
+                        item_limits = new
                         {
                             adult = m.Adult_Limit,
                             senior = m.Senior_limit,
                             child = m.Child_limit,
                             toddler = LimitRules.EffectToddler(m.Tot_Limit, m.Child_limit),
-                            perOrder = m.Per_Order_Limit,
-                            overLimitBehavior = m.Over_Limit_Behavior,
+                            per_order = m.Per_Order_Limit,
+                            over_limit_behavior = m.Over_Limit_Behavior,
                         },
-                        isAddOn = m.Is_Add_On,
-                        imageURL = m.MenuItem.image_url,
+                        is_add_on = m.Is_Add_On,
+                        item_image_url = m.MenuItem.image_url,
                         tags = m.MenuItem.MenuItemTags.
                             Select(me => new
                             {
@@ -384,11 +361,11 @@ namespace back_end.Controllers
         /// Returns only active menus associated with the specified location.
         /// </remarks>
         [HttpGet("location/{location}")]
-        [ProducesResponseType(typeof(IEnumerable<Menu>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<MenuResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
 
-        public async Task<ActionResult<IEnumerable<Menu>>> GetMenuByLocation(int location)
+        public async Task<ActionResult<IEnumerable<MenuResponseDto>>> GetMenuByLocation(int location)
         {
             try
             {
@@ -400,14 +377,12 @@ namespace back_end.Controllers
                     return NotFound(new { message = $"Can't find location with ID: {location}" });
                 }
 
-                var menus = await _context.MenuLocations
-                                .Where(m => m.Location_Id == location)
-                                .Include(m => m.Menu)
-                                .Where(m => m.Menu.Is_active)
-                                .Select(m => m.Menu)
+                var menus = await _context.Menus
+                                .Include(m => m.MenuLocations)
+                                .Where(m => m.Is_active && m.MenuLocations.Any(ml => ml.Location_Id == location))
                                 .ToListAsync();
 
-                return Ok(menus);
+                return Ok(menus.Select(MenuResponseDto.From).ToList());
             }
             catch (Exception ex)
             {
@@ -441,9 +416,9 @@ namespace back_end.Controllers
         ///     {
         ///         "name": "Updated Dinner Menu",
         ///         "description": "Evening dining options",
-        ///         "start_Time": "17:00:00",
-        ///         "end_Time": "22:00:00",
-        ///         "is_Active": true
+        ///         "start_time": "17:00:00",
+        ///         "end_time": "22:00:00",
+        ///         "is_active": true
         ///     }
         ///
         /// This endpoint requires Admin role authorization.
@@ -463,7 +438,7 @@ namespace back_end.Controllers
         {
             try
             {
-                var menu = _context.Menus.FirstOrDefault(m => m.Menu_id == menuId);
+                var menu = await _context.Menus.Include(m => m.MenuLocations).FirstOrDefaultAsync(m => m.Menu_id == menuId);
                 if (menu == null)
                 {
                     return NotFound("Menu Id was not Found");
@@ -485,29 +460,21 @@ namespace back_end.Controllers
                 {
                     menu.Description = menuData.Description;
                 }
-                if (menuData.Start_Time.HasValue)
+                if (menuData.StartTime.HasValue)
                 {
-                    menu.Start_time = (TimeOnly)menuData.Start_Time;
+                    menu.Start_time = (TimeOnly)menuData.StartTime;
                 }
-                if (menuData.End_Time.HasValue)
+                if (menuData.EndTime.HasValue)
                 {
-                    menu.End_time = (TimeOnly)menuData.End_Time;
+                    menu.End_time = (TimeOnly)menuData.EndTime;
                 }
-                if (menuData.Is_Active.HasValue)
+                if (menuData.IsActive.HasValue)
                 {
-                    menu.Is_active = (bool)menuData.Is_Active;
+                    menu.Is_active = (bool)menuData.IsActive;
                 }
                 _context.Update(menu);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuResponseDto
-                {
-                    MenuId = menu.Menu_id,
-                    Name = menu.Name,
-                    Description = menu.Description,
-                    StartTime = menu.Start_time,
-                    EndTime = menu.End_time,
-                    IsActive = menu.Is_active
-                });
+                return Ok(MenuResponseDto.From(menu));
             }
             catch (Exception ex)
             {

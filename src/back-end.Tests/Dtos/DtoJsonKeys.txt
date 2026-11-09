@@ -67,21 +67,22 @@ back_end.Dtos.LocationResponseDto: address_one, address_two, city, location_id, 
 back_end.Dtos.LocationUpdateDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LockGuestCountsDto: locked
 back_end.Dtos.MenuAssignmentCreate: adult_Limit, child_Limit, is_Add_on, item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, senior_Limit, status, tot_Limit
-back_end.Dtos.MenuAssignmentResponse: is_Add_On, item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, status, tot_Limit
+back_end.Dtos.MenuAssignmentResponseDto: adult_limit, assignment_id, child_limit, is_add_on, item_id, location_id, menu_id, menu_name, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
 back_end.Dtos.MenuAssignmentUpdateDto: adult_Limit, child_Limit, is_Add_on, over_Limit_Behavior, per_Order_Limit, price, senior_Limit, status, tot_Limit
 back_end.Dtos.MenuBaseDto: description, end_time, is_active, name, start_time
 back_end.Dtos.MenuCreateDto: description, end_time, is_active, name, start_time
 back_end.Dtos.MenuItemAssignmentBaseDto: item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, tot_Limit
-back_end.Dtos.MenuItemBaseDto: category_Id, description, item_Image_Url, name, status
-back_end.Dtos.MenuItemCreateDto: category_Id, description, item_Image_Url, name, status, tag_Ids
-back_end.Dtos.MenuItemDetailDto: category_Name, current_Price, tag_Names, total_Orders
+back_end.Dtos.MenuItemBaseDto: category_id, description, item_image_url, name, status
+back_end.Dtos.MenuItemCreateDto: category_id, description, item_image_url, name, status, tag_ids
+back_end.Dtos.MenuItemDetailDto: category_name, current_price, tag_names, total_orders
 back_end.Dtos.MenuItemDetailResponseDto: category_id, category_name, description, is_add_on, item_id, item_image_url, menu_id, name, price, status
-back_end.Dtos.MenuItemResponseDto: category_Id, created_at, description, item_Image_Url, item_id, name, status, tags, updated_at
-back_end.Dtos.MenuItemUpdateDto: category_Id, description, item_Image_Url, name, status, tag_Ids
+back_end.Dtos.MenuItemResponseDto: category_id, created_at, description, item_id, item_image_url, name, status, tags, updated_at
+back_end.Dtos.MenuItemUpdateDto: category_id, description, item_image_url, name, status, tag_ids
 back_end.Dtos.MenuItemViewCreateDto: item_id, session_id, view_seconds
+back_end.Dtos.MenuItemWithAssignmentsDto: category_id, created_at, description, item_id, item_image_url, menu_assignments, name, status, tags, updated_at
 back_end.Dtos.MenuLocationCreateDto: menu_id
-back_end.Dtos.MenuResponseDto: description, end_time, is_active, menu_id, name, start_time
-back_end.Dtos.MenuUpdateDto: description, end_Time, is_Active, name, start_Time
+back_end.Dtos.MenuResponseDto: description, end_time, is_active, location_ids, menu_id, name, start_time
+back_end.Dtos.MenuUpdateDto: description, end_time, is_active, name, start_time
 back_end.Dtos.MergeBillDto: into_bill_id
 back_end.Dtos.MoveGuestDto: bill_id, guest_count, guest_type, move_orders
 back_end.Dtos.MyBillDto: adult_count, bill_id, bill_name, child_count, counts_locked, people_count, requested_at, senior_count, status, tot_count, total_count

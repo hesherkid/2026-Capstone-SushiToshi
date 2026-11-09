@@ -38,7 +38,7 @@ export const useStaffOrder = (session) => {
 
     Promise.all([
       api.get("/Category"),
-      api.get(`/Menu/${menuId}/item`, { params: locationId ? { locationId } : {} }),
+      api.get(`/Menu/${menuId}/item`, { params: locationId ? { location_id: locationId } : {} }),
       // Without limits the cart doesn't stop early, but the server still checks
       api.get(`/Order/session/${sessionId}/limits`).catch(() => null),
     ])

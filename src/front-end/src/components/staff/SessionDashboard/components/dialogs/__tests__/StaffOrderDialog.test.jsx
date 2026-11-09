@@ -32,9 +32,9 @@ const session = (overrides = {}) => ({
 });
 
 const ITEMS = [
-  { itemId: 10, name: "Salmon Roll", price: 0, categoryID: 1, isAddOn: false },
-  { itemId: 11, name: "Tuna Roll", price: 0, categoryID: 1, isAddOn: false },
-  { itemId: 66, name: "Hot Stone", price: 5, categoryID: 2, isAddOn: false },
+  { item_id: 10, name: "Salmon Roll", price: 0, category_id: 1, is_add_on: false },
+  { item_id: 11, name: "Tuna Roll", price: 0, category_id: 1, is_add_on: false },
+  { item_id: 66, name: "Hot Stone", price: 5, category_id: 2, is_add_on: false },
 ];
 
 const mockMenu = (limits = { items: [], categories: [] }) => {
@@ -65,7 +65,7 @@ describe("Staff order dialog", () => {
 
     expect(await screen.findByText("Salmon Roll")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Rolls" })).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledWith("/Menu/1/item", { params: { locationId: 2 } });
+    expect(api.get).toHaveBeenCalledWith("/Menu/1/item", { params: { location_id: 2 } });
   });
 
   it("can't place an order until an item is picked", async () => {

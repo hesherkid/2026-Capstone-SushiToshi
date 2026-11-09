@@ -7,14 +7,14 @@ const money = (value) => `$${Number(value).toFixed(2)}`;
 
 export const limitText = (item) => {
   const parts = [];
-  const cat = item.categoryLimits ?? {};
-  const own = item.itemLimits ?? {};
+  const cat = item.category_limits ?? {};
+  const own = item.item_limits ?? {};
 
   // Per order (whole table, each order): always blocks
-  if (own.perOrder) parts.push(`${own.perOrder} per order`);
-  if (cat.perOrder)
+  if (own.per_order) parts.push(`${own.per_order} per order`);
+  if (cat.per_order)
     parts.push(
-      `${cat.perOrder} per order across all ${item.category ?? "items in this section"}`,
+      `${cat.per_order} per order across all ${item.category ?? "items in this section"}`,
     );
 
   // Per person (whole dining session): the tighter one is what the guest hits first
@@ -24,7 +24,7 @@ export const limitText = (item) => {
     // Charge applies when the limit that binds is set to Charge (e.g. Hot Stone)
     const binding = own.adult === limit ? own : cat;
     // An included item's price is what an extra costs past a Charge limit
-    const charges = binding.overLimitBehavior === "Charge" && item.price > 0;
+    const charges = binding.over_limit_behavior === "Charge" && item.price > 0;
     parts.push(
       charges
         ? `${limit} per person, then ${money(item.price)} each`

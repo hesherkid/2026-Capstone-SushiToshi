@@ -90,8 +90,8 @@ const SALMON = {
   item_id: 7,
   name: "Salmon Nigiri",
   description: "Two pieces",
-  category_Id: 2,
-  item_Image_Url: null,
+  category_id: 2,
+  item_image_url: null,
   status: "Available",
   tags: [SPICY],
 };
@@ -100,7 +100,7 @@ const mockGets = (menuAssignments = []) =>
   api.get.mockImplementation((url) => {
     if (url === "/menuItem") return Promise.resolve({ data: [SALMON] });
     if (url.toLowerCase() === "/menuitem/7")
-      return Promise.resolve({ data: { ...SALMON, menuAssignments } });
+      return Promise.resolve({ data: { ...SALMON, menu_assignments: menuAssignments } });
     if (url === "/Category") return Promise.resolve({ data: CATEGORIES });
     return Promise.resolve({ data: [] });
   });
@@ -364,7 +364,7 @@ describe("Menu item delete", () => {
   };
 
   it("won't offer to delete an item that is assigned to a menu", async () => {
-    mockGets([{ assignment_Id: 3, menu_Id: 1, item_Id: 7 }]);
+    mockGets([{ assignment_id: 3, menu_id: 1, item_id: 7 }]);
     await clickRowDelete();
 
     expect(await screen.findByTestId("page-error")).toHaveTextContent(
