@@ -285,26 +285,33 @@ const MenuAssignmentDialog = ({
         ? `/menuassignment/${editingAssignment.menu_id}/${selectedItem.item_id}${locationQuery(editingAssignment.location_id)}`
         : "/menuassignment";
 
+      const fields = {
+        price: parseFloat(formData.price) || 0,
+        adult_limit: parseInt(formData.adult_limit) || 0,
+        child_limit: parseInt(formData.child_limit) || 0,
+        senior_limit: parseInt(formData.senior_limit) || 0,
+        tot_limit: parseInt(formData.tot_limit) || 0,
+        per_order_limit: parseInt(formData.per_order_limit) || 0,
+        over_limit_behavior: formData.over_limit_behavior,
+        status: formData.status,
+        is_add_on: formData.is_add_on,
+      };
+
+      // An edit's menu, item and location are in the URL, and the API rejects them in the body
       await api({
         method: editingAssignment ? "PUT" : "POST",
         url,
-        data: {
-          menu_id: parseInt(formData.menu_id),
-          item_id: selectedItem.item_id,
-          location_id:
-            formData.location_id === ALL_LOCATIONS
-              ? null
-              : parseInt(formData.location_id),
-          price: parseFloat(formData.price) || 0,
-          adult_limit: parseInt(formData.adult_limit) || 0,
-          child_limit: parseInt(formData.child_limit) || 0,
-          senior_limit: parseInt(formData.senior_limit) || 0,
-          tot_limit: parseInt(formData.tot_limit) || 0,
-          per_order_limit: parseInt(formData.per_order_limit) || 0,
-          over_limit_behavior: formData.over_limit_behavior,
-          status: formData.status,
-          is_add_on: formData.is_add_on,
-        },
+        data: editingAssignment
+          ? fields
+          : {
+              ...fields,
+              menu_id: parseInt(formData.menu_id),
+              item_id: selectedItem.item_id,
+              location_id:
+                formData.location_id === ALL_LOCATIONS
+                  ? null
+                  : parseInt(formData.location_id),
+            },
       });
 
       // Refetch assignments to ensure we have complete data with menu objects

@@ -154,6 +154,10 @@ describe("Menu assignment dialog", () => {
       }),
     });
     expect(request.data).not.toHaveProperty("full_price");
+    // The menu, item and location are in the URL; the API rejects them in an edit's body
+    expect(request.data).not.toHaveProperty("menu_id");
+    expect(request.data).not.toHaveProperty("item_id");
+    expect(request.data).not.toHaveProperty("location_id");
   });
 
   it("won't save an item that charges past its limit without a price", async () => {

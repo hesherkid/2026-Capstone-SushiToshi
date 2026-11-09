@@ -66,12 +66,12 @@ back_end.Dtos.LocationPricingSummary: location_id, location_name, province_code,
 back_end.Dtos.LocationResponseDto: address_one, address_two, city, location_id, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LocationUpdateDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LockGuestCountsDto: locked
-back_end.Dtos.MenuAssignmentCreate: adult_Limit, child_Limit, is_Add_on, item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, senior_Limit, status, tot_Limit
+back_end.Dtos.MenuAssignmentCreate: adult_limit, child_limit, is_add_on, item_id, location_id, menu_id, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
 back_end.Dtos.MenuAssignmentResponseDto: adult_limit, assignment_id, child_limit, is_add_on, item_id, location_id, menu_id, menu_name, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
-back_end.Dtos.MenuAssignmentUpdateDto: adult_Limit, child_Limit, is_Add_on, over_Limit_Behavior, per_Order_Limit, price, senior_Limit, status, tot_Limit
+back_end.Dtos.MenuAssignmentUpdateDto: adult_limit, child_limit, is_add_on, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
 back_end.Dtos.MenuBaseDto: description, end_time, is_active, name, start_time
 back_end.Dtos.MenuCreateDto: description, end_time, is_active, name, start_time
-back_end.Dtos.MenuItemAssignmentBaseDto: item_Id, location_Id, menu_Id, over_Limit_Behavior, per_Order_Limit, price, tot_Limit
+back_end.Dtos.MenuItemAssignmentBaseDto: item_id, location_id, menu_id, over_limit_behavior, per_order_limit, price, tot_limit
 back_end.Dtos.MenuItemBaseDto: category_id, description, item_image_url, name, status
 back_end.Dtos.MenuItemCreateDto: category_id, description, item_image_url, name, status, tag_ids
 back_end.Dtos.MenuItemResponseDto: category_id, created_at, description, item_id, item_image_url, name, status, tags, updated_at
