@@ -175,7 +175,7 @@ const ReviewOrderPage = () => {
         throw new Error("Couldn't place your order. Please try again.");
 
       setPlacedExtras(
-        (order.orderItems ?? [])
+        (order.order_items ?? [])
           .filter((line) => line.charge_reason === "OverLimit")
           .map((line) => ({
             itemId: line.item_id,

@@ -92,12 +92,12 @@ export const OrderProvider = ({ children }) => {
       const result = await baseApproveOrder(orderId);
       if (result) {
         setOrders((prev) =>
-          prev.map((order) => (order.orderId === orderId ? result : order)),
+          prev.map((order) => (order.order_id === orderId ? result : order)),
         );
         groupOrdersByStatus(
-          orders.map((order) => (order.orderId === orderId ? result : order)),
+          orders.map((order) => (order.order_id === orderId ? result : order)),
         );
-        if (selectedOrder?.orderId === orderId) {
+        if (selectedOrder?.order_id === orderId) {
           setSelectedOrder(result);
         }
         return result;
@@ -112,12 +112,12 @@ export const OrderProvider = ({ children }) => {
       const result = await baseCancelOrder(orderId);
       if (result) {
         setOrders((prev) =>
-          prev.map((order) => (order.orderId === orderId ? result : order)),
+          prev.map((order) => (order.order_id === orderId ? result : order)),
         );
         groupOrdersByStatus(
-          orders.map((order) => (order.orderId === orderId ? result : order)),
+          orders.map((order) => (order.order_id === orderId ? result : order)),
         );
-        if (selectedOrder?.orderId === orderId) {
+        if (selectedOrder?.order_id === orderId) {
           setSelectedOrder(result);
         }
         return result;
@@ -132,12 +132,12 @@ export const OrderProvider = ({ children }) => {
       const result = await baseCompleteOrder(orderId);
       if (result) {
         setOrders((prev) =>
-          prev.map((order) => (order.orderId === orderId ? result : order)),
+          prev.map((order) => (order.order_id === orderId ? result : order)),
         );
         groupOrdersByStatus(
-          orders.map((order) => (order.orderId === orderId ? result : order)),
+          orders.map((order) => (order.order_id === orderId ? result : order)),
         );
-        if (selectedOrder?.orderId === orderId) {
+        if (selectedOrder?.order_id === orderId) {
           setSelectedOrder(result);
         }
         return result;
@@ -156,15 +156,15 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
-          if (selectedOrder?.orderId === orderId) {
+          if (selectedOrder?.order_id === orderId) {
             setSelectedOrder(updatedOrder);
           }
         }
@@ -190,15 +190,15 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
-          if (selectedOrder?.orderId === orderId) {
+          if (selectedOrder?.order_id === orderId) {
             setSelectedOrder(updatedOrder);
           }
         }
@@ -224,15 +224,15 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
-          if (selectedOrder?.orderId === orderId) {
+          if (selectedOrder?.order_id === orderId) {
             setSelectedOrder(updatedOrder);
           }
         }
@@ -258,15 +258,15 @@ export const OrderProvider = ({ children }) => {
         if (updatedOrder) {
           setOrders((prev) =>
             prev.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
           groupOrdersByStatus(
             orders.map((order) =>
-              order.orderId === orderId ? updatedOrder : order,
+              order.order_id === orderId ? updatedOrder : order,
             ),
           );
-          if (selectedOrder?.orderId === orderId) {
+          if (selectedOrder?.order_id === orderId) {
             setSelectedOrder(updatedOrder);
           }
         }

@@ -161,18 +161,28 @@ namespace back_end.Dtos
 
     public class OrderResponseDto
     {
-        public int Order_Id { get; set; }
-        public int Session_Id { get; set; }
-        public int Bill_Id { get; set; }
-        public int? User_Id { get; set; }
-        public string? User_Name { get; set; }
+        [JsonPropertyName("order_id")]
+        public int OrderId { get; set; }
+        [JsonPropertyName("session_id")]
+        public int SessionId { get; set; }
+        [JsonPropertyName("bill_id")]
+        public int BillId { get; set; }
+        [JsonPropertyName("user_id")]
+        public int? UserId { get; set; }
+        [JsonPropertyName("user_name")]
+        public string? UserName { get; set; }
+        [JsonPropertyName("status")]
         public OrderStatus Status { get; set; }
-        public DateTime Created_At { get; set; }
-        public DateTime? Completed_At { get; set; }
+        [JsonPropertyName("created_at")]
+        public DateTime CreatedAt { get; set; }
+        [JsonPropertyName("completed_at")]
+        public DateTime? CompletedAt { get; set; }
 
+        [JsonPropertyName("order_items")]
         public List<OrderItemResponseDto> OrderItems { get; set; } = new();
 
         // Automatically calculated from OrderItems
+        [JsonPropertyName("pending_items_count")]
         public int PendingItemsCount
         {
             get

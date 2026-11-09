@@ -92,7 +92,7 @@ back_end.Dtos.OrderItemInsertResponse: item_id, menu_id, order_id, order_item_id
 back_end.Dtos.OrderItemResponseDto: charge_reason, completed_at, item_id, menu_id, name, order_id, order_item_id, price_at_time, quantity, status
 back_end.Dtos.OrderItemUpdateDto: price_at_time, quantity, status
 back_end.Dtos.OrderLimitLeftDto: free_left, per_order, session_left
-back_end.Dtos.OrderResponseDto: bill_Id, completed_At, created_At, orderItems, order_Id, pendingItemsCount, session_Id, status, user_Id, user_Name
+back_end.Dtos.OrderResponseDto: bill_id, completed_at, created_at, order_id, order_items, pending_items_count, session_id, status, user_id, user_name
 back_end.Dtos.PagedUserResponseDto: items, page, page_size, total
 back_end.Dtos.PasswordChangeDto: current_password, new_password
 back_end.Dtos.PastVisitBillDto: bill_id, bill_name, guest_count, total

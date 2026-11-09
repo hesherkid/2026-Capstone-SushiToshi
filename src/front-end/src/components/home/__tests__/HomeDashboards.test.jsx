@@ -38,9 +38,9 @@ const pendingRequests = [
 ];
 
 const orders = [
-  { orderId: 501, sessionId: 1, status: "Pending", tableNumbers: [1, 2], createdAt: "2026-10-14T20:05:00Z", items: [{ quantity: 2 }, { quantity: 1 }] },
-  { orderId: 502, sessionId: 2, status: "Processing", tableNumbers: [5], createdAt: "2026-10-14T20:02:00Z", items: [{ quantity: 1 }] },
-  { orderId: 503, sessionId: 2, status: "Delivered", tableNumbers: [5], createdAt: "2026-10-14T19:50:00Z", items: [{ quantity: 4 }] },
+  { order_id: 501, session_id: 1, status: "Pending", table_numbers: [1, 2], created_at: "2026-10-14T20:05:00Z", items: [{ quantity: 2 }, { quantity: 1 }] },
+  { order_id: 502, session_id: 2, status: "Processing", table_numbers: [5], created_at: "2026-10-14T20:02:00Z", items: [{ quantity: 1 }] },
+  { order_id: 503, session_id: 2, status: "Delivered", table_numbers: [5], created_at: "2026-10-14T19:50:00Z", items: [{ quantity: 4 }] },
 ];
 
 const mockApiData = ({ requests = pendingRequests, allOrders = orders } = {}) => {
@@ -127,8 +127,8 @@ describe("Home page dashboards", () => {
       created_at: `2026-10-14T20:0${i}:00Z`,
     }));
     const manyOrders = Array.from({ length: 6 }, (_, i) => ({
-      orderId: 600 + i, sessionId: 1, status: "Pending", tableNumbers: [i + 1],
-      createdAt: `2026-10-14T20:0${i}:00Z`, items: [{ quantity: 1 }],
+      order_id: 600 + i, session_id: 1, status: "Pending", table_numbers: [i + 1],
+      created_at: `2026-10-14T20:0${i}:00Z`, items: [{ quantity: 1 }],
     }));
     mockApiData({ requests: manyRequests, allOrders: manyOrders });
     render(<HomePage />);

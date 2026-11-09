@@ -17,30 +17,31 @@ export const normalizeStatus = (status) => {
   return upper === "APPROVED" ? ORDER_STATUS.PROCESSING : upper;
 };
 
+// An order from all_orders or history, in the shape the staff order screens use.
 // Shared with useOrderHistory so live and past orders have the same shape
 export const mapOrder = (order) => {
   const items = Array.isArray(order.items)
     ? order.items.map((item) => ({
-        orderItemId: item.orderItemId,
-        itemId: item.itemId,
+        orderItemId: item.order_item_id,
+        itemId: item.item_id,
         name: item.name,
         quantity: item.quantity,
-        price: item.priceAtTime,
-        isAddOn: item.isAddOn,
+        price: item.price_at_time,
+        isAddOn: item.is_add_on,
         status: item.status,
       }))
     : [];
 
   return {
-    orderId: order.orderId,
-    sessionId: order.sessionId,
-    billId: order.billId,
-    billName: order.billName ?? null,
-    userName: order.userName,
+    orderId: order.order_id,
+    sessionId: order.session_id,
+    billId: order.bill_id,
+    billName: order.bill_name ?? null,
+    userName: order.user_name,
     status: normalizeStatus(order.status),
-    createdAt: order.createdAt,
-    completedAt: order.completedAt,
-    tableNumbers: order.tableNumbers || [],
+    createdAt: order.created_at,
+    completedAt: order.completed_at,
+    tableNumbers: order.table_numbers || [],
     items,
     itemCount: items.reduce((sum, item) => sum + (item.quantity || 0), 0),
     orderTotal: items.reduce(

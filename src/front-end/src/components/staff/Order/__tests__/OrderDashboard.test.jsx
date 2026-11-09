@@ -48,37 +48,37 @@ if (typeof window.ResizeObserver === "undefined") {
 }
 
 const item = (orderItemId, name, quantity, status = "Pending") => ({
-  orderItemId,
-  itemId: orderItemId * 10,
+  order_item_id: orderItemId,
+  item_id: orderItemId * 10,
   name,
   quantity,
-  priceAtTime: 5,
+  price_at_time: 5,
   status,
 });
 
 const orders = [
   {
-    orderId: 501,
-    sessionId: 1,
+    order_id: 501,
+    session_id: 1,
     status: "Pending",
-    tableNumbers: [1, 2],
-    createdAt: "2026-10-14T20:05:00Z",
+    table_numbers: [1, 2],
+    created_at: "2026-10-14T20:05:00Z",
     items: [item(1, "Salmon Nigiri", 2), item(2, "Miso Soup", 1)],
   },
   {
-    orderId: 502,
-    sessionId: 2,
+    order_id: 502,
+    session_id: 2,
     status: "Approved",
-    tableNumbers: [5],
-    createdAt: "2026-10-14T20:02:00Z",
+    table_numbers: [5],
+    created_at: "2026-10-14T20:02:00Z",
     items: [item(3, "Tuna Roll", 1, "Processing")],
   },
   {
-    orderId: 503,
-    sessionId: 2,
+    order_id: 503,
+    session_id: 2,
     status: "Delivered",
-    tableNumbers: [5],
-    createdAt: "2026-10-14T19:50:00Z",
+    table_numbers: [5],
+    created_at: "2026-10-14T19:50:00Z",
     items: [item(4, "Edamame", 4, "Delivered")],
   },
 ];
@@ -217,13 +217,13 @@ const pastOrder = (
   createdAt,
   quantity,
 ) => ({
-  orderId,
-  sessionId,
-  billId,
-  billName,
+  order_id: orderId,
+  session_id: sessionId,
+  bill_id: billId,
+  bill_name: billName,
   status,
-  tableNumbers: sessionId === 42 ? [1, 2] : [5],
-  createdAt,
+  table_numbers: sessionId === 42 ? [1, 2] : [5],
+  created_at: createdAt,
   items: [item(orderId * 10, `Item ${orderId}`, quantity, status)],
 });
 
