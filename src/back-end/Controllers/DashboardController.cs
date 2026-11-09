@@ -175,7 +175,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Failed to load dashboard sessions for location {LocationId}", locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -298,7 +299,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Failed to load dashboard summary for location {LocationId}", locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
   }
