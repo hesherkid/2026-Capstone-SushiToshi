@@ -344,7 +344,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CopyMenuAssignments(
             int sourceMenuId,
-[FromQuery(Name = "new_menu_name")]             string newMenuName
+[FromQuery(Name = "new_menu_name")] string newMenuName
         )
         {
             try
