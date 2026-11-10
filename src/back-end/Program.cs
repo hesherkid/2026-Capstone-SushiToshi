@@ -350,7 +350,9 @@ app.MapGet("/db-test", async (ApplicationDbContext context) =>
 {
     try
     {
-        await context.Database.CanConnectAsync();
+        // CanConnectAsync returns false (it doesn't throw) when the database doesn't exist
+        if (!await context.Database.CanConnectAsync())
+            return Results.Problem("Database connection failed: the server can't be reached or the database doesn't exist");
         return Results.Ok("Database connection successful!");
     }
     catch (Exception ex)
@@ -367,47 +369,41 @@ using (var scope = app.Services.CreateScope())
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     try
     {
-        var canConnect = await context.Database.CanConnectAsync();
-        if (canConnect)
+        // Dev only: start from an empty database so everything is seeded fresh
+        // (same as `dotnet ef database drop`). Users are recreated by UserSeeder.
+        if (app.Environment.IsDevelopment() &&
+            app.Configuration.GetValue<bool>("Seeding:ResetOnStartup"))
         {
-            logger.LogInformation("Database connection successful");
-            // Dev only: start from an empty database so everything is seeded fresh
-            // (same as `dotnet ef database drop`). Users are recreated by UserSeeder.
-            if (app.Environment.IsDevelopment() &&
-                app.Configuration.GetValue<bool>("Seeding:ResetOnStartup"))
-            {
-                logger.LogWarning("Seeding:ResetOnStartup is on: dropping the database for a fresh seed");
-                await context.Database.EnsureDeletedAsync();
-            }
-            await context.Database.MigrateAsync();
-            logger.LogInformation("Database migrations applied successfully");
-            // Missing default prices would make every bill wrong: stop now instead
-            await PricingService.EnsureDefaultProfileAsync(context);
+            logger.LogWarning("Seeding:ResetOnStartup is on: dropping the database for a fresh seed");
+            await context.Database.EnsureDeletedAsync();
+        }
+        // Creates the database if it doesn't exist (after `dotnet ef database drop`, or on a new server).
+        // Don't check CanConnectAsync first: it returns false for a missing database, so migrations
+        // would never run. If the server can't be reached, this throws and the catch below logs why
+        await context.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully");
+        // Missing default prices would make every bill wrong: stop now instead
+        await PricingService.EnsureDefaultProfileAsync(context);
 
-            if (!app.Configuration.GetValue("Seeding:Enabled", true))
-            {
-                logger.LogInformation("Seeding:Enabled is off: skipping database seed");
-            }
-            else if (!context.MenuItems.Any())
-            {
-                await seeder.SeedDatabase();
-                logger.LogInformation("Database seed completed.");
-            }
-            else
-            {
-                logger.LogInformation("Database has already been seeded.");
-                UserSeeder userSeeder = scope.ServiceProvider.GetRequiredService<UserSeeder>();
-                userSeeder.Seed();
-                await context.SaveChangesAsync();
-            }
-
-            // Production seeds no accounts, so the first admin comes from configuration
-            await AdminBootstrap.EnsureAdminAsync(context, app.Configuration, logger);
+        if (!app.Configuration.GetValue("Seeding:Enabled", true))
+        {
+            logger.LogInformation("Seeding:Enabled is off: skipping database seed");
+        }
+        else if (!context.MenuItems.Any())
+        {
+            await seeder.SeedDatabase();
+            logger.LogInformation("Database seed completed.");
         }
         else
         {
-            logger.LogWarning("Cannot connect to database");
+            logger.LogInformation("Database has already been seeded.");
+            UserSeeder userSeeder = scope.ServiceProvider.GetRequiredService<UserSeeder>();
+            userSeeder.Seed();
+            await context.SaveChangesAsync();
         }
+
+        // Production seeds no accounts, so the first admin comes from configuration
+        await AdminBootstrap.EnsureAdminAsync(context, app.Configuration, logger);
     }
     // Missing default prices must stop startup; other database errors are only logged
     catch (Exception ex) when (ex is not PricingNotConfiguredException)
