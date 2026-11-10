@@ -63,7 +63,7 @@ describe("Customer bill dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ask for Bill" }));
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith("/Bill/request_bill/80", null, { params: { session_id: 8 } })
+      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/80", null, { params: { session_id: 8 } })
     );
     expect(await screen.findByText(/Staff will bring your bill shortly/)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Bill Requested" })).toBeDisabled();

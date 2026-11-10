@@ -56,7 +56,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample requests:
     ///
-    ///     POST /api/diningsession/Create_Dinning_Session
+    ///     POST /api/diningsession/create-dining-session
     ///     {
     ///         "menu_id": 123,
     ///         "location_id": 1,
@@ -64,7 +64,7 @@ namespace back_end.Controllers
     ///         "table_id": 456
     ///     }
     ///
-    ///     POST /api/diningsession/Create_Dinning_Session
+    ///     POST /api/diningsession/create-dining-session
     ///     {
     ///         "menu_id": 123,
     ///         "location_id": 1,
@@ -72,7 +72,7 @@ namespace back_end.Controllers
     ///         "table_group_id": 789
     ///     }
     ///
-    ///     POST /api/diningsession/Create_Dinning_Session
+    ///     POST /api/diningsession/create-dining-session
     ///     {
     ///         "menu_id": 123,
     ///         "location_id": 1
@@ -82,7 +82,7 @@ namespace back_end.Controllers
     /// The session is automatically marked as started with the current UTC timestamp.
     /// Use assignmentType to control whether a table, table group, or neither is assigned during creation.
     /// </remarks>
-    [HttpPost("Create_Dinning_Session")]
+    [HttpPost("create-dining-session")]
     // Staff seat tables; guests join an existing session through POST /api/DiningSession/join
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(DiningSessionResponseDto), StatusCodes.Status200OK)]
@@ -214,17 +214,17 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample requests:
     ///
-    ///     GET /api/diningsession/get_list_dining_sessions?active_only=true
+    ///     GET /api/diningsession/get-list-dining-sessions?active_only=true
     ///     (Returns only active/ongoing sessions)
     ///     
-    ///     GET /api/diningsession/get_list_dining_sessions?active_only=false
+    ///     GET /api/diningsession/get-list-dining-sessions?active_only=false
     ///     (Returns only ended sessions)
     ///
     /// Sessions are ordered by start time in descending order (newest first).
     /// Each session includes table numbers and participant count.
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpGet("get_list_dining_sessions")]
+    [HttpGet("get-list-dining-sessions")]
     [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ListDiningSessions([FromQuery] ListDiningSessionsRequestDto act)
@@ -301,7 +301,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     GET /api/diningsession/get_location/123
+    ///     GET /api/diningsession/get-location/123
     ///
     /// Returns comprehensive session details including:
     /// - Session metadata (ID, menu, timestamps)
@@ -310,7 +310,7 @@ namespace back_end.Controllers
     /// - Order and bill statistics
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpGet("get_location/{sessionId}")]
+    [HttpGet("get-location/{sessionId}")]
     public async Task<IActionResult> GetDiningSession(int sessionId)
     {
       try
@@ -603,14 +603,14 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     DELETE /api/diningsession/123/Tables/456
+    ///     DELETE /api/diningsession/123/tables/456
     ///
     /// Removes the association between a table and a dining session.
     /// Session must not have ended (ended sessions keep their table for history and analytics)
     /// Session must not have any open bills
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpDelete("{sessionId}/Tables/{tableId}")]
+    [HttpDelete("{sessionId}/tables/{tableId}")]
     public async Task<IActionResult> RemoveTableFromSession(int sessionId, int tableId)
     {
       try

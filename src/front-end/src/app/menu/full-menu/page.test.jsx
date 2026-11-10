@@ -413,7 +413,7 @@ describe("FullMenu guest flow", () => {
       fireEvent.click(start);
 
       await waitFor(() =>
-        expect(api.post).toHaveBeenCalledWith("/Bill/create_Bill/42", {
+        expect(api.post).toHaveBeenCalledWith("/Bill/create-bill/42", {
           bill_name: "Kim",
           adult_count: 2,
           senior_count: 0,

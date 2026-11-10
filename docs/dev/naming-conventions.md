@@ -11,6 +11,7 @@ This page lists the naming rules for the backend and the API, and explains why s
 | Backend files | Named after the class they hold | `BillController.cs` |
 | JSON keys in request and response bodies | snake_case | `adult_count` |
 | API query parameters | snake_case | `?location_id=1` |
+| API route paths | kebab-case | `/api/bill/leftover-fee/{sessionId}` |
 | Page URLs (QR codes, login links) | camelCase | `/auth/login?locationId=1&tableNumber=4` |
 | EF entity properties | Match the database column | `Bill_Id`, `table_number` |
 
@@ -38,9 +39,18 @@ Either style fixes the real problem, which was the same field arriving under dif
 
 The trade-off is that front-end code mixes styles a little, as in `const billName = bill.bill_name`.
 
+## Why route paths are kebab-case
+
+Route paths use kebab-case (`leftover-fee`), not snake_case like the JSON keys. Microsoft's REST API guidelines recommend kebab-case for paths, and most of the routes already used it. GitHub's API makes the same split: snake_case keys, kebab-case paths.
+
+Routes that start with `api/[controller]` keep the controller's class name, as in `/api/Bill/get-bills/{sessionId}`. Route matching ignores case, so `/api/bill/...` works too. Making those prefixes kebab-case would have changed every front-end URL.
+
+Some routes still name an action, like `get-bills` or `close-bill`, instead of naming a resource and letting the HTTP method be the action. Changing them would have meant redesigning the routes, not just renaming them, so they were only renamed.
+
 ## How the names are checked
 
 - **`DtoJsonKeysTests`** compares every DTO's JSON keys with `src/back-end.Tests/Dtos/DtoJsonKeys.txt`, so renaming a C# property can't quietly change a key. When a key change is intended, regenerate the file with `UPDATE_DTO_JSON_KEYS=1 dotnet test --filter DtoJsonKeysTests` and commit it with the change.
 - **`QueryParameterNameTests`** checks that every query parameter is snake_case.
+- **`RouteNameTests`** checks that every route path is kebab-case. It skips route parameters and the `[controller]` prefix.
 - **In Development, the backend rejects unknown names** with a 400 that names them. That covers body keys a DTO doesn't have (`Json:RejectUnknownKeys`) and query parameters an action doesn't take (`Query:RejectUnknownParameters`).
 - **In development, the frontend warns about missing keys.** Reading a key an API response doesn't have prints an `[api]` warning in the browser console (`src/front-end/src/utils/missingKeyWarnings.js`).

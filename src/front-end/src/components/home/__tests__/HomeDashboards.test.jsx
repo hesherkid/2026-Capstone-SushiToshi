@@ -48,7 +48,7 @@ const mockApiData = ({ requests = pendingRequests, allOrders = orders } = {}) =>
     if (url === "/Dashboard/sessions") return Promise.resolve({ data: sessions });
     if (url.includes("ServiceRequest/pending")) return Promise.resolve({ data: requests });
     if (url === "/staff/7") return Promise.resolve({ data: { first_name: "Arlyssa" } });
-    if (url === "/Order/all_orders") return Promise.resolve({ data: allOrders });
+    if (url === "/Order/all-orders") return Promise.resolve({ data: allOrders });
     return Promise.resolve({ data: [] });
   });
 };
@@ -74,7 +74,7 @@ describe("Home page dashboards", () => {
 
     expect(await screen.findByRole("link", { name: "2 Active sessions" })).toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith("/Dashboard/sessions", { params: { location_id: "2" } });
-    expect(api.get).not.toHaveBeenCalledWith("/DiningSession/get_list_dining_sessions", expect.anything());
+    expect(api.get).not.toHaveBeenCalledWith("/DiningSession/get-list-dining-sessions", expect.anything());
   });
 
   it("shows staff a welcome, live counts and only this location's table requests", async () => {
@@ -160,7 +160,7 @@ describe("Home page dashboards", () => {
     render(<HomePage />);
 
     await screen.findByRole("heading", { name: "Welcome back, Arlyssa" });
-    expect(api.get).not.toHaveBeenCalledWith("/Order/all_orders", expect.anything());
+    expect(api.get).not.toHaveBeenCalledWith("/Order/all-orders", expect.anything());
   });
 
   it("tells staff when no tables are waiting", async () => {

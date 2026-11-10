@@ -281,7 +281,7 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/lock_guest_counts/80",
+        "/Bill/lock-guest-counts/80",
         { locked: true },
         { params: { session_id: 8 } },
       ),
@@ -324,7 +324,7 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/lock_guest_counts/80",
+        "/Bill/lock-guest-counts/80",
         { locked: false },
         { params: { session_id: 8 } },
       ),
@@ -361,7 +361,7 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/guest_counts/80",
+        "/Bill/guest-counts/80",
         { adult_count: 3, senior_count: 0, child_count: 2, tot_count: 0 },
         { params: { session_id: 8 } },
       ),
@@ -715,7 +715,7 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/close_bill/80",
+        "/Bill/close-bill/80",
         null,
         expect.anything(),
       ),

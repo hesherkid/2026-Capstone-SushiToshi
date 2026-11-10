@@ -140,14 +140,14 @@ A table can have several bills, one per party paying separately. Each `SessionPa
 | `GET /api/sessionparticipant/{session_id}/bill`       | Their bill (with counts by guest type) and the table's open bills (name and party size only)         |
 | `PUT /api/sessionparticipant/{session_id}/bill`       | Join an open bill                                                                                    |
 | `PUT /api/sessionparticipant/{session_id}/bill/guests` | Change their own bill's guest counts                                                                 |
-| `POST /api/bill/create_Bill/{session_id}`             | Start a bill. A guest is put on it, and it's marked `Started_By_Guest`                               |
+| `POST /api/bill/create-bill/{session_id}`             | Start a bill. A guest is put on it, and it's marked `Started_By_Guest`                               |
 
 **Staff** manage everyone's from the Dining Session dialog (`components/staff/SessionDashboard`):
 
 | Endpoint                                                                   | What it does                                                                      |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `PUT /api/bill/guest_counts/{bill_id}`                                     | Edit Guests. Clears both "by guest" flags                                         |
-| `PUT /api/bill/lock_guest_counts/{bill_id}`                                | Lock or unlock the counts (`Counts_Locked`). Locking clears both "by guest" flags |
+| `PUT /api/bill/guest-counts/{bill_id}`                                     | Edit Guests. Clears both "by guest" flags                                         |
+| `PUT /api/bill/lock-guest-counts/{bill_id}`                                | Lock or unlock the counts (`Counts_Locked`). Locking clears both "by guest" flags |
 | `PUT /api/bill/merge/{bill_id}`                                            | Move people, non-cancelled orders, leftover fee and counts to another open bill, then cancel this one |
 | `PUT /api/sessionparticipant/{session_id}/participants/{participant_id}/bill` | Move someone, optionally with their orders (`move_orders`) and guests from the old bill's count (`guest_type`, `guest_count`) |
 
@@ -164,7 +164,7 @@ The rules live in `Helpers/BillLinks.cs`:
 
 **Concurrent changes:** anything that changes a bill's orders or counts takes a row lock first with `Helpers/BillLock.cs` (`SELECT ... FOR UPDATE` in a transaction), so an order can't land on a bill while staff close, merge or recount it. Lock several bills with the `params` overload, which locks in ID order to avoid deadlocks. Call it before reading anything. The in-memory test database has no locks, so it returns null there.
 
-**Cancelling a bill** (`POST /api/bill/cancel_bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
+**Cancelling a bill** (`POST /api/bill/cancel-bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
 
 ## Where things live
 

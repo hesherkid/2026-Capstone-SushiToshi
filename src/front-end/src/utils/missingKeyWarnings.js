@@ -52,7 +52,7 @@ export const warnOnMissingKeys = (data, label) => {
 // for computed columns like "actions"). Anything that isn't a wrapper comes back as it is
 export const unwrap = (value) => originals.get(value) ?? value;
 
-// "GET /Bill/get_bills/12" -> "GET /Bill/get_bills/:id", so each endpoint warns once, not once per id
+// "GET /Bill/get-bills/12" -> "GET /Bill/get-bills/:id", so each endpoint warns once, not once per id
 export const endpointLabel = (config) =>
   `${(config?.method ?? "get").toUpperCase()} ${(config?.url ?? "").split("?")[0].replace(/\/\d+(?=\/|$)/g, "/:id")}`;
 

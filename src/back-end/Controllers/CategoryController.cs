@@ -173,11 +173,11 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/category/get_category/123
+        ///     GET /api/category/get-category/123
         ///
         /// Returns the complete category details for the specified ID.
         /// </remarks>
-        [HttpGet("get_category/{categoryId}")]
+        [HttpGet("get-category/{categoryId}")]
         [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -219,7 +219,7 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     PUT /api/category/update_category/123
+        ///     PUT /api/category/update-category/123
         ///     {
         ///         "name": "Appetizers",
         ///         "description": "Starter dishes and small plates",
@@ -239,7 +239,7 @@ namespace back_end.Controllers
         /// Over limit behavior determines how the system handles situations where the specified limits are exceeded. Accepts Block or Charge.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
-        [HttpPut("update_category/{categoryId}")]
+        [HttpPut("update-category/{categoryId}")]
         [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -304,13 +304,13 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     DELETE /api/category/delete_category/123
+        ///     DELETE /api/category/delete-category/123
         ///
         /// Permanently removes the category from the database.
         /// If the category has associated menu items, deletion will be blocked and a conflict response will be returned.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
-        [HttpDelete("delete_category/{categoryId}")]
+        [HttpDelete("delete-category/{categoryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -362,16 +362,16 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample requests:
         ///
-        ///     GET /api/category/get_menu_by_category/123
+        ///     GET /api/category/get-menu-by-category/123
         ///     (Returns first 10 items)
         ///     
-        ///     GET /api/category/get_menu_by_category/123?skip=10&amp;limit=20
+        ///     GET /api/category/get-menu-by-category/123?skip=10&amp;limit=20
         ///     (Returns items 11-30)
         ///
         /// Supports pagination through skip and limit parameters.
         /// Default pagination: skip=0, limit=10
         /// </remarks>
-        [HttpGet("get_menu_by_category/{categoryId}")]
+        [HttpGet("get-menu-by-category/{categoryId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(IEnumerable<MenuItemResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

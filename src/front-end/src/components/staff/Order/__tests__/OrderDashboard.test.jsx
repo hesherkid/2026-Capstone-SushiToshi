@@ -129,7 +129,7 @@ describe("Order dashboard", () => {
     expect(
       screen.getByRole("tab", { name: "Delivered (1)" }),
     ).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledWith("/Order/all_orders", {
+    expect(api.get).toHaveBeenCalledWith("/Order/all-orders", {
       params: { location_id: "1", delivered_open_sessions_only: true },
     });
   });

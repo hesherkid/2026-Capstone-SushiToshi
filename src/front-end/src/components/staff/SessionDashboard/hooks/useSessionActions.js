@@ -74,7 +74,7 @@ export const useSessionActions = (onSuccess) => {
           if (!payload.location_id) throw new Error("Location ID is required");
 
           const response = await api.post(
-            "/DiningSession/Create_Dinning_Session",
+            "/DiningSession/create-dining-session",
             payload
           );
 
@@ -96,7 +96,7 @@ export const useSessionActions = (onSuccess) => {
       return apiWrapper(
         "listDiningSessions",
         async () => {
-          const res = await api.get("/DiningSession/get_list_dining_sessions", {
+          const res = await api.get("/DiningSession/get-list-dining-sessions", {
             params: { active_only: activeOnly },
           });
           return res.data || [];
@@ -116,7 +116,7 @@ export const useSessionActions = (onSuccess) => {
         const sid = toInt(sessionId);
         validateIds({ "session ID": sid });
 
-        const res = await api.get(`/DiningSession/get_location/${sid}`);
+        const res = await api.get(`/DiningSession/get-location/${sid}`);
         return res.data;
       });
     },
@@ -210,7 +210,7 @@ export const useSessionActions = (onSuccess) => {
           const tid = toInt(tableId);
           validateIds({ "session ID": sid, "table ID": tid });
 
-          const res = await api.delete(`/DiningSession/${sid}/Tables/${tid}`);
+          const res = await api.delete(`/DiningSession/${sid}/tables/${tid}`);
 
           return res.data;
         },
@@ -358,7 +358,7 @@ export const useSessionActions = (onSuccess) => {
             throw new Error("At least one guest is required");
           }
 
-          const res = await api.post(`/Bill/create_Bill/${sid}`, payload);
+          const res = await api.post(`/Bill/create-bill/${sid}`, payload);
 
           return res.data;
         },
@@ -384,7 +384,7 @@ export const useSessionActions = (onSuccess) => {
           const params = {};
           if (tableId) params.table_id = toInt(tableId);
 
-          const res = await api.get(`/Bill/get_bills/${sid}`, { params });
+          const res = await api.get(`/Bill/get-bills/${sid}`, { params });
           return res.data || [];
         },
         { defaultReturn: [] }
@@ -424,7 +424,7 @@ export const useSessionActions = (onSuccess) => {
           const bid = toInt(billId);
           validateIds({ "session ID": sid, "bill ID": bid });
 
-          const res = await api.put(`/Bill/close_bill/${bid}`, null, {
+          const res = await api.put(`/Bill/close-bill/${bid}`, null, {
             params: { session_id: sid },
           });
 
@@ -451,7 +451,7 @@ export const useSessionActions = (onSuccess) => {
           validateIds({ "session ID": sid, "bill ID": bid });
 
           const res = await api.put(
-            `/Bill/guest_counts/${bid}`,
+            `/Bill/guest-counts/${bid}`,
             {
               adult_count: toInt(counts.adultCount) || 0,
               senior_count: toInt(counts.seniorCount) || 0,
@@ -482,7 +482,7 @@ export const useSessionActions = (onSuccess) => {
           validateIds({ "session ID": sid, "bill ID": bid });
 
           const res = await api.put(
-            `/Bill/lock_guest_counts/${bid}`,
+            `/Bill/lock-guest-counts/${bid}`,
             { locked: Boolean(locked) },
             { params: { session_id: sid } },
           );

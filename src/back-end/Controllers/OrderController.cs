@@ -1177,11 +1177,11 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/order/all_orders?location_id=1&delivered_open_sessions_only=true
+        ///     GET /api/order/all-orders?location_id=1&delivered_open_sessions_only=true
         ///
         /// Returns all orders filtered by the specified location and delivered open sessions.
         /// </remarks>
-        [HttpGet("all_orders")]
+        [HttpGet("all-orders")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -1233,7 +1233,7 @@ namespace back_end.Controllers
         /// <param name="locationId">Optional location filter. Staff always get their current location</param>
         /// <param name="tableNumber">Optional table number. Matches single tables and tables in a group</param>
         /// <param name="name">Optional guest or bill name. Partial, case-insensitive match</param>
-        /// <returns>Orders placed in the range, newest first, in the same shape as all_orders</returns>
+        /// <returns>Orders placed in the range, newest first, in the same shape as all-orders</returns>
         /// <remarks>
         /// Sample request:
         ///
@@ -1314,7 +1314,7 @@ namespace back_end.Controllers
             return BadRequest(new ValidationProblemDetails(ModelState));
         }
 
-        // Orders with everything the staff order views need. Shared by all_orders and history
+        // Orders with everything the staff order views need. Shared by all-orders and history
         private IQueryable<SessionOrder> StaffOrdersQuery() =>
             _context.SessionOrders
                 .Include(o => o.DiningSession)
@@ -1330,7 +1330,7 @@ namespace back_end.Controllers
                         .ThenInclude(mi => mi.MenuAssignments)
                 .AsQueryable();
 
-        // The staff order shape, shared by all_orders and history so the two can't drift apart
+        // The staff order shape, shared by all-orders and history so the two can't drift apart
         private static object ToStaffOrder(SessionOrder o) => new
         {
             order_id = o.Order_Id,
