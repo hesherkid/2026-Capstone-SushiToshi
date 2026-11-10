@@ -13,7 +13,7 @@ jest.mock("next/navigation", () => ({
 const mockCreateOrder = jest.fn();
 let mockOnSuccess;
 // The server saves the order with its items, then the page's success callback runs
-const ordersPlaced = (order = { order_Id: 500, orderItems: [] }) =>
+const ordersPlaced = (order = { order_id: 500, order_items: [] }) =>
   mockCreateOrder.mockImplementation(async () => {
     await mockOnSuccess();
     return order;
@@ -137,8 +137,8 @@ describe("Review order page", () => {
     withCart();
     // The server split the 2 into 1 included and 1 charged extra
     ordersPlaced({
-      order_Id: 500,
-      orderItems: [
+      order_id: 500,
+      order_items: [
         { item_id: 11, quantity: 1, price_at_time: 0, charge_reason: "None" },
         { item_id: 11, quantity: 1, price_at_time: 5, charge_reason: "OverLimit" },
       ],
@@ -292,7 +292,7 @@ describe("Review order page", () => {
 
   it("charges for what's past a limit that charges, with the category's free units shared", async () => {
     // 2 Miso Soup and 1 Salmon Roll, both in a category with 2 free left, then $5 each
-    const SALMON_IN_APPETIZERS = { ...SALMON_ROLL, categoryID: 1 };
+    const SALMON_IN_APPETIZERS = { ...SALMON_ROLL, category_id: 1 };
     api.get.mockImplementation(
       tableApi({
         bills: [LEE],
@@ -393,7 +393,7 @@ describe("Review order page", () => {
     fireEvent.click(placeOrder);
     await waitFor(() => expect(mockCreateOrder).toHaveBeenCalledTimes(1));
 
-    ordersPlaced({ order_Id: 501, orderItems: [] });
+    ordersPlaced({ order_id: 501, order_items: [] });
 
     await waitFor(() =>
       expect(

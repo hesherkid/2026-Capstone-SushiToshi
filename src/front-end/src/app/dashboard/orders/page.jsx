@@ -36,8 +36,8 @@ const statusKey = (status) => {
 
 // Add-ons and over-limit extras show what they cost; all you can eat items are included
 const itemPrice = (item) => {
-  // "Mine" sends price; the table view sends priceAtTime
-  const price = Number(item.price ?? item.priceAtTime);
+  // "Mine" sends price; the table view sends price_at_time
+  const price = Number(item.price ?? item.price_at_time);
   if (!price) return null;
   const quantity = item.quantity || 1;
   return quantity > 1
@@ -222,14 +222,14 @@ const OrdersPage = () => {
   // Other guests' orders show only the bill they're on, never who placed them
   const orderLabel = (order) => {
     const parts = [];
-    if (myUserId && order.userId === myUserId) parts.push("You");
-    if (order.billName) parts.push(order.billName);
+    if (myUserId && order.user_id === myUserId) parts.push("You");
+    if (order.bill_name) parts.push(order.bill_name);
     return parts.join(" · ");
   };
 
   // Pending orders can be cancelled by whoever placed them ("My orders" only has theirs)
   const canCancel = (order) =>
-    statusKey(order.status) === "PENDING" && (view === VIEWS.MINE || (myUserId && order.userId === myUserId));
+    statusKey(order.status) === "PENDING" && (view === VIEWS.MINE || (myUserId && order.user_id === myUserId));
 
   const closeCancelDialog = () => {
     setOrderToCancel(null);
@@ -239,14 +239,14 @@ const OrdersPage = () => {
   // Returns false to keep the dialog open with the error (see ConfirmDialog)
   const handleCancelOrder = async () => {
     try {
-      await orderService.cancelOrder(orderToCancel.orderId);
+      await orderService.cancelOrder(orderToCancel.order_id);
     } catch (err) {
       setCancelError(cancelErrorMessage(err));
       // The kitchen may have picked it up; show where it's at now
       fetchOrders({ quiet: true });
       return false;
     }
-    notifySuccess(`Order #${orderToCancel.orderId} cancelled`);
+    notifySuccess(`Order #${orderToCancel.order_id} cancelled`);
     fetchOrders({ quiet: true });
   };
 
@@ -254,14 +254,14 @@ const OrdersPage = () => {
   const renderOrderCard = (order) => {
     const items = order.items || [];
     const itemCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    const placedAt = formatTime(order.createdAt);
+    const placedAt = formatTime(order.created_at);
     const label = view === VIEWS.TABLE ? orderLabel(order) : "";
 
     return (
       <Paper
-        key={order.orderId}
+        key={order.order_id}
         component="section"
-        aria-label={`Order #${order.orderId}`}
+        aria-label={`Order #${order.order_id}`}
         variant="outlined"
         sx={{ borderRadius: 3, overflow: "hidden", textAlign: "left" }}
       >
@@ -277,7 +277,7 @@ const OrdersPage = () => {
         >
           <Box sx={{ minWidth: 0 }}>
             <Typography component="h3" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-              Order #{order.orderId}
+              Order #{order.order_id}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
               {[placedAt, `${itemCount} ${itemCount === 1 ? "item" : "items"}`]
@@ -301,7 +301,7 @@ const OrdersPage = () => {
               return (
                 <Box
                   component="li"
-                  key={item.orderItemId}
+                  key={item.order_item_id}
                 >
                   <Divider />
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5 }}>
@@ -316,13 +316,13 @@ const OrdersPage = () => {
                           color: cancelled ? "text.secondary" : "text.primary",
                         }}
                       >
-                        {item.name || `Item #${item.itemId}`}
+                        {item.name || `Item #${item.item_id}`}
                       </Typography>
                       {/* Same wording as Review order; extras are the units over a limit that charges */}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                         {price ? (
                           <>
-                            {item.chargeReason === "OverLimit" ? "Extra" : "Add-on"}{" "}
+                            {item.charge_reason === "OverLimit" ? "Extra" : "Add-on"}{" "}
                             <Box component="span" sx={{ ml: 0.5, fontWeight: 600, color: "primary.main" }}>
                               {price}
                             </Box>
@@ -505,7 +505,7 @@ const OrdersPage = () => {
       <ConfirmDialog
         open={!!orderToCancel}
         title="Cancel this order?"
-        message={`Order #${orderToCancel?.orderId} hasn't been started yet. Cancelling it removes it from the kitchen.`}
+        message={`Order #${orderToCancel?.order_id} hasn't been started yet. Cancelling it removes it from the kitchen.`}
         confirmLabel="Cancel order"
         cancelLabel="Keep order"
         onConfirm={handleCancelOrder}

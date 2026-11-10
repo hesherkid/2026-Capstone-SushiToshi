@@ -70,7 +70,7 @@ const MenuManagement = () => {
   setLocationDialogOpen(true);
   };
 
-  // The dialog lists menu.menuLocations, so reload the menus to show what was saved
+  // The dialog lists menu.location_ids, so reload the menus to show what was saved
   const closeLocationDialog = () => {
     setLocationDialogOpen(false);
     fetchMenus();

@@ -296,7 +296,7 @@ namespace back_end.Controllers
         [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<SessionOrder>>> CreateOrder(OrderCreateDto orderData)
+        public async Task<ActionResult<OrderResponseDto>> CreateOrder(OrderCreateDto orderData)
         {
             try
             {
@@ -379,13 +379,13 @@ namespace back_end.Controllers
 
                 return Ok(new OrderResponseDto
                 {
-                    Order_Id = newOrder.Order_Id,
-                    Session_Id = newOrder.session_id,
-                    Bill_Id = newOrder.Bill_Id,
-                    User_Id = newOrder.User_Id,
-                    User_Name = newOrder.User_Name,
+                    OrderId = newOrder.Order_Id,
+                    SessionId = newOrder.session_id,
+                    BillId = newOrder.Bill_Id,
+                    UserId = newOrder.User_Id,
+                    UserName = newOrder.User_Name,
                     Status = newOrder.Status,
-                    Created_At = newOrder.Created_At,
+                    CreatedAt = newOrder.Created_At,
                     OrderItems = plan.Lines.Select(l => new OrderItemResponseDto
                     {
                         OrderItemId = l.Order_Item_Id,
@@ -473,13 +473,13 @@ namespace back_end.Controllers
 
                 return Ok(new OrderResponseDto
                 {
-                    Order_Id = order.Order_Id,
-                    Session_Id = order.session_id,
-                    Bill_Id = order.Bill_Id,
-                    User_Id = order.User_Id,
-                    User_Name = order.User_Name,
+                    OrderId = order.Order_Id,
+                    SessionId = order.session_id,
+                    BillId = order.Bill_Id,
+                    UserId = order.User_Id,
+                    UserName = order.User_Name,
                     Status = order.Status,
-                    Created_At = order.Created_At,
+                    CreatedAt = order.Created_At,
                     OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
                         OrderItemId = oi.Order_Item_Id,
@@ -727,13 +727,13 @@ namespace back_end.Controllers
 
                 return Ok(new OrderResponseDto
                 {
-                    Order_Id = order.Order_Id,
-                    Session_Id = order.session_id,
-                    Bill_Id = order.Bill_Id,
-                    User_Id = order.User_Id,
+                    OrderId = order.Order_Id,
+                    SessionId = order.session_id,
+                    BillId = order.Bill_Id,
+                    UserId = order.User_Id,
                     Status = order.Status,
-                    Created_At = order.Created_At,
-                    Completed_At = order.Completed_At,
+                    CreatedAt = order.Created_At,
+                    CompletedAt = order.Completed_At,
                     OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
                         OrderItemId = oi.Order_Item_Id,
@@ -837,14 +837,14 @@ namespace back_end.Controllers
                 await _context.SaveChangesAsync();
                 return Ok(new OrderResponseDto
                 {
-                    Order_Id = order.Order_Id,
-                    Session_Id = order.session_id,
-                    Bill_Id = order.Bill_Id,
-                    User_Id = order.User_Id,
-                    User_Name = order.User_Name,
+                    OrderId = order.Order_Id,
+                    SessionId = order.session_id,
+                    BillId = order.Bill_Id,
+                    UserId = order.User_Id,
+                    UserName = order.User_Name,
                     Status = order.Status,
-                    Created_At = order.Created_At,
-                    Completed_At = order.Completed_At,
+                    CreatedAt = order.Created_At,
+                    CompletedAt = order.Completed_At,
                     OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
                     {
                         OrderItemId = oi.Order_Item_Id,
@@ -981,19 +981,19 @@ namespace back_end.Controllers
                         ? "Items added. Some items are over the limit and will be charged."
                         : "Items added successfully",
                     count = newLines.Count,
-                    orderId,
-                    userId,
-                    userName,
+                    order_id = orderId,
+                    user_id = userId,
+                    user_name = userName,
                     lines = newLines.Select(l => new
                     {
-                        orderItemId = l.Order_Item_Id,
-                        itemId = l.Item_Id,
+                        order_item_id = l.Order_Item_Id,
+                        item_id = l.Item_Id,
                         name = namesById.GetValueOrDefault(l.Item_Id),
                         quantity = l.Quantity,
-                        priceAtTime = l.Price_At_Time,
-                        chargeReason = l.Charge_Reason.ToString()
+                        price_at_time = l.Price_At_Time,
+                        charge_reason = l.Charge_Reason.ToString()
                     }),
-                    overLimitTotal = overLimit.Sum(l => l.Quantity * l.Price_At_Time)
+                    over_limit_total = overLimit.Sum(l => l.Quantity * l.Price_At_Time)
                 });
             }
             catch (Exception ex)
@@ -1333,18 +1333,18 @@ namespace back_end.Controllers
         // The staff order shape, shared by all_orders and history so the two can't drift apart
         private static object ToStaffOrder(SessionOrder o) => new
         {
-            orderId = o.Order_Id,
-            sessionId = o.session_id,
-            billId = o.Bill_Id,
-            billName = o.Bill.Bill_Name,
-            locationId = o.DiningSession.Location_Id,
-            tableNumbers = o.DiningSession.Table_Id.HasValue
+            order_id = o.Order_Id,
+            session_id = o.session_id,
+            bill_id = o.Bill_Id,
+            bill_name = o.Bill.Bill_Name,
+            location_id = o.DiningSession.Location_Id,
+            table_numbers = o.DiningSession.Table_Id.HasValue
                 ? new[] { o.DiningSession.Table!.table_number }
                 : o.DiningSession.TableGroup?.Tables?.Select(t => t.table_number).ToArray() ?? Array.Empty<int>(),
-            userName = o.User_Name,
+            user_name = o.User_Name,
             status = o.Status.ToString(),
-            createdAt = o.Created_At,
-            completedAt = o.Completed_At,
+            created_at = o.Created_At,
+            completed_at = o.Completed_At,
             items = o.OrderItems.Select(oi =>
             {
                 var assignment = oi
@@ -1355,13 +1355,13 @@ namespace back_end.Controllers
 
                 return new
                 {
-                    orderItemId = oi.Order_Item_Id,
-                    itemId = oi.Item_Id,
+                    order_item_id = oi.Order_Item_Id,
+                    item_id = oi.Item_Id,
                     name = oi.MenuItem.Name,
                     quantity = oi.Quantity,
-                    priceAtTime = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0,
-                    isAddOn = isAddOn,
-                    chargeReason = oi.Charge_Reason.ToString(),
+                    price_at_time = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0,
+                    is_add_on = isAddOn,
+                    charge_reason = oi.Charge_Reason.ToString(),
                     status = oi.Order_Item_Status.ToString()
                 };
             }).ToList()
@@ -1436,30 +1436,30 @@ namespace back_end.Controllers
                 //Calculate the cost of every item together
                 var orderInfo = new
                 {
-                    orderId = order.Order_Id,
-                    sessionId = order.session_id,
-                    billId = order.Bill_Id,
+                    order_id = order.Order_Id,
+                    session_id = order.session_id,
+                    bill_id = order.Bill_Id,
                     status = order.Status,
-                    createdAt = order.Created_At,
-                    completedAt = order.Completed_At,
+                    created_at = order.Created_At,
+                    completed_at = order.Completed_At,
 
                     customer = new
                     {
-                        userId = order.User_Id,
-                        userName = order.User_Name
+                        user_id = order.User_Id,
+                        user_name = order.User_Name
                     },
 
                     items = order.OrderItems.Select(o => new
                     {
-                        itemId = o.Item_Id,
-                        itemName = o.MenuItem.Name,
+                        item_id = o.Item_Id,
+                        item_name = o.MenuItem.Name,
                         quantity = o.Quantity,
-                        priceAtTime = o.Price_At_Time,
-                        itemStatus = o.Order_Item_Status,
-                        itemTotal = o.Quantity * o.Price_At_Time
+                        price_at_time = o.Price_At_Time,
+                        item_status = o.Order_Item_Status,
+                        item_total = o.Quantity * o.Price_At_Time
                     }).ToList(),
 
-                    orderTotal = order.OrderItems.Select(i => i.Quantity * i.Price_At_Time).Sum()
+                    order_total = order.OrderItems.Select(i => i.Quantity * i.Price_At_Time).Sum()
                 };
 
                 return Ok(orderInfo);
@@ -1539,16 +1539,16 @@ namespace back_end.Controllers
 
                 var orderAll = sessionOrder.Select(o => new
                 {
-                    orderId = o.Order_Id,
-                    billId = o.Bill_Id,
-                    billName = o.Bill?.Bill_Name,
-                    billStatus = o.Bill?.Status.ToString(),
-                    sessionId = o.session_id,
-                    userId = o.User_Id,
-                    userName = o.User_Name,
+                    order_id = o.Order_Id,
+                    bill_id = o.Bill_Id,
+                    bill_name = o.Bill?.Bill_Name,
+                    bill_status = o.Bill?.Status.ToString(),
+                    session_id = o.session_id,
+                    user_id = o.User_Id,
+                    user_name = o.User_Name,
                     status = o.Status,
-                    itemTotal = o.OrderItems.Count,
-                    orderTotal = o.OrderItems.Sum(or =>
+                    item_total = o.OrderItems.Count,
+                    order_total = o.OrderItems.Sum(or =>
                     {
                         // Get menu assignment for this item
                         var assignment = or
@@ -1560,8 +1560,8 @@ namespace back_end.Controllers
                         bool isAddOn = assignment?.Is_Add_On ?? false;
                         return isAddOn || or.Charge_Reason == ChargeReason.OverLimit ? (or.Quantity * or.Price_At_Time) : 0;
                     }),
-                    createdAt = o.Created_At,
-                    completedAt = o.Completed_At,
+                    created_at = o.Created_At,
+                    completed_at = o.Completed_At,
                     // List of items in the order
                     items = o.OrderItems.Select(oi =>
                     {
@@ -1576,13 +1576,13 @@ namespace back_end.Controllers
 
                         return new
                         {
-                            orderItemId = oi.Order_Item_Id,
-                            itemId = oi.Item_Id,
+                            order_item_id = oi.Order_Item_Id,
+                            item_id = oi.Item_Id,
                             name = oi.MenuItem?.Name,
                             quantity = oi.Quantity,
-                            priceAtTime = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0, // Only show price for add-ons
-                            isAddOn = isAddOn,
-                            chargeReason = oi.Charge_Reason.ToString(),
+                            price_at_time = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0, // Only show price for add-ons
+                            is_add_on = isAddOn,
+                            charge_reason = oi.Charge_Reason.ToString(),
                             status = oi.Order_Item_Status
                         };
                     }).ToList()
@@ -1644,13 +1644,13 @@ namespace back_end.Controllers
                 //Package up the user's Order and add in all the menu item's details
                 var userOrder = orders.Select(o => new
                 {
-                    orderId = o.Order_Id,
-                    SessionId = o.session_id,
+                    order_id = o.Order_Id,
+                    session_id = o.session_id,
                     bill_id = o.Bill_Id,
-                    billStatus = o.Bill?.Status.ToString(),
+                    bill_status = o.Bill?.Status.ToString(),
                     status = o.Status.ToString(),
-                    createdAt = o.Created_At,
-                    completedAt = o.Completed_At,
+                    created_at = o.Created_At,
+                    completed_at = o.Completed_At,
                     items = o.OrderItems.Select(i =>
                     {
                         // Get menu assignment for this item at this session's location
@@ -1663,13 +1663,13 @@ namespace back_end.Controllers
 
                         return new
                         {
-                            orderItemId = i.Order_Item_Id,
-                            itemId = i.Item_Id,
+                            order_item_id = i.Order_Item_Id,
+                            item_id = i.Item_Id,
                             name = i.MenuItem?.Name,
                             quantity = i.Quantity,
                             price = isAddOn || i.Charge_Reason == ChargeReason.OverLimit ? i.Price_At_Time : 0, // Only show price for add-ons
-                            isAddOn = isAddOn,
-                            chargeReason = i.Charge_Reason.ToString(),
+                            is_add_on = isAddOn,
+                            charge_reason = i.Charge_Reason.ToString(),
                             status = i.Order_Item_Status.ToString()
                         };
                     }).ToList()

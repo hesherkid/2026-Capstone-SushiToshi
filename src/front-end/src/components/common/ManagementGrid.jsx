@@ -1,9 +1,11 @@
 import React, { useMemo } from "react";
 import { DataGrid } from "@mui/x-data-grid";
+import { unwrap } from "@/utils/missingKeyWarnings";
 
 // Shared DataGrid for admin management lists. Every prop can be overridden.
 export const ManagementGrid = ({
   columns = [],
+  rows,
   initialState,
   slotProps,
   sx = {},
@@ -15,9 +17,14 @@ export const ManagementGrid = ({
     [columns],
   );
 
+  // The grid reads row[field] for every column, computed ones too ("actions", "menu"), which
+  // the development missing-key warnings would report as keys missing from the API response
+  const plainRows = useMemo(() => rows?.map(unwrap), [rows]);
+
   return (
     <DataGrid
       columns={flexColumns}
+      rows={plainRows}
       autoHeight
       showToolbar
       disableRowSelectionOnClick

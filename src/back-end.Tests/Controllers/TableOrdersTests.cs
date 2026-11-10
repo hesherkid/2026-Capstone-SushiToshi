@@ -75,8 +75,8 @@ public class TableOrdersTests : IDisposable
     {
         var orders = Orders(await ControllerFor(Friend).GetOrderBySession(269));
 
-        orders.EnumerateArray().Select(o => o.GetProperty("orderId").GetInt32()).Should().Equal(900);
-        orders.EnumerateArray().Select(o => o.GetProperty("userName").GetString()).Should().AllBe("Guest K7P2");
+        orders.EnumerateArray().Select(o => o.GetProperty("order_id").GetInt32()).Should().Equal(900);
+        orders.EnumerateArray().Select(o => o.GetProperty("user_name").GetString()).Should().AllBe("Guest K7P2");
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class TableOrdersTests : IDisposable
     {
         var orders = Orders(await ControllerFor(30, "Staff").GetOrderBySession(269, billId: 333));
 
-        orders.EnumerateArray().Select(o => o.GetProperty("orderId").GetInt32()).Should().Equal(901);
+        orders.EnumerateArray().Select(o => o.GetProperty("order_id").GetInt32()).Should().Equal(901);
     }
 
     [Fact]

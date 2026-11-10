@@ -27,7 +27,7 @@ const IN_AN_HOUR = Math.floor(Date.now() / 1000) + 3600;
 
 const LUNCH = { menu_id: 7, name: "Lunch", start_time: "11:00:00", end_time: "15:00:00" };
 const DINNER = { menu_id: 8, name: "Dinner", start_time: "15:00:00", end_time: "22:00:00" };
-const UNAGI = { ...SALMON_ROLL, itemId: 13, name: "Unagi Roll" };
+const UNAGI = { ...SALMON_ROLL, item_id: 13, name: "Unagi Roll" };
 
 // Two locations: 3 has lunch and dinner, 4 has dinner only
 const browseApi = ({ favourites = [] } = {}) => (url) => {
@@ -85,7 +85,7 @@ describe("Browse menu page", () => {
     render(<BrowseMenuPage />);
 
     expect(await screen.findByText("Miso Soup")).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledWith("/Menu/7/item", { params: { locationId: 3 } });
+    expect(api.get).toHaveBeenCalledWith("/Menu/7/item", { params: { location_id: 3 } });
     expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
   });
 
@@ -117,7 +117,7 @@ describe("Browse menu page", () => {
     fireEvent.click(screen.getByRole("option", { name: "Sushi Toshi North" }));
 
     expect(await screen.findByText("Unagi Roll")).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledWith("/Menu/8/item", { params: { locationId: 4 } });
+    expect(api.get).toHaveBeenCalledWith("/Menu/8/item", { params: { location_id: 4 } });
     // Only one menu there, so there's nothing to pick
     expect(screen.queryByRole("group", { name: "Menus" })).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /Location/ })).toHaveTextContent("Sushi Toshi North");
@@ -132,7 +132,7 @@ describe("Browse menu page", () => {
   });
 
   it("lets customers filter by their favourites", async () => {
-    api.get.mockImplementation(browseApi({ favourites: [SALMON_ROLL.itemId] }));
+    api.get.mockImplementation(browseApi({ favourites: [SALMON_ROLL.item_id] }));
     atRestaurantTime("2026-11-05T02:00:00Z");
     render(<BrowseMenuPage />);
 

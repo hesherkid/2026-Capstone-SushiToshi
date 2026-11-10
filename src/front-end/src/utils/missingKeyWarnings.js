@@ -7,6 +7,8 @@ const IGNORED_KEYS = new Set(["then", "toJSON", "$$typeof", "constructor", "asym
 const warned = new Set();
 // One wrapper per object, so reading the same object twice gives the same value and React effects don't re-run
 const wrappers = new WeakMap();
+// Each wrapper's original object, for unwrap
+const originals = new WeakMap();
 
 // Plain JSON objects and arrays only; files like QR images (Blob) break if wrapped
 const isJson = (value) =>
@@ -42,8 +44,13 @@ export const warnOnMissingKeys = (data, label) => {
     },
   });
   wrappers.set(data, wrapper);
+  originals.set(wrapper, data);
   return wrapper;
 };
+
+// The original object, for code that reads keys the API never sends (a DataGrid reads row[field]
+// for computed columns like "actions"). Anything that isn't a wrapper comes back as it is
+export const unwrap = (value) => originals.get(value) ?? value;
 
 // "GET /Bill/get_bills/12" -> "GET /Bill/get_bills/:id", so each endpoint warns once, not once per id
 export const endpointLabel = (config) =>

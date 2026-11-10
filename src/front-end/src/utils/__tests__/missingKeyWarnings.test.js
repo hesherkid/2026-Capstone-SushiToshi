@@ -1,4 +1,4 @@
-import { warnOnMissingKeys, endpointLabel } from "../missingKeyWarnings";
+import { warnOnMissingKeys, endpointLabel, unwrap } from "../missingKeyWarnings";
 
 // Each test uses its own label, because each endpoint and key only warns once
 let label = 0;
@@ -63,6 +63,18 @@ describe("warnOnMissingKeys", () => {
 
     expect(rows[0]).toBe(row);
     expect(rows.map((r) => r.table_id)).toEqual([1]);
+  });
+
+  it("unwraps back to the original object, which doesn't warn", () => {
+    const original = { table_id: 1 };
+    const row = warnOnMissingKeys(original, nextLabel());
+
+    expect(unwrap(row)).toBe(original);
+    expect(unwrap(row).actions).toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
+    // Anything that isn't a wrapper comes back as it is
+    expect(unwrap(original)).toBe(original);
+    expect(unwrap(null)).toBeNull();
   });
 
   it("leaves strings, numbers and files alone", () => {

@@ -200,7 +200,7 @@ const BrowseMenuPage = () => {
     let cancelled = false;
     setItemsLoaded(false);
     api
-      .get(`/Menu/${menuId}/item`, { params: { locationId } })
+      .get(`/Menu/${menuId}/item`, { params: { location_id: locationId } })
       .then(({ data }) => {
         if (!cancelled)
           setMenuItems(groupItemsByCategory(Array.isArray(data) ? data : []));

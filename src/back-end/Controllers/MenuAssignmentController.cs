@@ -48,7 +48,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="assignmentData">The assignment data including menu ID, item ID, price, limits, and status</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the created <see cref="MenuItemAssignment"/> object.
+        /// An <see cref="IActionResult"/> containing the created <see cref="MenuAssignmentResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the created assignment on success.
         /// Returns HTTP 400 (Bad Request) if validation fails.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
@@ -62,32 +62,32 @@ namespace back_end.Controllers
         ///
         ///     POST /api/menuassignment
         ///     {
-        ///         "menu_Id": 123,
-        ///         "item_Id": 456,
+        ///         "menu_id": 123,
+        ///         "item_id": 456,
         ///         "price": 15.99,
-        ///         "over_Limit_Behavior": "Charge",
-        ///         "adult_Limit": 100,
-        ///         "senior_Limit": 50,
-        ///         "child_Limit": 30,
-        ///         "tot_Limit": 20,
-        ///         "per_Order_Limit": 2,
-        ///         "is_Add_on": true,
+        ///         "over_limit_behavior": "Charge",
+        ///         "adult_limit": 100,
+        ///         "senior_limit": 50,
+        ///         "child_limit": 30,
+        ///         "tot_limit": 20,
+        ///         "per_order_limit": 2,
+        ///         "is_add_on": true,
         ///         "status": "Available"
         ///     }
         ///
         /// Creates a new association between a menu and a menu item.
-        /// adult_Limit, child_Limit, and senior_Limit are required (0 = unlimited).
-        /// tot_Limit is optional: 0 or omitted = same as child_Limit.
+        /// adult_limit, child_limit, and senior_limit are required (0 = unlimited).
+        /// tot_limit is optional: 0 or omitted = same as child_limit.
         /// Rules: child and senior ≤ adult, toddler ≤ child.
         /// Over_Limit_Behavior defaults to "Block".
-        /// over_Limit_Behavior "Charge" requires price greater than 0.
+        /// over_limit_behavior "Charge" requires price greater than 0.
         /// Add-on items must have a price greater than 0.
-        /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
+        /// per_order_limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Item views are recorded separately (POST api/menu-item-views).
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
-        [ProducesResponseType(typeof(MenuItemAssignment), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuAssignmentResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -97,20 +97,20 @@ namespace back_end.Controllers
         {
             try
             {
-                var limitError = LimitRules.Validate(assignmentData.Adult_Limit ?? 0, assignmentData.Child_Limit ?? 0, assignmentData.Senior_Limit ?? 0, assignmentData.Tot_Limit ?? 0, assignmentData.Per_Order_Limit ?? 0);
+                var limitError = LimitRules.Validate(assignmentData.AdultLimit ?? 0, assignmentData.ChildLimit ?? 0, assignmentData.SeniorLimit ?? 0, assignmentData.TotLimit ?? 0, assignmentData.PerOrderLimit ?? 0);
                 if (limitError != null) return BadRequest(limitError);
 
-                var behavior = assignmentData.Over_Limit_Behavior ?? OverLimitBehavior.Block;
+                var behavior = assignmentData.OverLimitBehavior ?? OverLimitBehavior.Block;
                 if (behavior == OverLimitBehavior.Charge && assignmentData.Price <= 0)
                     return BadRequest("Items that charge over the limit need a full price greater than 0");
 
-                if (assignmentData.Is_Add_on && assignmentData.Price <= 0)
+                if (assignmentData.IsAddOn && assignmentData.Price <= 0)
                 {
                     return BadRequest("Add-on items must have a price greater than 0");
                 }
 
-                if (assignmentData.Location_Id != null &&
-                    !await _context.MenuItemAssignments.AnyAsync(a => a.Menu_Id == assignmentData.Menu_Id && a.Item_Id == assignmentData.Item_Id
+                if (assignmentData.LocationId != null &&
+                    !await _context.MenuItemAssignments.AnyAsync(a => a.Menu_Id == assignmentData.MenuId && a.Item_Id == assignmentData.ItemId
                     && a.Location_Id == null))
                 {
                     return BadRequest("Add the item to the menu (default price) before adding a location price");
@@ -118,23 +118,23 @@ namespace back_end.Controllers
 
                 var assignment = new MenuItemAssignment
                 {
-                    Menu_Id = assignmentData.Menu_Id,
-                    Item_Id = assignmentData.Item_Id,
+                    Menu_Id = assignmentData.MenuId,
+                    Item_Id = assignmentData.ItemId,
                     Price = assignmentData.Price,
                     Over_Limit_Behavior = behavior,
-                    Adult_Limit = assignmentData.Adult_Limit!.Value,
-                    Child_limit = assignmentData.Child_Limit!.Value,
-                    Senior_limit = assignmentData.Senior_Limit!.Value,
-                    Tot_Limit = assignmentData.Tot_Limit ?? 0,
-                    Per_Order_Limit = assignmentData.Per_Order_Limit ?? 0,
+                    Adult_Limit = assignmentData.AdultLimit!.Value,
+                    Child_limit = assignmentData.ChildLimit!.Value,
+                    Senior_limit = assignmentData.SeniorLimit!.Value,
+                    Tot_Limit = assignmentData.TotLimit ?? 0,
+                    Per_Order_Limit = assignmentData.PerOrderLimit ?? 0,
                     Status = assignmentData.Status,
-                    Is_Add_On = assignmentData.Is_Add_on,
-                    Location_Id = assignmentData.Location_Id,
+                    Is_Add_On = assignmentData.IsAddOn,
+                    Location_Id = assignmentData.LocationId,
                 };
 
                 await _context.MenuItemAssignments.AddAsync(assignment);
                 await _context.SaveChangesAsync();
-                return Ok(assignment);
+                return Ok(MenuAssignmentResponseDto.From(assignment));
 
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UX_assignment_menu_item_location") == true)
@@ -143,7 +143,7 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating menu assignment for Menu_Id: {Menu_Id}, Item_Id: {Item_Id}", assignmentData.Menu_Id, assignmentData.Item_Id);
+                _logger.LogError(ex, "Error creating menu assignment for Menu_Id: {Menu_Id}, Item_Id: {Item_Id}", assignmentData.MenuId, assignmentData.ItemId);
                 return StatusCode(500, new { message = "An error occurred while updating the menu assignment." });
             }
         }
@@ -158,7 +158,7 @@ namespace back_end.Controllers
         /// <param name="updateData">The updated assignment data</param>
         /// <param name="locationId">Optional location override; omit for the default (all locations) assignment</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuItemAssignment"/> object.
+        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuAssignmentResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the updated assignment on success.
         /// Returns HTTP 400 (Bad Request) if the limit validation fails.
         /// Returns HTTP 404 (Not Found) if the menu item assignment doesn't exist.
@@ -174,27 +174,27 @@ namespace back_end.Controllers
         ///     PUT /api/menuassignment/123/456
         ///     {
         ///         "price": 15.99,
-        ///         "adult_Limit": 1,
-        ///         "child_Limit": 1,
-        ///         "senior_Limit": 1,
-        ///         "tot_Limit": 0,
-        ///         "per_Order_Limit": 2,
-        ///         "over_Limit_Behavior": "Charge",
-        ///         "is_Add_on": false,
+        ///         "adult_limit": 1,
+        ///         "child_limit": 1,
+        ///         "senior_limit": 1,
+        ///         "tot_limit": 0,
+        ///         "per_order_limit": 2,
+        ///         "over_limit_behavior": "Charge",
+        ///         "is_add_on": false,
         ///         "status": "Available"
         ///     }
         ///
         /// This endpoint requires Admin or Staff role authorization.
         /// All fields are optional - fields not sent keep their current values.
-        /// A limit of 0 means unlimited, except tot_Limit: 0 means "same as child_Limit".
+        /// A limit of 0 means unlimited, except tot_limit: 0 means "same as child_limit".
         /// Rules: child and senior ≤ adult, toddler ≤ child.
-        /// over_Limit_Behavior "Charge" requires price greater than 0.
-        /// per_Order_Limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
+        /// over_limit_behavior "Charge" requires price greater than 0.
+        /// per_order_limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
         /// Add-on items require price greater than 0.
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPut("{menuId}/{itemId}")]
-        [ProducesResponseType(typeof(MenuItemAssignment), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuAssignmentResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -219,14 +219,14 @@ namespace back_end.Controllers
                     return NotFound("Menu Assignment was not found.");
                 }
 
-                var finalAdultLimit = updateData.Adult_Limit ?? assignment.Adult_Limit;
-                var finalChildLimit = updateData.Child_Limit ?? assignment.Child_limit;
-                var finalSeniorLimit = updateData.Senior_Limit ?? assignment.Senior_limit;
-                var finalTotLimit = updateData.Tot_Limit ?? assignment.Tot_Limit;
-                var finalPerOrder = updateData.Per_Order_Limit ?? assignment.Per_Order_Limit;
-                var finalBehavior = updateData.Over_Limit_Behavior ?? assignment.Over_Limit_Behavior;
+                var finalAdultLimit = updateData.AdultLimit ?? assignment.Adult_Limit;
+                var finalChildLimit = updateData.ChildLimit ?? assignment.Child_limit;
+                var finalSeniorLimit = updateData.SeniorLimit ?? assignment.Senior_limit;
+                var finalTotLimit = updateData.TotLimit ?? assignment.Tot_Limit;
+                var finalPerOrder = updateData.PerOrderLimit ?? assignment.Per_Order_Limit;
+                var finalBehavior = updateData.OverLimitBehavior ?? assignment.Over_Limit_Behavior;
                 var finalPrice = updateData.Price ?? assignment.Price;
-                var finalIsAddOn = updateData.Is_Add_on ?? assignment.Is_Add_On;
+                var finalIsAddOn = updateData.IsAddOn ?? assignment.Is_Add_On;
 
                 var limitError = LimitRules.Validate(finalAdultLimit, finalChildLimit, finalSeniorLimit, finalTotLimit, finalPerOrder);
                 if (limitError != null) return BadRequest(limitError);
@@ -248,7 +248,7 @@ namespace back_end.Controllers
                 assignment.Status = updateData.Status ?? assignment.Status;
 
                 await _context.SaveChangesAsync();
-                return Ok(assignment);
+                return Ok(MenuAssignmentResponseDto.From(assignment));
             }
             catch (Exception ex)
             {

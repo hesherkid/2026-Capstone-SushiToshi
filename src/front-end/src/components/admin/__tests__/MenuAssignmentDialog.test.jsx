@@ -42,20 +42,20 @@ const MENUS = [
 ];
 
 const HOT_STONE_ROW = {
-  assignment_Id: 3,
-  menu_Id: 1,
-  item_Id: 66,
-  location_Id: null,
-  menu: MENUS[0],
+  assignment_id: 3,
+  menu_id: 1,
+  menu_name: MENUS[0].name,
+  item_id: 66,
+  location_id: null,
   price: 5,
-  is_Add_On: false,
+  is_add_on: false,
   status: "Available",
-  adult_Limit: 1,
+  adult_limit: 1,
   child_limit: 1,
   senior_limit: 1,
-  tot_Limit: 0,
-  per_Order_Limit: 0,
-  over_Limit_Behavior: "Charge",
+  tot_limit: 0,
+  per_order_limit: 0,
+  over_limit_behavior: "Charge",
 };
 
 const mockApi = (assignments = [HOT_STONE_ROW]) => {
@@ -63,7 +63,7 @@ const mockApi = (assignments = [HOT_STONE_ROW]) => {
     if (url === "/Location") return Promise.resolve({ data: [] });
     if (url === "/menuItem/66")
       return Promise.resolve({
-        data: { item_id: 66, menuAssignments: assignments },
+        data: { item_id: 66, menu_assignments: assignments },
       });
     return Promise.resolve({ data: [] });
   });
@@ -154,6 +154,10 @@ describe("Menu assignment dialog", () => {
       }),
     });
     expect(request.data).not.toHaveProperty("full_price");
+    // The menu, item and location are in the URL; the API rejects them in an edit's body
+    expect(request.data).not.toHaveProperty("menu_id");
+    expect(request.data).not.toHaveProperty("item_id");
+    expect(request.data).not.toHaveProperty("location_id");
   });
 
   it("won't save an item that charges past its limit without a price", async () => {

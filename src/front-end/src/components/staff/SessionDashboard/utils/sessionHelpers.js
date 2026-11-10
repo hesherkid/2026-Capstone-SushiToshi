@@ -278,8 +278,8 @@ export const formatGuestBreakdown = (bill) => {
   const seniorCount = bill.senior_count ?? 0;
   const childCount = bill.child_count ?? 0;
   const totCount = bill.tot_count ?? 0;
-  // Bill responses call it total_count; the dashboard's bills call it total_guests
-  const totalCount = bill.total_count ?? bill.total_guests ?? 0;
+  // A bill from GET /Dashboard/sessions
+  const totalCount = bill.total_guests ?? 0;
 
   if (adultCount > 0) {
     parts.push(`${adultCount} Adult${adultCount !== 1 ? 's' : ''}`);
