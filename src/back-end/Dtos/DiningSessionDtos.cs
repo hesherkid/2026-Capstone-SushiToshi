@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 using back_end.domain;
 
 namespace back_end.Dtos
@@ -84,6 +85,7 @@ namespace back_end.Dtos
 
   public class ListDiningSessionsRequestDto
   {
+    [FromQuery(Name = "active_only")]
     public bool ActiveOnly { get; set; } = false;
   }
 

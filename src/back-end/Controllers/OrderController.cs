@@ -1177,7 +1177,7 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/order/all_orders?locationId=1&deliveredOpenSessionsOnly=true
+        ///     GET /api/order/all_orders?location_id=1&delivered_open_sessions_only=true
         ///
         /// Returns all orders filtered by the specified location and delivered open sessions.
         /// </remarks>
@@ -1185,7 +1185,7 @@ namespace back_end.Controllers
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery] int? locationId = null, [FromQuery] bool deliveredOpenSessionsOnly = false)
+        public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery(Name = "location_id")] int? locationId = null, [FromQuery(Name = "delivered_open_sessions_only")] bool deliveredOpenSessionsOnly = false)
         {
             try
             {
@@ -1237,7 +1237,7 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/order/history?from=2026-10-20&amp;to=2026-10-26&amp;tableNumber=14&amp;name=lee
+        ///     GET /api/order/history?from=2026-10-20&amp;to=2026-10-26&amp;table_number=14&amp;name=lee
         ///
         /// </remarks>
         [HttpGet("history")]
@@ -1249,8 +1249,8 @@ namespace back_end.Controllers
         public async Task<ActionResult<IEnumerable<object>>> GetOrderHistory(
             [FromQuery] string? from,
             [FromQuery] string? to,
-            [FromQuery] int? locationId = null,
-            [FromQuery] int? tableNumber = null,
+            [FromQuery(Name = "location_id")] int? locationId = null,
+            [FromQuery(Name = "table_number")] int? tableNumber = null,
             [FromQuery] string? name = null)
         {
             try

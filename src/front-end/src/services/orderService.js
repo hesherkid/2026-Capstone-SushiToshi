@@ -126,7 +126,7 @@ export const orderService = {
    * @returns {Promise<Array>} Array of all orders by location
    */
   getAllOrdersByLocation: async (locationId = null) => {
-    const params = locationId ? { locationId } : {};
+    const params = locationId ? { location_id: locationId } : {};
     const response = await api.get("/Order/all_orders", { params });
     return response.data;
   },

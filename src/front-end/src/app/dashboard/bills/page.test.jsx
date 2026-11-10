@@ -102,7 +102,7 @@ describe("Bill page", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "Ask for bill" }));
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith("/Bill/request_bill/8", null, { params: { _session_id: 42 } }),
+      expect(api.post).toHaveBeenCalledWith("/Bill/request_bill/8", null, { params: { session_id: 42 } }),
     );
     expect(await screen.findByText(/Your server will bring your bill shortly/)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Bill requested" })).toBeDisabled();

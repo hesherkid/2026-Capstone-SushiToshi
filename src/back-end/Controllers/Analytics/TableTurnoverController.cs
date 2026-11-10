@@ -33,7 +33,7 @@ namespace back_end.Controllers
         /// Sample requests:
         ///
         ///     GET /api/analytics/table-turnover
-        ///     GET /api/analytics/table-turnover?range=yesterday&amp;locationId=1
+        ///     GET /api/analytics/table-turnover?range=yesterday&amp;location_id=1
         ///     GET /api/analytics/table-turnover?range=custom&amp;from=2026-09-01&amp;to=2026-09-30
         ///
         /// Rules:
@@ -58,7 +58,7 @@ namespace back_end.Controllers
             [FromQuery] string? range,
             [FromQuery] string? from,
             [FromQuery] string? to,
-            [FromQuery] int? locationId)
+            [FromQuery(Name = "location_id")] int? locationId)
         {
             try
             {

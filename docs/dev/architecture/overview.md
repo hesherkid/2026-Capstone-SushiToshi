@@ -129,8 +129,6 @@ Other parties' bills only ever show a customer their name and party size (`GET /
 6. **They're sent to the menu** (`/menu/full-menu`). Orders, service requests and the bill all use that session.
 7. **They pick their bill.** A guest who isn't on a bill yet sees `components/menu/BillChoiceDialog.jsx` and either joins one of the table's open bills or starts one for their party, then checks its guest count. They can't order until they're on a bill. If they rescan after their bill was closed or cancelled, `join` takes them off it so they pick again.
 
-Old QR codes that link to `/join` or `/start-session` still work. Those pages forward to `/auth/login` (`components/auth/QrLoginRedirect.jsx`).
-
 ## Bills and who's on them
 
 A table can have several bills, one per party paying separately. Each `SessionParticipant` has a nullable `Bill_Id` for the bill they order on and can see. Deleting a bill sets it back to null.

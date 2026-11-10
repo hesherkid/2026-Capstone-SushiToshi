@@ -202,7 +202,7 @@ namespace back_end.Controllers
             int menuId,
             int itemId,
             MenuAssignmentUpdateDto updateData,
-            [FromQuery] int? locationId
+            [FromQuery(Name = "location_id")] int? locationId
         )
         {
             try
@@ -287,7 +287,7 @@ namespace back_end.Controllers
         public async Task<IActionResult> DeleteMenuItemAssignment(
             int menuId,
             int itemId,
-            [FromQuery] int? locationId
+            [FromQuery(Name = "location_id")] int? locationId
         )
         {
             try

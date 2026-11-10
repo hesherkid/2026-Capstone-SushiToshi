@@ -34,8 +34,8 @@ namespace back_end.Controllers
         /// Sample requests:
         ///
         ///     GET /api/analytics/item-performance
-        ///     GET /api/analytics/item-performance?range=yesterday&amp;locationId=1
-        ///     GET /api/analytics/item-performance?range=custom&amp;from=2026-09-01&amp;to=2026-09-30&amp;categoryId=3
+        ///     GET /api/analytics/item-performance?range=yesterday&amp;location_id=1
+        ///     GET /api/analytics/item-performance?range=custom&amp;from=2026-09-01&amp;to=2026-09-30&amp;category_id=3
         ///
         /// Rules:
         /// - Only order items with status Delivered count as sold (Cancelled items also get Completed_At, so status is checked).
@@ -56,9 +56,9 @@ namespace back_end.Controllers
             [FromQuery] string? range,
             [FromQuery] string? from,
             [FromQuery] string? to,
-            [FromQuery] int? locationId,
-            [FromQuery] int? categoryId,
-            [FromQuery] int? tagId,
+            [FromQuery(Name = "location_id")] int? locationId,
+            [FromQuery(Name = "category_id")] int? categoryId,
+            [FromQuery(Name = "tag_id")] int? tagId,
             [FromQuery] int top = 5)
         {
             try

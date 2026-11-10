@@ -187,7 +187,7 @@ describe("TableTurnover", () => {
         expect(api.get).toHaveBeenCalledWith(
           ENDPOINT,
           expect.objectContaining({
-            params: { range: "last7", locationId: "1" },
+            params: { range: "last7", location_id: "1" },
           }),
         );
       });
@@ -201,7 +201,7 @@ describe("TableTurnover", () => {
       expect(api.get.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     });
 
-    it("omits locationId when no branch location is saved", async () => {
+    it("omits location_id when no branch location is saved", async () => {
       storage.get.mockReturnValue(null);
       render(<TableTurnover />);
 
@@ -507,7 +507,7 @@ describe("TableTurnover", () => {
           range: "custom",
           from: "2025-01-06",
           to: "2025-01-12",
-          locationId: "1",
+          location_id: "1",
         }),
       );
     });
@@ -543,7 +543,7 @@ describe("TableTurnover", () => {
       );
 
       await waitFor(() =>
-        expect(lastParams()).toMatchObject({ locationId: "1" }),
+        expect(lastParams()).toMatchObject({ location_id: "1" }),
       );
     });
 

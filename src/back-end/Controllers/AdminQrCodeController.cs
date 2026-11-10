@@ -39,13 +39,13 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> GetWifiQr(
-            [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
+            [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table,
             CancellationToken ct,
             [FromQuery, SwaggerParameter("Regenerate instead of using the saved image")] bool refresh = false)
         {
             if (locationId <= 0 || table <= 0)
-                return BadRequest("locationId and table must be positive integers");
+                return BadRequest("location_id and table must be positive integers");
 
             // Service handles the disk cache: uses the saved PNG unless refresh=true (or none exists),
             // otherwise generates from current config and saves it.
@@ -73,13 +73,13 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> GetSessionQr(
-            [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
+            [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table,
             CancellationToken ct,
             [FromQuery, SwaggerParameter("Regenerate instead of using the saved image")] bool refresh = false)
         {
             if (locationId <= 0 || table <= 0)
-                return BadRequest("locationId and table must be positive integers");
+                return BadRequest("location_id and table must be positive integers");
 
             // Service handles the disk cache: uses the saved PNG unless refresh=true (or none exists),
             // otherwise generates from current config and saves it.
@@ -101,11 +101,11 @@ namespace back_end.Controllers
             Description = "Generate WiFi and Session QR codes for all tables at a location. Saves to storage/qrcodes/."
         )]
         public async Task<IActionResult> BulkGenerate(
-            [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
+            [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             CancellationToken ct)
         {
             if (locationId <= 0)
-                return BadRequest("locationId must be positive");
+                return BadRequest("location_id must be positive");
 
             var name = await _qrService.GetLocationNameAsync(locationId, ct);
             if (name is null) return NotFound($"Location {locationId} not found");
@@ -150,11 +150,11 @@ namespace back_end.Controllers
         )]
         [Produces("application/zip")]
         public async Task<IActionResult> DownloadBulkZip(
-            [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
+            [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             CancellationToken ct)
         {
             if (locationId <= 0)
-                return BadRequest("locationId must be positive");
+                return BadRequest("location_id must be positive");
 
             var name = await _qrService.GetLocationNameAsync(locationId, ct);
             if (name is null) return NotFound($"Location {locationId} not found");
@@ -210,11 +210,11 @@ namespace back_end.Controllers
         )]
         [Produces("application/pdf")]
         public async Task<IActionResult> DownloadBulkPdf(
-            [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
+            [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             CancellationToken ct)
         {
             if (locationId <= 0)
-                return BadRequest("locationId must be positive");
+                return BadRequest("location_id must be positive");
 
             var locationName = await _qrService.GetLocationNameAsync(locationId, ct);
             if (locationName is null) return NotFound($"Location {locationId} not found");
@@ -345,7 +345,7 @@ namespace back_end.Controllers
             Description = "Delete cached WiFi and Session QR codes for a specific table."
         )]
         public IActionResult Clear(
-            [FromQuery, SwaggerParameter("Location ID", Required = true)] int locationId,
+            [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table)
         {
             _qrService.DeleteQrCode(locationId, table, "wifi");

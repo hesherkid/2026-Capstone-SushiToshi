@@ -49,7 +49,7 @@ public class QrCodeIntegrationTests : IClassFixture<WebApplicationFactory<Progra
         var table = 5;
 
         // Act
-        var response = await _client.GetAsync($"/api/admin/qr/wifi?locationId={locationId}&table={table}");
+        var response = await _client.GetAsync($"/api/admin/qr/wifi?location_id={locationId}&table={table}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -63,7 +63,7 @@ public class QrCodeIntegrationTests : IClassFixture<WebApplicationFactory<Progra
         var table = 5;
 
         // Act
-        var response = await _client.GetAsync($"/api/admin/qr/session?locationId={locationId}&table={table}");
+        var response = await _client.GetAsync($"/api/admin/qr/session?location_id={locationId}&table={table}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -76,7 +76,7 @@ public class QrCodeIntegrationTests : IClassFixture<WebApplicationFactory<Progra
         var locationId = 1;
 
         // Act - Updated to match new API (no tableCount parameter)
-        var response = await _client.PostAsync($"/api/admin/qr/bulk?locationId={locationId}", null);
+        var response = await _client.PostAsync($"/api/admin/qr/bulk?location_id={locationId}", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -90,7 +90,7 @@ public class QrCodeIntegrationTests : IClassFixture<WebApplicationFactory<Progra
         var table = 5;
 
         // Act
-        var response = await _client.DeleteAsync($"/api/admin/qr/clear?locationId={locationId}&table={table}");
+        var response = await _client.DeleteAsync($"/api/admin/qr/clear?location_id={locationId}&table={table}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

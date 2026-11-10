@@ -40,7 +40,7 @@ namespace back_end.Services.Analytics
             if (query.MinViews < 1 || query.MinViews > ViewTrackingRules.MaxMinViews)
             {
                 return AnalyticsResult<BrowsingBehaviorResponseDto>.Invalid(
-                    "minViews", $"minViews must be between 1 and {ViewTrackingRules.MaxMinViews}");
+                    "min_views", $"min_views must be between 1 and {ViewTrackingRules.MaxMinViews}");
             }
 
             var windowResult = await AnalyticsQueries.ResolveWindowAsync(

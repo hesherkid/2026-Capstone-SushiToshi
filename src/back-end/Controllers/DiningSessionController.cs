@@ -56,24 +56,26 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample requests:
     ///
-    ///     POST /api/diningsession/Create_Dinning_Session?assignmentType=table
+    ///     POST /api/diningsession/Create_Dinning_Session
     ///     {
     ///         "menu_id": 123,
-    ///         "location_Id": 1,
-    ///         "table_Id": 456
-    ///     }
-    ///
-    ///     POST /api/diningsession/Create_Dinning_Session?assignmentType=table_group
-    ///     {
-    ///         "menu_id": 123,
-    ///         "location_Id": 1,
-    ///         "tableGroup_Id": 789
+    ///         "location_id": 1,
+    ///         "assignment_type": "table",
+    ///         "table_id": 456
     ///     }
     ///
     ///     POST /api/diningsession/Create_Dinning_Session
     ///     {
     ///         "menu_id": 123,
-    ///         "location_Id": 1
+    ///         "location_id": 1,
+    ///         "assignment_type": "table_group",
+    ///         "table_group_id": 789
+    ///     }
+    ///
+    ///     POST /api/diningsession/Create_Dinning_Session
+    ///     {
+    ///         "menu_id": 123,
+    ///         "location_id": 1
     ///     }
     ///
     /// Creates a new dining session with the specified menu.
@@ -212,10 +214,10 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample requests:
     ///
-    ///     GET /api/diningsession/get_list_dining_sessions?ActiveOnly=true
+    ///     GET /api/diningsession/get_list_dining_sessions?active_only=true
     ///     (Returns only active/ongoing sessions)
     ///     
-    ///     GET /api/diningsession/get_list_dining_sessions?ActiveOnly=false
+    ///     GET /api/diningsession/get_list_dining_sessions?active_only=false
     ///     (Returns only ended sessions)
     ///
     /// Sessions are ordered by start time in descending order (newest first).

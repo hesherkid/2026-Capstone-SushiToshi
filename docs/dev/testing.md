@@ -153,7 +153,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Covered areas:**
 
-- Auth: LoginForm, RegisterForm, QrLoginRedirect
+- Auth: LoginForm, RegisterForm
 - Admin: categories, customers, holidays, menu items, menu assignment, QR codes, staff, tags, pricing profiles
 - Analytics: nav and all four reports
 - Staff: Order, Session and Table dashboards, plus the bill summary, new bill and leftover fee dialogs
@@ -187,7 +187,7 @@ One spec, `e2e/qr-code-generation.spec.js`. It covers the login page, admin navi
 | Lines      | 60%       |
 | Statements | 60%       |
 
-Thin route wrappers that only render a tested component are left out of coverage: `app/analytics/`, `app/auth/`, `app/dashboard/call-server/` and `app/join/` (see `coveragePathIgnorePatterns`).
+Thin route wrappers that only render a tested component are left out of coverage: `app/analytics/`, `app/auth/` and `app/dashboard/call-server/` (see `coveragePathIgnorePatterns`).
 
 Raise these as coverage grows. The long-term target is 70% for each metric (see [Coverage Goals](#coverage-goals)).
 
