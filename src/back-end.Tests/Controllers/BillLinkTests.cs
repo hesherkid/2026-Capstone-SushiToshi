@@ -121,7 +121,7 @@ public class BillLinkTests : IDisposable
         _context.DiningSessions.Add(new DiningSession { Session_Id = OtherTable + 1, Menu_Id = 1, Location_Id = 1, Table_Id = 103, Started_At = DateTime.UtcNow });
         _context.SaveChanges();
 
-        await Sessions(Dee).JoinTableSession(new JoinTableSessionDto { Table_Number = 3, Location_Id = 1 });
+        await Sessions(Dee).JoinTableSession(new JoinTableSessionDto { TableNumber = 3, LocationId = 1 });
 
         SeatBill(Dee).Should().BeNull();
     }
@@ -129,7 +129,7 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task Joining_ATableWithSeveralBills_LeavesTheChoiceToTheGuest()
     {
-        await Sessions(Dee).JoinTableSession(new JoinTableSessionDto { Table_Number = 1, Location_Id = 1 });
+        await Sessions(Dee).JoinTableSession(new JoinTableSessionDto { TableNumber = 1, LocationId = 1 });
 
         SeatBill(Dee).Should().BeNull();
     }
@@ -143,7 +143,7 @@ public class BillLinkTests : IDisposable
         (await _context.Bills.FindAsync(Lee))!.Status = status;
         _context.SaveChanges();
 
-        await Sessions(Ana).JoinTableSession(new JoinTableSessionDto { Table_Number = 1, Location_Id = 1 });
+        await Sessions(Ana).JoinTableSession(new JoinTableSessionDto { TableNumber = 1, LocationId = 1 });
 
         SeatBill(Ana).Should().BeNull();
         Body(await Seats(Ana).GetMyBill(Table)).MyBill.Should().BeNull();
@@ -152,7 +152,7 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task Rejoining_KeepsThemOnTheirOpenBill()
     {
-        await Sessions(Ana).JoinTableSession(new JoinTableSessionDto { Table_Number = 1, Location_Id = 1 });
+        await Sessions(Ana).JoinTableSession(new JoinTableSessionDto { TableNumber = 1, LocationId = 1 });
 
         SeatBill(Ana).Should().Be(Lee);
     }
@@ -496,8 +496,8 @@ public class BillLinkTests : IDisposable
         await LockCounts(Lee, true);
 
         Body(await Seats(Ana).GetMyBill(Table)).MyBill!.CountsLocked.Should().BeTrue();
-        (await DashboardBill(Lee)).Counts_Locked.Should().BeTrue();
-        (await DashboardBill(Park)).Counts_Locked.Should().BeFalse();
+        (await DashboardBill(Lee)).CountsLocked.Should().BeTrue();
+        (await DashboardBill(Park)).CountsLocked.Should().BeFalse();
     }
 
     [Fact]
@@ -777,7 +777,7 @@ public class BillLinkTests : IDisposable
             new Mock<ILogger<DashboardController>>().Object, new LocationAccessService(_context))
         { ControllerContext = As(Server, "Staff") };
         var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashboardSessionsDto>;
-        return sessions!.SelectMany(s => s.Bills).Single(b => b.Bill_Id == billId);
+        return sessions!.SelectMany(s => s.Bills).Single(b => b.BillId == billId);
     }
 
     [Fact]
@@ -788,9 +788,9 @@ public class BillLinkTests : IDisposable
 
         var lee = await DashboardBill(Lee);
 
-        lee.People_On_Bill.Should().Be(2);
-        lee.Total_Guests.Should().Be(1);
-        lee.Counts_Changed_By_Guest.Should().BeTrue();
+        lee.PeopleOnBill.Should().Be(2);
+        lee.TotalGuests.Should().Be(1);
+        lee.CountsChangedByGuest.Should().BeTrue();
     }
 
     [Fact]
@@ -801,10 +801,10 @@ public class BillLinkTests : IDisposable
         { ControllerContext = As(Server, "Staff") };
         var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashboardSessionsDto>;
 
-        var people = sessions!.Single(s => s.Session_Id == Table).People;
+        var people = sessions!.Single(s => s.SessionId == Table).People;
         people.Should().HaveCount(2);
-        people.Single(p => p.User_Name == "Ana").Bill_Id.Should().Be(Lee);
-        people.Single(p => p.User_Name == "Ben").Bill_Id.Should().BeNull();
+        people.Single(p => p.UserName == "Ana").BillId.Should().Be(Lee);
+        people.Single(p => p.UserName == "Ben").BillId.Should().BeNull();
     }
 
     [Fact]
@@ -815,7 +815,7 @@ public class BillLinkTests : IDisposable
         { ControllerContext = As(Server, "Staff") };
         var sessions = ((await dashboard.GetDashboardSessions(null)) as OkObjectResult)!.Value as List<DashboardSessionsDto>;
 
-        sessions!.Single(s => s.Session_Id == Table).Seat_Count.Should().Be(8);
+        sessions!.Single(s => s.SessionId == Table).SeatCount.Should().Be(8);
     }
 
     // ---- Only their own bill ----

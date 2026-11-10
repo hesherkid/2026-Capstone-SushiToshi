@@ -77,7 +77,7 @@ public class DiningSessionJoinTests : IDisposable
             },
         };
 
-    private static JoinTableSessionDto Table(int number) => new() { Table_Number = number, Location_Id = LocationId };
+    private static JoinTableSessionDto Table(int number) => new() { TableNumber = number, LocationId = LocationId };
 
     private static JoinTableSessionResponseDto Body(IActionResult result) =>
         ((result as OkObjectResult)!.Value as JoinTableSessionResponseDto)!;
@@ -88,15 +88,15 @@ public class DiningSessionJoinTests : IDisposable
         var result = await ControllerAs(MiaUserId).JoinTableSession(Table(1));
 
         var body = Body(result);
-        body.Session_Id.Should().Be(7);
-        body.Menu_Id.Should().Be(1);
-        body.Table_Numbers.Should().Equal(1);
-        body.Already_Joined.Should().BeFalse();
+        body.SessionId.Should().Be(7);
+        body.MenuId.Should().Be(1);
+        body.TableNumbers.Should().Equal(1);
+        body.AlreadyJoined.Should().BeFalse();
 
         var participant = await _context.SessionParticipants.SingleAsync();
         participant.User_Id.Should().Be(MiaUserId);
         participant.User_Name.Should().Be("Mia Chen");
-        body.Participant_Id.Should().Be(participant.Participant_Id);
+        body.ParticipantId.Should().Be(participant.Participant_Id);
     }
 
     [Fact]
@@ -105,8 +105,8 @@ public class DiningSessionJoinTests : IDisposable
         var first = Body(await ControllerAs(MiaUserId).JoinTableSession(Table(1)));
         var second = Body(await ControllerAs(MiaUserId).JoinTableSession(Table(1)));
 
-        second.Already_Joined.Should().BeTrue();
-        second.Participant_Id.Should().Be(first.Participant_Id);
+        second.AlreadyJoined.Should().BeTrue();
+        second.ParticipantId.Should().Be(first.ParticipantId);
         (await _context.SessionParticipants.CountAsync()).Should().Be(1);
     }
 
@@ -117,8 +117,8 @@ public class DiningSessionJoinTests : IDisposable
 
         var atTable3 = Body(await ControllerAs(MiaUserId).JoinTableSession(Table(3)));
 
-        atTable3.Session_Id.Should().Be(8);
-        var oldSeat = await _context.SessionParticipants.SingleAsync(p => p.Participant_Id == atTable1.Participant_Id);
+        atTable3.SessionId.Should().Be(8);
+        var oldSeat = await _context.SessionParticipants.SingleAsync(p => p.Participant_Id == atTable1.ParticipantId);
         oldSeat.Left_At.Should().NotBeNull();
         (await _context.SessionParticipants.CountAsync(p => p.User_Id == MiaUserId && p.Left_At == null)).Should().Be(1);
     }
@@ -140,7 +140,7 @@ public class DiningSessionJoinTests : IDisposable
     {
         var body = Body(await ControllerAs(GuestUserId).JoinTableSession(Table(tableNumber)));
 
-        body.Session_Id.Should().Be(8);
+        body.SessionId.Should().Be(8);
     }
 
     [Fact]
@@ -192,8 +192,8 @@ public class DiningSessionJoinTests : IDisposable
         var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = LocationId,
-            Table_Id = tableId,
+            LocationId = LocationId,
+            TableId = tableId,
             AssignmentType = "table",
         });
 
@@ -207,13 +207,13 @@ public class DiningSessionJoinTests : IDisposable
         var result = await ControllerAs(1, "Staff").CreateDiningSession(new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = LocationId,
-            Table_Id = 102,
+            LocationId = LocationId,
+            TableId = 102,
             AssignmentType = "table",
         });
 
         var body = (result as OkObjectResult)!.Value as DiningSessionResponseDto;
-        body!.Table_Numbers.Should().Equal(2);
+        body!.TableNumbers.Should().Equal(2);
         (await _context.DiningSessions.AnyAsync(ds => ds.Table_Id == 102 && ds.Ended_At == null)).Should().BeTrue();
         (await _context.SessionParticipants.AnyAsync()).Should().BeFalse();
     }

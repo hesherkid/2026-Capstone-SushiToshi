@@ -18,48 +18,68 @@ namespace back_end.Dtos
     [Required(ErrorMessage = "Menu Id is Required")]
     [Range(1, int.MaxValue, ErrorMessage = "Menu Id Bust be Positive")]
     public int MenuId { get; set; }
-    public int Location_Id { get; set; }
-    public int? Table_Id { get; set; }
-    public int? TableGroup_Id { get; set; }
+    [JsonPropertyName("location_id")]
+    public int LocationId { get; set; }
+    [JsonPropertyName("table_id")]
+    public int? TableId { get; set; }
+    [JsonPropertyName("table_group_id")]
+    public int? TableGroupId { get; set; }
 
+    [JsonPropertyName("assignment_type")]
     public string? AssignmentType { get; set; }
   }
 
   public class DiningSessionResponseDto
   {
-    public int Session_Id { get; set; }
-    public int Menu_Id { get; set; }
-    public int Location_Id { get; set; }
-    public string? Location_Name { get; set; }
-    public DateTime Started_at { get; set; }
-    public DateTime? Ended_at { get; set; }
-    public DateTime? First_Order_Time { get; set; }
-    public List<int> Table_Numbers { get; set; } = new List<int>();
-    public int Active_Participants { get; set; }
+    [JsonPropertyName("session_id")]
+    public int SessionId { get; set; }
+    [JsonPropertyName("menu_id")]
+    public int MenuId { get; set; }
+    [JsonPropertyName("location_id")]
+    public int LocationId { get; set; }
+    [JsonPropertyName("location_name")]
+    public string? LocationName { get; set; }
+    [JsonPropertyName("started_at")]
+    public DateTime StartedAt { get; set; }
+    [JsonPropertyName("ended_at")]
+    public DateTime? EndedAt { get; set; }
+    [JsonPropertyName("first_order_time")]
+    public DateTime? FirstOrderTime { get; set; }
+    [JsonPropertyName("table_numbers")]
+    public List<int> TableNumbers { get; set; } = new List<int>();
+    [JsonPropertyName("active_participants")]
+    public int ActiveParticipants { get; set; }
   }
 
   public class DiningSessionDetailDto : DiningSessionResponseDto
   {
-    public int Orders_Count { get; set; }
-    public int Bills_Count { get; set; }
-    public int Total_participant { get; set; }
+    [JsonPropertyName("orders_count")]
+    public int OrdersCount { get; set; }
+    [JsonPropertyName("bills_count")]
+    public int BillsCount { get; set; }
+    [JsonPropertyName("total_participant")]
+    public int TotalParticipant { get; set; }
 
-    public int Active_Bill_Count { get; set; }
+    [JsonPropertyName("active_bill_count")]
+    public int ActiveBillCount { get; set; }
 
 
   }
 
   public class SessionIdResponseDto
   {
-    public int Session_Id { get; set; }
+    [JsonPropertyName("session_id")]
+    public int SessionId { get; set; }
 
 
   }
 
   public class SessionMenuResponseDto
   {
-    public int Menu_Id { get; set; }
-    public int Location_Id { get; set; }
+    [JsonPropertyName("menu_id")]
+    public int MenuId { get; set; }
+    [JsonPropertyName("location_id")]
+    public int LocationId { get; set; }
     }
 
   public class ListDiningSessionsRequestDto
@@ -72,20 +92,27 @@ namespace back_end.Dtos
   {
     // The number printed on the table, not the database Table_Id
     [Range(1, int.MaxValue, ErrorMessage = "Table number must be positive")]
-    public int Table_Number { get; set; }
+    [JsonPropertyName("table_number")]
+    public int TableNumber { get; set; }
 
     [Range(1, int.MaxValue, ErrorMessage = "Location Id must be positive")]
-    public int Location_Id { get; set; }
+    [JsonPropertyName("location_id")]
+    public int LocationId { get; set; }
   }
 
   public class JoinTableSessionResponseDto
   {
-    public int Session_Id { get; set; }
-    public int Participant_Id { get; set; }
-    public int Menu_Id { get; set; }
-    public List<int> Table_Numbers { get; set; } = new();
+    [JsonPropertyName("session_id")]
+    public int SessionId { get; set; }
+    [JsonPropertyName("participant_id")]
+    public int ParticipantId { get; set; }
+    [JsonPropertyName("menu_id")]
+    public int MenuId { get; set; }
+    [JsonPropertyName("table_numbers")]
+    public List<int> TableNumbers { get; set; } = new();
 
     // True when the user was already a participant (rescanning the QR code is safe)
-    public bool Already_Joined { get; set; }
+    [JsonPropertyName("already_joined")]
+    public bool AlreadyJoined { get; set; }
   }
 }

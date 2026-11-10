@@ -20,13 +20,13 @@ jest.mock("../../../context/SessionContext", () => ({
   useSession: () => ({ sessions: mockSessions, refreshData: mockRefreshData }),
 }));
 
-const openBill = { bill_Id: 5, bill_Name: "Window Booth", status: "Open", requested_At: null };
+const openBill = { bill_id: 5, bill_name: "Window Booth", status: "Open", requested_at: null };
 
 const session = (overrides = {}) => ({
-  session_Id: 8,
-  menu_Id: 1,
-  location_Id: 2,
-  table_Numbers: [3],
+  session_id: 8,
+  menu_id: 1,
+  location_id: 2,
+  table_numbers: [3],
   bills: [openBill],
   ...overrides,
 });
@@ -87,8 +87,8 @@ describe("Staff order dialog", () => {
 
     await waitFor(() => expect(api.post).toHaveBeenCalled());
     expect(api.post).toHaveBeenCalledWith("/Order", {
-      session_Id: 8,
-      bill_Id: 5,
+      session_id: 8,
+      bill_id: 5,
       // Exactly these keys: in development the API rejects any key OrderItemCreateDto doesn't have
       items: [{ menu_id: 1, item_id: 10, quantity: 1, price_at_time: 0 }],
     });

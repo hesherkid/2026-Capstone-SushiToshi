@@ -10,34 +10,34 @@ export const useSessionDashboardActions = () => {
   return {
     newSession: () => openDialog("newSession"),
 
-    viewSession: (session) => openSession(session.session_Id),
+    viewSession: (session) => openSession(session.session_id),
 
-    newBill: (session) => openDialog("newBill", session.session_Id),
+    newBill: (session) => openDialog("newBill", session.session_id),
 
     // Staff ordering on one of the table's open bills
     addOrder: (session, bill) =>
-      openDialog("staffOrder", { sessionId: session.session_Id, billId: bill.bill_Id }),
+      openDialog("staffOrder", { sessionId: session.session_id, billId: bill.bill_id }),
 
     // Fixing a bill's guest counts
     editGuests: (session, bill) =>
-      openDialog("editGuests", { sessionId: session.session_Id, bill }),
+      openDialog("editGuests", { sessionId: session.session_id, bill }),
 
     // Moving everything on one bill onto another, e.g. when the whole table wants one bill
     mergeBill: (session, bill) =>
-      openDialog("mergeBill", { sessionId: session.session_Id, bill }),
+      openDialog("mergeBill", { sessionId: session.session_id, bill }),
 
     // Moving someone at the table onto another bill
     moveGuest: (session, person) =>
-      openDialog("moveGuest", { sessionId: session.session_Id, person }),
+      openDialog("moveGuest", { sessionId: session.session_id, person }),
 
     endSession: (session) =>
       openDialog("confirm", {
         title: "End session",
-        message: `End Session #${session.session_Id} for ${
-          session.table_Numbers?.length > 1 ? "tables" : "table"
-        } ${session.table_Numbers?.join(", ") || "—"}?`,
+        message: `End Session #${session.session_id} for ${
+          session.table_numbers?.length > 1 ? "tables" : "table"
+        } ${session.table_numbers?.join(", ") || "—"}?`,
         confirmLabel: "End Session",
-        onConfirm: () => endSession(session.session_Id),
+        onConfirm: () => endSession(session.session_id),
       }),
 
     completeRequest: async (request) => {

@@ -124,7 +124,7 @@ public class GuestLoginTests : IDisposable
                     },
                 },
             };
-            await sessions.JoinTableSession(new JoinTableSessionDto { Table_Number = 1, Location_Id = 1 });
+            await sessions.JoinTableSession(new JoinTableSessionDto { TableNumber = 1, LocationId = 1 });
         }
 
         var participants = await _context.SessionParticipants.Where(p => p.Session_Id == 7).ToListAsync();

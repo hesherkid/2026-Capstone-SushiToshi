@@ -20,19 +20,19 @@ const MergeBillDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
   }, [open]);
 
   // The live session, so a count a guest changed meanwhile shows up
-  const session = sessions.find((s) => s.session_Id === sessionId);
+  const session = sessions.find((s) => s.session_id === sessionId);
   const bills = session?.bills ?? [];
-  const bill = bills.find((b) => b.bill_Id === openedBill?.bill_Id) ?? openedBill;
-  const into = bills.find((b) => b.bill_Id === intoId);
-  const choices = bills.filter((b) => isOpenBill(b) && b.bill_Id !== bill?.bill_Id);
-  const people = (session?.people ?? []).filter((p) => p.bill_Id === bill?.bill_Id);
-  const name = bill?.bill_Name ?? "this bill";
+  const bill = bills.find((b) => b.bill_id === openedBill?.bill_id) ?? openedBill;
+  const into = bills.find((b) => b.bill_id === intoId);
+  const choices = bills.filter((b) => isOpenBill(b) && b.bill_id !== bill?.bill_id);
+  const people = (session?.people ?? []).filter((p) => p.bill_id === bill?.bill_id);
+  const name = bill?.bill_name ?? "this bill";
 
   // Moving the orders changes a total the guests may already have seen
-  const askedForBill = into ? [bill, into].filter((b) => b?.requested_At) : [];
+  const askedForBill = into ? [bill, into].filter((b) => b?.requested_at) : [];
 
   const handleSubmit = async () => {
-    if (await mergeBill(sessionId, bill.bill_Id, intoId)) onClose();
+    if (await mergeBill(sessionId, bill.bill_id, intoId)) onClose();
   };
 
   return (
@@ -60,8 +60,8 @@ const MergeBillDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
           fullWidth
         >
           {choices.map((choice) => (
-            <MenuItem key={choice.bill_Id} value={choice.bill_Id}>
-              {choice.bill_Name}
+            <MenuItem key={choice.bill_id} value={choice.bill_id}>
+              {choice.bill_name}
             </MenuItem>
           ))}
         </TextField>
@@ -70,13 +70,13 @@ const MergeBillDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
       {into && bill && (
         <Alert severity="info">
           <Typography variant="body2" component="div">
-            {into.bill_Name} goes from {guestsLabel(into.total_Guests)} to{" "}
-            {guestsLabel(into.total_Guests + bill.total_Guests)}, including anyone on {name} who
+            {into.bill_name} goes from {guestsLabel(into.total_guests)} to{" "}
+            {guestsLabel(into.total_guests + bill.total_guests)}, including anyone on {name} who
             didn&apos;t join on a phone.
           </Typography>
           <Typography variant="body2" component="div" sx={{ mt: 0.5 }}>
             {people.length > 0
-              ? `${people.map((p) => p.user_Name || "Guest").join(", ")} and all of ${name}'s orders move too.`
+              ? `${people.map((p) => p.user_name || "Guest").join(", ")} and all of ${name}'s orders move too.`
               : `All of ${name}'s orders move too.`}{" "}
             {name} is then cancelled.
           </Typography>
@@ -84,8 +84,8 @@ const MergeBillDialog = ({ open, sessionId, bill: openedBill, onClose }) => {
       )}
 
       {askedForBill.map((b) => (
-        <Alert key={b.bill_Id} severity="warning">
-          {b.bill_Name} has asked for the bill. Merging changes the total, so show them the new bill
+        <Alert key={b.bill_id} severity="warning">
+          {b.bill_name} has asked for the bill. Merging changes the total, so show them the new bill
           summary.
         </Alert>
       ))}

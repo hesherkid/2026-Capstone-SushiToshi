@@ -38,10 +38,10 @@ const SessionDashboardInner = () => {
   const rows = sessions
     .map((session) => ({
       ...session,
-      requestCount: requestsBySession[session.session_Id]?.length || 0,
+      requestCount: requestsBySession[session.session_id]?.length || 0,
     }))
     .sort(
-      (a, b) => b.requestCount - a.requestCount || b.session_Id - a.session_Id
+      (a, b) => b.requestCount - a.requestCount || b.session_id - a.session_id
     );
 
   return (
@@ -90,7 +90,7 @@ const SessionDashboardInner = () => {
         rows={rows}
         columns={getSessionColumns(actions)}
         loading={isLoading}
-        getRowId={(row) => row.session_Id}
+        getRowId={(row) => row.session_id}
         getRowClassName={rowClassName}
         initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
         localeText={{ noRowsLabel: "No active sessions" }}

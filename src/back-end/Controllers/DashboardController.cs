@@ -134,40 +134,40 @@ namespace back_end.Controllers
 
           var dashboardSession = new DashboardSessionsDto
           {
-            Session_Id = session.Session_Id,
-            Menu_Id = session.Menu_Id,
-            Location_Id = session.Location_Id,
-            Location_Name = session.Location?.Name,
-            Started_At = session.Started_At,
-            Ended_At = session.Ended_At,
-            First_Order_At = session.First_Order_At,
-            Table_Numbers = GetTableNumbers(session),
-            Seat_Count = BillLinks.TableCapacity(session),
-            Active_Participants = activeParticipants,
+            SessionId = session.Session_Id,
+            MenuId = session.Menu_Id,
+            LocationId = session.Location_Id,
+            LocationName = session.Location?.Name,
+            StartedAt = session.Started_At,
+            EndedAt = session.Ended_At,
+            FirstOrderAt = session.First_Order_At,
+            TableNumbers = GetTableNumbers(session),
+            SeatCount = BillLinks.TableCapacity(session),
+            ActiveParticipants = activeParticipants,
             Bills = session.Bills.Select(b => new DashboardBillDto
             {
-              Bill_Id = b.Bill_Id,
-              Bill_Name = b.Bill_Name,
+              BillId = b.Bill_Id,
+              BillName = b.Bill_Name,
               Status = b.Status,
-              Created_At = b.Created_At,
-              Total_Guests = b.Total_Count,
-              Adult_Count = b.Adult_Count,
-              Senior_Count = b.Senior_Count,
-              Child_Count = b.Child_Count,
-              Tot_Count = b.Tot_Count,
-              Requested_At = b.Requested_At,
-              Started_By_Guest = b.Started_By_Guest,
-              Counts_Changed_By_Guest = b.Counts_Changed_By_Guest,
-              Counts_Locked = b.Counts_Locked,
-              People_On_Bill = session.Participants.Count(p => p.Left_At == null && p.Bill_Id == b.Bill_Id)
+              CreatedAt = b.Created_At,
+              TotalGuests = b.Total_Count,
+              AdultCount = b.Adult_Count,
+              SeniorCount = b.Senior_Count,
+              ChildCount = b.Child_Count,
+              TotCount = b.Tot_Count,
+              RequestedAt = b.Requested_At,
+              StartedByGuest = b.Started_By_Guest,
+              CountsChangedByGuest = b.Counts_Changed_By_Guest,
+              CountsLocked = b.Counts_Locked,
+              PeopleOnBill = session.Participants.Count(p => p.Left_At == null && p.Bill_Id == b.Bill_Id)
             }).ToList(),
             People = session.Participants
                 .Where(p => p.Left_At == null)
                 .OrderBy(p => p.Joined_At)
-                .Select(p => new DashboardPersonDto { Participant_Id = p.Participant_Id, User_Name = p.User_Name, Bill_Id = p.Bill_Id })
+                .Select(p => new DashboardPersonDto { ParticipantId = p.Participant_Id, UserName = p.User_Name, BillId = p.Bill_Id })
                 .ToList(),
-            Bill_Count = session.Bills.Count(),
-            Is_Closable = isClosable
+            BillCount = session.Bills.Count(),
+            IsClosable = isClosable
           };
           dashboardSessions.Add(dashboardSession);
         }
@@ -286,12 +286,12 @@ namespace back_end.Controllers
 
         var summary = new DashboardSummaryDto
         {
-          Location_Id = locationId,
-          Location_Name = locationName,
-          Total_Active_Sessions = totalActiveSessions,
-          Total_Tables_In_Use = totalTablesInUse,
-          Total_Active_Bills = totalActiveBills,
-          Total_ActiveParticipants = totalActiveParticipants
+          LocationId = locationId,
+          LocationName = locationName,
+          TotalActiveSessions = totalActiveSessions,
+          TotalTablesInUse = totalTablesInUse,
+          TotalActiveBills = totalActiveBills,
+          TotalActiveParticipants = totalActiveParticipants
         };
 
         return Ok(summary);

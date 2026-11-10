@@ -194,11 +194,11 @@ export const hasOpenBills = (session) => {
  * exceptBillId: the bill being edited, whose current guests are being replaced by `total`
  */
 export const overSeatsWarning = (session, total, exceptBillId) => {
-  const seats = session?.seat_Count;
+  const seats = session?.seat_count;
   if (!seats) return null;
   const otherGuests = (session.bills ?? [])
-    .filter((bill) => String(bill.status).toUpperCase() === "OPEN" && bill.bill_Id !== exceptBillId)
-    .reduce((sum, bill) => sum + (bill.total_Guests || 0), 0);
+    .filter((bill) => String(bill.status).toUpperCase() === "OPEN" && bill.bill_id !== exceptBillId)
+    .reduce((sum, bill) => sum + (bill.total_guests || 0), 0);
   if (otherGuests + total <= seats) return null;
   const others = otherGuests ? `, and the other bills have ${otherGuests}` : "";
   return `This table seats ${seats}${others}. That makes ${otherGuests + total} guests at the table.`;
@@ -232,7 +232,7 @@ export const canRemoveTable = (session, tableNumber) => {
   if (session.bills && session.bills.length > 0) return false;
 
   // Can't remove the last table
-  if (session.table_Numbers.length <= 1) return false;
+  if (session.table_numbers.length <= 1) return false;
 
   return true;
 };
@@ -274,35 +274,12 @@ export const getSessionDuration = (startTime, endTime = null) => {
 export const formatGuestBreakdown = (bill) => {
   if (!bill) return "No guests";
   const parts = [];
-  const adultCount =
-    bill.adult_count ??
-    bill.Adult_Count ??
-    bill.adult_Count ??
-    0;
-
-  const seniorCount =
-    bill.senior_count ??
-    bill.Senior_Count ??
-    bill.senior_Count ??
-    0;
-
-  const childCount =
-    bill.child_count ??
-    bill.Child_Count ??
-    bill.child_Count ??
-    0;
-
-  const totCount =
-    bill.tot_count ??
-    bill.Tot_Count ??
-    bill.tot_Count ??
-    0;
-
-  const totalCount =
-    bill.total_count ??
-    bill.Total_Guests ??
-    bill.total_Guests ??
-    0;
+  const adultCount = bill.adult_count ?? 0;
+  const seniorCount = bill.senior_count ?? 0;
+  const childCount = bill.child_count ?? 0;
+  const totCount = bill.tot_count ?? 0;
+  // Bill responses call it total_count; the dashboard's bills call it total_guests
+  const totalCount = bill.total_count ?? bill.total_guests ?? 0;
 
   if (adultCount > 0) {
     parts.push(`${adultCount} Adult${adultCount !== 1 ? 's' : ''}`);
@@ -333,7 +310,7 @@ export const formatGuestBreakdown = (bill) => {
 export const sessionGuestCount = (session) =>
   (session?.bills || [])
     .filter((bill) => String(bill.status).toUpperCase() !== "CANCELLED")
-    .reduce((sum, bill) => sum + (Number(bill.total_Guests) || 0), 0);
+    .reduce((sum, bill) => sum + (Number(bill.total_guests) || 0), 0);
 
 /**
  * Validate bill data before creation
