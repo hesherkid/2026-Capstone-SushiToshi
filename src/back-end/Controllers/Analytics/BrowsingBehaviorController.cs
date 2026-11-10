@@ -37,8 +37,8 @@ namespace back_end.Controllers
         /// Sample requests:
         ///
         ///     GET /api/analytics/browsing-behavior
-        ///     GET /api/analytics/browsing-behavior?range=yesterday&amp;locationId=1
-        ///     GET /api/analytics/browsing-behavior?range=custom&amp;from=2026-10-01&amp;to=2026-10-07&amp;categoryId=3&amp;minViews=20
+        ///     GET /api/analytics/browsing-behavior?range=yesterday&amp;location_id=1
+        ///     GET /api/analytics/browsing-behavior?range=custom&amp;from=2026-10-01&amp;to=2026-10-07&amp;category_id=3&amp;min_views=20
         ///
         /// Rules:
         /// - A view counts when it lasted at least 5 seconds. Shorter views are reported only as short_views.
@@ -61,11 +61,11 @@ namespace back_end.Controllers
             [FromQuery] string? range,
             [FromQuery] string? from,
             [FromQuery] string? to,
-            [FromQuery] int? locationId,
-            [FromQuery] int? categoryId,
-            [FromQuery] int? tagId,
+            [FromQuery(Name = "location_id")] int? locationId,
+            [FromQuery(Name = "category_id")] int? categoryId,
+            [FromQuery(Name = "tag_id")] int? tagId,
             [FromQuery] int top = 5,
-            [FromQuery] int minViews = ViewTrackingRules.DefaultMinViews)
+            [FromQuery(Name = "min_views")] int minViews = ViewTrackingRules.DefaultMinViews)
         {
             try
             {

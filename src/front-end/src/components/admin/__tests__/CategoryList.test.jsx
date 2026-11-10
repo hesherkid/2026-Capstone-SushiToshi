@@ -142,7 +142,7 @@ describe("Category list", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
 
     await waitFor(() =>
-      expect(api.delete).toHaveBeenCalledWith("/Category/delete_category/5"),
+      expect(api.delete).toHaveBeenCalledWith("/Category/delete-category/5"),
     );
     await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
   });

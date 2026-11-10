@@ -328,9 +328,9 @@ const OrderTiming = () => {
       params.from = appliedCustom.from;
       params.to = appliedCustom.to;
     }
-    if (useLocationFilter && homeLocation) params.locationId = homeLocation;
-    if (categoryId) params.categoryId = categoryId;
-    if (tagId) params.tagId = tagId;
+    if (useLocationFilter && homeLocation) params.location_id = homeLocation;
+    if (categoryId) params.category_id = categoryId;
+    if (tagId) params.tag_id = tagId;
     return JSON.stringify(params);
   }, [
     isClient,

@@ -82,7 +82,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAllTableGroups([FromQuery] bool? activeOnly, [FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAllTableGroups([FromQuery(Name = "active_only")] bool? activeOnly, [FromQuery(Name = "location_id")] int? locationId)
     {
       try
       {
@@ -123,7 +123,7 @@ namespace back_end.Controllers
 
     [Authorize(Policy = "staffOnly")]
     [HttpGet("available")]
-    public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAvailableTableGroups([FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAvailableTableGroups([FromQuery(Name = "location_id")] int? locationId)
     {
       try
       {

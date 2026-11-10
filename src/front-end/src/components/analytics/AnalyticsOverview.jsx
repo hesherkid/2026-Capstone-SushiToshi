@@ -29,6 +29,9 @@ const REQUESTS = {
   timing: "analytics/order-timing",
 };
 
+// Table turnover has no top-N list, and the API rejects a query parameter an endpoint doesn't take
+const TAKES_TOP = new Set(["items", "browsing", "timing"]);
+
 const parseLocalDate = (value) => {
   const [y, m, d] = value.split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -175,7 +178,7 @@ const AnalyticsOverview = () => {
   const requestKey = useMemo(() => {
     if (!isClient) return null;
     const params = { range: "today", top: TOP_N };
-    if (homeLocation) params.locationId = homeLocation;
+    if (homeLocation) params.location_id = homeLocation;
     return JSON.stringify({ params, refreshTick });
   }, [isClient, homeLocation, refreshTick]);
 
@@ -183,11 +186,15 @@ const AnalyticsOverview = () => {
     if (!requestKey) return;
     const controller = new AbortController();
     const { params } = JSON.parse(requestKey);
+    const { top, ...withoutTop } = params;
     const keys = Object.keys(REQUESTS);
 
     Promise.allSettled(
       keys.map((k) =>
-        api.get(REQUESTS[k], { params, signal: controller.signal }),
+        api.get(REQUESTS[k], {
+          params: TAKES_TOP.has(k) ? params : withoutTop,
+          signal: controller.signal,
+        }),
       ),
     ).then((settled) => {
       if (controller.signal.aborted) return;

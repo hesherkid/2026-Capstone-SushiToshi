@@ -19,16 +19,13 @@ namespace back_end.Dtos.Auth
         [JsonPropertyName("password")]
         public string? UserPassword { get; set; }
 
-        [JsonPropertyName("first_name")]
         public string? FirstName { get; set; }
 
-        [JsonPropertyName("last_name")]
         public string? LastName { get; set; }
     }
 
     public class GoogleTokenDto
     {
-        [JsonPropertyName("id_token")]
         public string IdToken { get; set; } = string.Empty;
     }
 }

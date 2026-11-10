@@ -111,8 +111,8 @@ export const useOrderHistory = () => {
     try {
       const params = { from: filters.from, to: filters.to };
       const locationId = storage.get("branch-location");
-      if (locationId) params.locationId = locationId;
-      if (filters.tableNumber !== "") params.tableNumber = filters.tableNumber;
+      if (locationId) params.location_id = locationId;
+      if (filters.tableNumber !== "") params.table_number = filters.tableNumber;
       if (filters.name.trim()) params.name = filters.name.trim();
 
       const response = await api.get("/Order/history", { params });

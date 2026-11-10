@@ -202,7 +202,7 @@ describe("OrderTiming", () => {
         expect(api.get).toHaveBeenCalledWith(
           ENDPOINT,
           expect.objectContaining({
-            params: { range: "last7", top: 5, locationId: "1" },
+            params: { range: "last7", top: 5, location_id: "1" },
           }),
         );
       });
@@ -216,7 +216,7 @@ describe("OrderTiming", () => {
       expect(api.get.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     });
 
-    it("omits locationId when no branch location is saved", async () => {
+    it("omits location_id when no branch location is saved", async () => {
       storage.get.mockReturnValue(null);
       render(<OrderTiming />);
 
@@ -508,7 +508,7 @@ describe("OrderTiming", () => {
           top: 5,
           from: "2025-01-06",
           to: "2025-01-12",
-          locationId: "1",
+          location_id: "1",
         }),
       );
     });
@@ -546,7 +546,7 @@ describe("OrderTiming", () => {
       );
 
       await waitFor(() =>
-        expect(lastParams()).toMatchObject({ locationId: "1" }),
+        expect(lastParams()).toMatchObject({ location_id: "1" }),
       );
     });
 
@@ -559,7 +559,7 @@ describe("OrderTiming", () => {
       );
 
       await waitFor(() =>
-        expect(lastParams()).toMatchObject({ categoryId: 2 }),
+        expect(lastParams()).toMatchObject({ category_id: 2 }),
       );
     });
 
@@ -569,7 +569,7 @@ describe("OrderTiming", () => {
       await user.click(screen.getByRole("combobox", { name: /tag/i }));
       await user.click(await screen.findByRole("option", { name: "Spicy" }));
 
-      await waitFor(() => expect(lastParams()).toMatchObject({ tagId: 7 }));
+      await waitFor(() => expect(lastParams()).toMatchObject({ tag_id: 7 }));
     });
 
     it("explains that category and tag only filter the item lists", async () => {

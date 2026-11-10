@@ -17,7 +17,7 @@ export const normalizeStatus = (status) => {
   return upper === "APPROVED" ? ORDER_STATUS.PROCESSING : upper;
 };
 
-// An order from all_orders or history, in the shape the staff order screens use.
+// An order from all-orders or history, in the shape the staff order screens use.
 // Shared with useOrderHistory so live and past orders have the same shape
 export const mapOrder = (order) => {
   const items = Array.isArray(order.items)
@@ -62,9 +62,9 @@ export const useOrderData = ({ paused = false } = {}) => {
     if (!silent) setIsLoading(true);
     try {
       const locationId = storage.get("branch-location");
-      const params = { deliveredOpenSessionsOnly: true };
-      if (locationId) params.locationId = locationId;
-      const response = await api.get("/Order/all_orders", { params });
+      const params = { delivered_open_sessions_only: true };
+      if (locationId) params.location_id = locationId;
+      const response = await api.get("/Order/all-orders", { params });
       setOrders(
         Array.isArray(response.data) ? response.data.map(mapOrder) : [],
       );

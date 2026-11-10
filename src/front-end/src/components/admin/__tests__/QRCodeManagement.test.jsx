@@ -140,7 +140,7 @@ describe('QRCodeManagement Component', () => {
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/admin/qr/wifi', {
-        params: { locationId: 1, table: '5', refresh: true },
+        params: { location_id: 1, table: '5', refresh: true },
         responseType: 'blob',
       });
     });
@@ -188,7 +188,7 @@ describe('QRCodeManagement Component', () => {
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/admin/qr/wifi', expect.objectContaining({
-        params: { locationId: 1, table: '5', refresh: true },
+        params: { location_id: 1, table: '5', refresh: true },
         responseType: 'blob',
       }));
     });
@@ -223,7 +223,7 @@ describe('QRCodeManagement Component', () => {
     // Wait for tables to load
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/TableEntity', {
-        params: { locationId: 1 }
+        params: { location_id: 1 }
       });
     });
 
@@ -233,7 +233,7 @@ describe('QRCodeManagement Component', () => {
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/admin/qr/bulk', null, {
-        params: { locationId: 1 },
+        params: { location_id: 1 },
       });
     });
   });
@@ -282,7 +282,7 @@ describe('QRCodeManagement Component', () => {
     // Wait for API call to be made
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/admin/qr/wifi', {
-        params: { locationId: 1, table: '5', refresh: true },
+        params: { location_id: 1, table: '5', refresh: true },
         responseType: 'blob',
       });
     });
@@ -409,7 +409,7 @@ describe('QRCodeManagement Component', () => {
     // Wait for tables to be fetched
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/TableEntity', {
-        params: { locationId: 1 }
+        params: { location_id: 1 }
       });
     });
 
@@ -419,7 +419,7 @@ describe('QRCodeManagement Component', () => {
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/admin/qr/bulk', null, {
-        params: { locationId: 1 },
+        params: { location_id: 1 },
       });
     });
 
@@ -459,7 +459,7 @@ describe('QRCodeManagement Component', () => {
     // Wait for tables to be fetched
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/TableEntity', {
-        params: { locationId: 1 }
+        params: { location_id: 1 }
       });
     });
 
@@ -469,7 +469,7 @@ describe('QRCodeManagement Component', () => {
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/admin/qr/bulk', null, {
-        params: { locationId: 1 },
+        params: { location_id: 1 },
       });
     });
 
@@ -505,7 +505,7 @@ describe('QRCodeManagement Component', () => {
     // Tables should be fetched for default location
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/TableEntity', {
-        params: { locationId: 1 }
+        params: { location_id: 1 }
       });
     });
   });

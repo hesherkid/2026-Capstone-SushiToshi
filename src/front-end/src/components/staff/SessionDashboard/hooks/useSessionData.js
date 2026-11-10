@@ -27,7 +27,7 @@ export const useSessionData = ({ live = false } = {}) => {
     if (!silent) setIsLoading(true);
     try {
       const [sessionsRes, requestsRes] = await Promise.all([
-        api.get(`/Dashboard/sessions?locationId=${locationId}`),
+        api.get(`/Dashboard/sessions?location_id=${locationId}`),
         api.get("/ServiceRequest/pending"),
       ]);
 

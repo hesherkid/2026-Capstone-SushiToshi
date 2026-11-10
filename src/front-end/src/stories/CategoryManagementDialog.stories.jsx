@@ -169,9 +169,9 @@ const MenuAssignmentDialog = ({
       ? "All locations"
       : (locations.find((l) => l.location_id === id)?.name ?? `Location ${id}`);
 
-  // ?locationId=X for an override row, nothing for the default row
+  // ?location_id=X for an override row, nothing for the default row
   const locationQuery = (locId) =>
-    locId != null ? `?locationId=${locId}` : "";
+    locId != null ? `?location_id=${locId}` : "";
 
   const handleDeleteAssignment = async (assignment) => {
     const isDefault = assignment.location_id == null;

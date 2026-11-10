@@ -1,7 +1,6 @@
 
 
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 using back_end.domain;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -12,16 +11,11 @@ namespace back_end.Dtos
     {
         [MinLength(1)]
         [MaxLength(255)]
-        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
-        [JsonPropertyName("description")]
         public string? Description { get; set; }
-        [JsonPropertyName("category_id")]
         public int CategoryId { get; set; }
-        [JsonPropertyName("item_image_url")]
         public string? ItemImageUrl { get; set; }
         //public bool is_add_on {get;set;}
-        [JsonPropertyName("status")]
         public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
     }
 
@@ -41,34 +35,26 @@ namespace back_end.Dtos
     // }
     public class MenuItemCreateDto : MenuItemBaseDto
     {
-        [JsonPropertyName("tag_ids")]
         public List<int> TagIds { get; set; } = [];
     }
 
     public class TagResponseDto
     {
-        [JsonPropertyName("tag_id")]
         public int TagId { get; set; }
-        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
 
     }
     public class FullTagResponseDto : TagResponseDto
     {
-        [JsonPropertyName("color_code")]
         public string ColorCode { get; set; } = string.Empty;
 
     }
 
     public class MenuItemResponseDto : MenuItemBaseDto
     {
-        [JsonPropertyName("item_id")]
         public int ItemId { get; set; }
-        [JsonPropertyName("tags")]
         public List<FullTagResponseDto> Tags { get; set; } = [];
-        [JsonPropertyName("created_at")]
         public DateTime? CreatedAt { get; set; }
-        [JsonPropertyName("updated_at")]
         public DateTime? UpdatedAt { get; set; }
 
         // Needs the item's MenuItemTags and their Tag loaded
@@ -95,7 +81,6 @@ namespace back_end.Dtos
     // GET /api/MenuItem/{id}: the item, plus every menu and location it's on
     public class MenuItemWithAssignmentsDto : MenuItemResponseDto
     {
-        [JsonPropertyName("menu_assignments")]
         public List<MenuAssignmentResponseDto> MenuAssignments { get; set; } = [];
 
         // Also needs the item's MenuAssignments and their Menu loaded
@@ -107,17 +92,11 @@ namespace back_end.Dtos
         }
     }
     public class MenuItemUpdateDto{
-        [JsonPropertyName("name")]
         public string? Name { get; set; }
-        [JsonPropertyName("description")]
         public string? Description { get; set; }
-        [JsonPropertyName("category_id")]
         public int? CategoryId { get; set; }
-        [JsonPropertyName("item_image_url")]
         public string? ItemImageUrl { get; set; }
-        [JsonPropertyName("status")]
         public MenuItemStatus? Status { get; set; }
-        [JsonPropertyName("tag_ids")]
         public List<int>? TagIds { get; set; }  
     }
     
