@@ -58,7 +58,7 @@ back_end.Dtos.JoinTableSessionResponseDto: already_joined, menu_id, participant_
 back_end.Dtos.LeftoverFeeBillShare: bill_id, bill_name, leftover_charge
 back_end.Dtos.LeftoverFeeRequest: amount
 back_end.Dtos.LeftoverFeeResponse: amount, bills, default_fee, session_id
-back_end.Dtos.ListDiningSessionsRequestDto: activeOnly
+back_end.Dtos.ListDiningSessionsRequestDto: active_only
 back_end.Dtos.LocationBaseDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LocationCreateDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LocationOptionDto: location_id, name
