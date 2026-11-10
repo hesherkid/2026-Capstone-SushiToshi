@@ -13,7 +13,6 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using System.IO.Compression;
 using System.Text;
-using System.Text.Json;
 
 namespace back_end.Tests.Controllers;
 
@@ -451,10 +450,10 @@ public class AdminQrCodeControllerTests : IDisposable
 
         var json = ToJson(result.Should().BeOfType<OkObjectResult>().Subject.Value);
         json.GetProperty("success").GetBoolean().Should().BeTrue();
-        json.GetProperty("locationId").GetInt32().Should().Be(LocId);
-        json.GetProperty("tableCount").GetInt32().Should().Be(3);
-        json.GetProperty("filesGenerated").GetInt32().Should().Be(6);
-        json.GetProperty("storageLocation").GetString().Should().Be("storage/qrcodes/");
+        json.GetProperty("location_id").GetInt32().Should().Be(LocId);
+        json.GetProperty("table_count").GetInt32().Should().Be(3);
+        json.GetProperty("files_generated").GetInt32().Should().Be(6);
+        json.GetProperty("storage_location").GetString().Should().Be("storage/qrcodes/");
 
         var files = json.GetProperty("files").EnumerateArray().Select(f => f.GetString()).ToList();
         files.Should().BeEquivalentTo(new[]
@@ -475,7 +474,7 @@ public class AdminQrCodeControllerTests : IDisposable
         var result = await _controller.BulkGenerate(LocId, CancellationToken.None);
 
         var json = ToJson(result.Should().BeOfType<OkObjectResult>().Subject.Value);
-        json.GetProperty("filesGenerated").GetInt32().Should().Be(3);
+        json.GetProperty("files_generated").GetInt32().Should().Be(3);
         json.GetProperty("files").EnumerateArray()
             .Should().OnlyContain(f => f.GetString()!.StartsWith("session_"));
     }

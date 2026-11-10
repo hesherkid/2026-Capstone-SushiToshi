@@ -409,7 +409,7 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "An error occurred while adding menu {MenuId} to location {LocationId}.", menuLocationCreate.Menu_id, locationId);
+        _logger.LogError(ex, "An error occurred while adding menu {MenuId} to location {LocationId}.", menuLocationCreate.MenuId, locationId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
 

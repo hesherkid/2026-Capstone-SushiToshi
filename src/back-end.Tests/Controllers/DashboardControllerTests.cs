@@ -156,7 +156,7 @@ public class DashboardControllerTests : IDisposable
 
         var result = await Controller().GetDashboardSessions(null);
 
-        Sessions(result).Select(s => s.Session_Id).Should().Equal(101, SessionId);
+        Sessions(result).Select(s => s.SessionId).Should().Equal(101, SessionId);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class DashboardControllerTests : IDisposable
 
         var result = await Controller(AdminId, UserRoles.Admin).GetDashboardSessions(null);
 
-        Sessions(result).Select(s => s.Session_Id).Should().BeEquivalentTo(new[] { SessionId, OtherSessionId });
+        Sessions(result).Select(s => s.SessionId).Should().BeEquivalentTo(new[] { SessionId, OtherSessionId });
     }
 
     [Fact]
@@ -179,8 +179,8 @@ public class DashboardControllerTests : IDisposable
         var result = await Controller(AdminId, UserRoles.Admin).GetDashboardSessions(OtherLocationId);
 
         var session = Sessions(result).Should().ContainSingle().Subject;
-        session.Session_Id.Should().Be(OtherSessionId);
-        session.Location_Name.Should().Be("Southside");
+        session.SessionId.Should().Be(OtherSessionId);
+        session.LocationName.Should().Be("Southside");
     }
 
     [Fact]
@@ -211,11 +211,11 @@ public class DashboardControllerTests : IDisposable
         var result = await Controller().GetDashboardSessions(null);
 
         var session = Sessions(result).Single();
-        session.Menu_Id.Should().Be(1);
-        session.Location_Id.Should().Be(LocationId);
-        session.Location_Name.Should().Be("Downtown");
-        session.Table_Numbers.Should().Equal(1);
-        session.Seat_Count.Should().Be(4);
+        session.MenuId.Should().Be(1);
+        session.LocationId.Should().Be(LocationId);
+        session.LocationName.Should().Be("Downtown");
+        session.TableNumbers.Should().Equal(1);
+        session.SeatCount.Should().Be(4);
     }
 
     [Fact]
@@ -226,8 +226,8 @@ public class DashboardControllerTests : IDisposable
         var result = await Controller().GetDashboardSessions(null);
 
         var session = Sessions(result).Single();
-        session.Table_Numbers.Should().BeEquivalentTo(new[] { 3, 4 });
-        session.Seat_Count.Should().Be(8);
+        session.TableNumbers.Should().BeEquivalentTo(new[] { 3, 4 });
+        session.SeatCount.Should().Be(8);
     }
 
     [Fact]
@@ -242,11 +242,11 @@ public class DashboardControllerTests : IDisposable
         var result = await Controller().GetDashboardSessions(null);
 
         var session = Sessions(result).Single();
-        session.Active_Participants.Should().Be(2);
-        session.People.Select(p => p.User_Name).Should().Equal("Ana", "Ben");
-        session.People.Single(p => p.User_Name == "Ana").Bill_Id.Should().Be(1);
-        session.People.Single(p => p.User_Name == "Ben").Bill_Id.Should().BeNull();
-        session.Bills.Single().People_On_Bill.Should().Be(1);
+        session.ActiveParticipants.Should().Be(2);
+        session.People.Select(p => p.UserName).Should().Equal("Ana", "Ben");
+        session.People.Single(p => p.UserName == "Ana").BillId.Should().Be(1);
+        session.People.Single(p => p.UserName == "Ben").BillId.Should().BeNull();
+        session.Bills.Single().PeopleOnBill.Should().Be(1);
     }
 
     [Fact]
@@ -278,23 +278,23 @@ public class DashboardControllerTests : IDisposable
         var result = await Controller().GetDashboardSessions(null);
 
         var session = Sessions(result).Single();
-        session.Bill_Count.Should().Be(1);
+        session.BillCount.Should().Be(1);
         session.Bills.Single().Should().BeEquivalentTo(new DashboardBillDto
         {
-            Bill_Id = 1,
-            Bill_Name = "Lee",
+            BillId = 1,
+            BillName = "Lee",
             Status = BillStatus.Open,
-            Created_At = createdAt,
-            Total_Guests = 4,
-            Adult_Count = 1,
-            Senior_Count = 1,
-            Child_Count = 1,
-            Tot_Count = 1,
-            Requested_At = requestedAt,
-            Started_By_Guest = true,
-            Counts_Changed_By_Guest = true,
-            Counts_Locked = true,
-            People_On_Bill = 1,
+            CreatedAt = createdAt,
+            TotalGuests = 4,
+            AdultCount = 1,
+            SeniorCount = 1,
+            ChildCount = 1,
+            TotCount = 1,
+            RequestedAt = requestedAt,
+            StartedByGuest = true,
+            CountsChangedByGuest = true,
+            CountsLocked = true,
+            PeopleOnBill = 1,
         });
     }
 
@@ -311,7 +311,7 @@ public class DashboardControllerTests : IDisposable
 
         var result = await Controller().GetDashboardSessions(null);
 
-        Sessions(result).Single().Is_Closable.Should().Be(closable);
+        Sessions(result).Single().IsClosable.Should().Be(closable);
     }
 
     [Fact]
@@ -323,12 +323,12 @@ public class DashboardControllerTests : IDisposable
 
         Summary(result).Should().BeEquivalentTo(new DashboardSummaryDto
         {
-            Location_Id = null,
-            Location_Name = null,
-            Total_Active_Sessions = 3,
-            Total_Tables_In_Use = 4,
-            Total_Active_Bills = 2,
-            Total_ActiveParticipants = 4,
+            LocationId = null,
+            LocationName = null,
+            TotalActiveSessions = 3,
+            TotalTablesInUse = 4,
+            TotalActiveBills = 2,
+            TotalActiveParticipants = 4,
         });
     }
 
@@ -341,12 +341,12 @@ public class DashboardControllerTests : IDisposable
 
         Summary(result).Should().BeEquivalentTo(new DashboardSummaryDto
         {
-            Location_Id = LocationId,
-            Location_Name = "Downtown",
-            Total_Active_Sessions = 2,
-            Total_Tables_In_Use = 3,
-            Total_Active_Bills = 1,
-            Total_ActiveParticipants = 3,
+            LocationId = LocationId,
+            LocationName = "Downtown",
+            TotalActiveSessions = 2,
+            TotalTablesInUse = 3,
+            TotalActiveBills = 1,
+            TotalActiveParticipants = 3,
         });
     }
 
@@ -358,8 +358,8 @@ public class DashboardControllerTests : IDisposable
         var result = await Controller().GetDashboardSummary(OtherLocationId);
 
         var summary = Summary(result);
-        summary.Location_Id.Should().Be(LocationId);
-        summary.Total_Active_Sessions.Should().Be(2);
+        summary.LocationId.Should().Be(LocationId);
+        summary.TotalActiveSessions.Should().Be(2);
     }
 
     [Fact]

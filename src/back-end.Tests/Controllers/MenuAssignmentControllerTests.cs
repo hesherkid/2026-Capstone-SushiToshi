@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Xunit;
 using Moq;
 using FluentAssertions;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using back_end.Configurations;
 using back_end.Controllers;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
@@ -449,4 +452,56 @@ public class MenuAssignmentControllerTests : IDisposable
                 a.Item_Id, a.Location_Id, a.Price, a.Adult_Limit, a.Child_limit, a.Senior_limit,
                 a.Tot_Limit, a.Per_Order_Limit, a.Over_Limit_Behavior, a.Is_Add_On, a.Status))
             .ToListAsync();
+
+    [Fact]
+    public async Task Create_ReturnsTheNewRow()
+    {
+        var data = ValidCreate();
+        data.Price = 4m;
+        data.AdultLimit = 2;
+        data.ChildLimit = 1;
+        data.SeniorLimit = 2;
+        data.PerOrderLimit = 3;
+        data.OverLimitBehavior = OverLimitBehavior.Charge;
+
+        var result = await Admin().CreateMenuItemAssignment(data);
+
+        var dto = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<MenuAssignmentResponseDto>().Subject;
+        dto.AssignmentId.Should().BePositive();
+        dto.MenuId.Should().Be(DinnerMenu);
+        dto.ItemId.Should().Be(NewItem);
+        dto.LocationId.Should().BeNull();
+        dto.AdultLimit.Should().Be(2);
+        dto.PerOrderLimit.Should().Be(3);
+        dto.OverLimitBehavior.Should().Be(OverLimitBehavior.Charge);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsTheWholeRow()
+    {
+        var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, SalmonNigiri, new MenuAssignmentUpdateDto { Price = 5m }, locationId: null);
+
+        var dto = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<MenuAssignmentResponseDto>().Subject;
+        dto.Price.Should().Be(5m);
+        dto.AdultLimit.Should().Be(6);
+        dto.Status.Should().Be(MenuItemStatus.Available);
+    }
+
+    // In development the API rejects keys a DTO doesn't have, so the edit dialog
+    // must leave out menu_id, item_id and location_id (they're in the URL instead)
+    [Fact]
+    public void UpdateDto_InDevelopment_AcceptsEditFieldsAndRejectsCreateOnlyKeys()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
+        ApiJsonOptions.Apply(options);
+
+        var edit = JsonSerializer.Deserialize<MenuAssignmentUpdateDto>(
+            """{"price": 5, "adult_limit": 2, "child_limit": 1, "senior_limit": 2, "tot_limit": 0, "per_order_limit": 0, "over_limit_behavior": "Block", "status": "available", "is_add_on": false}""",
+            options);
+        edit!.Price.Should().Be(5m);
+        edit.Status.Should().Be(MenuItemStatus.Available);
+
+        var withMenuId = () => JsonSerializer.Deserialize<MenuAssignmentUpdateDto>("""{"menu_id": 1, "price": 5}""", options);
+        withMenuId.Should().Throw<JsonException>().WithMessage("*menu_id*");
+    }
 }

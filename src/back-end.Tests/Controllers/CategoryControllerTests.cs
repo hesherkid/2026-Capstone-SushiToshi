@@ -433,9 +433,9 @@ public class CategoryControllerTests : IDisposable
         var result = await _controller.GetMenuItemsByCategory(1);
 
         var items = result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().BeAssignableTo<List<Menu_Item>>().Subject;
+            .Which.Value.Should().BeAssignableTo<List<MenuItemResponseDto>>().Subject;
         items.Should().HaveCount(3);
-        items.Should().OnlyContain(m => m.Category_id == 1);
+        items.Should().OnlyContain(m => m.CategoryId == 1);
     }
 
     [Fact]

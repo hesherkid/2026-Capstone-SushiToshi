@@ -109,13 +109,13 @@ public class LocationControllerTests : IDisposable
     private static LocationCreateDto NewLocation(string? provinceCode = null) => new()
     {
         Name = "South Side",
-        Address_One = "789 South Ave",
-        Address_Two = "Unit 4",
+        AddressOne = "789 South Ave",
+        AddressTwo = "Unit 4",
         City = "Calgary",
         Province = "Alberta",
-        Province_Code = provinceCode,
-        Postal_Code = "T2P 1A1",
-        Phone_Number = "4035550100"
+        ProvinceCode = provinceCode,
+        PostalCode = "T2P 1A1",
+        PhoneNumber = "4035550100"
     };
 
     [Fact]
@@ -124,8 +124,8 @@ public class LocationControllerTests : IDisposable
         var result = await _controller.GetAllLocations();
 
         var locations = result.Result.Should().BeOfType<OkObjectResult>()
-            .Subject.Value.Should().BeAssignableTo<List<Locations>>().Subject;
-        locations.Select(l => l.Location_Id).Should().Equal(Northside, Southside, Quiet);
+            .Subject.Value.Should().BeAssignableTo<List<LocationResponseDto>>().Subject;
+        locations.Select(l => l.LocationId).Should().Equal(Northside, Southside, Quiet);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class LocationControllerTests : IDisposable
         var result = await _controller.GetAllLocations();
 
         result.Result.Should().BeOfType<OkObjectResult>()
-            .Subject.Value.Should().BeAssignableTo<List<Locations>>()
+            .Subject.Value.Should().BeAssignableTo<List<LocationResponseDto>>()
             .Subject.Should().BeEmpty();
     }
 
@@ -178,7 +178,7 @@ public class LocationControllerTests : IDisposable
         var result = await _controller.GetLocations(Southside);
 
         result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().BeOfType<Locations>()
+            .Which.Value.Should().BeOfType<LocationResponseDto>()
             .Which.Name.Should().Be("Southside");
     }
 
@@ -204,13 +204,13 @@ public class LocationControllerTests : IDisposable
         var result = await _controller.UpdateLocation(Northside, new LocationUpdateDto
         {
             Name = "Northside Renamed",
-            Address_One = "1 New St",
-            Address_Two = "Floor 2",
+            AddressOne = "1 New St",
+            AddressTwo = "Floor 2",
             City = "St. Albert",
             Province = "Alberta",
-            Province_Code = "SK",
-            Postal_Code = "T8N 1A1",
-            Phone_Number = "7805550199"
+            ProvinceCode = "SK",
+            PostalCode = "T8N 1A1",
+            PhoneNumber = "7805550199"
         });
 
         result.Should().BeOfType<OkObjectResult>();
@@ -345,7 +345,7 @@ public class LocationControllerTests : IDisposable
     [Fact]
     public async Task AddMenu_CanBeAddedToALocation()
     {
-        var result = await _controller.AddMenuToLocation(Quiet, new MenuLocationCreateDto { Menu_id = DinnerMenu });
+        var result = await _controller.AddMenuToLocation(Quiet, new MenuLocationCreateDto { MenuId = DinnerMenu });
 
         result.Should().BeOfType<OkObjectResult>();
         using var db = NewContext();
@@ -355,7 +355,7 @@ public class LocationControllerTests : IDisposable
     [Fact]
     public async Task AddMenu_ALocationThatDoesntExist_ReturnsNotFound()
     {
-        var result = await _controller.AddMenuToLocation(NoSuchLocation, new MenuLocationCreateDto { Menu_id = LunchMenu });
+        var result = await _controller.AddMenuToLocation(NoSuchLocation, new MenuLocationCreateDto { MenuId = LunchMenu });
 
         result.Should().BeOfType<NotFoundObjectResult>();
         using var db = NewContext();
@@ -388,15 +388,15 @@ public class LocationControllerTests : IDisposable
         var tables = OkJson(await _controller.GetLocationTables(Northside));
 
         tables.EnumerateArray().Select(t => t.GetProperty("table_number").GetInt32()).Should().Equal(1, 2);
-        tables[0].GetProperty("tableGroup_Name").ValueKind.Should().Be(JsonValueKind.Null);
+        tables[0].GetProperty("table_group_name").ValueKind.Should().Be(JsonValueKind.Null);
 
         var patio = tables[1];
-        patio.GetProperty("table_Id").GetInt32().Should().Be(PatioTable);
+        patio.GetProperty("table_id").GetInt32().Should().Be(PatioTable);
         patio.GetProperty("seat_count").GetInt32().Should().Be(4);
         patio.GetProperty("is_active").GetBoolean().Should().BeTrue();
         patio.GetProperty("qr_code").GetString().Should().Be("qr-2");
-        patio.GetProperty("tableGroup_Id").GetInt32().Should().Be(PatioGroup);
-        patio.GetProperty("tableGroup_Name").GetString().Should().Be("Patio");
+        patio.GetProperty("table_group_id").GetInt32().Should().Be(PatioGroup);
+        patio.GetProperty("table_group_name").GetString().Should().Be("Patio");
     }
 
     [Fact]
@@ -420,17 +420,17 @@ public class LocationControllerTests : IDisposable
     {
         var groups = OkJson(await _controller.GetLocationTableGroups(Northside));
 
-        groups.EnumerateArray().Select(g => g.GetProperty("group_Name").GetString()).Should().Equal("Bar", "Patio");
+        groups.EnumerateArray().Select(g => g.GetProperty("group_name").GetString()).Should().Equal("Bar", "Patio");
 
         var bar = groups[0];
-        bar.GetProperty("is_Active").GetBoolean().Should().BeFalse();
-        bar.GetProperty("table_Count").GetInt32().Should().Be(0);
-        bar.GetProperty("total_Seats").GetInt32().Should().Be(0);
+        bar.GetProperty("is_active").GetBoolean().Should().BeFalse();
+        bar.GetProperty("table_count").GetInt32().Should().Be(0);
+        bar.GetProperty("total_seats").GetInt32().Should().Be(0);
 
         var patio = groups[1];
-        patio.GetProperty("tableGroup_Id").GetInt32().Should().Be(PatioGroup);
-        patio.GetProperty("table_Count").GetInt32().Should().Be(1);
-        patio.GetProperty("total_Seats").GetInt32().Should().Be(4);
+        patio.GetProperty("table_group_id").GetInt32().Should().Be(PatioGroup);
+        patio.GetProperty("table_count").GetInt32().Should().Be(1);
+        patio.GetProperty("total_seats").GetInt32().Should().Be(4);
         patio.GetProperty("tables")[0].GetProperty("table_number").GetInt32().Should().Be(2);
     }
 
@@ -447,7 +447,7 @@ public class LocationControllerTests : IDisposable
     {
         var sessions = OkJson(await _controller.GetLocationDiningSessions(Northside, activeOnly: null));
 
-        sessions.EnumerateArray().Select(s => s.GetProperty("session_Id").GetInt32()).Should().Equal(OpenSession, EndedSession);
+        sessions.EnumerateArray().Select(s => s.GetProperty("session_id").GetInt32()).Should().Equal(OpenSession, EndedSession);
     }
 
     [Fact]
@@ -456,10 +456,10 @@ public class LocationControllerTests : IDisposable
         var sessions = OkJson(await _controller.GetLocationDiningSessions(Northside, activeOnly: true));
 
         var open = sessions.EnumerateArray().Should().ContainSingle().Subject;
-        open.GetProperty("session_Id").GetInt32().Should().Be(OpenSession);
-        open.GetProperty("ended_At").ValueKind.Should().Be(JsonValueKind.Null);
-        open.GetProperty("table_Numbers").EnumerateArray().Select(t => t.GetInt32()).Should().Equal(1);
-        open.GetProperty("active_Participants").GetInt32().Should().Be(2);
+        open.GetProperty("session_id").GetInt32().Should().Be(OpenSession);
+        open.GetProperty("ended_at").ValueKind.Should().Be(JsonValueKind.Null);
+        open.GetProperty("table_numbers").EnumerateArray().Select(t => t.GetInt32()).Should().Equal(1);
+        open.GetProperty("active_participants").GetInt32().Should().Be(2);
     }
 
     [Fact]
@@ -468,9 +468,9 @@ public class LocationControllerTests : IDisposable
         var sessions = OkJson(await _controller.GetLocationDiningSessions(Northside, activeOnly: false));
 
         var ended = sessions.EnumerateArray().Should().ContainSingle().Subject;
-        ended.GetProperty("session_Id").GetInt32().Should().Be(EndedSession);
-        ended.GetProperty("table_Numbers").EnumerateArray().Select(t => t.GetInt32()).Should().Equal(2);
-        ended.GetProperty("active_Participants").GetInt32().Should().Be(0);
+        ended.GetProperty("session_id").GetInt32().Should().Be(EndedSession);
+        ended.GetProperty("table_numbers").EnumerateArray().Select(t => t.GetInt32()).Should().Equal(2);
+        ended.GetProperty("active_participants").GetInt32().Should().Be(0);
     }
 
     [Fact]
