@@ -119,7 +119,7 @@ export const orderService = {
 
   // ORDER RETRIEVAL
 
-  // Past orders use GET /Order/history via useOrderHistory; live orders use all_orders below
+  // Past orders use GET /Order/history via useOrderHistory; live orders use all-orders below
 
   /**
    * Gets all orders based on location (Staff/Admin only)
@@ -127,7 +127,7 @@ export const orderService = {
    */
   getAllOrdersByLocation: async (locationId = null) => {
     const params = locationId ? { location_id: locationId } : {};
-    const response = await api.get("/Order/all_orders", { params });
+    const response = await api.get("/Order/all-orders", { params });
     return response.data;
   },
 

@@ -110,7 +110,7 @@ const CategoryManagementDialog = ({
     try {
       if (selectedCategory) {
         await api.put(
-          `/Category/update_category/${selectedCategory.category_id}`,
+          `/Category/update-category/${selectedCategory.category_id}`,
           formData,
         );
       } else {
@@ -134,7 +134,7 @@ const CategoryManagementDialog = ({
     try {
       // The API returns 404 when the category has no items
       const hasItems = await api
-        .get(`/Category/get_menu_by_category/${selectedCategory.category_id}`, {
+        .get(`/Category/get-menu-by-category/${selectedCategory.category_id}`, {
           params: { limit: 1 },
         })
         .then((res) => Array.isArray(res.data) && res.data.length > 0)
@@ -150,7 +150,7 @@ const CategoryManagementDialog = ({
       }
 
       await api.delete(
-        `/Category/delete_category/${selectedCategory.category_id}`,
+        `/Category/delete-category/${selectedCategory.category_id}`,
       );
 
       onSuccess();

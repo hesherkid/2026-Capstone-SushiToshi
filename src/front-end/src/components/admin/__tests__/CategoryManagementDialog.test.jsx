@@ -109,7 +109,7 @@ describe("Category dialog", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Category/update_category/5",
+        "/Category/update-category/5",
         expect.objectContaining({
           per_order_limit: 2,
           over_limit_behavior: "Charge",
@@ -186,9 +186,9 @@ describe("Category dialog", () => {
     confirmDelete();
 
     await waitFor(() =>
-      expect(api.delete).toHaveBeenCalledWith("/Category/delete_category/5"),
+      expect(api.delete).toHaveBeenCalledWith("/Category/delete-category/5"),
     );
-    expect(api.get).toHaveBeenCalledWith("/Category/get_menu_by_category/5", {
+    expect(api.get).toHaveBeenCalledWith("/Category/get-menu-by-category/5", {
       params: { limit: 1 },
     });
     expect(onSuccess).toHaveBeenCalled();

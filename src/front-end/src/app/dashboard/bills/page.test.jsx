@@ -37,7 +37,7 @@ const mockTable = ({ bills = [LEE], seated = true } = {}) => {
         ? Promise.resolve({ data: { session_id: 42 } })
         : Promise.reject({ response: { status: 404 } });
     }
-    if (url === "/Bill/get_bills/42") return Promise.resolve({ status: 200, data: bills });
+    if (url === "/Bill/get-bills/42") return Promise.resolve({ status: 200, data: bills });
     const summary = url.match(/^\/Bill\/summary\/(\d+)$/);
     if (summary) return Promise.resolve({ data: summaries[summary[1]] });
     return Promise.resolve({ data: [] });
@@ -102,7 +102,7 @@ describe("Bill page", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "Ask for bill" }));
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith("/Bill/request_bill/8", null, { params: { session_id: 42 } }),
+      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/8", null, { params: { session_id: 42 } }),
     );
     expect(await screen.findByText(/Your server will bring your bill shortly/)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Bill requested" })).toBeDisabled();
@@ -154,7 +154,7 @@ describe("Bill page", () => {
     let bills = [];
     api.get.mockImplementation((url) => {
       if (url === "/DiningSession/participants/active-session-id") return Promise.resolve({ data: { session_id: 42 } });
-      if (url === "/Bill/get_bills/42") return Promise.resolve({ status: 200, data: bills });
+      if (url === "/Bill/get-bills/42") return Promise.resolve({ status: 200, data: bills });
       if (url === "/Bill/summary/8") return Promise.resolve({ data: summaries[8] });
       return Promise.resolve({ data: [] });
     });

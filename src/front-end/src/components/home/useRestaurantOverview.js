@@ -55,7 +55,7 @@ export default function useRestaurantOverview({ includeOrders = false } = {}) {
         api.get("/Dashboard/sessions", { params: locationParams }),
         api.get("/ServiceRequest/pending"),
         includeOrders
-          ? api.get("/Order/all_orders", { params: locationParams })
+          ? api.get("/Order/all-orders", { params: locationParams })
           : Promise.resolve({ data: [] }),
       ]);
 
