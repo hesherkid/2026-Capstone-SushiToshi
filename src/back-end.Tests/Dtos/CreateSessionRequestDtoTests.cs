@@ -2,6 +2,7 @@ using Xunit;
 using FluentAssertions;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using back_end.Configurations;
 using back_end.Dtos;
 
 namespace back_end.Tests.Dtos;
@@ -12,6 +13,16 @@ public class CreateSessionRequestDtoTests
     /// Tests for DiningSessiionDto.CreateSessionDto
     /// Only Menu_Id is validated ([Range(1, int.MaxValue)]); all other fields are optional.
     /// </summary>
+
+    // The JSON settings the API uses
+    private static readonly JsonSerializerOptions ApiOptions = CreateApiOptions();
+
+    private static JsonSerializerOptions CreateApiOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        ApiJsonOptions.Apply(options);
+        return options;
+    }
 
     private static (bool isValid, List<ValidationResult> results) Validate(object dto)
     {
@@ -193,7 +204,7 @@ public class CreateSessionRequestDtoTests
         var dto = new CreateSessionRequestDto { MenuId = 1, LocationId = 1 };
 
         // Act
-        var json = JsonSerializer.Serialize(dto);
+        var json = JsonSerializer.Serialize(dto, ApiOptions);
 
         // Assert
         json.Should().Contain("\"menu_id\"");

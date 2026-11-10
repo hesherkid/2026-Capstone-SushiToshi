@@ -1,7 +1,6 @@
 
 
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 using back_end.domain;
 using back_end.domain.Entities;
 using back_end.domain.enums;
@@ -10,15 +9,10 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 namespace back_end.Dtos{
     public class MenuBaseDto
     {
-        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
-        [JsonPropertyName("description")]
         public string? Description { get; set; }
-        [JsonPropertyName("start_time")]
         public TimeOnly? StartTime { get; set; }
-        [JsonPropertyName("end_time")]
         public TimeOnly? EndTime { get; set; }
-        [JsonPropertyName("is_active")]
         public bool IsActive { get; set; } = true;
 
     }
@@ -31,23 +25,16 @@ namespace back_end.Dtos{
     {
         [MinLength(1)]
         [MaxLength(255)]
-        [JsonPropertyName("name")]
         public string? Name { get; set; }
-        [JsonPropertyName("description")]
         public string? Description { get; set; }
-        [JsonPropertyName("start_time")]
         public TimeOnly? StartTime { get; set; }
-        [JsonPropertyName("end_time")]
         public TimeOnly? EndTime { get; set; }
-        [JsonPropertyName("is_active")]
         public bool? IsActive { get; set; }
     }
 
     public class MenuResponseDto : MenuBaseDto
     {
-        [JsonPropertyName("menu_id")]
         public int MenuId { get; set; }
-        [JsonPropertyName("location_ids")]
         public List<int> LocationIds { get; set; } = [];
 
         // LocationIds is empty unless the menu's MenuLocations are loaded

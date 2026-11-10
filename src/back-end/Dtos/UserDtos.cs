@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 using back_end.domain;
 using back_end.domain.enums;
 using back_end.domain.Entities;
@@ -45,23 +44,14 @@ namespace back_end.Dtos
 
     public class UserResponseDto
     {
-        [JsonPropertyName("user_id")]
         public int UserId { get; set; }
-        [JsonPropertyName("email")]
         public string Email { get; set; } = string.Empty;
-        [JsonPropertyName("first_name")]
         public string FirstName { get; set; } = string.Empty;
-        [JsonPropertyName("last_name")]
         public string LastName { get; set; } = string.Empty;
-        [JsonPropertyName("role")]
         public UserRoles Role { get; set; }
-        [JsonPropertyName("status")]
         public UserStatus Status { get; set; }
-        [JsonPropertyName("created_at")]
         public DateTime CreatedAt { get; set; }
-        [JsonPropertyName("last_interaction_at")]
         public DateTime? LastInteractionAt { get; set; }
-        [JsonPropertyName("is_email_confirmed")]
         public bool IsEmailConfirmed { get; set; }
 
         public static UserResponseDto From(User u) => new UserResponseDto

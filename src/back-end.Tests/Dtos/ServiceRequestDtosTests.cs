@@ -2,6 +2,7 @@ using Xunit;
 using FluentAssertions;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using back_end.Configurations;
 using back_end.Dtos;
 using back_end.domain.enums;
 
@@ -14,6 +15,16 @@ public class ServiceRequestDtosTests
     /// The requestion user comes from the JWT token, not in the request body, create DTO only carries notes.
     /// User references in the response are numeric user IDs.
     /// </summary>
+
+    // The JSON settings the API uses
+    private static readonly JsonSerializerOptions ApiOptions = CreateApiOptions();
+
+    private static JsonSerializerOptions CreateApiOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        ApiJsonOptions.Apply(options);
+        return options;
+    }
 
     // ------------ ServiceRequestCreateDto Tests ------------
     [Fact]
@@ -38,7 +49,7 @@ public class ServiceRequestDtosTests
         var dto = new ServiceRequestCreateDto { Notes = "Test" };
 
         // Act
-        var json = JsonSerializer.Serialize(dto);
+        var json = JsonSerializer.Serialize(dto, ApiOptions);
 
         // Assert
         json.Should().Contain("\"notes\"");
@@ -149,7 +160,7 @@ public class ServiceRequestDtosTests
         };
 
         // Act
-        var json = JsonSerializer.Serialize(dto);
+        var json = JsonSerializer.Serialize(dto, ApiOptions);
 
         // Assert
         json.Should().Contain("\"request_id\"");
