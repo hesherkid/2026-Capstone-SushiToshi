@@ -61,7 +61,7 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
     setError(null);
     try {
       await api.delete(
-        `/Category/delete_category/${categoryToDelete.category_id}`,
+        `/Category/delete-category/${categoryToDelete.category_id}`,
       );
       await fetchCategories();
       setCategoryToDelete(null);

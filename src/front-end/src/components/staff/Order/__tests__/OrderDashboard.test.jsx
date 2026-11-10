@@ -129,8 +129,8 @@ describe("Order dashboard", () => {
     expect(
       screen.getByRole("tab", { name: "Delivered (1)" }),
     ).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledWith("/Order/all_orders", {
-      params: { locationId: "1", deliveredOpenSessionsOnly: true },
+    expect(api.get).toHaveBeenCalledWith("/Order/all-orders", {
+      params: { location_id: "1", delivered_open_sessions_only: true },
     });
   });
 
@@ -264,7 +264,7 @@ describe("Past orders", () => {
     const today = toDateInput(new Date());
     await waitFor(() =>
       expect(api.get).toHaveBeenCalledWith("/Order/history", {
-        params: { from: today, to: today, locationId: "1" },
+        params: { from: today, to: today, location_id: "1" },
       }),
     );
 
@@ -338,7 +338,7 @@ describe("Past orders", () => {
       expect(api.get).toHaveBeenCalledWith(
         "/Order/history",
         expect.objectContaining({
-          params: expect.objectContaining({ tableNumber: "14", name: "lee" }),
+          params: expect.objectContaining({ table_number: "14", name: "lee" }),
         }),
       ),
     );

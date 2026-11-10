@@ -184,7 +184,7 @@ public class PasswordRuleTests : IDisposable
 
         IsValid(new ResetPasswordDto { Token = "reset", NewPassword = password }).Should().Be(valid);
         IsValid(new CreateStaffDto { Email = "sam@example.com", FirstName = "Sam", LastName = "Tanaka", Password = password }).Should().Be(valid);
-        IsValid(new ResetPasswordRequestDto { New_password = password }).Should().Be(valid);
+        IsValid(new ResetPasswordRequestDto { NewPassword = password }).Should().Be(valid);
         IsValid(new StaffMemberChangePasswordDto { NewPassword = password, CurrentPassword = "Current1!" }).Should().Be(valid);
     }
 
@@ -195,7 +195,7 @@ public class PasswordRuleTests : IDisposable
         var password = " \t        ";
 
         IsValid(new ResetPasswordDto { Token = "reset", NewPassword = password }).Should().BeFalse();
-        IsValid(new ResetPasswordRequestDto { New_password = password }).Should().BeFalse();
+        IsValid(new ResetPasswordRequestDto { NewPassword = password }).Should().BeFalse();
         IsValid(new StaffMemberChangePasswordDto { NewPassword = password, CurrentPassword = "Current1!" }).Should().BeFalse();
     }
 }

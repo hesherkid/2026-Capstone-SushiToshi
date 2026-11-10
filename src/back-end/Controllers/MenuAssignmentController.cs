@@ -202,7 +202,7 @@ namespace back_end.Controllers
             int menuId,
             int itemId,
             MenuAssignmentUpdateDto updateData,
-            [FromQuery] int? locationId
+            [FromQuery(Name = "location_id")] int? locationId
         )
         {
             try
@@ -287,7 +287,7 @@ namespace back_end.Controllers
         public async Task<IActionResult> DeleteMenuItemAssignment(
             int menuId,
             int itemId,
-            [FromQuery] int? locationId
+            [FromQuery(Name = "location_id")] int? locationId
         )
         {
             try
@@ -332,13 +332,13 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     POST /api/menuassignment/copy_menu/123?new_menu_name=Winter%20Menu%202025
+        ///     POST /api/menuassignment/copy-menu/123?new_menu_name=Winter%20Menu%202025
         ///
         /// Creates a new menu with the specified name and copies all item assignments
         /// (including prices, limits, full price, and over-limit behavior) from the source menu.
         /// </remarks>
         [Authorize(Policy = "adminOnly")]   // copies every location's overrides
-        [HttpPost("copy_menu/{sourceMenuId}")]
+        [HttpPost("copy-menu/{sourceMenuId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

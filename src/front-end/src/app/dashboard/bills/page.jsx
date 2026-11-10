@@ -64,7 +64,7 @@ const BillsPage = () => {
     try {
       if (!quiet) setLoading(true);
 
-      const res = await api.get(`/Bill/get_bills/${sid}`);
+      const res = await api.get(`/Bill/get-bills/${sid}`);
       if (res.status !== 200) throw new Error("Failed to fetch bills");
 
       // Cancelled bills are nothing to pay

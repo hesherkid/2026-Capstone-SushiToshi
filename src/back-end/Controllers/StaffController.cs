@@ -312,7 +312,7 @@ namespace back_end.Controllers
 
             if (user == null) return NotFound("Staff user not found");
 
-            user.Password_hash = BCrypt.Net.BCrypt.HashPassword(request.New_password, workFactor: 12);
+            user.Password_hash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword, workFactor: 12);
             user.Last_Interaction_at = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

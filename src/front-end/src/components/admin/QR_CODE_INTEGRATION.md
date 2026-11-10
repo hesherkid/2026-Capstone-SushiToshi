@@ -57,14 +57,14 @@ All are under `/api/admin/qr` and require the `Admin` role.
 
 | Action | Request |
 | --- | --- |
-| WiFi QR code | `GET /wifi?locationId={id}&table={number}` |
-| Session QR code | `GET /session?locationId={id}&table={number}` |
-| Bulk generate | `POST /bulk?locationId={id}` |
-| Download bulk as ZIP | `GET /bulk/download-zip?locationId={id}` |
-| Download bulk as PDF | `GET /bulk/download-pdf?locationId={id}` |
-| Clear a table's saved codes | `DELETE /clear?locationId={id}&table={number}` |
+| WiFi QR code | `GET /wifi?location_id={id}&table={number}` |
+| Session QR code | `GET /session?location_id={id}&table={number}` |
+| Bulk generate | `POST /bulk?location_id={id}` |
+| Download bulk as ZIP | `GET /bulk/download-zip?location_id={id}` |
+| Download bulk as PDF | `GET /bulk/download-pdf?location_id={id}` |
+| Clear a table's saved codes | `DELETE /clear?location_id={id}&table={number}` |
 
-The page also calls `GET /api/location` for the location list and `GET /api/TableEntity?locationId={id}` for the table count.
+The page also calls `GET /api/location` for the location list and `GET /api/TableEntity?location_id={id}` for the table count.
 
 ## Error Messages
 

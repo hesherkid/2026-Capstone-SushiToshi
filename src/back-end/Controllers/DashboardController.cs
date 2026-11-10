@@ -75,7 +75,7 @@ namespace back_end.Controllers
     ///     GET /api/dashboard/sessions
     ///     (Returns all active sessions across all locations)
     ///     
-    ///     GET /api/dashboard/sessions?locationId=1
+    ///     GET /api/dashboard/sessions?location_id=1
     ///     (Returns only active sessions for location with ID 1)
     ///
     /// Returns comprehensive information about each active session including:
@@ -92,7 +92,7 @@ namespace back_end.Controllers
     [ProducesResponseType(typeof(List<DashboardSessionsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDashboardSessions([FromQuery] int? locationId)
+    public async Task<IActionResult> GetDashboardSessions([FromQuery(Name = "location_id")] int? locationId)
     {
       try
       {
@@ -198,7 +198,7 @@ namespace back_end.Controllers
     ///     GET /api/dashboard/summary
     ///     (Returns statistics for all locations)
     ///     
-    ///     GET /api/dashboard/summary?locationId=1
+    ///     GET /api/dashboard/summary?location_id=1
     ///     (Returns statistics for location with ID 1 only)
     ///
     /// Returns real-time statistics including:
@@ -212,7 +212,7 @@ namespace back_end.Controllers
     [HttpGet("summary")]
     [ProducesResponseType(typeof(DashboardSummaryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDashboardSummary([FromQuery] int? locationId)
+    public async Task<IActionResult> GetDashboardSummary([FromQuery(Name = "location_id")] int? locationId)
     {
       try
       {
