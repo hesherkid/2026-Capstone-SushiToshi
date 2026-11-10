@@ -159,17 +159,7 @@ namespace back_end.Controllers
         // Reload to get table navigation property
         await _context.Entry(serviceRequest).Reference(sr => sr.Table).LoadAsync();
 
-        return Ok(new ServiceRequestResponseDto
-        {
-          RequestId = serviceRequest.request_id,
-          SessionId = serviceRequest.Session_Id,
-          TableId = serviceRequest.Table_Id,
-          RequestedBy = serviceRequest.Request_By,
-          Status = serviceRequest.Status,
-          Notes = serviceRequest.Notes,
-          CreatedAt = serviceRequest.Created_At,
-          TableNumber = serviceRequest.Table.table_number,
-        });
+        return Ok(ServiceRequestResponseDto.From(serviceRequest));
       }
       catch (Exception ex)
       {
@@ -183,7 +173,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="requestId">The unique identifier of the service request to complete</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing the updated <see cref="ServiceRequest"/> object.
+    /// An <see cref="IActionResult"/> containing the updated <see cref="ServiceRequestResponseDto"/> object.
     /// Returns HTTP 200 (OK) with the completed service request on success.
     /// Returns HTTP 404 (Not Found) if the service request doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
@@ -238,20 +228,7 @@ namespace back_end.Controllers
 
         await _context.SaveChangesAsync();
 
-        return Ok(new ServiceRequestResponseDto
-        {
-          RequestId = serviceRequest.request_id,
-          SessionId = serviceRequest.Session_Id,
-          TableId = serviceRequest.Table_Id,
-          RequestedBy = serviceRequest.Request_By,
-          ClaimedBy = serviceRequest.Claimed_By,
-          Status = serviceRequest.Status,
-          Notes = serviceRequest.Notes,
-          CreatedAt = serviceRequest.Created_At,
-          ClaimedAt = serviceRequest.Claimed_At,
-          CompletedAt = serviceRequest.Completed_At,
-          TableNumber = serviceRequest.Table?.table_number ?? 0
-        });
+        return Ok(ServiceRequestResponseDto.From(serviceRequest));
       }
       catch (Exception ex)
       {
@@ -307,18 +284,7 @@ namespace back_end.Controllers
             .Where(sr => sr.Session_Id == sessionId && sr.Status == ServiceRequestStatus.Pending)
             .ToListAsync();
 
-        var response = sessionRequestList.Select(sr => new ServiceRequestResponseDto
-        {
-          RequestId = sr.request_id,
-          SessionId = sr.Session_Id,
-          TableId = sr.Table_Id,
-          Status = sr.Status,
-          RequestedBy = sr.Request_By,
-          ClaimedBy = sr.Claimed_By,
-          Notes = sr.Notes,
-          CreatedAt = sr.Created_At,
-          TableNumber = sr.Table?.table_number ?? 0
-        }).ToList();
+        var response = sessionRequestList.Select(ServiceRequestResponseDto.From).ToList();
 
         return Ok(response);
       }
@@ -333,7 +299,7 @@ namespace back_end.Controllers
     /// Retrieves all service requests from the database.
     /// </summary>
     /// <returns>
-    /// An <see cref="ActionResult"/> containing a collection of <see cref="ServiceRequest"/> objects.
+    /// An <see cref="ActionResult"/> containing a collection of <see cref="ServiceRequestResponseDto"/> objects.
     /// Returns HTTP 200 (OK) with the list of service requests on success.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
@@ -343,7 +309,7 @@ namespace back_end.Controllers
     //Get all current service requests
     [Authorize(Policy = "staffOnly")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ServiceRequest>>> GetAllServiceRequest()
+    public async Task<ActionResult<IEnumerable<ServiceRequestResponseDto>>> GetAllServiceRequest()
     {
       try
       {
@@ -351,13 +317,12 @@ namespace back_end.Controllers
         var scope = await _locationAccess.ResolveLocationAsync(User, null);
         if (scope.IsForbidden) return LocationResults.NoLocation();
 
-        var request = await _context.ServiceRequests
+        // A DTO, not the entity: the entity's users would send their password hashes
+        var requests = await _context.ServiceRequests
             .Include(sr => sr.Table)
-            .Include(sr => sr.RequestedByUser)
-            .Include(sr => sr.ClaimedByUser)
             .Where(sr => scope.LocationId == null || sr.DiningSession.Location_Id == scope.LocationId)
             .ToListAsync();
-        return Ok(request);
+        return Ok(requests.Select(ServiceRequestResponseDto.From).ToList());
       }
       catch (Exception ex)
       {
@@ -387,18 +352,7 @@ namespace back_end.Controllers
             .OrderBy(sr => sr.Created_At)
             .ToListAsync();
 
-        var response = pendingRequests.Select(sr => new ServiceRequestResponseDto
-        {
-          RequestId = sr.request_id,
-          SessionId = sr.Session_Id,
-          TableId = sr.Table_Id,
-          Status = sr.Status,
-          RequestedBy = sr.Request_By,
-          ClaimedBy = sr.Claimed_By,
-          Notes = sr.Notes,
-          CreatedAt = sr.Created_At,
-          TableNumber = sr.Table?.table_number ?? 0
-        }).ToList();
+        var response = pendingRequests.Select(ServiceRequestResponseDto.From).ToList();
 
         return Ok(response);
       }

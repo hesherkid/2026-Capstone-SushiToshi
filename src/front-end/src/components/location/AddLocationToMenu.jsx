@@ -30,11 +30,9 @@ const AddLocationsToMenu = ({ menu, onClose, availableLocations = [] }) => {
     return map;
   }, [safeLocations]);
 
-  // Assigned = array of string ids derived from menu.menuLocations[]
+  // Assigned = array of string ids from menu.location_ids[]
   const [assignedLocations, setAssignedLocations] = useState(
-    (menu?.menuLocations ?? [])
-      .map((ml) => String(ml?.location_Id))
-      .filter(Boolean)
+    (menu?.location_ids ?? []).map(String)
   );
 
   const [selectedLocation, setSelectedLocation] = useState(""); // always a string
@@ -42,11 +40,7 @@ const AddLocationsToMenu = ({ menu, onClose, availableLocations = [] }) => {
 
   // Keep state in sync when the menu changes
   useEffect(() => {
-    setAssignedLocations(
-      (menu?.menuLocations ?? [])
-        .map((ml) => String(ml?.location_Id))
-        .filter(Boolean)
-    );
+    setAssignedLocations((menu?.location_ids ?? []).map(String));
     setSelectedLocation("");
     setError(null);
   }, [menu?.menu_id]);
@@ -97,6 +91,8 @@ const AddLocationsToMenu = ({ menu, onClose, availableLocations = [] }) => {
     try {
       await api.delete(`MenuLocation/menu/${menu.menu_id}/location/${id}`);
     } catch (err) {
+      // Already gone (e.g. the location was deleted), so it stays off the list
+      if (err.response?.status === 404) return;
       console.error("DELETE failed:", err);
       setError(serverMessage(err, `Couldn't remove ${getLocationName(id)}.`));
       setAssignedLocations(prev); // revert

@@ -211,7 +211,7 @@ describe('QRCodeManagement Component', () => {
     });
 
     api.post.mockResolvedValueOnce({
-      data: { filesGenerated: 4, tableCount: 2, success: true },
+      data: { files_generated: 4, table_count: 2, success: true },
     });
 
     render(<QRCodeManagement />);

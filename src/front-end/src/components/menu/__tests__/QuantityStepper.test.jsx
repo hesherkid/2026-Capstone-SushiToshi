@@ -46,22 +46,30 @@ describe("Quantity stepper", () => {
     expect(onDecrease).toHaveBeenCalledTimes(1);
   });
 
-  it("hides the plus once the item's limit is reached", () => {
+  it("greys out the plus once the item's limit is reached, but keeps it", () => {
+    const onIncrease = jest.fn();
     render(
       <QuantityStepper
         itemName="Miso Soup"
         quantity={2}
         onDecrease={jest.fn()}
-        onIncrease={jest.fn()}
+        onIncrease={onIncrease}
         canIncrease={false}
       />,
     );
 
-    expect(
-      screen.queryByRole("button", { name: "Add one Miso Soup" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Remove one Miso Soup" }),
-    ).toBeEnabled();
+    // Still there, so keyboard focus isn't lost, but it does nothing and looks disabled
+    const add = screen.getByRole("button", {
+      name: "Add one Miso Soup, limit reached",
+    });
+    expect(add).toHaveAttribute("aria-disabled", "true");
+    expect(add).toHaveStyle({ cursor: "not-allowed" });
+    fireEvent.click(add);
+    expect(onIncrease).not.toHaveBeenCalled();
+
+    // The minus still works
+    const remove = screen.getByRole("button", { name: "Remove one Miso Soup" });
+    expect(remove).not.toHaveAttribute("aria-disabled", "true");
+    expect(remove).not.toHaveStyle({ cursor: "not-allowed" });
   });
 });

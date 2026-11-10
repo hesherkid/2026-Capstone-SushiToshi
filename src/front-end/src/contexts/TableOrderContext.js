@@ -277,7 +277,7 @@ export const TableOrderProvider = ({ children }) => {
     const loadItems = async () => {
       try {
         const response = await api.get(`/Menu/${menuId}/item`, {
-          params: locationId ? { locationId } : {},
+          params: locationId ? { location_id: locationId } : {},
         });
         const items = Array.isArray(response.data) ? response.data : [];
         setMenuItems(groupItemsByCategory(items));

@@ -59,8 +59,9 @@ namespace back_end.Controllers
             }
             catch (Exception error)
             {
+                // Logged, not sent: the exception would show the browser the server's internals
                 _logger.LogError(error, "Can not Assign a menu location");
-                return BadRequest(error);
+                return StatusCode(500, "Internal Server Error");
             }
         }
  [Authorize(Policy = "adminOnly")]        
@@ -86,7 +87,12 @@ namespace back_end.Controllers
                     return NotFound("Menu and Menu Location were not found");
 
                 };
-                if (_context.OrderItems.Any(oi => oi.Menu_Id == menuId && (oi.Order_Item_Status == OrderStatus.Pending || oi.Order_Item_Status == OrderStatus.Processing)))
+                // Only orders on this menu at this location; another location's open orders don't block it
+                var hasOpenOrders = await _context.OrderItems.AnyAsync(oi =>
+                    oi.Menu_Id == menuId &&
+                    oi.SessionOrder.DiningSession.Location_Id == locationId &&
+                    (oi.Order_Item_Status == OrderStatus.Pending || oi.Order_Item_Status == OrderStatus.Processing));
+                if (hasOpenOrders)
                 {
                     return BadRequest("Could not process request, there are open orders on this menu location.");
                 }
@@ -97,8 +103,8 @@ namespace back_end.Controllers
             }
             catch (Exception error)
             {
-                _logger.LogError(error, "Can not Assign a menu location");
-                return BadRequest(error);
+                _logger.LogError(error, "Can not remove a menu location");
+                return StatusCode(500, "Internal Server Error");
             }
                 
         

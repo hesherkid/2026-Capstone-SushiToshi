@@ -27,7 +27,7 @@ const useNewIds = (getId) => {
 };
 
 const getRequestId = (request) => request.request_id;
-const getOrderId = (order) => order.orderId;
+const getOrderId = (order) => order.order_id;
 
 /**
  * Live data for the staff/admin home pages: active dining sessions at the location
@@ -71,8 +71,8 @@ export default function useRestaurantOverview({ includeOrders = false } = {}) {
       // Oldest first, so the order that has waited longest is at the top
       const openOrders = (Array.isArray(ordersResponse.data) ? ordersResponse.data : [])
         .filter((order) => OPEN_ORDER_STATUSES.has(order.status))
-        .filter((order) => locationId || sessionIds.has(order.sessionId))
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        .filter((order) => locationId || sessionIds.has(order.session_id))
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
       trackRequests(pending);
       trackOrders(openOrders);

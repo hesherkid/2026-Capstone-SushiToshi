@@ -1,25 +1,25 @@
 // Shared by the menu and Review order page tests: a guest seated at session 42,
 // on menu 7 at location 3, with two items. The underscore keeps this folder out of the routes.
 export const MISO_SOUP = {
-  itemId: 11,
+  item_id: 11,
   name: "Miso Soup",
   description: "Classic miso broth",
   price: 6,
-  categoryID: 1,
+  category_id: 1,
   category: "Appetizers",
   tags: [{ name: "Popular", color: "#C01E2E" }],
-  imageURL: "",
+  item_image_url: "",
 };
 
 export const SALMON_ROLL = {
-  itemId: 12,
+  item_id: 12,
   name: "Salmon Roll",
   description: "Salmon and rice",
   price: 8,
-  categoryID: 2,
+  category_id: 2,
   category: "Sushi Rolls",
   tags: [],
-  imageURL: "",
+  item_image_url: "",
 };
 
 // What GET /SessionParticipant/42/bill returns: the guest's bill and the table's open bills

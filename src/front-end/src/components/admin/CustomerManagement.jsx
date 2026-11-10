@@ -97,7 +97,7 @@ export const getCustomerColumns = ({
     valueFormatter: (value) => (value ? formatDate(value) : "—"),
   },
   {
-    field: "last_Interaction_at",
+    field: "last_interaction_at",
     headerName: "Last Active",
     type: "date",
     flex: 0.8,

@@ -59,7 +59,7 @@ const customer = (id, overrides = {}) => ({
   role: "Customer",
   status: "Active",
   created_at: daysAgo(100),
-  last_Interaction_at: null,
+  last_interaction_at: null,
   is_email_confirmed: true,
   ...overrides,
 });

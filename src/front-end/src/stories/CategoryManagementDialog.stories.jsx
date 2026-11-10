@@ -47,14 +47,14 @@ const emptyForm = {
 
 const toForm = (a) => ({
   price: a.price.toString(),
-  is_add_on: a.is_Add_On === true,
+  is_add_on: a.is_add_on === true,
   status: (a.status || "Available").toLowerCase(),
-  adult_limit: a.adult_Limit || 0,
+  adult_limit: a.adult_limit || 0,
   child_limit: a.child_limit || 0,
   senior_limit: a.senior_limit || 0,
-  tot_limit: a.tot_Limit || 0,
-  per_order_limit: a.per_Order_Limit || 0,
-  over_limit_behavior: a.over_Limit_Behavior || "Block",
+  tot_limit: a.tot_limit || 0,
+  per_order_limit: a.per_order_limit || 0,
+  over_limit_behavior: a.over_limit_behavior || "Block",
   full_price: a.full_Price != null ? a.full_Price.toString() : "",
 });
 
@@ -97,9 +97,9 @@ const errorText = (data, fallback) => {
 // Short summary for the table, e.g. "2/person, 1/order"
 const limitSummary = (a) => {
   const parts = [];
-  if (a.adult_Limit) parts.push(`${a.adult_Limit}/adult`);
-  if (a.per_Order_Limit) parts.push(`${a.per_Order_Limit}/order`);
-  if (parts.length && a.over_Limit_Behavior === "Charge")
+  if (a.adult_limit) parts.push(`${a.adult_limit}/adult`);
+  if (a.per_order_limit) parts.push(`${a.per_order_limit}/order`);
+  if (parts.length && a.over_limit_behavior === "Charge")
     parts.push(`then $${Number(a.full_Price).toFixed(2)}`);
   return parts.length ? parts.join(", ") : "None";
 };
@@ -124,7 +124,7 @@ const MenuAssignmentDialog = ({
 
   const loadAssignments = async () => {
     const response = await api.get(`/menuItem/${selectedItem.item_id}`);
-    const assignmentsData = response.data.menuAssignments || [];
+    const assignmentsData = response.data.menu_assignments || [];
     setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
   };
 
@@ -145,7 +145,7 @@ const MenuAssignmentDialog = ({
       .then((res) =>
         setLocations(
           (Array.isArray(res.data) ? res.data : []).map((l) => ({
-            location_id: l.location_Id,
+            location_id: l.location_id,
             name: l.name,
           })),
         ),
@@ -157,8 +157,8 @@ const MenuAssignmentDialog = ({
     if (editingAssignment) {
       setFormData({
         ...emptyForm,
-        menu_id: editingAssignment.menu_Id,
-        location_id: editingAssignment.location_Id ?? ALL_LOCATIONS,
+        menu_id: editingAssignment.menu_id,
+        location_id: editingAssignment.location_id ?? ALL_LOCATIONS,
         ...toForm(editingAssignment),
       });
     }
@@ -174,7 +174,7 @@ const MenuAssignmentDialog = ({
     locId != null ? `?locationId=${locId}` : "";
 
   const handleDeleteAssignment = async (assignment) => {
-    const isDefault = assignment.location_Id == null;
+    const isDefault = assignment.location_id == null;
     if (
       isDefault &&
       !window.confirm(
@@ -185,12 +185,12 @@ const MenuAssignmentDialog = ({
     }
     try {
       await api.delete(
-        `/menuassignment/${assignment.menu_Id}/${selectedItem.item_id}${locationQuery(assignment.location_Id)}`,
+        `/menuassignment/${assignment.menu_id}/${selectedItem.item_id}${locationQuery(assignment.location_id)}`,
       );
       setAssignments((prev) =>
         isDefault
-          ? prev.filter((a) => a.menu_Id !== assignment.menu_Id) // default + its overrides
-          : prev.filter((a) => a.assignment_Id !== assignment.assignment_Id),
+          ? prev.filter((a) => a.menu_id !== assignment.menu_id) // default + its overrides
+          : prev.filter((a) => a.assignment_id !== assignment.assignment_id),
       );
       resetForm();
     } catch (err) {
@@ -216,7 +216,7 @@ const MenuAssignmentDialog = ({
     setSubmitting(true);
     try {
       const url = editingAssignment
-        ? `/menuassignment/${editingAssignment.menu_Id}/${selectedItem.item_id}${locationQuery(editingAssignment.location_Id)}`
+        ? `/menuassignment/${editingAssignment.menu_id}/${selectedItem.item_id}${locationQuery(editingAssignment.location_id)}`
         : "/menuassignment";
 
       const fullPrice = parseFloat(formData.full_price);
@@ -268,7 +268,7 @@ const MenuAssignmentDialog = ({
   // Does this menu + location already have a row?
   const hasRow = (menuId, locId) =>
     assignments.some(
-      (a) => a.menu_Id === menuId && (a.location_Id ?? null) === locId,
+      (a) => a.menu_id === menuId && (a.location_id ?? null) === locId,
     );
 
   const selectedLocId =
@@ -279,7 +279,7 @@ const MenuAssignmentDialog = ({
   // Default row: menus without one yet.
   // Location row: menus that HAVE a default but no row for that location yet.
   const availableMenus = menus.filter((menu) => {
-    if (editingAssignment && editingAssignment.menu_Id === menu.menu_id)
+    if (editingAssignment && editingAssignment.menu_id === menu.menu_id)
       return true;
     if (selectedLocId == null) return !hasRow(menu.menu_id, null);
     return hasRow(menu.menu_id, null) && !hasRow(menu.menu_id, selectedLocId);
@@ -289,7 +289,7 @@ const MenuAssignmentDialog = ({
   useEffect(() => {
     if (editingAssignment || selectedLocId == null || !formData.menu_id) return;
     const def = assignments.find(
-      (a) => a.menu_Id === Number(formData.menu_id) && a.location_Id == null,
+      (a) => a.menu_id === Number(formData.menu_id) && a.location_id == null,
     );
     if (!def) return;
     setFormData((prev) => ({ ...prev, ...toForm(def) }));
@@ -364,25 +364,25 @@ const MenuAssignmentDialog = ({
                   {[...assignments]
                     .sort(
                       (a, b) =>
-                        a.menu_Id - b.menu_Id ||
-                        (a.location_Id ?? 0) - (b.location_Id ?? 0),
+                        a.menu_id - b.menu_id ||
+                        (a.location_id ?? 0) - (b.location_id ?? 0),
                     )
                     .map((assignment) => (
                       <TableRow
-                        key={assignment.assignment_Id}
+                        key={assignment.assignment_id}
                         selected={
-                          editingAssignment?.assignment_Id ===
-                          assignment.assignment_Id
+                          editingAssignment?.assignment_id ===
+                          assignment.assignment_id
                         }
                       >
                         <TableCell>
-                          {assignment.menu?.name || "Unknown Menu"}
+                          {assignment.menu_name || "Unknown Menu"}
                         </TableCell>
                         <TableCell>
-                          {assignment.location_Id == null ? (
+                          {assignment.location_id == null ? (
                             <strong>All locations</strong>
                           ) : (
-                            locationName(assignment.location_Id)
+                            locationName(assignment.location_id)
                           )}
                         </TableCell>
                         <TableCell>
@@ -391,7 +391,7 @@ const MenuAssignmentDialog = ({
                         <TableCell>{limitSummary(assignment)}</TableCell>
                         <TableCell>{assignment.status}</TableCell>
                         <TableCell>
-                          {assignment.is_Add_On ? "Yes" : "No"}
+                          {assignment.is_add_on ? "Yes" : "No"}
                         </TableCell>
                         <TableCell align="right">
                           <IconButton
@@ -405,7 +405,7 @@ const MenuAssignmentDialog = ({
                             size="small"
                             color="error"
                             title={
-                              assignment.location_Id == null
+                              assignment.location_id == null
                                 ? "Remove from menu"
                                 : "Reset to default price"
                             }

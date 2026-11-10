@@ -7,7 +7,7 @@ const wagyu = {
   name: "Wagyu Nigiri",
   price: 9,
   is_add_on: true,
-  itemLimits: { perOrder: 2 },
+  item_limits: { per_order: 2 },
 };
 
 describe("Cart line", () => {

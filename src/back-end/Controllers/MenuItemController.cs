@@ -40,6 +40,7 @@ namespace back_end.Controllers
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
         /// </returns>
         /// <response code="200">Returns the newly created menu item</response>
+        /// <response code="400">If the name is blank or category_id is missing</response>
         /// <response code="409">If a menu item with the same name already exists</response>
         /// <response code="500">If an internal error occurs while creating the menu item</response>
         /// <remarks>
@@ -49,9 +50,9 @@ namespace back_end.Controllers
         ///     {
         ///         "name": "Grilled Salmon",
         ///         "description": "Fresh Atlantic salmon with lemon butter sauce",
-        ///         "category_Id": 2,
-        ///         "item_Image_Url": "https://example.com/images/salmon.jpg",
-        ///         "tag_Ids": [1, 3, 5]
+        ///         "category_id": 2,
+        ///         "item_image_url": "https://example.com/images/salmon.jpg",
+        ///         "tag_ids": [1, 3, 5]
         ///     }
         ///
         /// This endpoint requires Admin or Staff role authorization.
@@ -61,6 +62,7 @@ namespace back_end.Controllers
         [Authorize(Policy = "staffOnly")]
         [HttpPost]
         [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateMenuItem(
@@ -69,6 +71,12 @@ namespace back_end.Controllers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(itemData.Name))
+                    return BadRequest("name is required.");
+
+                if (itemData.CategoryId <= 0)
+                    return BadRequest("category_id is required.");
+
                 if (await _context.MenuItems.AnyAsync(mi => mi.Name == itemData.Name))
                 {
                     return Conflict("Menu Item already Exist");
@@ -77,13 +85,13 @@ namespace back_end.Controllers
                 {
                     Name = itemData.Name,
                     Description = itemData.Description ?? string.Empty,
-                    Category_id = itemData.Category_Id,
-                    image_url = itemData.Item_Image_Url,
+                    Category_id = itemData.CategoryId,
+                    image_url = itemData.ItemImageUrl,
                     Status = MenuItemStatus.Available
                 };
-                if (itemData.Tag_Ids.Count > 0)
+                if (itemData.TagIds.Count > 0)
                 {
-                    var tags = await _context.Tags.Where(t => itemData.Tag_Ids.Contains(t.tag_id)).ToListAsync();
+                    var tags = await _context.Tags.Where(t => itemData.TagIds.Contains(t.tag_id)).ToListAsync();
                     foreach (var tag in tags)
                     {
                         newMenuItem.MenuItemTags.Add(new MenuItemTag
@@ -95,21 +103,7 @@ namespace back_end.Controllers
                 }
                 _context.Add(newMenuItem);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuItemResponseDto
-                {
-                    Name = newMenuItem.Name,
-                    Description = newMenuItem.Description,
-                    Category_Id = newMenuItem.Category_id,
-                    Item_Image_Url = newMenuItem.image_url,
-                    Status = newMenuItem.Status,
-                    ItemId = newMenuItem.item_id,
-                    Tags = newMenuItem.MenuItemTags.Select(t => new FullTagResponseDto
-                    {
-                        TagId = t.Tag.tag_id,
-                        Name = t.Tag.tag_name,
-                        ColorCode = t.Tag.tag_color
-                    }).ToList(),
-                });
+                return Ok(MenuItemResponseDto.From(newMenuItem));
             }
             catch (Exception ex)
             {
@@ -125,7 +119,7 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="itemId">The unique identifier of the menu item</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the <see cref="Menu_Item"/> object.
+        /// An <see cref="IActionResult"/> containing the <see cref="MenuItemWithAssignmentsDto"/> object.
         /// Returns HTTP 200 (OK) with the menu item details on success.
         /// Returns HTTP 404 (Not Found) if the menu item doesn't exist.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -143,7 +137,7 @@ namespace back_end.Controllers
         /// </remarks>
 
         [HttpGet("{itemId}")]
-        [ProducesResponseType(typeof(Menu_Item), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuItemWithAssignmentsDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetMenuItem(
@@ -153,17 +147,16 @@ namespace back_end.Controllers
             try
             {
                 var item = await _context.MenuItems
-                    .Include(mi => mi.Category)  // Include Category details
                     .Include(mi => mi.MenuAssignments)
                         .ThenInclude(ma => ma.Menu)  // Navigate through MenuAssignments to get Menu
                     .Include(mi => mi.MenuItemTags)
-                        .ThenInclude(mit => mit.Tag)  // If you also need the Tag details
+                        .ThenInclude(mit => mit.Tag)
                     .FirstOrDefaultAsync(mi => mi.item_id == itemId);
                 if (item == null)
                 {
                     return NotFound(new { message = "Menu item was not found" });
                 }
-                return Ok(item);
+                return Ok(MenuItemWithAssignmentsDto.From(item));
             }
             catch (Exception ex)
             {
@@ -178,7 +171,7 @@ namespace back_end.Controllers
         /// Retrieves all menu items from the database.
         /// </summary>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of <see cref="Menu_Item"/> objects.
+        /// An <see cref="IActionResult"/> containing a collection of <see cref="MenuItemResponseDto"/> objects.
         /// Returns HTTP 200 (OK) with the list of all menu items on success.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
         /// </returns>
@@ -194,7 +187,7 @@ namespace back_end.Controllers
         /// </remarks>
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<Menu_Item>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<MenuItemResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ListMenuItems()
         {
@@ -207,22 +200,7 @@ namespace back_end.Controllers
                     .ThenBy(mi => mi.Name)
                     .ToListAsync();
 
-                var result = allItems.Select(item => new MenuItemResponseDto
-                {
-                    ItemId = item.item_id,
-                    Name = item.Name,
-                    Description = item.Description,
-                    Category_Id = item.Category_id,
-                    Item_Image_Url = item.image_url,
-                    Status = item.Status,
-
-                    Tags = item.MenuItemTags.Select(mit => new FullTagResponseDto
-                    {
-                        TagId = mit.Tag.tag_id,
-                        Name = mit.Tag.tag_name,
-                        ColorCode = mit.Tag.tag_color
-                    }).ToList()
-                }).ToList();
+                var result = allItems.Select(MenuItemResponseDto.From).ToList();
 
                 return Ok(result);
             }
@@ -254,10 +232,10 @@ namespace back_end.Controllers
         ///     {
         ///         "name": "Updated Grilled Salmon",
         ///         "description": "Premium Atlantic salmon with garlic butter",
-        ///         "category_Id": 2,
-        ///         "item_Image_Url": "https://example.com/images/salmon-new.jpg",
+        ///         "category_id": 2,
+        ///         "item_image_url": "https://example.com/images/salmon-new.jpg",
         ///         "status": "Available",
-        ///         "tag_Ids": [1, 3, 5, 7]
+        ///         "tag_ids": [1, 3, 5, 7]
         ///     }
         ///
         /// This endpoint requires Admin or Staff role authorization.
@@ -289,22 +267,22 @@ namespace back_end.Controllers
                 {
                     itemUpdate.Description = menuItemUpdate.Description;
                 }
-                if (menuItemUpdate.Category_Id != null)
+                if (menuItemUpdate.CategoryId != null)
                 {
-                    itemUpdate.Category_id = (int)menuItemUpdate.Category_Id;
+                    itemUpdate.Category_id = (int)menuItemUpdate.CategoryId;
                 }
-                if (menuItemUpdate.Item_Image_Url != null)
+                if (menuItemUpdate.ItemImageUrl != null)
                 {
-                    itemUpdate.image_url = menuItemUpdate.Item_Image_Url;
+                    itemUpdate.image_url = menuItemUpdate.ItemImageUrl;
                 }
                 if (menuItemUpdate.Status != null)
                 {
                     itemUpdate.Status = (MenuItemStatus)menuItemUpdate.Status;
                 }
-                if (menuItemUpdate != null && menuItemUpdate.Tag_Ids != null && menuItemUpdate.Tag_Ids.Count > 0)
+                if (menuItemUpdate != null && menuItemUpdate.TagIds != null && menuItemUpdate.TagIds.Count > 0)
                 {
                     await _context.Entry(itemUpdate).Collection(i => i.MenuItemTags).LoadAsync();
-                    foreach (var tagId in menuItemUpdate.Tag_Ids.Distinct())
+                    foreach (var tagId in menuItemUpdate.TagIds.Distinct())
                     {
                         itemUpdate.MenuItemTags.Add(new MenuItemTag
                         {
@@ -317,21 +295,9 @@ namespace back_end.Controllers
                 ;
                 _context.Update(itemUpdate);
                 await _context.SaveChangesAsync();
-                return Ok(new MenuItemResponseDto
-                {
-                    Name = itemUpdate.Name,
-                    Description = itemUpdate.Description,
-                    Category_Id = itemUpdate.Category_id,
-                    Item_Image_Url = itemUpdate.image_url,
-                    Status = itemUpdate.Status,
-                    ItemId = itemUpdate.item_id,
-                    Tags = itemUpdate.MenuItemTags.Select(t => new FullTagResponseDto
-                    {
-                        TagId = t.Tag.tag_id,
-                        Name = t.Tag.tag_name,
-                        ColorCode = t.Tag.tag_color
-                    }).ToList()
-                });
+                // The tags added above only have Tag_id, so load each one's Tag for the response
+                await _context.Entry(itemUpdate).Collection(i => i.MenuItemTags).Query().Include(mit => mit.Tag).LoadAsync();
+                return Ok(MenuItemResponseDto.From(itemUpdate));
 
             }
             catch (Exception ex)
@@ -461,7 +427,7 @@ namespace back_end.Controllers
 
                 _logger.LogInformation("Image uploaded successfully for item {ItemId}: {ImageUrl}", itemId, publicUrl);
 
-                return Ok(new { itemId, image_url = publicUrl });
+                return Ok(new { item_id = itemId, image_url = publicUrl });
             }
             catch (Exception ex)
             {
@@ -584,7 +550,7 @@ namespace back_end.Controllers
                 return Ok(new
                 {
                     message = "Menu item deleted successfully.",
-                    itemId
+                    item_id = itemId
                 });
             }
             catch (DbUpdateException ex)
@@ -621,7 +587,7 @@ namespace back_end.Controllers
         /// <param name="itemId">The unique identifier of the menu item</param>
         /// <param name="menuStatus">The new status to assign to the menu item</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="Menu_Item"/> object.
+        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuItemResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the updated menu item on success.
         /// Returns HTTP 404 (Not Found) if the menu item doesn't exist.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the update.
@@ -639,7 +605,7 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPut("{itemId}/status")]
-        [ProducesResponseType(typeof(Menu_Item), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateItemStatus(
@@ -649,7 +615,7 @@ namespace back_end.Controllers
         {
             try
             {
-                var item = await _context.MenuItems.FirstOrDefaultAsync(mi => mi.item_id == itemId);
+                var item = await _context.MenuItems.Include(mi => mi.MenuItemTags).ThenInclude(mit => mit.Tag).FirstOrDefaultAsync(mi => mi.item_id == itemId);
                 if (item is null)
                 {
                     return NotFound("menu item was not found");
@@ -657,7 +623,7 @@ namespace back_end.Controllers
                 item.Status = menuStatus;
                 _context.Update(item);
                 await _context.SaveChangesAsync();
-                return Ok(item);
+                return Ok(MenuItemResponseDto.From(item));
             }
             catch (Exception ex)
             {
@@ -726,73 +692,9 @@ namespace back_end.Controllers
 
 
 
-        /// <summary>
-        /// Retrieves all tags with their color codes associated with a specific menu item.
-        /// </summary>
-        /// <param name="itemId">The unique identifier of the menu item</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of <see cref="FullTagResponseDto"/> objects.
-        /// Returns HTTP 200 (OK) with the list of tags including color codes sorted alphabetically on success.
-        /// Returns HTTP 404 (Not Found) if the menu item doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the list of tags with color codes associated with the menu item</response>
-        /// <response code="404">If the menu item is not found</response>
-        /// <response code="500">If an internal error occurs while retrieving tags</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     GET /api/menuitem/123/tags-with-colors
-        ///
-        /// This endpoint requires authentication.
-        /// Returns all tags for the specified menu item with their color codes, sorted alphabetically by tag name.
-        /// </remarks>
-        [Authorize(Policy = "staffOnly")]
-        [HttpGet("{itemId}/tags-with-colors")]
-        [ProducesResponseType(typeof(IEnumerable<FullTagResponseDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> AddTagToMenu(
-                   int itemId,
-[FromQuery(Name = "tag_id")]                    int tagId
-               )
-        {
-            try
-            {
-                var menuItem = await _context.MenuItems.Include(mi => mi.MenuItemTags).FirstOrDefaultAsync(mi => mi.item_id == itemId); ;
-                if (menuItem is null)
-                {
-                    return NotFound("Menu Item was not found");
-                }
-                var returnedTag = await _context.Tags.FirstOrDefaultAsync(t => t.tag_id == tagId);
-                if (returnedTag is null)
-                {
-                    return NotFound("Item Tag Was not found");
-                }
-                if (menuItem.MenuItemTags.Any(mt => mt.Tag_id == returnedTag.tag_id))
-                {
-                    return Conflict("Can not Assign tag to same Menu Item");
-                }
-                menuItem.MenuItemTags.Add(new MenuItemTag
-                {
-                    Menu_item_id = menuItem.item_id,
-                    Tag_id = returnedTag.tag_id,
-                    Tag = returnedTag
-                });
-                await _context.SaveChangesAsync();
-                return Ok(menuItem);
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error Getting Menu Item Tags with Colors");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
-            }
-        }
-
         [Authorize(Policy = "staffOnly")]
         [HttpPost("{itemId}/tags/{tagId}")]
-        [ProducesResponseType(typeof(Menu_Item), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -829,7 +731,7 @@ namespace back_end.Controllers
                 });
 
                 await _context.SaveChangesAsync();
-                return Ok(item);
+                return Ok(MenuItemResponseDto.From(item));
 
             }
             catch (Exception ex)
@@ -845,7 +747,7 @@ namespace back_end.Controllers
         /// <param name="itemId">The unique identifier of the menu item</param>
         /// <param name="tagId">The unique identifier of the tag to remove</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="Menu_Item"/> object.
+        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuItemResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the updated menu item on success.
         /// Returns HTTP 404 (Not Found) if the menu item or tag doesn't exist.
         /// Returns HTTP 409 (Conflict) if the tag is not associated with the menu item.
@@ -865,7 +767,7 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpDelete("{itemId}/tags/{tagId}")]
-        [ProducesResponseType(typeof(Menu_Item), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -876,7 +778,7 @@ namespace back_end.Controllers
         {
             try
             {
-                var menuItem = await _context.MenuItems.Include(mi => mi.MenuItemTags).FirstOrDefaultAsync(mi => mi.item_id == itemId); ;
+                var menuItem = await _context.MenuItems.Include(mi => mi.MenuItemTags).ThenInclude(mit => mit.Tag).FirstOrDefaultAsync(mi => mi.item_id == itemId); ;
                 if (menuItem is null)
                 {
                     return NotFound("Menu Item was not found");
@@ -897,7 +799,7 @@ namespace back_end.Controllers
                 }
                 menuItem.MenuItemTags.Remove(itemToRemote);
                 await _context.SaveChangesAsync();
-                return Ok(menuItem);
+                return Ok(MenuItemResponseDto.From(menuItem));
 
             }
             catch (Exception ex)

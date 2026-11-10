@@ -199,6 +199,27 @@ public class TagControllerTests : IDisposable
         result.Should().BeOfType<NotFoundObjectResult>();
     }
 
+    [Fact]
+    public async Task GetMenuItemsByTag_ReturnsItemsWithAllTheirTags()
+    {
+        // Arrange: Edamame is Vegetarian and Gluten-Free
+        _context.MenuItems.Add(new Menu_Item { item_id = 66, Name = "Edamame", Description = "Salted", Category_id = 1, image_url = "/menu-items/66.png" });
+        _context.MenuItemTags.AddRange(
+            new MenuItemTag { Menu_item_id = 66, Tag_id = 1 },
+            new MenuItemTag { Menu_item_id = 66, Tag_id = 3 });
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+
+        // Act
+        var result = await _controller.GetMenuItemsByTag(1);
+
+        // Assert
+        var items = result.Should().BeOfType<OkObjectResult>().Subject.Value.Should().BeOfType<List<MenuItemResponseDto>>().Subject;
+        var edamame = items.Single();
+        edamame.ItemImageUrl.Should().Be("/menu-items/66.png");
+        edamame.Tags.Select(t => t.Name).Should().BeEquivalentTo(["Vegetarian", "Gluten-Free"]);
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();

@@ -86,9 +86,9 @@ const ITEMS = [
     item_id: 66,
     name: "Hot Stone Steak",
     description: "Cooked at your table",
-    image_url: "/images/66.png",
+    item_image_url: "/images/66.png",
   },
-  { item_id: 67, name: "Dragon Roll", description: "Eel", image_url: null },
+  { item_id: 67, name: "Dragon Roll", description: "Eel", item_image_url: null },
 ];
 
 const mockGets = (items = ITEMS) =>

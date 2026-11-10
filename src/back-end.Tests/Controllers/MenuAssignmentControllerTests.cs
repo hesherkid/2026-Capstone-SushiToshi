@@ -108,13 +108,13 @@ public class MenuAssignmentControllerTests : IDisposable
 
     private static MenuAssignmentCreate ValidCreate(int itemId = NewItem, int? locationId = null) => new()
     {
-        Menu_Id = DinnerMenu,
-        Item_Id = itemId,
-        Location_Id = locationId,
+        MenuId = DinnerMenu,
+        ItemId = itemId,
+        LocationId = locationId,
         Price = 0m,
-        Adult_Limit = 6,
-        Child_Limit = 4,
-        Senior_Limit = 5,
+        AdultLimit = 6,
+        ChildLimit = 4,
+        SeniorLimit = 5,
     };
 
     private async Task<MenuItemAssignment?> Reload(int menuId, int itemId, int? locationId)
@@ -131,17 +131,17 @@ public class MenuAssignmentControllerTests : IDisposable
     public async Task Create_SavesAndFillsInDefaults()
     {
         var data = ValidCreate();
-        data.Over_Limit_Behavior = null;
-        data.Tot_Limit = null;
-        data.Per_Order_Limit = null;
+        data.OverLimitBehavior = null;
+        data.TotLimit = null;
+        data.PerOrderLimit = null;
 
         var result = await Admin().CreateMenuItemAssignment(data);
 
-        var saved = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<MenuItemAssignment>().Subject;
-        saved.Over_Limit_Behavior.Should().Be(OverLimitBehavior.Block);
-        saved.Tot_Limit.Should().Be(0);
-        saved.Per_Order_Limit.Should().Be(0);
-        saved.Location_Id.Should().BeNull();
+        var saved = result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<MenuAssignmentResponseDto>().Subject;
+        saved.OverLimitBehavior.Should().Be(OverLimitBehavior.Block);
+        saved.TotLimit.Should().Be(0);
+        saved.PerOrderLimit.Should().Be(0);
+        saved.LocationId.Should().BeNull();
         (await Reload(DinnerMenu, NewItem, null)).Should().NotBeNull();
     }
 
@@ -150,10 +150,10 @@ public class MenuAssignmentControllerTests : IDisposable
     {
         var data = ValidCreate();
         data.Price = 6.95m;
-        data.Is_Add_on = true;
-        data.Over_Limit_Behavior = OverLimitBehavior.Charge;
-        data.Tot_Limit = 3;
-        data.Per_Order_Limit = 2;
+        data.IsAddOn = true;
+        data.OverLimitBehavior = OverLimitBehavior.Charge;
+        data.TotLimit = 3;
+        data.PerOrderLimit = 2;
         data.Status = MenuItemStatus.Unavailable;
 
         var result = await Admin().CreateMenuItemAssignment(data);
@@ -177,8 +177,8 @@ public class MenuAssignmentControllerTests : IDisposable
     public async Task Create_InvalidLimits_ReturnsBadRequest(int adult, int child, int senior, int tot, int perOrder, string message)
     {
         var data = ValidCreate();
-        data.Adult_Limit = adult; data.Child_Limit = child; data.Senior_Limit = senior;
-        data.Tot_Limit = tot; data.Per_Order_Limit = perOrder;
+        data.AdultLimit = adult; data.ChildLimit = child; data.SeniorLimit = senior;
+        data.TotLimit = tot; data.PerOrderLimit = perOrder;
 
         var result = await Admin().CreateMenuItemAssignment(data);
 
@@ -190,7 +190,7 @@ public class MenuAssignmentControllerTests : IDisposable
     public async Task Create_ChargeWithZeroPrice_ReturnsBadRequest()
     {
         var data = ValidCreate();
-        data.Over_Limit_Behavior = OverLimitBehavior.Charge;
+        data.OverLimitBehavior = OverLimitBehavior.Charge;
 
         var result = await Admin().CreateMenuItemAssignment(data);
 
@@ -202,7 +202,7 @@ public class MenuAssignmentControllerTests : IDisposable
     public async Task Create_AddOnWithZeroPrice_ReturnsBadRequest()
     {
         var data = ValidCreate();
-        data.Is_Add_on = true;
+        data.IsAddOn = true;
 
         var result = await Admin().CreateMenuItemAssignment(data);
 
@@ -223,7 +223,9 @@ public class MenuAssignmentControllerTests : IDisposable
     {
         var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, SalmonNigiri, new MenuAssignmentUpdateDto { Price = 3.75m }, locationId: null);
 
-        result.Should().BeOfType<OkObjectResult>();
+        result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeOfType<MenuAssignmentResponseDto>()
+            .Which.Price.Should().Be(3.75m);
         var saved = await Reload(DinnerMenu, SalmonNigiri, null);
         saved!.Price.Should().Be(3.75m);
         saved.Adult_Limit.Should().Be(6);
@@ -242,13 +244,13 @@ public class MenuAssignmentControllerTests : IDisposable
         var update = new MenuAssignmentUpdateDto
         {
             Price = 5m,
-            Adult_Limit = 8,
-            Child_Limit = 6,
-            Senior_Limit = 7,
-            Tot_Limit = 3,
-            Per_Order_Limit = 12,
-            Over_Limit_Behavior = OverLimitBehavior.Charge,
-            Is_Add_on = true,
+            AdultLimit = 8,
+            ChildLimit = 6,
+            SeniorLimit = 7,
+            TotLimit = 3,
+            PerOrderLimit = 12,
+            OverLimitBehavior = OverLimitBehavior.Charge,
+            IsAddOn = true,
             Status = MenuItemStatus.Unavailable,
         };
 
@@ -294,7 +296,7 @@ public class MenuAssignmentControllerTests : IDisposable
     [Fact]
     public async Task Update_ChildAboveStoredAdult_ReturnsBadRequest()
     {
-        var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, SalmonNigiri, new MenuAssignmentUpdateDto { Child_Limit = 7, Price = 8m }, locationId: null);
+        var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, SalmonNigiri, new MenuAssignmentUpdateDto { ChildLimit = 7, Price = 8m }, locationId: null);
 
         result.Should().BeOfType<BadRequestObjectResult>().Which.Value.Should().Be("Child limit cannot exceed Adult limit.");
         var saved = await Reload(DinnerMenu, SalmonNigiri, null);
@@ -306,7 +308,7 @@ public class MenuAssignmentControllerTests : IDisposable
     public async Task Update_ChargeOnFreeItem_ReturnsBadRequest()
     {
         var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, MisoSoup,
-            new MenuAssignmentUpdateDto { Over_Limit_Behavior = OverLimitBehavior.Charge }, locationId: null);
+            new MenuAssignmentUpdateDto { OverLimitBehavior = OverLimitBehavior.Charge }, locationId: null);
 
         result.Should().BeOfType<BadRequestObjectResult>()
             .Which.Value.Should().Be("Items that charge over the limit need a full price greater than 0");
@@ -316,7 +318,7 @@ public class MenuAssignmentControllerTests : IDisposable
     public async Task Update_AddOnOnFreeItem_ReturnsBadRequest()
     {
         var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, MisoSoup,
-            new MenuAssignmentUpdateDto { Is_Add_on = true }, locationId: null);
+            new MenuAssignmentUpdateDto { IsAddOn = true }, locationId: null);
 
         result.Should().BeOfType<BadRequestObjectResult>()
             .Which.Value.Should().Be("Add-on items must have a price greater than 0");
@@ -326,7 +328,7 @@ public class MenuAssignmentControllerTests : IDisposable
     public async Task Update_ChargeWithNewPriceInSameRequest_IsAllowed()
     {
         var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, MisoSoup,
-            new MenuAssignmentUpdateDto { Over_Limit_Behavior = OverLimitBehavior.Charge, Price = 2.50m }, locationId: null);
+            new MenuAssignmentUpdateDto { OverLimitBehavior = OverLimitBehavior.Charge, Price = 2.50m }, locationId: null);
 
         result.Should().BeOfType<OkObjectResult>();
         (await Reload(DinnerMenu, MisoSoup, null))!.Over_Limit_Behavior.Should().Be(OverLimitBehavior.Charge);

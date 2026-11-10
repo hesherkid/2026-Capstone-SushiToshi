@@ -64,7 +64,7 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="createLocation">The location data including name, address, city, province, postal code, and phone number</param>
     /// <returns>
-    /// An <see cref="IActionResult"/> containing the created <see cref="Locations"/> object.
+    /// An <see cref="IActionResult"/> containing the created <see cref="LocationResponseDto"/> object.
     /// Returns HTTP 200 (OK) with the created location on success.
     /// Returns HTTP 409 (Conflict) if a location with the same name already exists.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
@@ -90,7 +90,7 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
     [HttpPost]
-    [ProducesResponseType(typeof(Locations), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LocationResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateLocation(
@@ -112,7 +112,7 @@ namespace back_end.Controllers
         };
         _context.Locations.Add(newLocation);
         await _context.SaveChangesAsync();
-        return Ok("Location was created");
+        return Ok(LocationResponseDto.From(newLocation));
       }
       catch (Exception ex)
       {

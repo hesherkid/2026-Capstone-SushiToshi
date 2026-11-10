@@ -9,7 +9,7 @@ const category = (category_id, category_name, description, limits = {}) => ({
   category_id,
   category_name,
   description,
-  image_url: null,
+  item_image_url: null,
   total_views: 0,
   total_view_seconds: 0,
   last_viewed_at: "0001-01-01T00:00:00",

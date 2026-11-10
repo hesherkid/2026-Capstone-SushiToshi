@@ -351,7 +351,7 @@ namespace back_end.Controllers
         /// <param name="skip">The number of items to skip for pagination (default: 0)</param>
         /// <param name="limit">The maximum number of items to return (default: 10)</param>
         /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of <see cref="Menu_Item"/> objects.
+        /// An <see cref="IActionResult"/> containing a collection of <see cref="MenuItemResponseDto"/> objects.
         /// Returns HTTP 200 (OK) with the list of menu items on success.
         /// Returns HTTP 404 (Not Found) if no menu items exist for the category.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
@@ -373,7 +373,7 @@ namespace back_end.Controllers
         /// </remarks>
         [HttpGet("get_menu_by_category/{categoryId}")]
         [Authorize(Policy = "adminOnly")]
-        [ProducesResponseType(typeof(IEnumerable<Menu_Item>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<MenuItemResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -383,6 +383,8 @@ namespace back_end.Controllers
             try
             {
                 var menuItems = await _context.MenuItems
+                    .Include(m => m.MenuItemTags)
+                        .ThenInclude(mit => mit.Tag)
                     .Where(m => m.Category_id == categoryId)
                     .Skip(skip)
                     .Take(limit)
@@ -393,7 +395,7 @@ namespace back_end.Controllers
                     return NotFound("No menu items found for the specified category.");
                 }
 
-                return Ok(menuItems);
+                return Ok(menuItems.Select(MenuItemResponseDto.From).ToList());
             }
             catch (Exception ex)
             {

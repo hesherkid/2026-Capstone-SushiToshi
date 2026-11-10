@@ -16,7 +16,7 @@ import { actionsColumn } from "@/components/common/RowActions";
 import TagChip from "./TagChip";
 
 const ItemImage = ({ item }) => {
-  const imageUrl = item.image_url || item.item_Image_Url;
+  const imageUrl = item.item_image_url;
   return imageUrl ? (
     <Box
       component="img"

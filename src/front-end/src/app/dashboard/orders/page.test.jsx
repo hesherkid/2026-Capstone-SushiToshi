@@ -21,11 +21,11 @@ jest.mock("@/config/auth", () => ({
   decodeToken: () => ({ "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": "22" }),
 }));
 
-const item = (id, name, status = "Pending") => ({ orderItemId: id, itemId: id, name, quantity: 1, priceAtTime: 0, status });
+const item = (id, name, status = "Pending") => ({ order_item_id: id, item_id: id, name, quantity: 1, price_at_time: 0, status });
 
 const tableOrders = [
-  { orderId: 900, userId: 21, userName: "guest-3f9c2a@guest.sushitoshi.invalid", billName: "Lee", status: "Pending", items: [item(1, "Salmon Nigiri")] },
-  { orderId: 901, userId: 22, userName: "Guest 4MXA", billName: "Lee", status: "Delivered", items: [item(2, "Miso Soup", "Delivered")] },
+  { order_id: 900, user_id: 21, user_name: "guest-3f9c2a@guest.sushitoshi.invalid", bill_name: "Lee", status: "Pending", items: [item(1, "Salmon Nigiri")] },
+  { order_id: 901, user_id: 22, user_name: "Guest 4MXA", bill_name: "Lee", status: "Delivered", items: [item(2, "Miso Soup", "Delivered")] },
 ];
 
 describe("Customer orders page", () => {
@@ -220,10 +220,10 @@ describe("Customer orders page", () => {
 
   it("labels units over a charged limit as extras, apart from add-ons", async () => {
     const charged = [{
-      orderId: 902, userId: 22, userName: "Guest 4MXA", billName: "Lee", status: "Pending",
+      order_id: 902, user_id: 22, user_name: "Guest 4MXA", bill_name: "Lee", status: "Pending",
       items: [
-        { ...item(3, "Hot Stone Steak"), quantity: 2, priceAtTime: 5, chargeReason: "OverLimit" },
-        { ...item(4, "Toro Nigiri"), priceAtTime: 9, isAddOn: true, chargeReason: "None" },
+        { ...item(3, "Hot Stone Steak"), quantity: 2, price_at_time: 5, charge_reason: "OverLimit" },
+        { ...item(4, "Toro Nigiri"), price_at_time: 9, is_add_on: true, charge_reason: "None" },
       ],
     }];
     api.get.mockImplementation((url) => {
@@ -306,7 +306,7 @@ describe("Customer orders page", () => {
 
   describe("cancelling an order", () => {
     // This person's own order the kitchen hasn't started
-    const myPendingOrder = { orderId: 902, userId: 22, billName: "Lee", status: "Pending", items: [item(3, "Edamame")] };
+    const myPendingOrder = { order_id: 902, user_id: 22, bill_name: "Lee", status: "Pending", items: [item(3, "Edamame")] };
 
     beforeEach(() => {
       api.get.mockImplementation((url) => {

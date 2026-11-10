@@ -1,12 +1,6 @@
 import { Box, IconButton, Typography } from "@mui/material";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 
-const inactive = {
-  color: "action.disabled",
-  cursor: "not-allowed",
-  "&:hover": { backgroundColor: "transparent" },
-};
-
 // A visible outline for keyboard focus
 const focusRing = {
   "&.Mui-focusVisible": {
@@ -24,7 +18,7 @@ const inactiveSx = {
 
 // − qty + in one pill, shared by the menu cards and the Review order rows.
 // At 1 the minus becomes a bin, since one more tap takes the item out; at 0 it's disabled.
-// canIncrease=false (the item's limit is reached) hides the plus
+// canIncrease=false (the item's limit is reached) greys out the plus; it stays so focus isn't lost
 const QuantityStepper = ({
   itemName,
   quantity,
@@ -84,7 +78,7 @@ const QuantityStepper = ({
         aria-disabled={!canIncrease}
         onClick={canIncrease ? onIncrease : undefined}
         disableRipple={!canIncrease}
-        sx={canDecrease ? focusRing : { ...inactiveSx, ...focusRing }}
+        sx={canIncrease ? focusRing : { ...inactiveSx, ...focusRing }}
       >
         <MaterialSymbol name="add" size={20} />
       </IconButton>

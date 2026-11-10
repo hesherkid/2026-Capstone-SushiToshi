@@ -48,7 +48,7 @@ export const OrderAlerts = ({ orders = [], newOrderIds = new Set() }) => {
 
   const pendingCount = orders.filter((o) => o.status === "Pending").length;
   const processingCount = orders.length - pendingCount;
-  const hasNew = orders.some((o) => newOrderIds.has(o.orderId));
+  const hasNew = orders.some((o) => newOrderIds.has(o.order_id));
   const preview = orders.slice(0, PREVIEW_LIMIT);
 
   return (
@@ -86,21 +86,21 @@ export const OrderAlerts = ({ orders = [], newOrderIds = new Set() }) => {
         {preview.map((order) => {
           const chip = STATUS_CHIP[order.status];
           return (
-            <ListItem key={order.orderId} disableGutters>
+            <ListItem key={order.order_id} disableGutters>
               <ListItemText
                 primary={
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                     <Typography component="span" sx={{ fontWeight: 600 }}>
-                      {tableLabel(order.tableNumbers)}
+                      {tableLabel(order.table_numbers)}
                     </Typography>
                     {chip && <Chip label={chip.label} color={chip.color} size="small" variant="outlined" />}
-                    {newOrderIds.has(order.orderId) && <Chip label="New" color="warning" size="small" />}
+                    {newOrderIds.has(order.order_id) && <Chip label="New" color="warning" size="small" />}
                     <Typography component="span" variant="body2" color="text.secondary">
-                      {formatTime(order.createdAt)}
+                      {formatTime(order.created_at)}
                     </Typography>
                   </Box>
                 }
-                secondary={`Order #${order.orderId} · ${itemSummary(order.items)}`}
+                secondary={`Order #${order.order_id} · ${itemSummary(order.items)}`}
               />
             </ListItem>
           );

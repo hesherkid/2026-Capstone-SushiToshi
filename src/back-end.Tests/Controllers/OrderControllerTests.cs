@@ -213,10 +213,10 @@ public class OrderControllerTests : IDisposable
         var orderResponse = okResult!.Value as OrderResponseDto;
 
         orderResponse.Should().NotBeNull();
-        orderResponse!.Session_Id.Should().Be(1);
-        orderResponse.Bill_Id.Should().Be(1);
-        orderResponse.User_Id.Should().Be(123);
-        orderResponse.User_Name.Should().Be("Test User");
+        orderResponse!.SessionId.Should().Be(1);
+        orderResponse.BillId.Should().Be(1);
+        orderResponse.UserId.Should().Be(123);
+        orderResponse.UserName.Should().Be("Test User");
         orderResponse.Status.Should().Be(OrderStatus.Pending);
         orderResponse.OrderItems.Should().ContainSingle()
             .Which.Should().Match<OrderItemResponseDto>(i =>
@@ -426,8 +426,8 @@ public class OrderControllerTests : IDisposable
         var orderResponse = okResult!.Value as OrderResponseDto;
 
         orderResponse.Should().NotBeNull();
-        orderResponse!.User_Id.Should().Be(userId);
-        orderResponse.User_Name.Should().Be(userName);
+        orderResponse!.UserId.Should().Be(userId);
+        orderResponse.UserName.Should().Be(userName);
     }
 
     [Fact]
@@ -484,7 +484,7 @@ public class OrderControllerTests : IDisposable
 
         // Assert
         var order = (result.Result as OkObjectResult)!.Value as OrderResponseDto;
-        order!.User_Name.Should().Be("customer@example.com");
+        order!.UserName.Should().Be("customer@example.com");
     }
 
     [Fact]
@@ -670,8 +670,8 @@ public class OrderControllerTests : IDisposable
 
         // Assert
         var order = (result.Result as OkObjectResult)!.Value as OrderResponseDto;
-        order!.User_Id.Should().Be(42);
-        order.User_Name.Should().Be("Server");
+        order!.UserId.Should().Be(42);
+        order.UserName.Should().Be("Server");
     }
 
     [Fact]
@@ -779,7 +779,7 @@ public class OrderControllerTests : IDisposable
     {
         result.Result.Should().BeOfType<OkObjectResult>();
         var json = JsonSerializer.SerializeToElement((result.Result as OkObjectResult)!.Value);
-        return json.EnumerateArray().Select(o => o.GetProperty("orderId").GetInt32()).ToArray();
+        return json.EnumerateArray().Select(o => o.GetProperty("order_id").GetInt32()).ToArray();
     }
 
     [Fact]
@@ -854,6 +854,26 @@ public class OrderControllerTests : IDisposable
         // Assert
         ids.Should().Equal(withItems.Order_Id);
         ids.Should().NotContain(empty.Order_Id);
+    }
+
+    // The staff order screens (mapOrder in useOrderData.js) read these keys
+    [Fact]
+    public async Task GetAllOrdersByLocation_UsesSnakeCaseKeys()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        SeedOrderAt(OpenSessionId, OpenSessionId, OrderStatus.Pending, OrderStatus.Pending);
+
+        // Act
+        var result = await _controller.GetAllOrdersByLocation(locationId: 1);
+
+        // Assert
+        var order = JsonSerializer.SerializeToElement((result.Result as OkObjectResult)!.Value).EnumerateArray().Single();
+        order.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo(
+            ["order_id", "session_id", "bill_id", "bill_name", "location_id", "table_numbers", "user_name", "status", "created_at", "completed_at", "items"]);
+        order.GetProperty("items")[0].EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo(
+            ["order_item_id", "item_id", "name", "quantity", "price_at_time", "is_add_on", "charge_reason", "status"]);
     }
 
     [Fact]

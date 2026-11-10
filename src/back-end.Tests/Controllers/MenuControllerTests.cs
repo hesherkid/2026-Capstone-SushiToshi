@@ -138,12 +138,12 @@ public class MenuControllerTests : IDisposable
     }
 
     private static List<int> IdsOf(List<JsonElement> items) =>
-        items.Select(i => i.GetProperty("itemId").GetInt32()).ToList();
+        items.Select(i => i.GetProperty("item_id").GetInt32()).ToList();
 
-    private static List<Menu> MenusFrom(ActionResult<IEnumerable<Menu>> result)
+    private static List<MenuResponseDto> MenusFrom(ActionResult<IEnumerable<MenuResponseDto>> result)
     {
         result.Result.Should().BeOfType<OkObjectResult>();
-        return ((IEnumerable<Menu>)((OkObjectResult)result.Result!).Value!).ToList();
+        return ((IEnumerable<MenuResponseDto>)((OkObjectResult)result.Result!).Value!).ToList();
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class MenuControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var menus = okResult!.Value as List<Menu>;
+        var menus = okResult!.Value as List<MenuResponseDto>;
 
         menus.Should().NotBeNull();
         menus!.Should().HaveCount(1);
@@ -171,10 +171,10 @@ public class MenuControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var menu = okResult!.Value as Menu;
+        var menu = okResult!.Value as MenuResponseDto;
 
         menu.Should().NotBeNull();
-        menu!.Menu_id.Should().Be(1);
+        menu!.MenuId.Should().Be(1);
         menu.Name.Should().Be("Main Menu");
     }
 
@@ -201,50 +201,10 @@ public class MenuControllerTests : IDisposable
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var menus = okResult!.Value as List<Menu>;
+        var menus = okResult!.Value as List<MenuResponseDto>;
 
         menus.Should().NotBeNull();
         menus!.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task CreateMenuItem_DuplicateName_ReturnsConflict()
-    {
-        // Arrange
-        _context.MenuItems.Add(new Menu_Item { item_id = Salmon, Name = "Salmon", Description = "x", Category_id = 1 });
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _controller.CreateMenuItem(new MenuItemCreateDto { Name = "Salmon", Category_Id = 1 });
-
-        // Assert
-        result.Should().BeOfType<ConflictObjectResult>();
-    }
-
-    [Fact]
-    public async Task CreateMenuItem_WithTags_AttachesKnownTagsAndIgnoresUnknown()
-    {
-        // Arrange
-        _context.Tags.AddRange(
-            new Tag { tag_id = RawTag, tag_name = "Raw", tag_color = "#FF0000" },
-            new Tag { tag_id = SpicyTag, tag_name = "Spicy", tag_color = "#FFA500" });
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _controller.CreateMenuItem(new MenuItemCreateDto
-        {
-            Name = "Spicy Tuna",
-            Category_Id = 1,
-            Tag_Ids = [RawTag, SpicyTag, 999]
-        });
-
-        // Assert
-        result.Should().BeOfType<OkObjectResult>();
-        var dto = (MenuItemResponseDto)((OkObjectResult)result).Value!;
-        dto.Status.Should().Be(MenuItemStatus.Available);
-        dto.Description.Should().BeEmpty();
-        dto.Tags.Select(t => t.Name).Should().BeEquivalentTo(["Raw", "Spicy"]);
-        _context.MenuItemTags.Count(t => t.Menu_item_id == dto.ItemId).Should().Be(2);
     }
 
     [Fact]
@@ -284,7 +244,7 @@ public class MenuControllerTests : IDisposable
         var north = ItemsFrom(await _controller.GetItemsByMenu(MainMenu, North));
 
         // Assert: South's price override replaces the default (one row, not two)
-        var salmon = south.Single(i => i.GetProperty("itemId").GetInt32() == Salmon);
+        var salmon = south.Single(i => i.GetProperty("item_id").GetInt32() == Salmon);
         salmon.GetProperty("price").GetDecimal().Should().Be(1.50m);
 
         // Assert: South's "Unavailable" override hides Toro there, but not at North
@@ -302,14 +262,14 @@ public class MenuControllerTests : IDisposable
         var items = ItemsFrom(await _controller.GetItemsByMenu(MainMenu, null));
 
         // Assert
-        var salmon = items.Single(i => i.GetProperty("itemId").GetInt32() == Salmon);
+        var salmon = items.Single(i => i.GetProperty("item_id").GetInt32() == Salmon);
         salmon.TryGetProperty("fullPrice", out _).Should().BeFalse("Price and Full_Price were merged into Price");
         salmon.GetProperty("category").GetString().Should().Be("Appetizers");
-        salmon.GetProperty("isAddOn").GetBoolean().Should().BeFalse();
+        salmon.GetProperty("is_add_on").GetBoolean().Should().BeFalse();
 
         // Toddler limit 0 falls back to the child limit
-        salmon.GetProperty("itemLimits").GetProperty("toddler").GetInt32().Should().Be(2);
-        salmon.GetProperty("categoryLimits").GetProperty("toddler").GetInt32().Should().Be(3);
+        salmon.GetProperty("item_limits").GetProperty("toddler").GetInt32().Should().Be(2);
+        salmon.GetProperty("category_limits").GetProperty("toddler").GetInt32().Should().Be(3);
 
         var tag = salmon.GetProperty("tags").EnumerateArray().Single();
         tag.GetProperty("name").GetString().Should().Be("Raw");
@@ -323,8 +283,8 @@ public class MenuControllerTests : IDisposable
         SeedMenuItems();
 
         // Act
-        var north = MenusFrom(await _controller.GetMenuByLocation(North)).Select(m => m.Menu_id);
-        var south = MenusFrom(await _controller.GetMenuByLocation(South)).Select(m => m.Menu_id);
+        var north = MenusFrom(await _controller.GetMenuByLocation(North)).Select(m => m.MenuId);
+        var south = MenusFrom(await _controller.GetMenuByLocation(South)).Select(m => m.MenuId);
 
         // Assert
         north.Should().BeEquivalentTo([MainMenu], "Old Menu is inactive and South Menu is another location's");
@@ -332,10 +292,24 @@ public class MenuControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllMenu_ListsEachMenusLocationIds()
+    {
+        // Arrange
+        SeedMenuItems();
+
+        // Act
+        var menus = MenusFrom(await _controller.GetAllMenu());
+
+        // Assert
+        menus.Single(m => m.MenuId == MainMenu).LocationIds.Should().BeEquivalentTo([North, South]);
+        menus.Single(m => m.MenuId == SouthMenu).LocationIds.Should().BeEquivalentTo([South]);
+    }
+
+    [Fact]
     public async Task UpdateMenu_PartialUpdate_ChangesOnlySentFields()
     {
         // Act
-        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDto { Is_Active = false });
+        var result = await _controller.UpdateMenu(MainMenu, new MenuUpdateDto { IsActive = false });
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -417,7 +391,6 @@ public class MenuControllerTests : IDisposable
 
     [Theory]
     [InlineData(nameof(MenuController.CreateMenu), "adminOnly")]
-    [InlineData(nameof(MenuController.CreateMenuItem), "staffOnly")]
     [InlineData(nameof(MenuController.UpdateMenu), "adminOnly")]
     [InlineData(nameof(MenuController.DeleteMenu), "adminOnly")]
     public void WriteEndpoints_RequirePolicy(string methodName, string policy)

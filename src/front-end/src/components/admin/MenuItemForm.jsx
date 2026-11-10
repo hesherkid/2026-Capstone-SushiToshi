@@ -29,7 +29,7 @@ const MenuItemForm = ({
   const [formData, setFormData] = useState({
     name: selectedItem?.name || "",
     description: selectedItem?.description || "",
-    category_id: selectedItem?.category_Id ?? selectedItem?.category_id ?? "",
+    category_id: selectedItem?.category_id ?? "",
   });
 
   const handleFileChange = (e) => {
