@@ -21,11 +21,11 @@ back_end.Dtos.Analytics.TableTurnoverResponseDto: duration_by_party_size, locati
 back_end.Dtos.Analytics.TableTurnoverSummaryDto: guests_seated, max_gap_minutes, sessions_open, sessions_over_time_limit, sessions_seated, sessions_without_party_size, time_limit_minutes
 back_end.Dtos.Analytics.TurnoverGapDto: gaps_over_limit, groups, overlapping_sessions, tables
 back_end.Dtos.Auth.ForgotPasswordDto: email
-back_end.Dtos.Auth.GoogleTokenDto: idToken
+back_end.Dtos.Auth.GoogleTokenDto: id_token
 back_end.Dtos.Auth.LoginDto: email, password
 back_end.Dtos.Auth.RegisterDto: email, first_name, last_name, password
 back_end.Dtos.Auth.ResendVerificationDto: email
-back_end.Dtos.Auth.ResetPasswordDto: newPassword, token
+back_end.Dtos.Auth.ResetPasswordDto: new_password, token
 back_end.Dtos.Auth.VerifyEmailDto: token
 back_end.Dtos.BillAddOnItem: item_id, item_name, line_total, order_item_id, price_per_unit, quantity, status
 back_end.Dtos.BillResponse: adult_count, bill_id, bill_name, child_count, closed_at, created_at, requested_at, senior_count, session_id, status, table_numbers, tot_count, total_count
@@ -108,7 +108,7 @@ back_end.Dtos.ServiceRequestResponseDto: claimed_at, claimed_by, completed_at, c
 back_end.Dtos.SessionIdResponseDto: session_id
 back_end.Dtos.SessionMenuResponseDto: location_id, menu_id
 back_end.Dtos.SessionOrderLimitsDto: categories, items
-back_end.Dtos.SessionParticipantResponseDto: Left_At, joined_at, participant, session_id, user_id, user_name
+back_end.Dtos.SessionParticipantResponseDto: joined_at, left_at, participant, session_id, user_id, user_name
 back_end.Dtos.StaffMemberChangePasswordDto: current_password, password
 back_end.Dtos.StaffMemberUpdateDto: created_at, email, first_name, is_email_confirmed, last_name, last_transaction_at, location, location_ids, role, status, user_id
 back_end.Dtos.StaffResponseDto: created_at, email, first_name, is_email_confirmed, last_name, last_transaction_at, location, location_id, location_ids, locations, role, status, user_id
@@ -130,5 +130,5 @@ back_end.Dtos.TagUpdateDto: tag_color, tag_name
 back_end.Dtos.UpdateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
 back_end.Dtos.UpdateGuestCountsDto: adult_count, child_count, senior_count, tot_count
 back_end.Dtos.UserCreateDto: email, first_name, last_name, password, role, status
-back_end.Dtos.UserResponseDto: created_at, email, first_name, is_email_confirmed, last_Interaction_at, last_name, role, status, user_id
+back_end.Dtos.UserResponseDto: created_at, email, first_name, is_email_confirmed, last_interaction_at, last_name, role, status, user_id
 back_end.Dtos.UserUpdateDto: email, first_name, last_name, new_password, role, status

@@ -135,10 +135,10 @@ namespace back_end.Controllers
             return Ok(new
             {
                 success = true,
-                locationId,
-                tableCount = tables.Count,
-                filesGenerated = files.Count,
-                storageLocation = "storage/qrcodes/",
+                location_id = locationId,
+                table_count = tables.Count,
+                files_generated = files.Count,
+                storage_location = "storage/qrcodes/",
                 files
             });
         }

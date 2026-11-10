@@ -150,6 +150,27 @@ public class CategoryControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetMenuItemsByCategory_ReturnsItemDtosWithTheirTags()
+    {
+        // Arrange
+        _context.Tags.Add(new Tag { tag_id = 5, tag_name = "Popular", tag_color = "#C01E2E" });
+        _context.MenuItems.Add(new Menu_Item { item_id = 100, Name = "Miso Soup", Description = "Classic miso broth", Category_id = 1 });
+        _context.MenuItemTags.Add(new MenuItemTag { Menu_item_id = 100, Tag_id = 5 });
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+
+        // Act
+        var result = await _controller.GetMenuItemsByCategory(1);
+
+        // Assert
+        var items = result.Should().BeOfType<OkObjectResult>().Subject.Value.Should().BeOfType<List<MenuItemResponseDto>>().Subject;
+        var miso = items.Single();
+        miso.ItemId.Should().Be(100);
+        miso.CategoryId.Should().Be(1);
+        miso.Tags.Single().Name.Should().Be("Popular");
+    }
+
+    [Fact]
     public async Task DeleteCategory_Empty_ReturnsOk()
     {
         var result = await _controller.DeleteCategory(3);

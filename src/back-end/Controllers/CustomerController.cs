@@ -47,15 +47,15 @@ namespace back_end.Controllers
                 .Take(limit)
                 .Select(u => new UserResponseDto
                 {
-                    User_id = u.User_id,
+                    UserId = u.User_id,
                     Email = u.Email,
-                    First_name = u.First_name,
-                    Last_name = u.Last_name,
+                    FirstName = u.First_name,
+                    LastName = u.Last_name,
                     Role = u.Role,
                     Status = u.Status,
-                    Created_at = u.Created_at,
-                    Last_Interaction_at = u.Last_Interaction_at,
-                    Is_email_confirmed = u.Is_email_confirmed
+                    CreatedAt = u.Created_at,
+                    LastInteractionAt = u.Last_Interaction_at,
+                    IsEmailConfirmed = u.Is_email_confirmed
                 })
                 .ToListAsync();
 

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Xunit;
 using Moq;
 using FluentAssertions;
@@ -216,10 +217,11 @@ public class AdminQrCodeControllerTests : IDisposable
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().NotBeNull();
 
-        // Verify the response contains expected data
-        dynamic value = okResult.Value!;
-        Assert.NotNull(value);
-        // Should have generated QR codes for 3 tables (WiFi + Session = 6 files)
+        // The QR code page shows files_generated and table_count
+        var json = JsonSerializer.SerializeToElement(okResult.Value);
+        json.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo(
+            ["success", "location_id", "table_count", "files_generated", "storage_location", "files"]);
+        json.GetProperty("location_id").GetInt32().Should().Be(locationId);
     }
 
     [Fact]

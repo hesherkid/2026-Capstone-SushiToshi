@@ -165,7 +165,7 @@ export const resetPassword = async (token, newPassword) => {
     "/auth/reset-password",
     {
       token,
-      newPassword,
+      new_password: newPassword,
     }
   );
 

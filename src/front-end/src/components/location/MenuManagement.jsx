@@ -31,6 +31,7 @@ const MenuManagement = () => {
     try {
       const response = await api.get("/Menu");
       setMenus(response.data);
+      return response.data;
     } catch (err) {
       console.error("Error fetching data:", err);
       setError(serverMessage(err, "Couldn't load the menus."));
@@ -65,9 +66,12 @@ const MenuManagement = () => {
     setIsFormOpen(true);
   };
 
-  const handleLocations = (menu) => {
-      setSelectedMenu(menu);
-  setLocationDialogOpen(true);
+  // Locations are added and deleted in Location management above, so load the latest
+  // locations and this menu's assigned ones before opening
+  const handleLocations = async (menu) => {
+    const [freshMenus] = await Promise.all([fetchMenus(), fetchLocations()]);
+    setSelectedMenu(freshMenus?.find((m) => m.menu_id === menu.menu_id) ?? menu);
+    setLocationDialogOpen(true);
   };
 
   // The dialog lists menu.location_ids, so reload the menus to show what was saved

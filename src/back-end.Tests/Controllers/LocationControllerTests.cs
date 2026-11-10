@@ -129,6 +129,28 @@ public class LocationControllerTests : IDisposable
         locations.Should().AllSatisfy(l => l.LocationId.Should().BeGreaterThan(0));
     }
 
+    [Fact]
+    public async Task CreateLocation_ReturnsTheNewLocation()
+    {
+        // Act
+        var result = await _controller.CreateLocation(new LocationCreateDto
+        {
+            Name = "South",
+            AddressOne = "9 South St",
+            City = "Edmonton",
+            Province = "Alberta",
+            PostalCode = "T6X 1A1",
+            PhoneNumber = "780-555-0100"
+        });
+
+        // Assert
+        var dto = result.Should().BeOfType<OkObjectResult>().Subject.Value.Should().BeOfType<LocationResponseDto>().Subject;
+        dto.LocationId.Should().BePositive();
+        dto.Name.Should().Be("South");
+        dto.AddressOne.Should().Be("9 South St");
+        dto.ProvinceCode.Should().Be("AB", "it defaults to Alberta");
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();

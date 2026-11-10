@@ -28,6 +28,7 @@ namespace back_end.Dtos.Auth
 
     public class GoogleTokenDto
     {
+        [JsonPropertyName("id_token")]
         public string IdToken { get; set; } = string.Empty;
     }
 }

@@ -277,7 +277,7 @@ namespace back_end.Controllers
         Summary = "Get menu items linked to a tag",
         Description = "Returns all menu items associated with the given tag. Requires Admin role."
     )]
-    [SwaggerResponse(StatusCodes.Status200OK, "List of menu items returned successfully", typeof(IEnumerable<Menu_Item>))]
+    [SwaggerResponse(StatusCodes.Status200OK, "List of menu items returned successfully", typeof(IEnumerable<MenuItemResponseDto>))]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Permission denied", typeof(ProblemDetails))]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Tag not found", typeof(ProblemDetails))]
     [SwaggerResponse(StatusCodes.Status500InternalServerError, "Server error", typeof(ProblemDetails))]
@@ -288,6 +288,8 @@ namespace back_end.Controllers
         var tag = await _context.Tags
           .Include(t => t.MenuItemTags)
             .ThenInclude(mit => mit.MenuItem)
+              .ThenInclude(mi => mi.MenuItemTags)
+                .ThenInclude(itemTag => itemTag.Tag)
           .FirstOrDefaultAsync(t => t.tag_id == tagId);
 
         if (tag is null)
@@ -295,7 +297,7 @@ namespace back_end.Controllers
           return NotFound(new { detail = "Tag not found" });
         }
 
-        var menuItems = tag.MenuItemTags.Select(mit => mit.MenuItem).ToList();
+        var menuItems = tag.MenuItemTags.Select(mit => MenuItemResponseDto.From(mit.MenuItem)).ToList();
 
         return Ok(menuItems);
       }
