@@ -89,7 +89,8 @@ describe("Staff order dialog", () => {
     expect(api.post).toHaveBeenCalledWith("/Order", {
       session_Id: 8,
       bill_Id: 5,
-      items: [expect.objectContaining({ item_id: 10, quantity: 1 })],
+      // Exactly these keys: in development the API rejects any key OrderItemCreateDto doesn't have
+      items: [{ menu_id: 1, item_id: 10, quantity: 1, price_at_time: 0 }],
     });
     await waitFor(() =>
       expect(mockNotifySuccess).toHaveBeenCalledWith("Order placed on Window Booth"),

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using back_end.domain;
+using back_end.domain.Entities;
 using Microsoft.AspNetCore.SignalR;
 
 namespace back_end.Dtos
@@ -13,9 +14,11 @@ namespace back_end.Dtos
         public string Name { get; set; } = string.Empty;
         [MaxLength(75)]
         [MinLength(1)]
-        public string Address_One { get; set; } = string.Empty;
+        [JsonPropertyName("address_one")]
+        public string AddressOne { get; set; } = string.Empty;
         [MaxLength(75)]
-        public string Address_Two { get; set; } = string.Empty;
+        [JsonPropertyName("address_two")]
+        public string AddressTwo { get; set; } = string.Empty;
         [MaxLength(50)]
         [MinLength(1)]
         public string City { get; set; } = string.Empty;
@@ -24,13 +27,16 @@ namespace back_end.Dtos
         public string Province { get; set; } = string.Empty;
         // Two-letter code for holidays, e.g. "AB". Optional: Alberta on create, unchanged on update
         [RegularExpression("^(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT)$")]
-        public string? Province_Code { get; set; }
+        [JsonPropertyName("province_code")]
+        public string? ProvinceCode { get; set; }
         [MaxLength(8)]
         [MinLength(1)]
-        public string Postal_Code { get; set; } = string.Empty;
+        [JsonPropertyName("postal_code")]
+        public string PostalCode { get; set; } = string.Empty;
         [MaxLength(11)]
         [MinLength(10)]
-        public string Phone_Number { get; set; } = string.Empty;
+        [JsonPropertyName("phone_number")]
+        public string PhoneNumber { get; set; } = string.Empty;
 
     }
 
@@ -43,13 +49,28 @@ namespace back_end.Dtos
 
     public class LocationResponseDto : LocationBaseDto
     {
-        public int Location_Id { get; set; }
+        [JsonPropertyName("location_id")]
+        public int LocationId { get; set; }
+
+        public static LocationResponseDto From(Locations location) => new()
+        {
+            LocationId = location.Location_Id,
+            Name = location.Name,
+            AddressOne = location.Address_Primary,
+            AddressTwo = location.Address_Secondary ?? string.Empty,
+            City = location.City,
+            Province = location.Province,
+            ProvinceCode = location.Province_Code,
+            PostalCode = location.Postal_Code,
+            PhoneNumber = location.Phone_Number,
+        };
     }
 
     public class MenuLocationCreateDto
     {
         [Required]
-        public int Menu_id { get; set; }
+        [JsonPropertyName("menu_id")]
+        public int MenuId { get; set; }
     }
 
 }

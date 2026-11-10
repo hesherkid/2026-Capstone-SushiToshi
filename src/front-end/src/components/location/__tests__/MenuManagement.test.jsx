@@ -98,7 +98,7 @@ describe("MenuManagement", () => {
           data: [{ ...menus[0], menuLocations: lunchLocations }, menus[1]],
         };
       if (url === "/location")
-        return { data: [{ location_Id: 7, name: "Downtown" }] };
+        return { data: [{ location_id: 7, name: "Downtown" }] };
       return { data: [] };
     });
     api.put.mockImplementation(async () => {

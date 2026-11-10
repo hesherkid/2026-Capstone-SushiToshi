@@ -85,14 +85,14 @@ export default function QRCodeManagement() {
       if (
         storedLocationId &&
         response.data?.some(
-          (loc) => loc.location_Id === Number(storedLocationId),
+          (loc) => loc.location_id === Number(storedLocationId),
         )
       ) {
         // Use stored location if it exists in the list
         setSelectedLocation(Number(storedLocationId));
       } else if (response.data && response.data.length > 0) {
         // Fallback to first location if no stored location
-        setSelectedLocation(response.data[0].location_Id);
+        setSelectedLocation(response.data[0].location_id);
       }
     } catch (error) {
       console.error("Error fetching locations:", error);
@@ -393,7 +393,7 @@ export default function QRCodeManagement() {
   };
 
   const selectedLocationName =
-    locations.find((loc) => loc.location_Id === selectedLocation)?.name || "";
+    locations.find((loc) => loc.location_id === selectedLocation)?.name || "";
 
   return (
     <Box
@@ -434,8 +434,8 @@ export default function QRCodeManagement() {
               >
                 {locations.map((location) => (
                   <MenuItem
-                    key={location.location_Id}
-                    value={location.location_Id}
+                    key={location.location_id}
+                    value={location.location_id}
                   >
                     {location.name}
                   </MenuItem>

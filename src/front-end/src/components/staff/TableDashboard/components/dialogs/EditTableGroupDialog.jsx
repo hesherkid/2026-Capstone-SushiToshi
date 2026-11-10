@@ -12,7 +12,7 @@ const EditTableGroupDialog = ({ open, group }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (group) setGroupName(group.group_Name || "");
+    if (group) setGroupName(group.group_name || "");
   }, [group]);
 
   const handleClose = () => {
@@ -24,7 +24,7 @@ const EditTableGroupDialog = ({ open, group }) => {
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.put(`/TableGroup/${group.tableGroup_Id}`, { Group_Name: groupName.trim() });
+      await api.put(`/TableGroup/${group.table_group_id}`, { group_name: groupName.trim() });
       await refreshData();
       handleClose();
     } catch (err) {
@@ -39,7 +39,7 @@ const EditTableGroupDialog = ({ open, group }) => {
       open={open}
       onClose={handleClose}
       title="Edit Table Group"
-      subtitle={group?.group_Name}
+      subtitle={group?.group_name}
       error={error}
       onErrorClose={() => setError(null)}
       onSubmit={handleSubmit}

@@ -361,7 +361,6 @@ describe("Tag add/edit dialog", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith("/Tag/5", {
-        tag_id: 5,
         tag_name: "Extra Spicy",
         tag_color: "#FF5733",
       }),

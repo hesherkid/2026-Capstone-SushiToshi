@@ -13,8 +13,8 @@ const getWorkingLocation = () => {
 };
 
 const emptyForm = () => ({
-  group_Name: "",
-  location_Id: getWorkingLocation(),
+  group_name: "",
+  location_id: getWorkingLocation(),
 });
 
 const NewTableGroupDialog = ({ open }) => {
@@ -35,7 +35,7 @@ const NewTableGroupDialog = ({ open }) => {
   // Table groups can only be added at the working location; the list is only open without one
   const workingLocation = getWorkingLocation();
   const locationOptions = workingLocation
-    ? availableLocations.filter((location) => location.location_Id === workingLocation)
+    ? availableLocations.filter((location) => location.location_id === workingLocation)
     : availableLocations;
 
   const set = (field) => (e) => setFormData((prev) => ({ ...prev, [field]: e.target.value }));
@@ -51,9 +51,9 @@ const NewTableGroupDialog = ({ open }) => {
     setError(null);
     try {
       await api.post("/TableGroup", {
-        Group_Name: formData.group_Name.trim(),
-        Is_Active: true,
-        Location_Id: formData.location_Id,
+        group_name: formData.group_name.trim(),
+        is_active: true,
+        location_id: formData.location_id,
       });
       await refreshData();
       handleClose();
@@ -75,18 +75,18 @@ const NewTableGroupDialog = ({ open }) => {
       submitLabel="Create Group"
       busyLabel="Creating..."
       busy={isSubmitting}
-      submitDisabled={!formData.group_Name.trim()}
+      submitDisabled={!formData.group_name.trim()}
     >
       <TextField
         select
         label="Location"
         required
-        value={locationOptions.length ? formData.location_Id : ""}
-        onChange={set("location_Id")}
+        value={locationOptions.length ? formData.location_id : ""}
+        onChange={set("location_id")}
         disabled={Boolean(workingLocation)}
       >
         {locationOptions.map((location) => (
-          <MenuItem key={location.location_Id} value={location.location_Id}>
+          <MenuItem key={location.location_id} value={location.location_id}>
             {location.name}
           </MenuItem>
         ))}
@@ -95,8 +95,8 @@ const NewTableGroupDialog = ({ open }) => {
         label="Group Name"
         required
         autoFocus
-        value={formData.group_Name}
-        onChange={set("group_Name")}
+        value={formData.group_name}
+        onChange={set("group_name")}
         placeholder="e.g., Large Party Area"
       />
     </FormDialog>

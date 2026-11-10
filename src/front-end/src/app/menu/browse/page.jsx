@@ -93,7 +93,7 @@ const pill = (selected) => ({
 });
 
 const firstLocation = (locations) => {
-  const ids = locations.map((location) => location.location_Id);
+  const ids = locations.map((location) => location.location_id);
   return (
     [storage.get(BROWSE_LOCATION_KEY), storage.get("locationId")]
       .map(Number)
@@ -229,7 +229,7 @@ const BrowseMenuPage = () => {
 
   const noMenus = menus?.length === 0 && !error;
   const locationName =
-    locations.find((location) => location.location_Id === locationId)?.name ??
+    locations.find((location) => location.location_id === locationId)?.name ??
     "";
 
   return (
@@ -304,8 +304,8 @@ const BrowseMenuPage = () => {
         >
           {locations.map((location) => (
             <MenuItem
-              key={location.location_Id}
-              value={location.location_Id}
+              key={location.location_id}
+              value={location.location_id}
               sx={{
                 gap: 1,
                 py: 1,
@@ -319,7 +319,7 @@ const BrowseMenuPage = () => {
               }}
             >
               {location.name}
-              {location.location_Id === locationId && (
+              {location.location_id === locationId && (
                 <MaterialSymbol
                   name="check"
                   size={18}

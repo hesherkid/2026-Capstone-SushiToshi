@@ -15,7 +15,7 @@ export const TABLE_STATUS = {
 // so an active table missing from it is in session.
 const getTableStatus = (table, emptyIds) => {
   if (!table.is_active) return TABLE_STATUS.INACTIVE;
-  return emptyIds.has(table.table_Id)
+  return emptyIds.has(table.table_id)
     ? TABLE_STATUS.AVAILABLE
     : TABLE_STATUS.IN_SESSION;
 };
@@ -45,7 +45,7 @@ export const useTableData = () => {
       ]);
       setRawTables(tablesRes.data || []);
       setRawGroups(groupsRes.data || []);
-      setEmptyIds(new Set((emptyRes.data || []).map((t) => t.table_Id)));
+      setEmptyIds(new Set((emptyRes.data || []).map((t) => t.table_id)));
     } catch (err) {
       console.error("Error fetching table data:", err);
       setError("Failed to load table data");
@@ -56,12 +56,12 @@ export const useTableData = () => {
 
   const tables = useMemo(() => {
     const groupNames = new Map(
-      rawGroups.map((g) => [g.tableGroup_Id, g.group_Name])
+      rawGroups.map((g) => [g.table_group_id, g.group_name])
     );
     return rawTables.map((table) => ({
       ...table,
       status: getTableStatus(table, emptyIds),
-      group_Name: groupNames.get(table.tableGroup_Id) ?? null,
+      group_name: groupNames.get(table.table_group_id) ?? null,
     }));
   }, [rawTables, rawGroups, emptyIds]);
 
@@ -73,7 +73,7 @@ export const useTableData = () => {
           (t) => getTableStatus(t, emptyIds) === TABLE_STATUS.IN_SESSION
         );
         let status = TABLE_STATUS.AVAILABLE;
-        if (!group.is_Active) status = TABLE_STATUS.INACTIVE;
+        if (!group.is_active) status = TABLE_STATUS.INACTIVE;
         else if (inSession) status = TABLE_STATUS.IN_SESSION;
 
         return {

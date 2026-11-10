@@ -34,8 +34,8 @@ const browseApi = ({ favourites = [] } = {}) => (url) => {
   const ok = (data) => Promise.resolve({ status: 200, data });
   if (url === "/Location") {
     return ok([
-      { location_Id: 3, name: "Sushi Toshi South" },
-      { location_Id: 4, name: "Sushi Toshi North" },
+      { location_id: 3, name: "Sushi Toshi South" },
+      { location_id: 4, name: "Sushi Toshi North" },
     ]);
   }
   if (url === "/Category") {

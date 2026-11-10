@@ -35,16 +35,16 @@ export const useTableActions = () => {
 
     toggleTable: (table) =>
       run(
-        () => api.post(`/TableEntity/${table.table_Id}/toggle-status`),
+        () => api.post(`/TableEntity/${table.table_id}/toggle-status`),
         "Failed to update table status"
       ),
 
     removeTableFromGroup: (table) =>
       confirm(
         "Remove from group",
-        `Remove Table ${table.table_number} from ${table.group_Name ?? "its group"}?`,
+        `Remove Table ${table.table_number} from ${table.group_name ?? "its group"}?`,
         "Remove",
-        () => api.delete(`/TableEntity/${table.table_Id}/remove-from-group`),
+        () => api.delete(`/TableEntity/${table.table_id}/remove-from-group`),
         "Failed to remove table from group"
       ),
 
@@ -53,7 +53,7 @@ export const useTableActions = () => {
         "Delete table",
         `Delete Table ${table.table_number}? This cannot be undone.`,
         "Delete",
-        () => api.delete(`/TableEntity/${table.table_Id}`),
+        () => api.delete(`/TableEntity/${table.table_id}`),
         "Failed to delete table"
       ),
 
@@ -63,16 +63,16 @@ export const useTableActions = () => {
 
     toggleGroup: (group) =>
       run(
-        () => api.post(`/TableGroup/${group.tableGroup_Id}/toggle-status`),
+        () => api.post(`/TableGroup/${group.table_group_id}/toggle-status`),
         "Failed to update group status"
       ),
 
     deleteGroup: (group) =>
       confirm(
         "Delete table group",
-        `Delete "${group.group_Name}"? This cannot be undone.`,
+        `Delete "${group.group_name}"? This cannot be undone.`,
         "Delete",
-        () => api.delete(`/TableGroup/${group.tableGroup_Id}`),
+        () => api.delete(`/TableGroup/${group.table_group_id}`),
         "Failed to delete table group"
       ),
   };

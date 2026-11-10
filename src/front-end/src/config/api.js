@@ -1,6 +1,7 @@
 import axios from "axios";
 import storage from "@/utils/storage";
 import { getExpiredLoginPath } from "@/utils/tableVisit";
+import { warnOnMissingKeys, endpointLabel } from "@/utils/missingKeyWarnings";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -38,7 +39,13 @@ api.interceptors.request.use(
 
 // Optional: Handle 401 responses (token expired)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // In development, reading a key the response doesn't have prints a console warning (see missingKeyWarnings)
+    if (process.env.NODE_ENV === "development") {
+      response.data = warnOnMissingKeys(response.data, endpointLabel(response.config));
+    }
+    return response;
+  },
   (error) => {
     if (
       error.response?.status === 401 &&
