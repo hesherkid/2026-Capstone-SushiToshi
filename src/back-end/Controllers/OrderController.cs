@@ -1667,7 +1667,7 @@ namespace back_end.Controllers
                             item_id = i.Item_Id,
                             name = i.MenuItem?.Name,
                             quantity = i.Quantity,
-                            price = isAddOn || i.Charge_Reason == ChargeReason.OverLimit ? i.Price_At_Time : 0, // Only show price for add-ons
+                            price_at_time = isAddOn || i.Charge_Reason == ChargeReason.OverLimit ? i.Price_At_Time : 0, // Only show price for add-ons
                             is_add_on = isAddOn,
                             charge_reason = i.Charge_Reason.ToString(),
                             status = i.Order_Item_Status.ToString()
