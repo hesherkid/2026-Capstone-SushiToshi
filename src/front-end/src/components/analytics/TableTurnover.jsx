@@ -465,7 +465,7 @@ const TableTurnover = () => {
       params.from = appliedCustom.from;
       params.to = appliedCustom.to;
     }
-    if (useLocationFilter && homeLocation) params.locationId = homeLocation;
+    if (useLocationFilter && homeLocation) params.location_id = homeLocation;
     return JSON.stringify(params);
   }, [isClient, rangePreset, appliedCustom, useLocationFilter, homeLocation]);
 

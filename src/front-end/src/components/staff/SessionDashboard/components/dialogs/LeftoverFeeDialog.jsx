@@ -46,7 +46,7 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
     setLoading(true);
     setError(null);
     api
-      .get(`/Bill/leftover_fee/${sessionId}`)
+      .get(`/Bill/leftover-fee/${sessionId}`)
       .then(({ data }) => {
         setInfo(data);
         const current = Number(data.amount) || 0;
@@ -68,7 +68,7 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
     setSaving(true);
     setError(null);
     try {
-      const { data } = await api.put(`/Bill/leftover_fee/${sessionId}`, {
+      const { data } = await api.put(`/Bill/leftover-fee/${sessionId}`, {
         amount: value,
       });
       onApplied?.(data);

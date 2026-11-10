@@ -88,7 +88,7 @@ describe("warnOnMissingKeys", () => {
 
 describe("endpointLabel", () => {
   it("replaces ids, so each endpoint warns once", () => {
-    expect(endpointLabel({ method: "get", url: "/Bill/get_bills/12?_table_id=3" })).toBe("GET /Bill/get_bills/:id");
+    expect(endpointLabel({ method: "get", url: "/Bill/get-bills/12?table_id=3" })).toBe("GET /Bill/get-bills/:id");
     expect(endpointLabel({ method: "put", url: "/DiningSession/5/close" })).toBe("PUT /DiningSession/:id/close");
   });
 });

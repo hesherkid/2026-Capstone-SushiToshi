@@ -155,7 +155,7 @@ export const TableOrderProvider = ({ children }) => {
   const startBill = useCallback(
     async ({ billName, adults, seniors, children, toddlers }) => {
       try {
-        await api.post(`/Bill/create_Bill/${sessionId}`, {
+        await api.post(`/Bill/create-bill/${sessionId}`, {
           bill_name: billName.trim(),
           adult_count: adults,
           senior_count: seniors,

@@ -180,15 +180,6 @@ Each table's Session QR code has the site's address saved inside the image when 
    - Scan the table's WiFi code. The phone should offer to join the guest network.
 7. **Print.** Click **Download as PDF** (16 codes per page, sized for letter paper) and print.
 
-### Keep the legacy QR routes
-
-Codes printed by earlier versions of the app use older links:
-
-- `/join?table=4&location=1`
-- `/start-session?tableNumber=4&locationId=1`
-
-Both pages still exist in the frontend (`src/front-end/src/app/join/` and `src/front-end/src/app/start-session/`) and send customers on to the login page. **Don't remove them** while any of those older codes are still on tables.
-
 ## 6. Pre-launch checklist
 
 **Backend**

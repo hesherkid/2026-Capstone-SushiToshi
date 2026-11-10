@@ -94,7 +94,7 @@ const ITEMS = [
 const mockGets = (items = ITEMS) =>
   api.get.mockImplementation((url) => {
     if (url === "/Tag") return Promise.resolve({ status: 200, data: [SPICY] });
-    if (url === "/tag/5/menu_items")
+    if (url === "/tag/5/menu-items")
       return Promise.resolve({ status: 200, data: items });
     return Promise.resolve({ status: 200, data: [] });
   });
@@ -206,7 +206,7 @@ describe("Tag menu items dialog", () => {
   it("lists the tag's menu items with their images", async () => {
     const dialog = await openItems();
 
-    expect(api.get).toHaveBeenCalledWith("/tag/5/menu_items");
+    expect(api.get).toHaveBeenCalledWith("/tag/5/menu-items");
     expect(within(dialog).getByAltText("Hot Stone Steak")).toHaveAttribute(
       "src",
       "/images/66.png",

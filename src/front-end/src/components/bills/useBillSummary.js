@@ -21,7 +21,7 @@ export const useBillSummary = ({ open, sessionId, billId }) => {
           setError(null);
         }
         const { data } = await api.get(`/Bill/summary/${billId}`, {
-          params: { _session_id: sessionId },
+          params: { session_id: sessionId },
         });
         setSummary(data);
       } catch (err) {

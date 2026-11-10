@@ -64,7 +64,7 @@ api.get = async (url) => {
   if (url.toLowerCase() === "/category") {
     return { data: mockCategories };
   }
-  if (url.startsWith("/Category/get_menu_by_category/")) {
+  if (url.startsWith("/Category/get-menu-by-category/")) {
     const error = new Error("Not found");
     error.response = {
       status: 404,
@@ -75,7 +75,7 @@ api.get = async (url) => {
   return { data: [] };
 };
 api.put = async (url, data) => {
-  if (url.startsWith("/Category/update_category/")) {
+  if (url.startsWith("/Category/update-category/")) {
     const id = parseInt(url.split("/").pop());
     return { data: { ...data, category_id: id } };
   }
@@ -88,7 +88,7 @@ api.post = async (url, data) => {
   return { data: {} };
 };
 api.delete = async (url) => {
-  if (url.startsWith("/Category/delete_category/")) {
+  if (url.startsWith("/Category/delete-category/")) {
     return { data: "Category deleted successfully." };
   }
   return { data: {} };
@@ -104,7 +104,7 @@ const meta = {
         return HttpResponse.json(mockCategories, { status: 200 });
       }),
       http.put(
-        "/Category/update_category/:categoryId",
+        "/Category/update-category/:categoryId",
         async ({ request, params }) => {
           await delay(200);
           const body = await request.json();
@@ -122,7 +122,7 @@ const meta = {
           { status: 200 },
         );
       }),
-      http.delete("/Category/delete_category/:categoryId", async () => {
+      http.delete("/Category/delete-category/:categoryId", async () => {
         await delay(200);
         return HttpResponse.json("Category deleted successfully.", {
           status: 200,

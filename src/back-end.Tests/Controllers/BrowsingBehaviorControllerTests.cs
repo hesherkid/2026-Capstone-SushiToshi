@@ -294,8 +294,8 @@ public class BrowsingBehaviorControllerTests : IDisposable
     [Theory]
     [InlineData(0, 10, "top")]
     [InlineData(26, 10, "top")]
-    [InlineData(5, 0, "minViews")]
-    [InlineData(5, 1001, "minViews")]
+    [InlineData(5, 0, "min_views")]
+    [InlineData(5, 1001, "min_views")]
     public async Task GetBrowsingBehavior_TopOrMinViewsOutOfRange_ReturnsValidationProblem(int top, int minViews, string expectedKey)
     {
         // Act

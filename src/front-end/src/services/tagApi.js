@@ -14,7 +14,7 @@ export const updateTag = ({ tag_id, tag_name, tag_color }) =>
 export const deleteTag = (tagId) => api.delete(`/tag/${tagId}`);
 
 export const getTagMenuItems = (tagId) =>
-  api.get(`/tag/${tagId}/menu_items`).then((res) => res.data);
+  api.get(`/tag/${tagId}/menu-items`).then((res) => res.data);
 
 // This route lives on MenuItemController, but only this screen uses it
 export const removeTagFromItem = (itemId, tagId) =>

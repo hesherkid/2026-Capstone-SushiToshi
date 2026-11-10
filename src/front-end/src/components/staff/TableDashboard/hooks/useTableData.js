@@ -39,9 +39,9 @@ export const useTableData = () => {
     setError(null);
     try {
       const [tablesRes, groupsRes, emptyRes] = await Promise.all([
-        api.get(`/TableEntity?locationId=${locationId}`),
-        api.get(`/TableGroup?locationId=${locationId}`),
-        api.get(`/TableEntity/empty?locationId=${locationId}`),
+        api.get(`/TableEntity?location_id=${locationId}`),
+        api.get(`/TableGroup?location_id=${locationId}`),
+        api.get(`/TableEntity/empty?location_id=${locationId}`),
       ]);
       setRawTables(tablesRes.data || []);
       setRawGroups(groupsRes.data || []);

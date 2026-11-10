@@ -100,7 +100,7 @@ namespace back_end.Controllers
     /// <response code="500">An internal server error occurred while retrieving tables.</response>
     [Authorize]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> GetAllTables([FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> GetAllTables([FromQuery(Name = "location_id")] int? locationId)
     {
       try
       {
@@ -142,7 +142,7 @@ namespace back_end.Controllers
     /// <response code="500">An unexpected error occurred while retrieving the tables.</response>
     [Authorize]
     [HttpGet("empty")]
-    public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> ListEmptyTables([FromQuery] int? locationId)
+    public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> ListEmptyTables([FromQuery(Name = "location_id")] int? locationId)
     {
       try
       {

@@ -1177,15 +1177,15 @@ namespace back_end.Controllers
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/order/all_orders?locationId=1&deliveredOpenSessionsOnly=true
+        ///     GET /api/order/all-orders?location_id=1&delivered_open_sessions_only=true
         ///
         /// Returns all orders filtered by the specified location and delivered open sessions.
         /// </remarks>
-        [HttpGet("all_orders")]
+        [HttpGet("all-orders")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery] int? locationId = null, [FromQuery] bool deliveredOpenSessionsOnly = false)
+        public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery(Name = "location_id")] int? locationId = null, [FromQuery(Name = "delivered_open_sessions_only")] bool deliveredOpenSessionsOnly = false)
         {
             try
             {
@@ -1233,11 +1233,11 @@ namespace back_end.Controllers
         /// <param name="locationId">Optional location filter. Staff always get their current location</param>
         /// <param name="tableNumber">Optional table number. Matches single tables and tables in a group</param>
         /// <param name="name">Optional guest or bill name. Partial, case-insensitive match</param>
-        /// <returns>Orders placed in the range, newest first, in the same shape as all_orders</returns>
+        /// <returns>Orders placed in the range, newest first, in the same shape as all-orders</returns>
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/order/history?from=2026-10-20&amp;to=2026-10-26&amp;tableNumber=14&amp;name=lee
+        ///     GET /api/order/history?from=2026-10-20&amp;to=2026-10-26&amp;table_number=14&amp;name=lee
         ///
         /// </remarks>
         [HttpGet("history")]
@@ -1249,8 +1249,8 @@ namespace back_end.Controllers
         public async Task<ActionResult<IEnumerable<object>>> GetOrderHistory(
             [FromQuery] string? from,
             [FromQuery] string? to,
-            [FromQuery] int? locationId = null,
-            [FromQuery] int? tableNumber = null,
+            [FromQuery(Name = "location_id")] int? locationId = null,
+            [FromQuery(Name = "table_number")] int? tableNumber = null,
             [FromQuery] string? name = null)
         {
             try
@@ -1314,7 +1314,7 @@ namespace back_end.Controllers
             return BadRequest(new ValidationProblemDetails(ModelState));
         }
 
-        // Orders with everything the staff order views need. Shared by all_orders and history
+        // Orders with everything the staff order views need. Shared by all-orders and history
         private IQueryable<SessionOrder> StaffOrdersQuery() =>
             _context.SessionOrders
                 .Include(o => o.DiningSession)
@@ -1330,7 +1330,7 @@ namespace back_end.Controllers
                         .ThenInclude(mi => mi.MenuAssignments)
                 .AsQueryable();
 
-        // The staff order shape, shared by all_orders and history so the two can't drift apart
+        // The staff order shape, shared by all-orders and history so the two can't drift apart
         private static object ToStaffOrder(SessionOrder o) => new
         {
             order_id = o.Order_Id,
@@ -1667,7 +1667,7 @@ namespace back_end.Controllers
                             item_id = i.Item_Id,
                             name = i.MenuItem?.Name,
                             quantity = i.Quantity,
-                            price = isAddOn || i.Charge_Reason == ChargeReason.OverLimit ? i.Price_At_Time : 0, // Only show price for add-ons
+                            price_at_time = isAddOn || i.Charge_Reason == ChargeReason.OverLimit ? i.Price_At_Time : 0, // Only show price for add-ons
                             is_add_on = isAddOn,
                             charge_reason = i.Charge_Reason.ToString(),
                             status = i.Order_Item_Status.ToString()

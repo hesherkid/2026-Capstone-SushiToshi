@@ -61,7 +61,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     POST /api/bill/create_Bill/123
+    ///     POST /api/bill/create-bill/123
     ///     {
     ///         "bill_name": "Table 5 Bill",
     ///         "adult_count": 2,
@@ -85,7 +85,7 @@ namespace back_end.Controllers
     /// ordered on another open bill can't start a new one (staff can move them).
     /// </remarks>
     [Authorize]
-    [HttpPost("create_Bill/{sessionId}")]
+    [HttpPost("create-bill/{sessionId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -243,17 +243,17 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample requests:
     ///
-    ///     GET /api/bill/get_bills/123
+    ///     GET /api/bill/get-bills/123
     ///     (Returns all bills for session 123)
     ///     
-    ///     GET /api/bill/get_bills/123?_table_id=456
+    ///     GET /api/bill/get-bills/123?table_id=456
     ///     (Returns bills for session 123, filtered by table 456)
     ///
     /// Bills are ordered by creation date (newest first).
     /// </remarks>
-    [HttpGet("get_bills/{sessionId}")]
+    [HttpGet("get-bills/{sessionId}")]
     [Authorize]
-    public async Task<IActionResult> GetBills(int sessionId, [FromQuery(Name = "_table_id")] int? tableId = null)
+    public async Task<IActionResult> GetBills(int sessionId, [FromQuery(Name = "table_id")] int? tableId = null)
     {
       try
       {
@@ -350,13 +350,13 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     GET /api/bill/get_bill/123?_session_id=456
+    ///     GET /api/bill/get-bill/123?session_id=456
     ///
     /// Returns complete bill information including guest counts, status, and timestamps.
     /// </remarks>
-    [HttpGet("get_bill/{billId}")]
+    [HttpGet("get-bill/{billId}")]
     [Authorize]
-    public async Task<IActionResult> GetBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
+    public async Task<IActionResult> GetBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
       {
@@ -408,7 +408,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     PUT /api/bill/guest_counts/123?_session_id=456
+    ///     PUT /api/bill/guest-counts/123?session_id=456
     ///     { "adult_count": 3, "senior_count": 0, "child_count": 1, "tot_count": 0 }
     ///
     /// At least one guest. Can go past the table's seats, for a party that pulled up extra chairs.
@@ -421,12 +421,12 @@ namespace back_end.Controllers
     /// <response code="403">The table is at another location.</response>
     /// <response code="404">The bill or session was not found.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("guest_counts/{billId}")]
+    [HttpPut("guest-counts/{billId}")]
     [ProducesResponseType(typeof(BillResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, UpdateGuestCountsDto counts)
+    public async Task<IActionResult> UpdateGuestCounts([FromQuery(Name = "session_id")] int sessionId, int billId, UpdateGuestCountsDto counts)
     {
       try
       {
@@ -491,7 +491,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     PUT /api/bill/lock_guest_counts/123?_session_id=456
+    ///     PUT /api/bill/lock-guest-counts/123?session_id=456
     ///     { "locked": true }
     ///
     /// Locking means staff have checked the counts, so it also clears the bill's Started_By_Guest
@@ -502,12 +502,12 @@ namespace back_end.Controllers
     /// <response code="403">The table is at another location.</response>
     /// <response code="404">The bill or session was not found.</response>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("lock_guest_counts/{billId}")]
+    [HttpPut("lock-guest-counts/{billId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> LockGuestCounts([FromQuery(Name = "_session_id")] int sessionId, int billId, LockGuestCountsDto request)
+    public async Task<IActionResult> LockGuestCounts([FromQuery(Name = "session_id")] int sessionId, int billId, LockGuestCountsDto request)
     {
       try
       {
@@ -552,7 +552,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     PUT /api/bill/merge/123?_session_id=456
+    ///     PUT /api/bill/merge/123?session_id=456
     ///     { "into_bill_id": 124 }
     ///
     /// Everything on bill 123 moves to bill 124: everyone on it, all of its orders that aren't
@@ -570,7 +570,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> MergeBill([FromQuery(Name = "_session_id")] int sessionId, int billId, MergeBillDto request)
+    public async Task<IActionResult> MergeBill([FromQuery(Name = "session_id")] int sessionId, int billId, MergeBillDto request)
     {
       try
       {
@@ -676,7 +676,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     PUT /api/bill/close_bill/123?_session_id=456
+    ///     PUT /api/bill/close-bill/123?session_id=456
     ///
     /// Closes the specified bill and sets the closed_at timestamp.
     /// Requirements:
@@ -684,8 +684,8 @@ namespace back_end.Controllers
     /// - All orders associated with the bill must be completed (no pending orders)
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpPut("close_bill/{billId}")]
-    public async Task<IActionResult> CloseBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
+    [HttpPut("close-bill/{billId}")]
+    public async Task<IActionResult> CloseBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
       {
@@ -774,7 +774,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Used to fill in the "Add leftover fee" dialog before staff apply it.
     /// </remarks>
-    [HttpGet("leftover_fee/{sessionId}")]
+    [HttpGet("leftover-fee/{sessionId}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -816,7 +816,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     PUT /api/bill/leftover_fee/456
+    ///     PUT /api/bill/leftover-fee/456
     ///     { "amount": 15.00 }
     ///
     /// Staff decide when a table has left too much food. The fee is for the whole table and is
@@ -824,7 +824,7 @@ namespace back_end.Controllers
     /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
     /// The fee is taxed with the rest of the bill.
     /// </remarks>
-    [HttpPut("leftover_fee/{sessionId}")]
+    [HttpPut("leftover-fee/{sessionId}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -922,9 +922,9 @@ namespace back_end.Controllers
     /// <response code="400">The bill isn't open.</response>
     /// <response code="403">The caller isn't on this bill.</response>
     /// <response code="404">The bill or session was not found.</response>
-    [HttpPost("request_bill/{billId}")]
+    [HttpPost("request-bill/{billId}")]
     [Authorize]
-    public async Task<IActionResult> RequestBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
+    public async Task<IActionResult> RequestBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
       {
@@ -1001,7 +1001,7 @@ namespace back_end.Controllers
     /// <remarks>
     /// Sample request:
     ///
-    ///     POST /api/bill/cancel_bill/123?_session_id=456
+    ///     POST /api/bill/cancel-bill/123?session_id=456
     ///
     /// Cancels the specified bill and automatically cancels all pending orders associated with it.
     /// Only bills with 'Open' status can be cancelled, and only if none of their orders are being made
@@ -1009,8 +1009,8 @@ namespace back_end.Controllers
     /// The bill's closed_at timestamp is set to the current UTC time.
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
-    [HttpPost("cancel_bill/{billId}")]
-    public async Task<IActionResult> CancelBill([FromQuery(Name = "_session_id")] int sessionId, int billId)
+    [HttpPost("cancel-bill/{billId}")]
+    public async Task<IActionResult> CancelBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
       {
@@ -1193,7 +1193,7 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [Authorize]
-    public async Task<IActionResult> GetBillSummary([FromQuery(Name = "_session_id")] int sessionId, int billId)
+    public async Task<IActionResult> GetBillSummary([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
       {

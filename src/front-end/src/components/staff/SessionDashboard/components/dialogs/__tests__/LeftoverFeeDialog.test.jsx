@@ -11,7 +11,7 @@ const LEE = { bill_id: 80, bill_name: "Lee", leftover_charge: 0 };
 const PARK = { bill_id: 81, bill_name: "Park", leftover_charge: 0 };
 const KIM = { bill_id: 82, bill_name: "Kim", leftover_charge: 0 };
 
-// What GET /Bill/leftover_fee/8 returns: the default, the table's current fee and its open bills
+// What GET /Bill/leftover-fee/8 returns: the default, the table's current fee and its open bills
 const mockFee = ({
   amount = 0,
   bills = [LEE, PARK, KIM],
@@ -46,7 +46,7 @@ describe("Leftover fee dialog", () => {
     renderDialog();
 
     await waitFor(() => expect(feeInput()).toHaveValue(10));
-    expect(api.get).toHaveBeenCalledWith("/Bill/leftover_fee/8");
+    expect(api.get).toHaveBeenCalledWith("/Bill/leftover-fee/8");
     expect(screen.getByText("Default $10.00")).toBeInTheDocument();
     expect(
       screen.getByText("Split evenly across 3 open bills"),
@@ -81,7 +81,7 @@ describe("Leftover fee dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Apply fee" }));
 
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith("/Bill/leftover_fee/8", {
+      expect(api.put).toHaveBeenCalledWith("/Bill/leftover-fee/8", {
         amount: 15,
       }),
     );
@@ -104,7 +104,7 @@ describe("Leftover fee dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove fee" }));
 
     await waitFor(() =>
-      expect(api.put).toHaveBeenCalledWith("/Bill/leftover_fee/8", {
+      expect(api.put).toHaveBeenCalledWith("/Bill/leftover-fee/8", {
         amount: 0,
       }),
     );

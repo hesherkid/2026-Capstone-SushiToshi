@@ -9,6 +9,7 @@ public static class ApiJsonOptions
 {
     public static void Apply(JsonSerializerOptions options)
     {
+        options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
         options.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.Converters.Add(new JsonStringEnumConverter());
     }

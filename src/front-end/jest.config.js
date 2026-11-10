@@ -32,7 +32,6 @@ const customJestConfig = {
     "/app/analytics/",
     "/app/auth/",
     "/app/dashboard/call-server/",
-    "/app/join/",
   ],
   // Coverage thresholds: increased to current baseline with a buffer (Oct 2026)
   // Oct 2026: branches 57.58, funcs 61.39, lines 64.34, statements 63.98

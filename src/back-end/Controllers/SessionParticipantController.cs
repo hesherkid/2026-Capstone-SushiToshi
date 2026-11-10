@@ -100,7 +100,7 @@ namespace back_end.Controllers
     /// The bill you're on at your table, and the table's open bills you could join.
     /// </summary>
     /// <remarks>
-    /// Guests pick their party's bill (or start one with POST /api/bill/create_Bill) before ordering.
+    /// Guests pick their party's bill (or start one with POST /api/bill/create-bill) before ordering.
     /// Other bills show only their name and party size.
     /// </remarks>
     /// <response code="200">Your bill (null if you haven't picked one) and the open bills.</response>

@@ -269,7 +269,7 @@ namespace back_end.Controllers
     /// <response code="404">The specified tag was not found.</response>
     /// <response code="500">An unexpected server error occurred while retrieving data.</response>
     [Authorize(Policy = "adminOnly")]
-    [HttpGet("{tagId:int}/menu_items")]
+    [HttpGet("{tagId:int}/menu-items")]
     [Produces("application/json")]
 
     [SwaggerOperation(

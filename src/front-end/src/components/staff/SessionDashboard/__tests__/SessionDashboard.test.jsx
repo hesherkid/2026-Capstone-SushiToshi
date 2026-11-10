@@ -168,7 +168,7 @@ describe("Session dashboard", () => {
     expect(
       screen.getByText("Tables In Use").closest(".MuiCard-root"),
     ).toHaveTextContent("3Tables In Use");
-    expect(api.get).toHaveBeenCalledWith("/Dashboard/sessions?locationId=1");
+    expect(api.get).toHaveBeenCalledWith("/Dashboard/sessions?location_id=1");
     expect(api.get).toHaveBeenCalledWith("/ServiceRequest/pending");
     expect(api.get.mock.calls.some(([url]) => url.includes("by-session"))).toBe(
       false,
@@ -281,9 +281,9 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/lock_guest_counts/80",
+        "/Bill/lock-guest-counts/80",
         { locked: true },
-        { params: { _session_id: 8 } },
+        { params: { session_id: 8 } },
       ),
     );
   });
@@ -324,9 +324,9 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/lock_guest_counts/80",
+        "/Bill/lock-guest-counts/80",
         { locked: false },
-        { params: { _session_id: 8 } },
+        { params: { session_id: 8 } },
       ),
     );
   });
@@ -361,9 +361,9 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/guest_counts/80",
+        "/Bill/guest-counts/80",
         { adult_count: 3, senior_count: 0, child_count: 2, tot_count: 0 },
-        { params: { _session_id: 8 } },
+        { params: { session_id: 8 } },
       ),
     );
   });
@@ -664,7 +664,7 @@ describe("Session dashboard", () => {
       expect(api.put).toHaveBeenCalledWith(
         "/Bill/merge/81",
         { into_bill_id: 80 },
-        { params: { _session_id: 8 } },
+        { params: { session_id: 8 } },
       ),
     );
   });
@@ -715,7 +715,7 @@ describe("Session dashboard", () => {
 
     await waitFor(() =>
       expect(api.put).toHaveBeenCalledWith(
-        "/Bill/close_bill/80",
+        "/Bill/close-bill/80",
         null,
         expect.anything(),
       ),

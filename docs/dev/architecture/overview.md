@@ -129,8 +129,6 @@ Other parties' bills only ever show a customer their name and party size (`GET /
 6. **They're sent to the menu** (`/menu/full-menu`). Orders, service requests and the bill all use that session.
 7. **They pick their bill.** A guest who isn't on a bill yet sees `components/menu/BillChoiceDialog.jsx` and either joins one of the table's open bills or starts one for their party, then checks its guest count. They can't order until they're on a bill. If they rescan after their bill was closed or cancelled, `join` takes them off it so they pick again.
 
-Old QR codes that link to `/join` or `/start-session` still work. Those pages forward to `/auth/login` (`components/auth/QrLoginRedirect.jsx`).
-
 ## Bills and who's on them
 
 A table can have several bills, one per party paying separately. Each `SessionParticipant` has a nullable `Bill_Id` for the bill they order on and can see. Deleting a bill sets it back to null.
@@ -142,14 +140,14 @@ A table can have several bills, one per party paying separately. Each `SessionPa
 | `GET /api/sessionparticipant/{session_id}/bill`       | Their bill (with counts by guest type) and the table's open bills (name and party size only)         |
 | `PUT /api/sessionparticipant/{session_id}/bill`       | Join an open bill                                                                                    |
 | `PUT /api/sessionparticipant/{session_id}/bill/guests` | Change their own bill's guest counts                                                                 |
-| `POST /api/bill/create_Bill/{session_id}`             | Start a bill. A guest is put on it, and it's marked `Started_By_Guest`                               |
+| `POST /api/bill/create-bill/{session_id}`             | Start a bill. A guest is put on it, and it's marked `Started_By_Guest`                               |
 
 **Staff** manage everyone's from the Dining Session dialog (`components/staff/SessionDashboard`):
 
 | Endpoint                                                                   | What it does                                                                      |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `PUT /api/bill/guest_counts/{bill_id}`                                     | Edit Guests. Clears both "by guest" flags                                         |
-| `PUT /api/bill/lock_guest_counts/{bill_id}`                                | Lock or unlock the counts (`Counts_Locked`). Locking clears both "by guest" flags |
+| `PUT /api/bill/guest-counts/{bill_id}`                                     | Edit Guests. Clears both "by guest" flags                                         |
+| `PUT /api/bill/lock-guest-counts/{bill_id}`                                | Lock or unlock the counts (`Counts_Locked`). Locking clears both "by guest" flags |
 | `PUT /api/bill/merge/{bill_id}`                                            | Move people, non-cancelled orders, leftover fee and counts to another open bill, then cancel this one |
 | `PUT /api/sessionparticipant/{session_id}/participants/{participant_id}/bill` | Move someone, optionally with their orders (`move_orders`) and guests from the old bill's count (`guest_type`, `guest_count`) |
 
@@ -166,7 +164,7 @@ The rules live in `Helpers/BillLinks.cs`:
 
 **Concurrent changes:** anything that changes a bill's orders or counts takes a row lock first with `Helpers/BillLock.cs` (`SELECT ... FOR UPDATE` in a transaction), so an order can't land on a bill while staff close, merge or recount it. Lock several bills with the `params` overload, which locks in ID order to avoid deadlocks. Call it before reading anything. The in-memory test database has no locks, so it returns null there.
 
-**Cancelling a bill** (`POST /api/bill/cancel_bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
+**Cancelling a bill** (`POST /api/bill/cancel-bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
 
 ## Where things live
 
@@ -198,6 +196,14 @@ Most controllers use `ApplicationDbContext` directly. There's no repository laye
 | Menu item views (`ViewTrackingRules`) | `POST /api/menu-item-views` | `ViewTrackingRules.RateLimitPerMinute` | Sign-in token (IP address without one) |
 
 Diners on the restaurant Wi-Fi share one IP address, so the per-IP limits are set to allow a busy room. Behind a proxy, they only work per client with forwarded headers turned on (see [Behind a reverse proxy](../../setup/production-setup.md#behind-a-reverse-proxy)).
+
+**JSON and query parameter names** are snake_case. [Naming conventions](../naming-conventions.md) explains why, and why some C# names aren't standard:
+
+- **JSON keys** come from the C# property name. `ApiJsonOptions` sets the `SnakeCaseLower` policy, so `TableNumber` is sent and read as `table_number`. Only add `[JsonPropertyName]` when the key differs from the property name, such as `UserEmail` sent as `email`. Enums are sent as their names (`"Pending"`).
+- **Query parameters** don't go through the JSON policy. Give each multi-word one its name: `[FromQuery(Name = "location_id")] int? locationId`.
+- **In Development, a wrong name gets a 400** that names it, instead of quietly binding to 0 or null. That covers body keys a DTO doesn't have (`Json:RejectUnknownKeys`) and query parameters an action doesn't take (`Query:RejectUnknownParameters`).
+- **Tests guard both.** `DtoJsonKeysTests` compares every DTO's keys with `DtoJsonKeys.txt`. When a key change is intended, regenerate it with `UPDATE_DTO_JSON_KEYS=1 dotnet test --filter DtoJsonKeysTests`. `QueryParameterNameTests` checks that every query parameter is snake_case.
+- **Page URLs aren't API names.** The QR code link `/auth/login?locationId=…&tableNumber=…` keeps camelCase (see `QrGeneratorService`).
 
 ### Frontend (`src/front-end/src`)
 
@@ -231,7 +237,7 @@ The staff dashboards (`components/staff/Order`, `SessionDashboard`, `TableDashbo
 A typical feature touches these places, in this order:
 
 1. **Entity and migration**, if the data model changes (see [database.md](../database.md#changing-the-schema))
-2. **DTOs** for the request and response
+2. **DTOs** for the request and response, with snake_case keys and query parameters (see [JSON and query parameter names](#backend-src-back-end))
 3. **Controller endpoint**, with the right `[Authorize]` attribute and, for location data, `ILocationAccessService`
 4. **Service or helper**, if the logic is shared or worth testing on its own
 5. **Backend tests** in `src/back-end.Tests` (see [testing.md](../testing.md))

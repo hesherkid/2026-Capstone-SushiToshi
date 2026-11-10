@@ -64,14 +64,14 @@ const BrowsingBehavior = () => {
     if (!isClient) return null;
     if (rangePreset === "custom" && !appliedCustom) return null;
 
-    const params = { range: rangePreset, top: TOP_N, minViews };
+    const params = { range: rangePreset, top: TOP_N, min_views: minViews };
     if (rangePreset === "custom") {
       params.from = appliedCustom.from;
       params.to = appliedCustom.to;
     }
-    if (useLocationFilter && homeLocation) params.locationId = homeLocation;
-    if (categoryId) params.categoryId = categoryId;
-    if (tagId) params.tagId = tagId;
+    if (useLocationFilter && homeLocation) params.location_id = homeLocation;
+    if (categoryId) params.category_id = categoryId;
+    if (tagId) params.tag_id = tagId;
     return JSON.stringify(params);
   }, [
     isClient,

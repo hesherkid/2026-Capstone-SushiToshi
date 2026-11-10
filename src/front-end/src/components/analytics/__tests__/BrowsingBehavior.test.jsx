@@ -211,7 +211,7 @@ describe("BrowsingBehavior", () => {
         expect(api.get).toHaveBeenCalledWith(
           ENDPOINT,
           expect.objectContaining({
-            params: { range: "last7", top: 5, minViews: 10, locationId: "1" },
+            params: { range: "last7", top: 5, min_views: 10, location_id: "1" },
           }),
         );
       });
@@ -225,12 +225,12 @@ describe("BrowsingBehavior", () => {
       expect(api.get.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     });
 
-    it("omits locationId when no branch location is saved", async () => {
+    it("omits location_id when no branch location is saved", async () => {
       storage.get.mockReturnValue(null);
       render(<BrowsingBehavior />);
 
       await waitFor(() => expect(api.get).toHaveBeenCalled());
-      expect(lastParams()).toEqual({ range: "last7", top: 5, minViews: 10 });
+      expect(lastParams()).toEqual({ range: "last7", top: 5, min_views: 10 });
       expect(screen.getByText("All locations")).toBeInTheDocument();
     });
 
@@ -418,10 +418,10 @@ describe("BrowsingBehavior", () => {
         expect(lastParams()).toEqual({
           range: "custom",
           top: 5,
-          minViews: 10,
+          min_views: 10,
           from: "2025-01-06",
           to: "2025-01-12",
-          locationId: "1",
+          location_id: "1",
         }),
       );
     });
@@ -451,7 +451,7 @@ describe("BrowsingBehavior", () => {
       await user.click(within(chip).getByTestId("CancelIcon"));
 
       await waitFor(() =>
-        expect(lastParams()).toEqual({ range: "last7", top: 5, minViews: 10 }),
+        expect(lastParams()).toEqual({ range: "last7", top: 5, min_views: 10 }),
       );
 
       await user.click(
@@ -459,7 +459,7 @@ describe("BrowsingBehavior", () => {
       );
 
       await waitFor(() =>
-        expect(lastParams()).toMatchObject({ locationId: "1" }),
+        expect(lastParams()).toMatchObject({ location_id: "1" }),
       );
     });
 
@@ -470,7 +470,7 @@ describe("BrowsingBehavior", () => {
       await user.click(await screen.findByRole("option", { name: "Desserts" }));
 
       await waitFor(() =>
-        expect(lastParams()).toMatchObject({ categoryId: 2 }),
+        expect(lastParams()).toMatchObject({ category_id: 2 }),
       );
     });
 
@@ -480,7 +480,7 @@ describe("BrowsingBehavior", () => {
       await user.click(screen.getByRole("combobox", { name: /tag/i }));
       await user.click(await screen.findByRole("option", { name: "Spicy" }));
 
-      await waitFor(() => expect(lastParams()).toMatchObject({ tagId: 7 }));
+      await waitFor(() => expect(lastParams()).toMatchObject({ tag_id: 7 }));
     });
 
     it("requests the chosen high views threshold", async () => {
@@ -491,7 +491,7 @@ describe("BrowsingBehavior", () => {
       );
       await user.click(await screen.findByRole("option", { name: "20 views" }));
 
-      await waitFor(() => expect(lastParams()).toMatchObject({ minViews: 20 }));
+      await waitFor(() => expect(lastParams()).toMatchObject({ min_views: 20 }));
     });
   });
 
@@ -649,14 +649,14 @@ describe("BrowsingBehavior", () => {
         response: {
           status: 400,
           data: {
-            errors: { minViews: ["minViews must be between 1 and 1000"] },
+            errors: { min_views: ["min_views must be between 1 and 1000"] },
           },
         },
       });
       render(<BrowsingBehavior />);
 
       expect(
-        await screen.findByText("minViews must be between 1 and 1000"),
+        await screen.findByText("min_views must be between 1 and 1000"),
       ).toBeInTheDocument();
     });
 

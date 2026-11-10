@@ -36,8 +36,7 @@ const statusKey = (status) => {
 
 // Add-ons and over-limit extras show what they cost; all you can eat items are included
 const itemPrice = (item) => {
-  // "Mine" sends price; the table view sends price_at_time
-  const price = Number(item.price ?? item.price_at_time);
+  const price = Number(item.price_at_time);
   if (!price) return null;
   const quantity = item.quantity || 1;
   return quantity > 1
