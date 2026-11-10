@@ -13,7 +13,11 @@ using back_end.Services;
 namespace back_end.domain.Seeders
 {
   /// <summary>
-  /// Seeds bills with guest counts/status, tied to assigned tables and participants.
+  /// Seeds bills with guest counts/status, and puts everyone seated at the session on one of them
+  /// (SessionParticipant.Bill_Id), the way picking or starting a bill does in the app.
+  /// - Every bill has at least one person on it, and is named after the first of them
+  /// - A bill's guest count is never less than the people on it (kids without a phone make up the rest)
+  /// - People stay on their bill after it's closed or cancelled, same as the app
   /// </summary>
   public class BillSeeder : ISeeder
   {
@@ -22,19 +26,11 @@ namespace back_end.domain.Seeders
     private readonly IPricingService _pricingService;
     private readonly Random _rng = new();
 
-    private Dictionary<int, (string DisplayName, string GivenName, string Surname)> _userSeedData = new();
-
     public BillSeeder(ApplicationDbContext context, ILogger<BillSeeder> logger, IPricingService pricingService)
     {
       _context = context;
       _logger = logger;
       _pricingService = pricingService;
-    }
-
-
-    public void SetUserSeedData(Dictionary<int, (string DisplayName, string GivenName, string Surname)> userSeedData)
-    {
-      _userSeedData = userSeedData;
     }
 
     public void Seed()
@@ -54,59 +50,62 @@ namespace back_end.domain.Seeders
         return;
       }
 
-      int created = 0;
-      var userUsageCount = new Dictionary<int, int>();
-      var userIds = _userSeedData.Keys.ToList();
+      // Tracked, so setting Bill below saves each person's Bill_Id with the bills
+      var seatsBySession = _context.SessionParticipants
+          .ToList()
+          .GroupBy(p => p.Session_Id)
+          .ToDictionary(g => g.Key, g => g.ToList());
 
-      var sessionsToProcess = sessions;
+      int created = 0, seated = 0;
 
-      foreach (var s in sessionsToProcess)
+      foreach (var s in sessions)
       {
         int totalSeats;
-        List<int> tableNumbers;
 
         if (s.Table_Id.HasValue && s.Table != null)
         {
           totalSeats = s.Table.seat_count;
-          tableNumbers = new List<int> { s.Table.table_number };
         }
         else if (s.TableGroup_Id.HasValue && s.TableGroup != null)
         {
           totalSeats = s.TableGroup.Tables.Sum(t => t.seat_count);
-          tableNumbers = s.TableGroup.Tables.Select(t => t.table_number).ToList();
         }
         else
         {
           continue;
         }
 
-        var remaining = totalSeats;
-
-        var numBillsForSession = _rng.Next(1, Math.Min(4, totalSeats + 1));
-
-        for (int billIndex = 0; billIndex < numBillsForSession; billIndex++)
+        if (!seatsBySession.TryGetValue(s.Session_Id, out var people) || people.Count == 0)
         {
-          if (remaining <= 0) break;
+          continue;
+        }
 
-          // Pick a random user as the bill owner
-          var userId = userIds[_rng.Next(userIds.Count)];
-          var info = _userSeedData[userId];
+        // 1 to 3 bills, never more than the people seated, so nobody's bill is empty
+        var numBillsForSession = _rng.Next(1, Math.Min(3, people.Count) + 1);
 
-          var maxGuests = Math.Min(remaining, 6);
-          var adult = _rng.Next(1, maxGuests + 1);
-          var senior = _rng.Next(0, Math.Max(0, maxGuests - adult) + 1);
-          var child = _rng.Next(0, Math.Max(0, maxGuests - adult - senior) + 1);
-          var tot = _rng.Next(0, Math.Max(0, maxGuests - adult - senior - child) + 1);
-          var total = adult + senior + child + tot;
+        // Deal the shuffled people out across the bills
+        var shuffled = people.OrderBy(_ => _rng.Next()).ToList();
+        var peopleOnBill = Enumerable.Range(0, numBillsForSession)
+            .Select(i => shuffled.Where((_, n) => n % numBillsForSession == i).OrderBy(p => p.Joined_At).ToList())
+            .ToList();
 
-          if (total == 0)
-          {
-            // Ensure at least one guest
-            adult = 1;
-            total = 1;
-          }
+        // Seats left over after one per person, for kids and anyone who didn't scan in
+        var spareSeats = Math.Max(0, totalSeats - people.Count);
 
-          remaining -= total;
+        foreach (var onBill in peopleOnBill)
+        {
+          var owner = onBill[0];
+
+          var extra = _rng.Next(0, Math.Min(spareSeats, 3) + 1);
+          spareSeats -= extra;
+          var total = onBill.Count + extra;
+
+          // Everyone with a phone is an adult or senior; at least one adult per bill
+          var grownUps = onBill.Count + _rng.Next(0, extra + 1);
+          var senior = _rng.Next(0, grownUps);
+          var adult = grownUps - senior;
+          var child = _rng.Next(0, total - grownUps + 1);
+          var tot = total - grownUps - child;
 
           BillStatus status;
           if (s.Ended_At != null)
@@ -125,16 +124,11 @@ namespace back_end.domain.Seeders
               status = BillStatus.Cancelled;
           }
 
-          var tableNumbersStr = tableNumbers.Select(n => n.ToString());
-          var billName = $"Table {string.Join(" & ", tableNumbersStr)} - Party of {total}";
-
-          var participant = _context.SessionParticipants
-              .Where(p => p.Session_Id == s.Session_Id)
-              .OrderBy(p => p.Joined_At)
-              .FirstOrDefault();
+          // Named after whoever started it, like a bill started from the menu
+          var billName = owner.User_Name ?? $"Party of {total}";
 
           var tableEnd = s.Ended_At ?? DateTime.UtcNow;
-          var createdAt = (participant?.Joined_At ?? s.Started_At).AddMinutes(_rng.Next(5, 31));
+          var createdAt = owner.Joined_At.AddMinutes(_rng.Next(5, 31));
           if (createdAt > tableEnd) createdAt = tableEnd;
 
           // Closed and cancelled bills both get Closed_At. A bill closed or cancelled at a 
@@ -145,11 +139,6 @@ namespace back_end.domain.Seeders
             _ when s.Ended_At != null => s.Ended_At,
             _ => createdAt.AddMinutes(_rng.NextDouble() * (tableEnd - createdAt).TotalMinutes)
           };
-
-          // Track user usage
-          if (!userUsageCount.ContainsKey(userId))
-            userUsageCount[userId] = 0;
-          userUsageCount[userId]++;
 
           var bill = new Billing
           {
@@ -166,14 +155,16 @@ namespace back_end.domain.Seeders
           };
 
           _context.Bills.Add(bill);
+          onBill.ForEach(p => p.Bill = bill);
           created++;
+          seated += onBill.Count;
         }
       }
 
       var totalOpen = _context.Bills.Count(b => b.Status == BillStatus.Open);
       var totalClosed = _context.Bills.Count(b => b.Status == BillStatus.Closed);
       var totalCancelled = _context.Bills.Count(b => b.Status == BillStatus.Cancelled);
-      _logger.LogInformation($"Created {created} bills ({totalOpen} open, {totalClosed} closed, {totalCancelled} cancelled)");
+      _logger.LogInformation($"Created {created} bills ({totalOpen} open, {totalClosed} closed, {totalCancelled} cancelled) with {seated} people on them");
     }
 
     /// <summary>

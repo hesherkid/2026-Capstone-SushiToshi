@@ -204,7 +204,6 @@ namespace back_end.domain.Seeders
         CreateUserIdMapping();
 
         // Pass userSeedData to seeders that need it
-        _billSeeder.SetUserSeedData(_userIdSeedData);
         _sessionParticipantSeeder.SetUserSeedData(_userIdSeedData);
         _sessionOrderSeeder.SetUserSeedData(_userIdSeedData);
         _serviceRequestSeeder.SetUserSeedData(_userIdSeedData);
