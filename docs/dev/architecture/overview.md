@@ -197,6 +197,14 @@ Most controllers use `ApplicationDbContext` directly. There's no repository laye
 
 Diners on the restaurant Wi-Fi share one IP address, so the per-IP limits are set to allow a busy room. Behind a proxy, they only work per client with forwarded headers turned on (see [Behind a reverse proxy](../../setup/production-setup.md#behind-a-reverse-proxy)).
 
+**JSON and query parameter names** are snake_case:
+
+- **JSON keys** come from the C# property name. `ApiJsonOptions` sets the `SnakeCaseLower` policy, so `TableNumber` is sent and read as `table_number`. Only add `[JsonPropertyName]` when the key differs from the property name, such as `UserEmail` sent as `email`. Enums are sent as their names (`"Pending"`).
+- **Query parameters** don't go through the JSON policy. Give each multi-word one its name: `[FromQuery(Name = "location_id")] int? locationId`.
+- **In Development, a wrong name gets a 400** that names it, instead of quietly binding to 0 or null. That covers body keys a DTO doesn't have (`Json:RejectUnknownKeys`) and query parameters an action doesn't take (`Query:RejectUnknownParameters`).
+- **Tests guard both.** `DtoJsonKeysTests` compares every DTO's keys with `DtoJsonKeys.txt`. When a key change is intended, regenerate it with `UPDATE_DTO_JSON_KEYS=1 dotnet test --filter DtoJsonKeysTests`. `QueryParameterNameTests` checks that every query parameter is snake_case.
+- **Page URLs aren't API names.** The QR code link `/auth/login?locationId=…&tableNumber=…` keeps camelCase (see `QrGeneratorService`).
+
 ### Frontend (`src/front-end/src`)
 
 The frontend is Next.js with the App Router, React 19 and MUI. All pages are client components that call the API.
@@ -229,7 +237,7 @@ The staff dashboards (`components/staff/Order`, `SessionDashboard`, `TableDashbo
 A typical feature touches these places, in this order:
 
 1. **Entity and migration**, if the data model changes (see [database.md](../database.md#changing-the-schema))
-2. **DTOs** for the request and response
+2. **DTOs** for the request and response, with snake_case keys and query parameters (see [JSON and query parameter names](#backend-src-back-end))
 3. **Controller endpoint**, with the right `[Authorize]` attribute and, for location data, `ILocationAccessService`
 4. **Service or helper**, if the logic is shared or worth testing on its own
 5. **Backend tests** in `src/back-end.Tests` (see [testing.md](../testing.md))
