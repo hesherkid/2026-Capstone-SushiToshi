@@ -197,7 +197,7 @@ Most controllers use `ApplicationDbContext` directly. There's no repository laye
 
 Diners on the restaurant Wi-Fi share one IP address, so the per-IP limits are set to allow a busy room. Behind a proxy, they only work per client with forwarded headers turned on (see [Behind a reverse proxy](../../setup/production-setup.md#behind-a-reverse-proxy)).
 
-**JSON and query parameter names** are snake_case:
+**JSON and query parameter names** are snake_case. [Naming conventions](../naming-conventions.md) explains why, and why some C# names aren't standard:
 
 - **JSON keys** come from the C# property name. `ApiJsonOptions` sets the `SnakeCaseLower` policy, so `TableNumber` is sent and read as `table_number`. Only add `[JsonPropertyName]` when the key differs from the property name, such as `UserEmail` sent as `email`. Enums are sent as their names (`"Pending"`).
 - **Query parameters** don't go through the JSON policy. Give each multi-word one its name: `[FromQuery(Name = "location_id")] int? locationId`.

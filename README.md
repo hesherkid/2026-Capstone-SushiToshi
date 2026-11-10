@@ -119,7 +119,7 @@ See [docs/dev/testing.md](docs/dev/testing.md) for running individual suites and
 
 ## 📋 Usage
 
-Guides for admins, setup and development are listed in [docs/README.md](docs/README.md).
+Guides for admins, setup and development are listed in [docs/README.md](docs/README.md). For why the API uses snake_case JSON keys and why some C# names aren't standard, see [Naming conventions](docs/dev/naming-conventions.md).
 
 ## 👥 Roles & Permissions
 
