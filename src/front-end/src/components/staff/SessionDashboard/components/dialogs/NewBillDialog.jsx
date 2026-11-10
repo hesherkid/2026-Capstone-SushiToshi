@@ -10,8 +10,8 @@ import storage from "@/utils/storage";
 const useBillTableLabel = (sessionId, sessions = []) =>
   useMemo(() => {
     // Staff: the session dashboard has every active session's tables
-    const session = sessions.find((s) => s.session_Id === Number(sessionId));
-    if (session?.table_Numbers?.length) return tableLabel(session.table_Numbers);
+    const session = sessions.find((s) => s.session_id === Number(sessionId));
+    if (session?.table_numbers?.length) return tableLabel(session.table_numbers);
 
     // Guests: the table number saved from their QR code
     const qrTable = storage.get("tableNumber");
@@ -55,7 +55,7 @@ const NewBillDialog = ({ open, sessionId, onClose }) => {
 
   // Staff can seat more than the table has (extra chairs), but confirm it by creating anyway
   const seatWarning =
-    totalGuests > 0 ? overSeatsWarning(sessions?.find((s) => s.session_Id === Number(sessionId)), totalGuests) : null;
+    totalGuests > 0 ? overSeatsWarning(sessions?.find((s) => s.session_id === Number(sessionId)), totalGuests) : null;
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;

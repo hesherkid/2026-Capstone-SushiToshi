@@ -17,14 +17,14 @@ describe("New bill dialog title", () => {
   });
 
   it("names the session's table for staff", () => {
-    mockSessions = [{ session_Id: 8, table_Numbers: [3] }];
+    mockSessions = [{ session_id: 8, table_numbers: [3] }];
     renderDialog();
 
     expect(screen.getByText("Create New Bill for Table 3")).toBeInTheDocument();
   });
 
   it("names every table in a table group", () => {
-    mockSessions = [{ session_Id: 8, table_Numbers: [1, 2] }];
+    mockSessions = [{ session_id: 8, table_numbers: [1, 2] }];
     renderDialog();
 
     expect(screen.getByText("Create New Bill for Tables 1, 2")).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe("New bill dialog seats", () => {
     fireEvent.change(screen.getByLabelText("Adults"), { target: { name: "adultCount", value: String(count) } });
 
   it("warns staff before seating more than the table has, but still lets them", () => {
-    mockSessions = [{ session_Id: 8, table_Numbers: [3], seat_Count: 4, bills: [{ bill_Id: 1, status: "OPEN", total_Guests: 2 }] }];
+    mockSessions = [{ session_id: 8, table_numbers: [3], seat_count: 4, bills: [{ bill_id: 1, status: "OPEN", total_guests: 2 }] }];
     renderDialog();
 
     enterAdults(2);
@@ -67,7 +67,7 @@ describe("New bill dialog seats", () => {
   });
 
   it("doesn't count closed bills against the seats", () => {
-    mockSessions = [{ session_Id: 8, seat_Count: 4, bills: [{ bill_Id: 1, status: "CLOSED", total_Guests: 2 }] }];
+    mockSessions = [{ session_id: 8, seat_count: 4, bills: [{ bill_id: 1, status: "CLOSED", total_guests: 2 }] }];
     renderDialog();
 
     enterAdults(4);

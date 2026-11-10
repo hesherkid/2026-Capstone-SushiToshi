@@ -215,7 +215,7 @@ describe("FullMenu guest flow", () => {
     const baseMock = api.get.getMockImplementation();
     api.get.mockImplementation((url, config) => {
       if (url.includes("/DiningSession/session-menu/42")) {
-        return Promise.resolve({ status: 200, data: { menu_Id: 7 } }); // no location
+        return Promise.resolve({ status: 200, data: { menu_id: 7 } }); // no location
       }
       return baseMock(url, config);
     });

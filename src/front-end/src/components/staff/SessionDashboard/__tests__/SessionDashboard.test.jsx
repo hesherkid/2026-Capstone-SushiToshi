@@ -55,38 +55,38 @@ if (typeof window.ResizeObserver === "undefined") {
 
 const sessions = [
   {
-    session_Id: 7,
-    table_Numbers: [3],
-    started_At: "2026-10-14T20:00:00Z",
-    active_Participants: 2,
+    session_id: 7,
+    table_numbers: [3],
+    started_at: "2026-10-14T20:00:00Z",
+    active_participants: 2,
     bills: [
-      { bill_Id: 70, bill_Name: "Smith", status: "Closed", total_Guests: 2 },
+      { bill_id: 70, bill_name: "Smith", status: "Closed", total_guests: 2 },
     ],
-    bill_Count: 1,
-    is_Closable: true,
+    bill_count: 1,
+    is_closable: true,
   },
   {
-    session_Id: 8,
-    table_Numbers: [1, 2],
-    started_At: "2026-10-14T20:10:00Z",
-    active_Participants: 1, // one phone for a party of 4
+    session_id: 8,
+    table_numbers: [1, 2],
+    started_at: "2026-10-14T20:10:00Z",
+    active_participants: 1, // one phone for a party of 4
     bills: [
       {
-        bill_Id: 80,
-        bill_Name: "Lee",
+        bill_id: 80,
+        bill_name: "Lee",
         status: "Open",
-        total_Guests: 4,
-        adult_Count: 4,
-        people_On_Bill: 1,
-        started_By_Guest: true,
+        total_guests: 4,
+        adult_count: 4,
+        people_on_bill: 1,
+        started_by_guest: true,
       },
     ],
     people: [
-      { participant_Id: 5, user_Name: "Ana Lee", bill_Id: 80 },
-      { participant_Id: 6, user_Name: "Ben Park", bill_Id: null },
+      { participant_id: 5, user_name: "Ana Lee", bill_id: 80 },
+      { participant_id: 6, user_name: "Ben Park", bill_id: null },
     ],
-    bill_Count: 1,
-    is_Closable: false,
+    bill_count: 1,
+    is_closable: false,
   },
 ];
 
@@ -238,15 +238,15 @@ describe("Session dashboard", () => {
   it("warns staff when more people are on a bill than its guest count, or a guest changed it", async () => {
     // A guest said 1, then two more people joined from their phones
     const PARK = {
-      bill_Id: 81,
-      bill_Name: "Park",
+      bill_id: 81,
+      bill_name: "Park",
       status: "Open",
-      total_Guests: 1,
-      people_On_Bill: 3,
-      counts_Changed_By_Guest: true,
+      total_guests: 1,
+      people_on_bill: 3,
+      counts_changed_by_guest: true,
     };
     const withPark = sessions.map((s) =>
-      s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
+      s.session_id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
     );
     const defaultGet = api.get.getMockImplementation();
     api.get.mockImplementation((url) =>
@@ -290,11 +290,11 @@ describe("Session dashboard", () => {
 
   it("shows a locked bill, with a way to unlock it", async () => {
     const locked = sessions.map((s) =>
-      s.session_Id === 8
+      s.session_id === 8
         ? {
             ...s,
             bills: [
-              { ...s.bills[0], started_By_Guest: false, counts_Locked: true },
+              { ...s.bills[0], started_by_guest: false, counts_locked: true },
             ],
           }
         : s,
@@ -370,24 +370,24 @@ describe("Session dashboard", () => {
 
   it("fills in a bill's current guests when staff edit them", async () => {
     const PARK = {
-      bill_Id: 81,
-      bill_Name: "Park",
+      bill_id: 81,
+      bill_name: "Park",
       status: "Open",
-      total_Guests: 5,
-      adult_Count: 2,
-      senior_Count: 1,
-      child_Count: 2,
-      tot_Count: 0,
+      total_guests: 5,
+      adult_count: 2,
+      senior_count: 1,
+      child_count: 2,
+      tot_count: 0,
     };
     // Without the breakdown, the guests show as adults so the total still matches
     const KIM = {
-      bill_Id: 82,
-      bill_Name: "Kim",
+      bill_id: 82,
+      bill_name: "Kim",
       status: "Open",
-      total_Guests: 3,
+      total_guests: 3,
     };
     const withBills = sessions.map((s) =>
-      s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK, KIM] } : s,
+      s.session_id === 8 ? { ...s, bills: [...s.bills, PARK, KIM] } : s,
     );
     const defaultGet = api.get.getMockImplementation();
     api.get.mockImplementation((url) =>
@@ -434,14 +434,14 @@ describe("Session dashboard", () => {
 
   it("lists who's on which bill, and lets staff move someone with their orders", async () => {
     const PARK = {
-      bill_Id: 81,
-      bill_Name: "Park",
+      bill_id: 81,
+      bill_name: "Park",
       status: "Open",
-      total_Guests: 1,
-      people_On_Bill: 0,
+      total_guests: 1,
+      people_on_bill: 0,
     };
     const withPark = sessions.map((s) =>
-      s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
+      s.session_id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
     );
     const defaultGet = api.get.getMockImplementation();
     api.get.mockImplementation((url) =>
@@ -506,15 +506,15 @@ describe("Session dashboard", () => {
   it("moves several guests' counts when one phone stands for a party, and warns about bills that asked for the bill", async () => {
     // Park has asked for the bill
     const PARK = {
-      bill_Id: 81,
-      bill_Name: "Park",
+      bill_id: 81,
+      bill_name: "Park",
       status: "Open",
-      total_Guests: 1,
-      adult_Count: 1,
-      requested_At: "2026-10-14T21:00:00Z",
+      total_guests: 1,
+      adult_count: 1,
+      requested_at: "2026-10-14T21:00:00Z",
     };
     const withPark = sessions.map((s) =>
-      s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
+      s.session_id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
     );
     const defaultGet = api.get.getMockImplementation();
     api.get.mockImplementation((url) =>
@@ -567,14 +567,14 @@ describe("Session dashboard", () => {
 
   it("can move someone without changing either bill's guest count", async () => {
     const PARK = {
-      bill_Id: 81,
-      bill_Name: "Park",
+      bill_id: 81,
+      bill_name: "Park",
       status: "Open",
-      total_Guests: 1,
-      people_On_Bill: 0,
+      total_guests: 1,
+      people_on_bill: 0,
     };
     const withPark = sessions.map((s) =>
-      s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
+      s.session_id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
     );
     const defaultGet = api.get.getMockImplementation();
     api.get.mockImplementation((url) =>
@@ -621,15 +621,15 @@ describe("Session dashboard", () => {
   it("merges one bill into another, moving its guests even without a phone", async () => {
     // Nobody joined Park on a phone; its 2 guests still move
     const PARK = {
-      bill_Id: 81,
-      bill_Name: "Park",
+      bill_id: 81,
+      bill_name: "Park",
       status: "Open",
-      total_Guests: 2,
-      adult_Count: 2,
-      people_On_Bill: 0,
+      total_guests: 2,
+      adult_count: 2,
+      people_on_bill: 0,
     };
     const withPark = sessions.map((s) =>
-      s.session_Id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
+      s.session_id === 8 ? { ...s, bills: [...s.bills, PARK] } : s,
     );
     const defaultGet = api.get.getMockImplementation();
     api.get.mockImplementation((url) =>

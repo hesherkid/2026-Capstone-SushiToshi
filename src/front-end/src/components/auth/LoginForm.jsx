@@ -100,11 +100,11 @@ const LoginFormContent = () => {
     try {
       const { data } = await api.post(
         "/DiningSession/join",
-        { Table_Number: Number(tableNumber), Location_Id: Number(locationId) },
+        { table_number: Number(tableNumber), location_id: Number(locationId) },
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
-      storage.set("session_id", String(data.session_Id));
-      return data.session_Id;
+      storage.set("session_id", String(data.session_id));
+      return data.session_id;
     } catch (err) {
       // e.g. "Table 4 doesn't have an active session yet. Please ask staff to start your table."
       throw new TableJoinError(

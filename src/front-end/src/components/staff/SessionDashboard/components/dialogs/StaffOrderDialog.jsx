@@ -28,8 +28,8 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
   const { notifySuccess } = useNotification();
 
   // The session as of the last poll, so a closed bill shows up here
-  const session = open ? sessions.find((s) => s.session_Id === sessionId) ?? null : null;
-  const bill = session?.bills?.find((b) => b.bill_Id === billId);
+  const session = open ? sessions.find((s) => s.session_id === sessionId) ?? null : null;
+  const bill = session?.bills?.find((b) => b.bill_id === billId);
 
   const order = useStaffOrder(session);
   const [search, setSearch] = useState("");
@@ -59,7 +59,7 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
     setError(null);
     try {
       await order.placeOrder(billId);
-      notifySuccess(`Order placed on ${bill.bill_Name}`);
+      notifySuccess(`Order placed on ${bill.bill_name}`);
       refreshData();
       onClose();
     } catch (err) {
@@ -143,8 +143,8 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
   return (
     <AppDialog open={open} onClose={handleClose} maxWidth="md">
       <DialogHeader
-        title={bill ? `New Order · ${bill.bill_Name}` : "New Order"}
-        subtitle={session && `Dining Session #${session.session_Id} · ${tableLabel(session.table_Numbers)}`}
+        title={bill ? `New Order · ${bill.bill_name}` : "New Order"}
+        subtitle={session && `Dining Session #${session.session_id} · ${tableLabel(session.table_numbers)}`}
         onClose={handleClose}
         closeDisabled={isSaving}
       />
@@ -172,7 +172,7 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
                 This bill is closed, so no more orders can be added to it.
               </Alert>
             )}
-            {canOrder && bill.requested_At && (
+            {canOrder && bill.requested_at && (
               <Alert severity="info" sx={{ mx: 3, mb: 2 }}>
                 The guests asked for this bill. Staff can still add to it.
               </Alert>

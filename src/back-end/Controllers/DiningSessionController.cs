@@ -95,9 +95,9 @@ namespace back_end.Controllers
         var menu = await _context.Menus.Where(m => m.Menu_id == sessionData.MenuId).FirstOrDefaultAsync();
         if (menu == null) return BadRequest("Menu Does not Exist");
 
-        var location = await _context.Locations.Where(l => l.Location_Id == sessionData.Location_Id).FirstOrDefaultAsync();
+        var location = await _context.Locations.Where(l => l.Location_Id == sessionData.LocationId).FirstOrDefaultAsync();
         if (location == null) return BadRequest("Location Does not Exist");
-        if (!await _locationAccess.CanAccessLocationAsync(User, sessionData.Location_Id))
+        if (!await _locationAccess.CanAccessLocationAsync(User, sessionData.LocationId))
         {
           return LocationResults.OtherLocation();
         }
@@ -109,14 +109,14 @@ namespace back_end.Controllers
 
         if (assignmentType == "table")
         {
-          if (!sessionData.Table_Id.HasValue)
+          if (!sessionData.TableId.HasValue)
             return BadRequest("Table_Id is required when assignmentType is 'table'");
 
           var table = await _context.Tables
-              .FirstOrDefaultAsync(t => t.Table_Id == sessionData.Table_Id.Value && t.is_active);
+              .FirstOrDefaultAsync(t => t.Table_Id == sessionData.TableId.Value && t.is_active);
 
-          if (table == null) return BadRequest($"Table: {sessionData.Table_Id} not found or inactive");
-          if (table.Location_Id != sessionData.Location_Id)
+          if (table == null) return BadRequest($"Table: {sessionData.TableId} not found or inactive");
+          if (table.Location_Id != sessionData.LocationId)
             return BadRequest($"Table belongs to a different location");
 
           // Busy if the table, or a table group it belongs to, already has an open session
@@ -133,16 +133,16 @@ namespace back_end.Controllers
         }
         else if (assignmentType == "tablegroup")
         {
-          if (!sessionData.TableGroup_Id.HasValue)
+          if (!sessionData.TableGroupId.HasValue)
             return BadRequest("TableGroup_Id is required when assignmentType is 'table_group'");
 
           var tableGroup = await _context.TableGroups
               .Include(tg => tg.Tables)
-              .FirstOrDefaultAsync(tg => tg.TableGroup_Id == sessionData.TableGroup_Id.Value && tg.Is_Active);
+              .FirstOrDefaultAsync(tg => tg.TableGroup_Id == sessionData.TableGroupId.Value && tg.Is_Active);
 
           if (tableGroup == null)
-            return BadRequest($"Table group: {sessionData.TableGroup_Id} not found or inactive");
-          if (tableGroup.Location_Id != sessionData.Location_Id)
+            return BadRequest($"Table group: {sessionData.TableGroupId} not found or inactive");
+          if (tableGroup.Location_Id != sessionData.LocationId)
             return BadRequest($"Table group belongs to a different location");
 
           var tableIds = tableGroup.Tables.Select(t => t.Table_Id).ToList();
@@ -165,7 +165,7 @@ namespace back_end.Controllers
         var newSession = new DiningSession
         {
           Menu_Id = sessionData.MenuId,
-          Location_Id = sessionData.Location_Id,
+          Location_Id = sessionData.LocationId,
           Table_Id = tableId,
           TableGroup_Id = tableGroupId,
           Started_At = DateTime.UtcNow
@@ -177,13 +177,13 @@ namespace back_end.Controllers
 
         return Ok(new DiningSessionResponseDto
         {
-          Session_Id = newSession.Session_Id,
-          Menu_Id = newSession.Menu_Id,
-          Started_at = newSession.Started_At,
-          Ended_at = newSession.Ended_At,
-          First_Order_Time = newSession.First_Order_At,
-          Table_Numbers = tableNumbers,
-          Active_Participants = 0
+          SessionId = newSession.Session_Id,
+          MenuId = newSession.Menu_Id,
+          StartedAt = newSession.Started_At,
+          EndedAt = newSession.Ended_At,
+          FirstOrderTime = newSession.First_Order_At,
+          TableNumbers = tableNumbers,
+          ActiveParticipants = 0
         });
       }
       catch (ValidationException vex)
@@ -193,7 +193,7 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error creating dining session at location {LocationId}",
-            sessionData.Location_Id);
+            sessionData.LocationId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
@@ -251,13 +251,13 @@ namespace back_end.Controllers
 
         var response = sessions.Select(session => new DiningSessionResponseDto
         {
-          Session_Id = session.Session_Id,
-          Menu_Id = session.Menu_Id,
-          Started_at = session.Started_At,
-          Ended_at = session.Ended_At,
-          First_Order_Time = session.First_Order_At,
-          Table_Numbers = GetTableNumbers(session),
-          Active_Participants = session.Participants.Count(p => p.Left_At == null)
+          SessionId = session.Session_Id,
+          MenuId = session.Menu_Id,
+          StartedAt = session.Started_At,
+          EndedAt = session.Ended_At,
+          FirstOrderTime = session.First_Order_At,
+          TableNumbers = GetTableNumbers(session),
+          ActiveParticipants = session.Participants.Count(p => p.Left_At == null)
         }).ToList();
 
         return Ok(response);
@@ -342,17 +342,17 @@ namespace back_end.Controllers
 
         return Ok(new DiningSessionDetailDto
         {
-          Session_Id = session.Session_Id,
-          Menu_Id = session.Menu_Id,
-          Started_at = session.Started_At,
-          Ended_at = session.Ended_At,
-          First_Order_Time = session.First_Order_At,
-          Table_Numbers = GetTableNumbers(session),
-          Active_Participants = activeParticipants,
-          Orders_Count = session.Orders.Count(),
-          Bills_Count = session.Bills.Count(),
-          Active_Bill_Count = session.Bills.Count(b => b.Status == BillStatus.Open),
-          Total_participant = totalParticipants
+          SessionId = session.Session_Id,
+          MenuId = session.Menu_Id,
+          StartedAt = session.Started_At,
+          EndedAt = session.Ended_At,
+          FirstOrderTime = session.First_Order_At,
+          TableNumbers = GetTableNumbers(session),
+          ActiveParticipants = activeParticipants,
+          OrdersCount = session.Orders.Count(),
+          BillsCount = session.Bills.Count(),
+          ActiveBillCount = session.Bills.Count(b => b.Status == BillStatus.Open),
+          TotalParticipant = totalParticipants
         });
       }
       catch (Exception ex)
@@ -467,13 +467,13 @@ namespace back_end.Controllers
 
         return Ok(new DiningSessionResponseDto
         {
-          Session_Id = session.Session_Id,
-          Menu_Id = session.Menu_Id,
-          Started_at = session.Started_At,
-          Ended_at = session.Ended_At,
-          First_Order_Time = session.First_Order_At,
-          Table_Numbers = new List<int> { table.table_number },
-          Active_Participants = await _context.SessionParticipants
+          SessionId = session.Session_Id,
+          MenuId = session.Menu_Id,
+          StartedAt = session.Started_At,
+          EndedAt = session.Ended_At,
+          FirstOrderTime = session.First_Order_At,
+          TableNumbers = new List<int> { table.table_number },
+          ActiveParticipants = await _context.SessionParticipants
               .CountAsync(s => s.Session_Id == session.Session_Id && s.Left_At == null),
         });
       }
@@ -527,11 +527,11 @@ namespace back_end.Controllers
 
         var tableGroup = await _context.TableGroups
             .Include(tg => tg.Tables)
-            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupData.TableGroup_Id && tg.Is_Active);
+            .FirstOrDefaultAsync(tg => tg.TableGroup_Id == tableGroupData.TableGroupId && tg.Is_Active);
 
         if (tableGroup == null)
         {
-          return BadRequest($"Table group: {tableGroupData.TableGroup_Id} not found or inactive");
+          return BadRequest($"Table group: {tableGroupData.TableGroupId} not found or inactive");
         }
 
         // Validate that table group belongs to same location as session
@@ -561,13 +561,13 @@ namespace back_end.Controllers
 
         return Ok(new DiningSessionResponseDto
         {
-          Session_Id = session.Session_Id,
-          Menu_Id = session.Menu_Id,
-          Started_at = session.Started_At,
-          Ended_at = session.Ended_At,
-          First_Order_Time = session.First_Order_At,
-          Table_Numbers = tableGroup.Tables.Select(t => t.table_number).ToList(),
-          Active_Participants = await _context.SessionParticipants
+          SessionId = session.Session_Id,
+          MenuId = session.Menu_Id,
+          StartedAt = session.Started_At,
+          EndedAt = session.Ended_At,
+          FirstOrderTime = session.First_Order_At,
+          TableNumbers = tableGroup.Tables.Select(t => t.table_number).ToList(),
+          ActiveParticipants = await _context.SessionParticipants
               .CountAsync(s => s.Session_Id == session.Session_Id && s.Left_At == null),
         });
       }
@@ -577,7 +577,7 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error adding table group {TableGroupId} to dining session {SessionId}", tableGroupData.TableGroup_Id, sessionId);
+        _logger.LogError(ex, "Error adding table group {TableGroupId} to dining session {SessionId}", tableGroupData.TableGroupId, sessionId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
@@ -838,8 +838,8 @@ namespace back_end.Controllers
 
         return Ok(new SessionMenuResponseDto
         {
-          Menu_Id = session.Menu_Id,
-          Location_Id = session.Location_Id
+          MenuId = session.Menu_Id,
+          LocationId = session.Location_Id
         });
       }
       catch (Exception ex)
@@ -958,13 +958,13 @@ namespace back_end.Controllers
 
         return Ok(new DiningSessionResponseDto
         {
-          Session_Id = session.Session_Id,
-          Menu_Id = session.Menu_Id,
-          Started_at = session.Started_At,
-          Ended_at = session.Ended_At,
-          First_Order_Time = session.First_Order_At,
-          Table_Numbers = GetTableNumbers(session),
-          Active_Participants = session.Participants.Count(p => p.Left_At == null)
+          SessionId = session.Session_Id,
+          MenuId = session.Menu_Id,
+          StartedAt = session.Started_At,
+          EndedAt = session.Ended_At,
+          FirstOrderTime = session.First_Order_At,
+          TableNumbers = GetTableNumbers(session),
+          ActiveParticipants = session.Participants.Count(p => p.Left_At == null)
         });
       }
       catch (Exception ex)
@@ -1000,25 +1000,25 @@ namespace back_end.Controllers
       }
 
       var table = await _context.Tables
-          .FirstOrDefaultAsync(t => t.table_number == request.Table_Number &&
-                                    t.Location_Id == request.Location_Id &&
+          .FirstOrDefaultAsync(t => t.table_number == request.TableNumber &&
+                                    t.Location_Id == request.LocationId &&
                                     t.is_active);
       if (table == null)
       {
-        return NotFound(new { message = $"Table {request.Table_Number} was not found at this location." });
+        return NotFound(new { message = $"Table {request.TableNumber} was not found at this location." });
       }
 
       // A grouped table seats guests in the group's session, otherwise the table's own
       var session = await _context.DiningSessions
           .Include(ds => ds.Table)
           .Include(ds => ds.TableGroup).ThenInclude(tg => tg!.Tables)
-          .Where(ds => ds.Ended_At == null && ds.Location_Id == request.Location_Id)
+          .Where(ds => ds.Ended_At == null && ds.Location_Id == request.LocationId)
           .FirstOrDefaultAsync(ds =>
               (table.TableGroup_Id != null && ds.TableGroup_Id == table.TableGroup_Id) ||
               ds.Table_Id == table.Table_Id);
       if (session == null)
       {
-        return NotFound(new { message = $"Table {request.Table_Number} doesn't have an active session yet. Please ask staff to start your table." });
+        return NotFound(new { message = $"Table {request.TableNumber} doesn't have an active session yet. Please ask staff to start your table." });
       }
 
       // Waits for another join by this person in progress, so the seats read below are current
@@ -1069,11 +1069,11 @@ namespace back_end.Controllers
 
       return Ok(new JoinTableSessionResponseDto
       {
-        Session_Id = session.Session_Id,
-        Participant_Id = participant.Participant_Id,
-        Menu_Id = session.Menu_Id,
-        Table_Numbers = GetTableNumbers(session),
-        Already_Joined = alreadyJoined
+        SessionId = session.Session_Id,
+        ParticipantId = participant.Participant_Id,
+        MenuId = session.Menu_Id,
+        TableNumbers = GetTableNumbers(session),
+        AlreadyJoined = alreadyJoined
       });
     }
   }

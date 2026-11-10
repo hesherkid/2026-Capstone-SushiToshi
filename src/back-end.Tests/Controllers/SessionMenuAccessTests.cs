@@ -85,7 +85,7 @@ public class SessionMenuAccessTests : IDisposable
         var result = await ControllerAs(MiaUserId, "Customer").GetSessionMenuId(7);
 
         result.Result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().BeEquivalentTo(new SessionMenuResponseDto { Menu_Id = 1, Location_Id = LocationId });
+            .Which.Value.Should().BeEquivalentTo(new SessionMenuResponseDto { MenuId = 1, LocationId = LocationId });
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class SessionMenuAccessTests : IDisposable
         var result = await ControllerAs(StaffUserId, "Staff").GetSessionMenuId(8);
 
         result.Result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().BeEquivalentTo(new SessionMenuResponseDto { Menu_Id = 2, Location_Id = LocationId });
+            .Which.Value.Should().BeEquivalentTo(new SessionMenuResponseDto { MenuId = 2, LocationId = LocationId });
     }
 
     [Fact]

@@ -27,8 +27,8 @@ public class CreateSessionRequestDtoTests
         var dto = new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = 1,
-            Table_Id = 5,
+            LocationId = 1,
+            TableId = 5,
             AssignmentType = "table"
         };
 
@@ -47,7 +47,7 @@ public class CreateSessionRequestDtoTests
         var dto = new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = 1
+            LocationId = 1
         };
 
         // Act
@@ -68,8 +68,8 @@ public class CreateSessionRequestDtoTests
         var dto = new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = locationId,
-            Table_Id = 1
+            LocationId = locationId,
+            TableId = 1
         };
 
         // Act
@@ -78,7 +78,7 @@ public class CreateSessionRequestDtoTests
 
         // Assert
         isValid.Should().BeTrue();
-        dto.Location_Id.Should().Be(locationId);
+        dto.LocationId.Should().Be(locationId);
     }
 
     [Theory]
@@ -91,8 +91,8 @@ public class CreateSessionRequestDtoTests
         var dto = new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = 1,
-            Table_Id = tableId
+            LocationId = 1,
+            TableId = tableId
         };
 
         // Act
@@ -101,7 +101,7 @@ public class CreateSessionRequestDtoTests
 
         // Assert
         isValid.Should().BeTrue();
-        dto.Table_Id.Should().Be(tableId);
+        dto.TableId.Should().Be(tableId);
     }
 
     [Theory]
@@ -111,7 +111,7 @@ public class CreateSessionRequestDtoTests
     public void CreateSessionRequestDto_WithPositiveMenuId_IsValid(int menuId)
     {
         // Arrange
-        var dto = new CreateSessionRequestDto { MenuId = menuId, Location_Id = 1, Table_Id = 1 };
+        var dto = new CreateSessionRequestDto { MenuId = menuId, LocationId = 1, TableId = 1 };
 
         // Act
         var (isValid, _) = Validate(dto);
@@ -126,7 +126,7 @@ public class CreateSessionRequestDtoTests
     public void CreateSessionRequestDto_WithZeroOrNegativeMenuId_IsInvalid(int menuId)
     {
         // Arrange
-        var dto = new CreateSessionRequestDto { MenuId = menuId, Location_Id = 1, Table_Id = 1 };
+        var dto = new CreateSessionRequestDto { MenuId = menuId, LocationId = 1, TableId = 1 };
 
         // Act
         var (isValid, results) = Validate(dto);
@@ -154,9 +154,9 @@ public class CreateSessionRequestDtoTests
 
         // Assert
         dto.MenuId.Should().Be(0);
-        dto.Location_Id.Should().Be(0);
-        dto.Table_Id.Should().BeNull();
-        dto.TableGroup_Id.Should().BeNull();
+        dto.LocationId.Should().Be(0);
+        dto.TableId.Should().BeNull();
+        dto.TableGroupId.Should().BeNull();
         dto.AssignmentType.Should().BeNull();
     }
 
@@ -167,9 +167,9 @@ public class CreateSessionRequestDtoTests
         var dto = new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = 2,
-            Table_Id = 3,
-            TableGroup_Id = null,
+            LocationId = 2,
+            TableId = 3,
+            TableGroupId = null,
             AssignmentType = "table"
         };
 
@@ -180,24 +180,26 @@ public class CreateSessionRequestDtoTests
         // Assert
         deserialized.Should().NotBeNull();
         deserialized!.MenuId.Should().Be(1);
-        deserialized.Location_Id.Should().Be(2);
-        deserialized.Table_Id.Should().Be(3);
-        deserialized.TableGroup_Id.Should().BeNull();
+        deserialized.LocationId.Should().Be(2);
+        deserialized.TableId.Should().Be(3);
+        deserialized.TableGroupId.Should().BeNull();
         deserialized.AssignmentType.Should().Be("table");
     }
 
     [Fact]
-    public void CreateSessionRequestDto_MenuId_UsesSnakeCaseJsonName()
+    public void CreateSessionRequestDto_UsesSnakeCaseJsonNames()
     {
         // Arrange
-        var dto = new CreateSessionRequestDto { MenuId = 1, Location_Id = 1 };
+        var dto = new CreateSessionRequestDto { MenuId = 1, LocationId = 1 };
 
         // Act
         var json = JsonSerializer.Serialize(dto);
 
-        // Assert — only Menu_Id has a [JsonPropertyName]; the rest keep their C# names
+        // Assert
         json.Should().Contain("\"menu_id\"");
-        json.Should().Contain("\"Location_Id\"");
+        json.Should().Contain("\"location_id\"");
+        json.Should().Contain("\"table_group_id\"");
+        json.Should().Contain("\"assignment_type\"");
     }
 
     [Theory]
@@ -210,9 +212,9 @@ public class CreateSessionRequestDtoTests
         var dto = new CreateSessionRequestDto
         {
             MenuId = 1,
-            Location_Id = 1,
-            Table_Id = tableId,
-            TableGroup_Id = tableGroupId
+            LocationId = 1,
+            TableId = tableId,
+            TableGroupId = tableGroupId
         };
 
         // Act
@@ -220,7 +222,7 @@ public class CreateSessionRequestDtoTests
 
         // Assert
         isValid.Should().BeTrue();
-        dto.Table_Id.Should().Be(tableId);
-        dto.TableGroup_Id.Should().Be(tableGroupId);
+        dto.TableId.Should().Be(tableId);
+        dto.TableGroupId.Should().Be(tableGroupId);
     }
 }

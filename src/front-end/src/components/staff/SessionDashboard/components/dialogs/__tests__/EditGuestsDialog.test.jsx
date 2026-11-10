@@ -3,12 +3,12 @@ import EditGuestsDialog from "../EditGuestsDialog";
 
 const mockUpdateGuestCounts = jest.fn();
 // Table seats 8: Lee's bill has 2, Park's has 3, and a closed bill doesn't count
-const lee = { bill_Id: 1, bill_Name: "Lee", status: "OPEN", total_Guests: 2, adult_Count: 2, senior_Count: 0, child_Count: 0, tot_Count: 0 };
+const lee = { bill_id: 1, bill_name: "Lee", status: "OPEN", total_guests: 2, adult_count: 2, senior_count: 0, child_count: 0, tot_count: 0 };
 const mockSessions = [
   {
-    session_Id: 8,
-    seat_Count: 8,
-    bills: [lee, { bill_Id: 2, status: "OPEN", total_Guests: 3 }, { bill_Id: 3, status: "CLOSED", total_Guests: 6 }],
+    session_id: 8,
+    seat_count: 8,
+    bills: [lee, { bill_id: 2, status: "OPEN", total_guests: 3 }, { bill_id: 3, status: "CLOSED", total_guests: 6 }],
   },
 ];
 

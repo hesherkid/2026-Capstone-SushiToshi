@@ -63,7 +63,7 @@ export const tableApi =
       return Promise.resolve({ status: 200, data: myBillResponse({ bills, myBillId, blocked }) });
     }
     if (url.includes("/DiningSession/session-menu/42")) {
-      return Promise.resolve({ status: 200, data: { menu_Id: 7, location_Id: 3 } });
+      return Promise.resolve({ status: 200, data: { menu_id: 7, location_id: 3 } });
     }
     if (url.includes("/Category")) {
       return Promise.resolve({

@@ -228,7 +228,7 @@ describe("LoginForm", () => {
       const user = userEvent.setup({ delay: null });
       loginAsGuest.mockResolvedValue({ access_token: "guest-token" });
       useSearchParams.mockReturnValue(new URLSearchParams("locationId=3&tableNumber=8"));
-      api.post.mockResolvedValue({ data: { session_Id: 55 } });
+      api.post.mockResolvedValue({ data: { session_id: 55 } });
 
       render(<LoginForm />);
       await user.click(
@@ -269,7 +269,7 @@ describe("LoginForm", () => {
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=3&tableNumber=8")
       );
-      api.post.mockResolvedValue({ data: { session_Id: 101, participant_Id: 9 } });
+      api.post.mockResolvedValue({ data: { session_id: 101, participant_id: 9 } });
 
       render(<LoginForm />);
       await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
@@ -277,7 +277,7 @@ describe("LoginForm", () => {
       await waitFor(() => {
         expect(api.post).toHaveBeenCalledWith(
           "/DiningSession/join",
-          { Table_Number: 8, Location_Id: 3 },
+          { table_number: 8, location_id: 3 },
           { headers: { Authorization: "Bearer guest-token" } }
         );
         expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu");
@@ -354,13 +354,13 @@ describe("LoginForm", () => {
       await screen.findByText(/Please ask staff to start your table/);
 
       // Staff start the table
-      api.post.mockResolvedValueOnce({ data: { session_Id: 55 } });
+      api.post.mockResolvedValueOnce({ data: { session_id: 55 } });
       await user.click(screen.getByRole("button", { name: "Try again" }));
 
       await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu"));
       expect(api.post).toHaveBeenLastCalledWith(
         "/DiningSession/join",
-        { Table_Number: 8, Location_Id: 3 },
+        { table_number: 8, location_id: 3 },
         { headers: { Authorization: "Bearer guest-token" } },
       );
       // The same guest: no second guest account
@@ -394,7 +394,7 @@ describe("LoginForm", () => {
 
     it("stays the same guest instead of creating another one", async () => {
       const user = userEvent.setup({ delay: null });
-      api.post.mockResolvedValue({ data: { session_Id: 101, participant_Id: 9, already_Joined: true } });
+      api.post.mockResolvedValue({ data: { session_id: 101, participant_id: 9, already_joined: true } });
 
       render(<LoginForm />);
       await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
@@ -403,7 +403,7 @@ describe("LoginForm", () => {
       expect(loginAsGuest).not.toHaveBeenCalled();
       expect(api.post).toHaveBeenCalledWith(
         "/DiningSession/join",
-        { Table_Number: 8, Location_Id: 3 },
+        { table_number: 8, location_id: 3 },
         { headers: { Authorization: "Bearer saved-guest-token" } }
       );
     });
@@ -413,7 +413,7 @@ describe("LoginForm", () => {
       loginAsGuest.mockResolvedValue({ access_token: "new-guest-token" });
       api.post
         .mockRejectedValueOnce({ response: { status: 401, data: { message: "Please sign in to join a table." } } })
-        .mockResolvedValueOnce({ data: { session_Id: 101, participant_Id: 10 } });
+        .mockResolvedValueOnce({ data: { session_id: 101, participant_id: 10 } });
 
       render(<LoginForm />);
       await user.click(screen.getByRole("button", { name: /Continue as Guest/i }));
@@ -422,7 +422,7 @@ describe("LoginForm", () => {
       expect(loginAsGuest).toHaveBeenCalledTimes(1);
       expect(api.post).toHaveBeenLastCalledWith(
         "/DiningSession/join",
-        { Table_Number: 8, Location_Id: 3 },
+        { table_number: 8, location_id: 3 },
         { headers: { Authorization: "Bearer new-guest-token" } }
       );
     });
@@ -476,7 +476,7 @@ describe("LoginForm", () => {
       useSearchParams.mockReturnValue(
         new URLSearchParams("locationId=1&tableNumber=4")
       );
-      api.post.mockResolvedValue({ data: { session_Id: 55 } });
+      api.post.mockResolvedValue({ data: { session_id: 55 } });
 
       render(<LoginForm />);
       await fillLoginForm(user);
@@ -485,7 +485,7 @@ describe("LoginForm", () => {
       await waitFor(() => {
         expect(api.post).toHaveBeenCalledWith(
           "/DiningSession/join",
-          { Table_Number: 4, Location_Id: 1 },
+          { table_number: 4, location_id: 1 },
           { headers: { Authorization: "Bearer mia-token" } }
         );
         expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu");
@@ -505,7 +505,7 @@ describe("LoginForm", () => {
       it("joins a registered customer to the table without asking for the password", async () => {
         const token = tokenFor({ [ROLE]: "Customer", email: "mia@example.com" });
         getAuthToken.mockReturnValue(token);
-        api.post.mockResolvedValue({ data: { session_Id: 55 } });
+        api.post.mockResolvedValue({ data: { session_id: 55 } });
 
         render(<LoginForm />);
 
@@ -513,7 +513,7 @@ describe("LoginForm", () => {
         await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/menu/full-menu"));
         expect(api.post).toHaveBeenCalledWith(
           "/DiningSession/join",
-          { Table_Number: 4, Location_Id: 1 },
+          { table_number: 4, location_id: 1 },
           { headers: { Authorization: `Bearer ${token}` } },
         );
         expect(loginUser).not.toHaveBeenCalled();
@@ -522,7 +522,7 @@ describe("LoginForm", () => {
       // Strict Mode runs effects twice; two joins at once used to seat the customer twice
       it("joins only once when the page mounts twice", async () => {
         getAuthToken.mockReturnValue(tokenFor({ [ROLE]: "Customer" }));
-        api.post.mockResolvedValue({ data: { session_Id: 55 } });
+        api.post.mockResolvedValue({ data: { session_id: 55 } });
 
         render(
           <StrictMode>

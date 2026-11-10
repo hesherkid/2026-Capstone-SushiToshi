@@ -63,10 +63,10 @@ describe("session time helpers (Edmonton)", () => {
 describe("sessionGuestCount", () => {
   it("adds up the guests on every bill, closed ones included", () => {
     const session = {
-      active_Participants: 1, // one phone scanned; not what staff mean by guests
+      active_participants: 1, // one phone scanned; not what staff mean by guests
       bills: [
-        { status: "Open", total_Guests: 3 },
-        { status: "Closed", total_Guests: 2 },
+        { status: "Open", total_guests: 3 },
+        { status: "Closed", total_guests: 2 },
       ],
     };
     expect(sessionGuestCount(session)).toBe(5);
@@ -75,15 +75,15 @@ describe("sessionGuestCount", () => {
   it("leaves out cancelled bills, so a merged bill's guests aren't counted twice", () => {
     const session = {
       bills: [
-        { status: "Open", total_Guests: 5 },
-        { status: "Cancelled", total_Guests: 2 },
+        { status: "Open", total_guests: 5 },
+        { status: "Cancelled", total_guests: 2 },
       ],
     };
     expect(sessionGuestCount(session)).toBe(5);
   });
 
   it("is 0 before any bill is made", () => {
-    expect(sessionGuestCount({ active_Participants: 2, bills: [] })).toBe(0);
+    expect(sessionGuestCount({ active_participants: 2, bills: [] })).toBe(0);
     expect(sessionGuestCount({})).toBe(0);
     expect(sessionGuestCount(null)).toBe(0);
   });

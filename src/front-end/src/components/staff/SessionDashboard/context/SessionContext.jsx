@@ -20,7 +20,7 @@ export const SessionProvider = ({ children, live = false }) => {
   // Kept apart from dialogState so New Bill / confirm dialogs can open on top of it
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const selectedSession =
-    sessionData.sessions.find((s) => s.session_Id === selectedSessionId) ??
+    sessionData.sessions.find((s) => s.session_id === selectedSessionId) ??
     null;
 
   const refreshData = useCallback(
@@ -38,15 +38,15 @@ export const SessionProvider = ({ children, live = false }) => {
   const createSession = useCallback(
     async (menuId, locationId, tableId, tableGroupId, tableAssignmentType) => {
       const sessionData = {
-        Menu_Id: menuId,
-        Location_Id: locationId,
-        AssignmentType: tableAssignmentType,
+        menu_id: menuId,
+        location_id: locationId,
+        assignment_type: tableAssignmentType,
       };
 
       if (tableAssignmentType === "table" && tableId) {
-        sessionData.Table_Id = tableId;
+        sessionData.table_id = tableId;
       } else if (tableAssignmentType === "tableGroup" && tableGroupId) {
-        sessionData.TableGroup_Id = tableGroupId;
+        sessionData.table_group_id = tableGroupId;
       }
 
       return succeeded(await actions.createDiningSession(sessionData));

@@ -28,8 +28,8 @@ jest.mock("@/config/auth", () => ({
 }));
 
 const sessions = [
-  { session_Id: 1, table_Numbers: [1, 2] },
-  { session_Id: 2, table_Numbers: [5] },
+  { session_id: 1, table_numbers: [1, 2] },
+  { session_id: 2, table_numbers: [5] },
 ];
 const pendingRequests = [
   { request_id: 11, session_id: 1, table_number: 2, notes: "Need more soy sauce", created_at: "2026-10-14T20:00:00Z" },

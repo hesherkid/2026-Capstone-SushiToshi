@@ -88,14 +88,14 @@ const guestCheckChips = (bill) => {
   if (!isOpenBill(bill)) return [];
   const chips = [];
   // A guest entered this party's size on their phone
-  if (bill.started_By_Guest) {
+  if (bill.started_by_guest) {
     chips.push(
       <Tooltip key="started" title="A guest started this bill on their phone. Check the number of guests.">
         <Chip icon={<Smartphone size={14} />} label="Started by guest" color="info" size="small" variant="outlined" />
       </Tooltip>
     );
   }
-  if (bill.counts_Changed_By_Guest) {
+  if (bill.counts_changed_by_guest) {
     chips.push(
       <Tooltip key="changed" title="A guest changed this bill's guest count on their phone. Check the number of guests.">
         <Chip icon={<Pencil size={14} />} label="Count changed by guest" color="info" size="small" variant="outlined" />
@@ -103,15 +103,15 @@ const guestCheckChips = (bill) => {
     );
   }
   // More people joined on their phones than the bill has guests
-  if (bill.people_On_Bill > bill.total_Guests) {
+  if (bill.people_on_bill > bill.total_guests) {
     chips.push(
       <Tooltip
         key="people"
-        title={`${bill.people_On_Bill} people have joined this bill on their phones, but it's for ${bill.total_Guests}. Check the number of guests.`}
+        title={`${bill.people_on_bill} people have joined this bill on their phones, but it's for ${bill.total_guests}. Check the number of guests.`}
       >
         <Chip
           icon={<Users size={14} />}
-          label={`${bill.people_On_Bill} people on ${bill.total_Guests}-guest bill`}
+          label={`${bill.people_on_bill} people on ${bill.total_guests}-guest bill`}
           color="warning"
           size="small"
         />
@@ -127,14 +127,14 @@ const SessionDetailDialog = () => {
   const actions = useSessionDashboardActions();
   const [summaryBillId, setSummaryBillId] = useState(null);
 
-  const requests = session ? requestsBySession[session.session_Id] || [] : [];
+  const requests = session ? requestsBySession[session.session_id] || [] : [];
   const bills = sortBillsByStatus(session?.bills || []);
   const openBillCount = bills.filter(isOpenBill).length;
   const hasOpenBills = openBillCount > 0;
   const guestCount = sessionGuestCount(session);
   // Everyone still seated, and which bill they're on
   const people = session?.people || [];
-  const billNameOf = (billId) => bills.find((b) => b.bill_Id === billId)?.bill_Name;
+  const billNameOf = (billId) => bills.find((b) => b.bill_id === billId)?.bill_name;
 
   return (
     <>
@@ -142,8 +142,8 @@ const SessionDetailDialog = () => {
         {session && (
           <>
             <DialogHeader
-              title={`Dining Session #${session.session_Id} · ${tableLabel(session.table_Numbers)}`}
-              subtitle={`Started ${formatTime(session.started_At)}`}
+              title={`Dining Session #${session.session_id} · ${tableLabel(session.table_numbers)}`}
+              subtitle={`Started ${formatTime(session.started_at)}`}
               onClose={closeSession}
             />
 
@@ -151,7 +151,7 @@ const SessionDetailDialog = () => {
               <Stack spacing={3}>
                 <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
                   <Stat label="Seated for">
-                    <SeatedFor startedAt={session.started_At} />
+                    <SeatedFor startedAt={session.started_at} />
                   </Stat>
                   <Stat label="Guests">{guestCount}</Stat>
                   <Stat label="Open bills">
@@ -217,7 +217,7 @@ const SessionDetailDialog = () => {
                         const checks = guestCheckChips(bill);
                         return (
                           <Paper
-                            key={bill.bill_Id}
+                            key={bill.bill_id}
                             variant="outlined"
                             sx={{
                               p: 2,
@@ -231,7 +231,7 @@ const SessionDetailDialog = () => {
                               <Box sx={{ flex: "1 1 200px", minWidth: 0 }}>
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                                   <Typography variant="subtitle1" component="h4" fontWeight={600}>
-                                    {bill.bill_Name}
+                                    {bill.bill_name}
                                   </Typography>
                                   <Chip
                                     label={formatBillStatus(bill.status)}
@@ -239,10 +239,10 @@ const SessionDetailDialog = () => {
                                     size="small"
                                   />
                                   {/* Guests pressed "Ready for Bill"; they can't order more on it */}
-                                  {open && bill.requested_At && (
+                                  {open && bill.requested_at && (
                                     <Chip icon={<Bell size={14} />} label="Asked for bill" color="warning" size="small" />
                                   )}
-                                  {open && bill.counts_Locked && (
+                                  {open && bill.counts_locked && (
                                     <Tooltip title="Staff checked the number of guests. Guests can't change it on their phones.">
                                       <Chip icon={<Lock size={14} />} label="Guests locked" size="small" variant="outlined" />
                                     </Tooltip>
@@ -257,7 +257,7 @@ const SessionDetailDialog = () => {
                                   <Button
                                     variant="contained"
                                     disableElevation
-                                    aria-label={`Add order to ${bill.bill_Name}`}
+                                    aria-label={`Add order to ${bill.bill_name}`}
                                     onClick={() => actions.addOrder(session, bill)}
                                     startIcon={<Plus size={18} />}
                                   >
@@ -267,7 +267,7 @@ const SessionDetailDialog = () => {
                                 {open && (
                                   <Button
                                     variant="outlined"
-                                    aria-label={`Edit guests on ${bill.bill_Name}`}
+                                    aria-label={`Edit guests on ${bill.bill_name}`}
                                     onClick={() => actions.editGuests(session, bill)}
                                     startIcon={<Pencil size={18} />}
                                   >
@@ -278,19 +278,19 @@ const SessionDetailDialog = () => {
                                 {open && (
                                   <Button
                                     variant="outlined"
-                                    aria-label={`${bill.counts_Locked ? "Unlock" : "Lock"} guests on ${bill.bill_Name}`}
-                                    onClick={() => lockGuestCounts(session.session_Id, bill.bill_Id, !bill.counts_Locked)}
+                                    aria-label={`${bill.counts_locked ? "Unlock" : "Lock"} guests on ${bill.bill_name}`}
+                                    onClick={() => lockGuestCounts(session.session_id, bill.bill_id, !bill.counts_locked)}
                                     disabled={isSaving}
-                                    startIcon={bill.counts_Locked ? <LockOpen size={18} /> : <Lock size={18} />}
+                                    startIcon={bill.counts_locked ? <LockOpen size={18} /> : <Lock size={18} />}
                                   >
-                                    {bill.counts_Locked ? "Unlock Guests" : "Lock Guests"}
+                                    {bill.counts_locked ? "Unlock Guests" : "Lock Guests"}
                                   </Button>
                                 )}
                                 {/* Everything on this bill moves to another, e.g. when the table wants one bill */}
                                 {open && openBillCount > 1 && (
                                   <Button
                                     variant="outlined"
-                                    aria-label={`Merge ${bill.bill_Name} into another bill`}
+                                    aria-label={`Merge ${bill.bill_name} into another bill`}
                                     onClick={() => actions.mergeBill(session, bill)}
                                     startIcon={<Merge size={18} />}
                                   >
@@ -300,8 +300,8 @@ const SessionDetailDialog = () => {
                                 <Tooltip title="View bill summary">
                                   <Button
                                     variant="outlined"
-                                    aria-label={`View ${bill.bill_Name} summary`}
-                                    onClick={() => setSummaryBillId(bill.bill_Id)}
+                                    aria-label={`View ${bill.bill_name} summary`}
+                                    onClick={() => setSummaryBillId(bill.bill_id)}
                                     startIcon={<Receipt size={18} />}
                                   >
                                     View Bill Summary
@@ -350,10 +350,10 @@ const SessionDetailDialog = () => {
                     <SectionHeading icon={Users}>People at the table ({people.length})</SectionHeading>
                     <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
                       {people.map((person, index) => {
-                        const billName = billNameOf(person.bill_Id);
+                        const billName = billNameOf(person.bill_id);
                         return (
                           <Box
-                            key={person.participant_Id}
+                            key={person.participant_id}
                             sx={{
                               display: "flex",
                               alignItems: "center",
@@ -365,11 +365,11 @@ const SessionDetailDialog = () => {
                             }}
                           >
                             <Avatar sx={{ width: 36, height: 36, fontSize: 14, bgcolor: "primary.main" }} aria-hidden>
-                              {initialsOf(person.user_Name)}
+                              {initialsOf(person.user_name)}
                             </Avatar>
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                               <Typography fontWeight={500} noWrap>
-                                {person.user_Name || "Guest"}
+                                {person.user_name || "Guest"}
                               </Typography>
                               <Typography
                                 variant="body2"
@@ -382,7 +382,7 @@ const SessionDetailDialog = () => {
                             {hasOpenBills && (
                               <Button
                                 size="small"
-                                aria-label={`Move ${person.user_Name || "guest"}`}
+                                aria-label={`Move ${person.user_name || "guest"}`}
                                 onClick={() => actions.moveGuest(session, person)}
                                 startIcon={<ArrowRightLeft size={16} />}
                               >
@@ -408,7 +408,7 @@ const SessionDetailDialog = () => {
                 variant="outlined"
                 startIcon={<ReceiptText size={18} />}
                 onClick={() => actions.newBill(session)}
-                disabled={!session.table_Numbers?.length}
+                disabled={!session.table_numbers?.length}
               >
                 New Bill
               </Button>
@@ -417,7 +417,7 @@ const SessionDetailDialog = () => {
                 color="error"
                 startIcon={<LogOut size={18} />}
                 onClick={() => actions.endSession(session)}
-                disabled={!session.is_Closable}
+                disabled={!session.is_closable}
               >
                 End Session
               </Button>
@@ -428,7 +428,7 @@ const SessionDetailDialog = () => {
 
       <BillSummaryDialog
         open={summaryBillId !== null}
-        sessionId={session?.session_Id}
+        sessionId={session?.session_id}
         billId={summaryBillId}
         onClose={() => setSummaryBillId(null)}
       />

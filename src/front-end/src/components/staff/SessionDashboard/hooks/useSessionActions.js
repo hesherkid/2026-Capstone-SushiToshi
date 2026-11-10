@@ -59,19 +59,19 @@ export const useSessionActions = (onSuccess) => {
         "createSession",
         async () => {
           const payload = {
-            Menu_Id: toInt(sessionData?.Menu_Id),
-            Location_Id: toInt(sessionData?.Location_Id),
-            Table_Id: sessionData?.Table_Id
-              ? toInt(sessionData?.Table_Id)
+            menu_id: toInt(sessionData?.menu_id),
+            location_id: toInt(sessionData?.location_id),
+            table_id: sessionData?.table_id
+              ? toInt(sessionData?.table_id)
               : null,
-            TableGroup_Id: sessionData?.TableGroup_Id
-              ? toInt(sessionData?.TableGroup_Id)
+            table_group_id: sessionData?.table_group_id
+              ? toInt(sessionData?.table_group_id)
               : null,
-            AssignmentType: sessionData.AssignmentType 
+            assignment_type: sessionData.assignment_type 
           };
 
-          if (!payload.Menu_Id) throw new Error("Menu ID is required");
-          if (!payload.Location_Id) throw new Error("Location ID is required");
+          if (!payload.menu_id) throw new Error("Menu ID is required");
+          if (!payload.location_id) throw new Error("Location ID is required");
 
           const response = await api.post(
             "/DiningSession/Create_Dinning_Session",
@@ -159,7 +159,7 @@ export const useSessionActions = (onSuccess) => {
           validateIds({ "session ID": sid, "table ID": tid });
 
           const res = await api.post(`/DiningSession/${sid}/tables`, {
-            table_Id: tid,
+            table_id: tid,
           });
 
           return res.data;
@@ -185,7 +185,7 @@ export const useSessionActions = (onSuccess) => {
           validateIds({ "session ID": sid, "table group ID": tgid });
 
           const res = await api.post(`/DiningSession/${sid}/table-groups`, {
-            tableGroup_Id: tgid,
+            table_group_id: tgid,
           });
 
           return res.data;
@@ -257,7 +257,7 @@ export const useSessionActions = (onSuccess) => {
         const res = await api.get(
           "/DiningSession/participants/active-session-id"
         );
-        return res.data?.Session_Id || res.data?.session_id || null;
+        return res.data?.session_id || null;
       });
     },
     [apiWrapper]
@@ -273,7 +273,7 @@ export const useSessionActions = (onSuccess) => {
         validateIds({ "session ID": sid });
 
         const res = await api.get(`/DiningSession/session-menu/${sid}`);
-        return res.data?.menu_Id || null;
+        return res.data?.menu_id || null;
       });
     },
     [apiWrapper]
@@ -337,25 +337,22 @@ export const useSessionActions = (onSuccess) => {
           if (!sid) throw new Error("Session ID is required");
 
           const payload = {
-            Bill_Name: billData.billName || billData.Bill_Name,
-            Adult_Count:
-              parseInt(billData.adultCount || billData.Adult_Count) || 0,
-            Child_Count:
-              parseInt(billData.childCount || billData.Child_Count) || 0,
-            Senior_Count:
-              parseInt(billData.seniorCount || billData.Senior_Count) || 0,
-            Tot_Count: parseInt(billData.totCount || billData.Tot_Count) || 0,
+            bill_name: billData.billName,
+            adult_count: parseInt(billData.adultCount) || 0,
+            child_count: parseInt(billData.childCount) || 0,
+            senior_count: parseInt(billData.seniorCount) || 0,
+            tot_count: parseInt(billData.totCount) || 0,
           };
 
-          if (!payload.Bill_Name?.trim())
+          if (!payload.bill_name?.trim())
             throw new Error("Bill name is required");
 
           // Validate at least one guest
           const totalGuests =
-            payload.Adult_Count +
-            payload.Child_Count +
-            payload.Senior_Count +
-            payload.Tot_Count;
+            payload.adult_count +
+            payload.child_count +
+            payload.senior_count +
+            payload.tot_count;
 
           if (totalGuests === 0) {
             throw new Error("At least one guest is required");
