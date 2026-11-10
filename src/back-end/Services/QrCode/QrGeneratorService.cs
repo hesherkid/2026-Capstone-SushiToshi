@@ -164,6 +164,7 @@ namespace back_end.Services
             var baseUrl = _config["QRCodeSettings:SessionPageUrl"]
                        ?? _config["Restaurant:BaseUrl"]
                        ?? "http://localhost:3000";
+            // Page URLs keep camelCase; only API query parameters are snake_case
             return $"{baseUrl}/auth/login?locationId={locationId}&tableNumber={table}";
         }
 
