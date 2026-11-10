@@ -93,8 +93,6 @@ back_end.Dtos.OrderItemResponseDto: charge_reason, completed_at, item_id, menu_i
 back_end.Dtos.OrderItemUpdateDto: price_at_time, quantity, status
 back_end.Dtos.OrderLimitLeftDto: free_left, per_order, session_left
 back_end.Dtos.OrderResponseDto: bill_id, completed_at, created_at, order_id, order_items, pending_items_count, session_id, status, user_id, user_name
-back_end.Dtos.PagedUserResponseDto: items, page, page_size, total
-back_end.Dtos.PasswordChangeDto: current_password, new_password
 back_end.Dtos.PastVisitBillDto: bill_id, bill_name, guest_count, total
 back_end.Dtos.PastVisitDto: bills, ended_at, items, location_name, session_id, started_at, table_numbers
 back_end.Dtos.PastVisitItemDto: item_id, name, quantity
@@ -129,6 +127,4 @@ back_end.Dtos.TagResponseDto: name, tag_id
 back_end.Dtos.TagUpdateDto: tag_color, tag_name
 back_end.Dtos.UpdateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
 back_end.Dtos.UpdateGuestCountsDto: adult_count, child_count, senior_count, tot_count
-back_end.Dtos.UserCreateDto: email, first_name, last_name, password, role, status
 back_end.Dtos.UserResponseDto: created_at, email, first_name, is_email_confirmed, last_interaction_at, last_name, role, status, user_id
-back_end.Dtos.UserUpdateDto: email, first_name, last_name, new_password, role, status
