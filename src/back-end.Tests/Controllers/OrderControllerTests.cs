@@ -876,6 +876,25 @@ public class OrderControllerTests : IDisposable
             ["order_item_id", "item_id", "name", "quantity", "price_at_time", "is_add_on", "charge_reason", "status"]);
     }
 
+    // The customer orders page reads the items the same way for "Mine" and the whole table
+    [Fact]
+    public async Task GetOrdersForActiveSession_UsesTheSameItemKeysAsTheTableView()
+    {
+        // Arrange: customer 123 is seated at session 1
+        SetupUserClaims("123");
+        var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
+        _context.SessionOrders.Find(order.Order_Id)!.User_Id = 123;
+        _context.SaveChanges();
+
+        // Act
+        var result = await _controller.GetOrdersForActiveSession();
+
+        // Assert
+        var mine = JsonSerializer.SerializeToElement((result.Result as OkObjectResult)!.Value).EnumerateArray().Single();
+        mine.GetProperty("items")[0].EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo(
+            ["order_item_id", "item_id", "name", "quantity", "price_at_time", "is_add_on", "charge_reason", "status"]);
+    }
+
     [Fact]
     public async Task GetAllOrdersByLocation_FlagOn_StillRespectsLocationFilter()
     {
