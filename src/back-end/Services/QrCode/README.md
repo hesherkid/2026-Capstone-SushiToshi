@@ -349,8 +349,6 @@ Session QR codes link to:
 https://<your-name>.ngrok-free.dev/auth/login?locationId=1&tableNumber=5
 ```
 
-> **Note:** earlier versions linked to `/start-session?...`, which created a dining session and redirected to the menu. The service now links to `/auth/login`.
-
 ## Troubleshooting
 
 ### QR Code Not Generating
