@@ -1,6 +1,7 @@
-# Testing Documentation - 2026 C#Capstone - Sushi Toshi
+# Testing Documentation - 2026 C# Capstone - Sushi Toshi
 
-## Table of Contents
+<details>
+<summary>Table of Contents</summary>
 
 - [Overview](#overview)
 - [Testing Infrastructure](#testing-infrastructure)
@@ -12,8 +13,7 @@
 - [Testing Best Practices](#testing-best-practices)
 - [Troubleshooting](#troubleshooting)
 - [Resources](#resources)
-
----
+</details>
 
 ## Overview
 
@@ -56,6 +56,7 @@ This document covers the automated tests for the Sushi Toshi Restaurant Manageme
 ```
 src/
 ├── back-end.Tests/              # Unit tests
+│   ├── Configurations/          # Settings tests (forwarded headers, guest clean up)
 │   ├── Controllers/             # Controller tests (incl. analytics, auth, staff location lock)
 │   ├── Services/                # Service tests
 │   ├── Helpers/                 # Helper tests (bill calculator, order limits, claims, date ranges)
@@ -122,23 +123,33 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 **Controllers with tests:**
 
 - AdminQrCodeController
-- AuthController (email login, guest login)
+- AuthController
 - BillController
-- CategoryController and TagController
+- CategoryController
 - CustomerController
-- DashboardController and DiningSessionController (session join, active session lookup, menu access)
+- DashboardController
+- DiningSessionController (session join, active session lookup, menu access)
 - HolidayController
 - LocationController
 - MenuController
+- MenuAssignmentController
+- MenuItemController
 - MenuItemViewController
+- MenuLocationController
+- MyItemsController
+- MyVisitsController
 - OrderController
 - PricingController
 - ServiceRequestController
+- SessionParticipantController
 - StaffController
+- TableEntityController
+- TableGroupController
+- TagController
 - Analytics: BrowsingBehavior, ItemPerformance, OrderTiming and TableTurnover controllers
 - Staff location lock, which covers Dashboard, DiningSession, MenuAssignment, Order, ServiceRequest and TableEntity controllers
 
-**Services with tests:** QrGeneratorService, LocationAccessService, PricingService (restaurant time), and the four analytics services through their controller tests.
+**Services with tests:** AdmintBootstrap, QrGeneratorService, LocationAccessService, GuestCleanup, GuestCleanupWorker, PricingService (restaurant time), and the four analytics services through their controller tests.
 
 **Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, analytics date ranges, DTO validation, and seeder rules.
 
@@ -146,8 +157,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Not yet tested:**
 
-- Controllers: MenuItemController, MenuLocationController, SessionController, SessionParticipantController, TableController, TableGroupController. MenuAssignmentController and TableEntityController are only covered by the staff location lock tests.
-- Services: AuthTokenService, HolidayService, CanadaHolidaysClient, SendGridEmailService
+- Services: AuthTokenService, HolidayService, CanadaHolidaysClient, SendGridEmailService, PricingNotConfiguredException
 
 ### Frontend
 
@@ -182,10 +192,10 @@ One spec, `e2e/qr-code-generation.spec.js`. It covers the login page, admin navi
 
 | Metric     | Threshold |
 | ---------- | --------- |
-| Branches   | 55%       |
-| Functions  | 59%       |
-| Lines      | 60%       |
-| Statements | 60%       |
+| Branches   | 65%       |
+| Functions  | 70%       |
+| Lines      | 75%       |
+| Statements | 75%       |
 
 Thin route wrappers that only render a tested component are left out of coverage: `app/analytics/`, `app/auth/` and `app/dashboard/call-server/` (see `coveragePathIgnorePatterns`).
 
@@ -906,15 +916,15 @@ page.getByRole('heading', { name: /start your order/i })
 
 ## Next Steps
 
-1. **Fill the gaps** listed under [Not yet tested](#current-test-coverage), starting with the untested backend controllers and the auth forms.
+1. **Fill the gaps** listed under [Not yet tested](#current-test-coverage), starting with the untested backend services and the front end auth forms.
 2. **Add E2E flows** for staff (open a session, take an order, close a bill) and for customers ordering from a QR code.
 3. **Raise the Jest coverage thresholds** in `jest.config.js` as coverage grows, so it can't slip back.
 4. **Keep this document current** when tests, CI jobs or required checks change.
 
 ---
 
-**Version**: 1.2
-**Last Updated**: 2026-10-28
+**Version**: 1.3
+**Last Updated**: 2026-11-10
 **Status**: Active Development
 
 For questions or issues with testing, please contact the development team or submit an issue on GitHub.

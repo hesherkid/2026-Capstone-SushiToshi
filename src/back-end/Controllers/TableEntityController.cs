@@ -252,7 +252,9 @@ namespace back_end.Controllers
         if (tableData.TableNumber.HasValue && table.table_number != tableData.TableNumber)
         {
           var existingTable = await _context.Tables
-              .FirstOrDefaultAsync(t => t.table_number == tableData.TableNumber && t.Table_Id != tableId);
+              .FirstOrDefaultAsync(t => t.table_number == tableData.TableNumber &&
+                              t.Location_Id == table.Location_Id &&
+                              t.Table_Id != tableId);
 
           if (existingTable != null)
           {

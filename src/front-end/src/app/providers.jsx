@@ -152,7 +152,6 @@ const theme = createTheme({
         }),
       },
     },
-    //TODO: decide if you want to keep the below highlight styles for focus-visible on checkboxes and radios - AW
     MuiCheckbox: {
       styleOverrides: {
         root: ({ theme }) => ({

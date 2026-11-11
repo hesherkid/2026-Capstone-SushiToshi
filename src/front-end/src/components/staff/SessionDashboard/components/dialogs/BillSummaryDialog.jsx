@@ -81,7 +81,7 @@ const BillSummaryDialog = ({ open, sessionId, billId, onClose }) => {
         open={leftoverOpen}
         onClose={() => setLeftoverOpen(false)}
         sessionId={sessionId}
-        onApplied={reload}
+        onApplied={() => reload()}
       />
 
       <ConfirmDialog

@@ -55,7 +55,7 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Cannot get all locations");
-        return StatusCode(500, "Internal Server Error");
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -116,7 +116,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "An error occurred while creating a location.");
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -162,7 +163,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "An error occurred while retrieving the location {LocationId}.", locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -254,7 +256,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "An error occurred while updating the location {LocationId}.", locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -342,7 +345,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "An error occurred while deleting the location {LocationId}.", locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -405,13 +409,12 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "An error occurred while adding menu {MenuId} to location {LocationId}.", menuLocationCreate.MenuId, locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
 
 
     }
-
-
 
     /// <summary>
     /// Removes a menu from a specific location.
@@ -459,7 +462,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error occurred while removing menu {MenuId} from location {LocationId}.", menuId, locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -507,7 +511,8 @@ namespace back_end.Controllers
       }
       catch (Exception ex)
       {
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        _logger.LogError(ex, "Error occurred while listing menus for location {LocationId}.", locationId);
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
   }

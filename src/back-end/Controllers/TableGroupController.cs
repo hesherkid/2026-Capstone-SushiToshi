@@ -234,7 +234,8 @@ namespace back_end.Controllers
         {
           var existingGroup = await _context.TableGroups
               .FirstOrDefaultAsync(tg => tg.Group_Name == groupData.GroupName &&
-                                         tg.TableGroup_Id != tableGroupId);
+                               tg.Location_Id == tableGroup.Location_Id &&
+                               tg.TableGroup_Id != tableGroupId);
 
           if (existingGroup != null)
           {
