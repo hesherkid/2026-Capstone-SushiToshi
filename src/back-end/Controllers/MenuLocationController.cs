@@ -16,13 +16,17 @@ namespace back_end.Controllers
         private readonly ILogger<MenuLocationController> _logger;
         private readonly IWebHostEnvironment _env;
 
-        public MenuLocationController(ApplicationDbContext context, ILogger<MenuLocationController> logger, IWebHostEnvironment env)
+        public MenuLocationController
+        (ApplicationDbContext context,
+            ILogger<MenuLocationController> logger,
+            IWebHostEnvironment env)
         {
             _context = context;
             _logger = logger;
             _env = env;
         }
- [Authorize(Policy = "adminOnly")]
+
+        [Authorize(Policy = "adminOnly")]
         [HttpPut("menu/{menuId}/location/{locationId}")]
         public async Task<IActionResult> AddLocationToMenu(
             [FromRoute] int menuId = -1,
@@ -43,7 +47,9 @@ namespace back_end.Controllers
                 {
                     return NotFound("The location was not found.");
                 }
-                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml => ml.Menu_Id == menuId && ml.Location_Id == locationId);
+                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml =>
+                    ml.Menu_Id == menuId && ml.Location_Id == locationId
+                );
                 if (menuLocation is null)
                 {
                     menuLocation = new MenuLocations
@@ -55,64 +61,64 @@ namespace back_end.Controllers
                     await _context.SaveChangesAsync();
                 }
                 return Ok();
-
             }
             catch (Exception error)
             {
-                // Logged, not sent: the exception would show the browser the server's internals
                 _logger.LogError(error, "Can not Assign a menu location");
                 return StatusCode(500, "Internal Server Error");
             }
         }
- [Authorize(Policy = "adminOnly")]        
+
+        [Authorize(Policy = "adminOnly")]
         [HttpDelete("menu/{menuId}/location/{locationId}")]
         public async Task<IActionResult> DeleteLocationToMenu(
         [FromRoute] int menuId,
         [FromRoute] int locationId
-        ){
+        )
+        {
             try
             {
                 if (menuId < 1)
                 {
                     return BadRequest("No menu location");
                 }
-                if(locationId <1)
+                if (locationId < 1)
                 {
                     return BadRequest("Menu location is Missing");
                 }
-                
-                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml => ml.Menu_Id == menuId && ml.Location_Id == locationId);
+
+                var menuLocation = await _context.MenuLocations.FirstOrDefaultAsync(ml =>
+                    ml.Menu_Id == menuId && ml.Location_Id == locationId
+                );
                 if (menuLocation is null)
                 {
                     return NotFound("Menu and Menu Location were not found");
-
-                };
+                }
+                ;
                 // Only orders on this menu at this location; another location's open orders don't block it
                 var hasOpenOrders = await _context.OrderItems.AnyAsync(oi =>
-                    oi.Menu_Id == menuId &&
-                    oi.SessionOrder.DiningSession.Location_Id == locationId &&
-                    (oi.Order_Item_Status == OrderStatus.Pending || oi.Order_Item_Status == OrderStatus.Processing));
+                    oi.Menu_Id == menuId
+                    && oi.SessionOrder.DiningSession.Location_Id == locationId
+                    && (
+                        oi.Order_Item_Status == OrderStatus.Pending
+                        || oi.Order_Item_Status == OrderStatus.Processing
+                    )
+                );
                 if (hasOpenOrders)
                 {
-                    return BadRequest("Could not process request, there are open orders on this menu location.");
+                    return BadRequest(
+                        "Could not process request, there are open orders on this menu location."
+                    );
                 }
                 _context.MenuLocations.Remove(menuLocation);
                 await _context.SaveChangesAsync();
                 return Ok("Menu location was Removed");
-                
             }
             catch (Exception error)
             {
                 _logger.LogError(error, "Can not remove a menu location");
                 return StatusCode(500, "Internal Server Error");
             }
-                
-        
         }
-
-        
     }
-    
-
-
 }

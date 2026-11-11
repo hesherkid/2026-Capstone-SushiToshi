@@ -110,7 +110,7 @@ namespace back_end.Controllers
 
 
                 _logger.LogError(ex, "Error creating menu item {MenuItemName}", itemData.Name);
-                return StatusCode(500, new { message = "An error occurred while creating the menu item", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while creating the menu item" });
             }
         }
 
@@ -135,7 +135,6 @@ namespace back_end.Controllers
         /// This endpoint requires authentication.
         /// Returns the menu item with all associated tags.
         /// </remarks>
-
         [HttpGet("{itemId}")]
         [ProducesResponseType(typeof(MenuItemWithAssignmentsDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -161,10 +160,9 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving active session");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
-
 
 
         /// <summary>
@@ -185,7 +183,6 @@ namespace back_end.Controllers
         /// This endpoint requires authentication.
         /// Returns all menu items in the system with their associated tags.
         /// </remarks>
-
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<MenuItemResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -207,7 +204,7 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving menu items");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -303,7 +300,7 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving active session");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -342,7 +339,6 @@ namespace back_end.Controllers
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpPost("{itemId:int}/image")]
-        // [RequestSizeLimit(5 * 1024 * 1024)]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -432,7 +428,7 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error Saving the File selected");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -609,8 +605,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateItemStatus(
-            int itemId,
-[FromQuery(Name = "menu_status")]             MenuItemStatus menuStatus
+            int itemId, [FromQuery(Name = "menu_status")] MenuItemStatus menuStatus
         )
         {
             try
@@ -628,7 +623,7 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error Updating the menu Item Status");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -661,8 +656,7 @@ namespace back_end.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetItemTags(
-            int itemId,
-[FromQuery(Name = "menu_status")]             MenuItemStatus menuStatus
+            int itemId, [FromQuery(Name = "menu_status")] MenuItemStatus menuStatus
         )
         {
             try
@@ -685,10 +679,9 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error Getting Menu Item Tags");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
-
 
 
 
@@ -737,7 +730,7 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error Getting Menu Item Tags with Colors");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -805,7 +798,7 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error Getting Menu Item Tags with Colors");
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
