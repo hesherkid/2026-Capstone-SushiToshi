@@ -61,7 +61,10 @@ namespace back_end.domain.Seeders
         // Create up to 10 active sessions (mix of individual tables and groups) per location
         for (int i = 1; i <= 10; i++)
         {
-          var startTime = now.AddHours(-_rng.Next(1, 4));
+          // Active parties have been seated 10-75 minutes, inside the 90 minute visit limit
+          var minutesSeated = _rng.Next(10, 76);
+          var startTime = now.AddMinutes(-minutesSeated);
+          var firstOrderAt = startTime.AddMinutes(Math.Min(_rng.Next(5, 20), minutesSeated - 1));
           var menu = menus[_rng.Next(menus.Count)];
 
           DiningSession session;
@@ -77,7 +80,7 @@ namespace back_end.domain.Seeders
               Menu_Id = menu.Menu_id,
               Location_Id = location.Location_Id,
               Started_At = startTime,
-              First_Order_At = startTime.AddMinutes(_rng.Next(5, 20)),
+              First_Order_At = firstOrderAt,
               Ended_At = null,
               Table_Id = table.Table_Id
             };
@@ -91,7 +94,7 @@ namespace back_end.domain.Seeders
               Menu_Id = menu.Menu_id,
               Location_Id = location.Location_Id,
               Started_At = startTime,
-              First_Order_At = startTime.AddMinutes(_rng.Next(5, 20)),
+              First_Order_At = firstOrderAt,
               Ended_At = null,
               TableGroup_Id = group.TableGroup_Id
             };
@@ -109,7 +112,7 @@ namespace back_end.domain.Seeders
         {
           var daysAgo = _rng.Next(1, 90);
           var startTime = now.AddDays(-daysAgo).AddHours(_rng.Next(9, 20));
-          var duration = _rng.Next(45, 180);
+          var duration = _rng.Next(45, 101); // 45-100 min, a few over the 90 minute limit for analytics
           var menu = menus[_rng.Next(menus.Count)];
 
           DiningSession session;
