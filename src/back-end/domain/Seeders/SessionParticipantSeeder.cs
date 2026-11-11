@@ -14,9 +14,10 @@ namespace back_end.domain.Seeders
     /// - Only diners are participants. Staff seat a table but never join it
     /// - Only one seat at a time can used, a user is never seated at two open tables, registered customers past 
     /// visits don't overlap
-    /// - Open tables are seated by throwaway guest accounts, same as "Continue as guest".
-    /// - Regisitered customers appear only in ended sessions (history and analytics), except the demo
-    /// customer (UserSeeder.DemoCustomerEmail), who is also seated at one open table
+    /// - Every open table has at least one throwaway guest account, same as "Continue as guest".
+    /// - Registered customers sit at past tables (history and analytics). The demo customer
+    /// (UserSeeder.DemoCustomerEmail) and about half the others are also seated at an open table, at most
+    /// two besides the demo customer per table, so staff see real names as well as guest codes
     /// </summary>
     public class SessionParticipantSeeder : ISeeder
     {
@@ -61,16 +62,34 @@ namespace back_end.domain.Seeders
             var now = DateTime.UtcNow;
             int registered = 0, guests = 0;
 
-            // Picked before the loop and marked busy, so none of the demo customer's past visits
-            // overlap the open table
+            // Registered customers at open tables are picked before the loop and marked busy, so none
+            // of their past visits overlap the open table
+            var openSessions = sessions.Where(s => s.Ended_At == null).ToList();
+            var openSeatsFor = openSessions.ToDictionary(s => s.Session_Id, _ => new List<User>());
+
             var demo = customers.FirstOrDefault(c => c.Email == UserSeeder.DemoCustomerEmail);
-            var demoSession = demo == null ? null : sessions
-                .Where(s => s.Ended_At == null)
+            var demoSession = demo == null ? null : openSessions
                 .OrderBy(s => s.Location_Id == DemoLocationId ? 0 : 1)
                 .ThenBy(_ => _rng.Next())
                 .FirstOrDefault();
             if (demo != null && demoSession != null)
-                busy[demo.User_id].Add((demoSession.Started_At, now));
+                openSeatsFor[demoSession.Session_Id].Add(demo);
+
+            foreach (var customer in customers.Where(c => c != demo).OrderBy(_ => _rng.Next()))
+            {
+                if (_rng.NextDouble() >= 0.5) continue;
+
+                var table = openSessions
+                    .Where(s => openSeatsFor[s.Session_Id].Count(u => u != demo) < 2)
+                    .OrderBy(_ => _rng.Next())
+                    .FirstOrDefault();
+                if (table == null) break;
+                openSeatsFor[table.Session_Id].Add(customer);
+            }
+
+            foreach (var s in openSessions)
+                foreach (var customer in openSeatsFor[s.Session_Id])
+                    busy[customer.User_id].Add((s.Started_At, now));
 
             foreach (var s in sessions)
             {
@@ -81,15 +100,23 @@ namespace back_end.domain.Seeders
                 // Diners join within the first 30 minutes, and never after the table ended (or "now")
                 var latestJoinMinutes = Math.Max(0, Math.Min(30, (int)(end - s.Started_At).TotalMinutes));
 
-                // The demo customer sat down first, so their bill is likely named after them
-                if (s == demoSession)
+                // Registered customers picked for this open table, then guests for the rest (at least one)
+                var seatedHere = isOpen ? openSeatsFor[s.Session_Id] : new List<User>();
+                if (isOpen) seats = Math.Max(seats, seatedHere.Count + 1);
+
+                foreach (var customer in seatedHere)
                 {
+                    // The demo customer sat down first, so their bill is likely named after them
+                    var joinedAt = customer == demo
+                        ? s.Started_At
+                        : s.Started_At.AddMinutes(_rng.Next(0, latestJoinMinutes + 1));
+
                     _context.SessionParticipants.Add(new SessionParticipant
                     {
                         Session_Id = s.Session_Id,
-                        User_Id = demo!.User_id,
-                        User_Name = DisplayName(demo),
-                        Joined_At = s.Started_At
+                        User_Id = customer.User_id,
+                        User_Name = DisplayName(customer),
+                        Joined_At = joinedAt
                     });
                     registered++;
                     seats--;

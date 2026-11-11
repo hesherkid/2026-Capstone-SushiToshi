@@ -15,7 +15,9 @@ namespace back_end.domain.Seeders
   /// <summary>
   /// Seeds bills with guest counts/status, and puts everyone seated at the session on one of them
   /// (SessionParticipant.Bill_Id), the way picking or starting a bill does in the app.
-  /// - Every bill has at least one person on it, and is named after the first of them
+  /// - Every bill has at least one person on it
+  /// - A bill is named after the first registered customer on it. When only guests are on it (whose name
+  /// is just a code, "Guest K7P2"), it's a name a guest might type when starting it, or "Table 5 - Bill 2"
   /// - A bill's guest count is never less than the people on it (kids without a phone make up the rest)
   /// - People stay on their bill after it's closed or cancelled, same as the app
   /// </summary>
@@ -25,6 +27,13 @@ namespace back_end.domain.Seeders
     private readonly ILogger<BillSeeder> _logger;
     private readonly IPricingService _pricingService;
     private readonly Random _rng = new();
+
+    // What guests type as the bill name when they start one from the menu
+    public static readonly string[] TypedBillNames =
+    {
+      "Lee", "Park", "Nguyen", "Patel", "Kim", "Chen", "Garcia", "Singh", "Tanaka", "Murphy",
+      "Priya", "Marcus", "Hana", "Diego", "Aisha", "Tom", "Jess & Sam", "Birthday dinner", "Work lunch", "The Wongs"
+    };
 
     public BillSeeder(ApplicationDbContext context, ILogger<BillSeeder> logger, IPricingService pricingService)
     {
@@ -56,19 +65,28 @@ namespace back_end.domain.Seeders
           .GroupBy(p => p.Session_Id)
           .ToDictionary(g => g.Key, g => g.ToList());
 
+      var guestSuffix = "@" + GuestAccounts.EmailDomain;
+      var guestIds = _context.Users
+          .Where(u => u.Email.EndsWith(guestSuffix))
+          .Select(u => u.User_id)
+          .ToHashSet();
+
       int created = 0, seated = 0;
 
       foreach (var s in sessions)
       {
         int totalSeats;
+        List<int> tableNumbers;
 
         if (s.Table_Id.HasValue && s.Table != null)
         {
           totalSeats = s.Table.seat_count;
+          tableNumbers = new List<int> { s.Table.table_number };
         }
         else if (s.TableGroup_Id.HasValue && s.TableGroup != null)
         {
           totalSeats = s.TableGroup.Tables.Sum(t => t.seat_count);
+          tableNumbers = s.TableGroup.Tables.Select(t => t.table_number).OrderBy(n => n).ToList();
         }
         else
         {
@@ -89,11 +107,15 @@ namespace back_end.domain.Seeders
             .Select(i => shuffled.Where((_, n) => n % numBillsForSession == i).OrderBy(p => p.Joined_At).ToList())
             .ToList();
 
+        // Typed names for guest-only bills, never the same one twice at a table
+        var typedNames = new Queue<string>(TypedBillNames.OrderBy(_ => _rng.Next()));
+
         // Seats left over after one per person, for kids and anyone who didn't scan in
         var spareSeats = Math.Max(0, totalSeats - people.Count);
 
-        foreach (var onBill in peopleOnBill)
+        for (int billNumber = 1; billNumber <= peopleOnBill.Count; billNumber++)
         {
+          var onBill = peopleOnBill[billNumber - 1];
           var owner = onBill[0];
 
           var extra = _rng.Next(0, Math.Min(spareSeats, 3) + 1);
@@ -124,8 +146,11 @@ namespace back_end.domain.Seeders
               status = BillStatus.Cancelled;
           }
 
-          // Named after whoever started it, like a bill started from the menu
-          var billName = owner.User_Name ?? $"Party of {total}";
+          // A registered customer's name. Only guests: mostly a typed name, sometimes the table
+          var named = onBill.FirstOrDefault(p => p.User_Id is int id && !guestIds.Contains(id) && !string.IsNullOrWhiteSpace(p.User_Name));
+          var billName = named?.User_Name
+              ?? (_rng.NextDouble() < 0.7 ? typedNames.Dequeue() : null)
+              ?? $"Table {string.Join(" & ", tableNumbers)} - Bill {billNumber}";
 
           var tableEnd = s.Ended_At ?? DateTime.UtcNow;
           var createdAt = owner.Joined_At.AddMinutes(_rng.Next(5, 31));

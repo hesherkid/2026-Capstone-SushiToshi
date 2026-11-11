@@ -155,7 +155,7 @@ public class SeederRulesTests
     }
 
     [Fact]
-    public void OpenTables_AreSeatedOnlyByGuestAccountsNobodyCanSignInAs_ExceptTheDemoCustomer()
+    public void OpenTables_HaveAGuest_AndAtMostTwoRegisteredCustomersBesidesTheDemoCustomer()
     {
         for (var run = 0; run < Runs; run++)
         {
@@ -163,12 +163,16 @@ public class SeederRulesTests
 
             var openSeats = context.SessionParticipants
                 .Include(p => p.User)
-                .Where(p => p.Left_At == null && p.DiningSession.Ended_At == null && p.User!.Email != UserSeeder.DemoCustomerEmail)
+                .Where(p => p.Left_At == null && p.DiningSession.Ended_At == null)
                 .ToList();
 
-            openSeats.Should().NotBeEmpty();
-            openSeats.Should().OnlyContain(p => GuestAccounts.IsGuest(p.User!.Email) && p.User.Password_hash == null,
-                "a registered customer seated by the seed would look seated when they open the menu");
+            foreach (var table in openSeats.GroupBy(p => p.Session_Id))
+            {
+                table.Should().Contain(p => GuestAccounts.IsGuest(p.User!.Email) && p.User.Password_hash == null,
+                    "staff should see guests as well as registered customers");
+                table.Count(p => !GuestAccounts.IsGuest(p.User!.Email) && p.User.Email != UserSeeder.DemoCustomerEmail)
+                     .Should().BeLessThanOrEqualTo(2);
+            }
         }
     }
 
@@ -251,7 +255,7 @@ public class SeederRulesTests
         for (var run = 0; run < Runs; run++)
         {
             using var context = Seeded();
-            var seats = context.SessionParticipants.ToList();
+            var seats = context.SessionParticipants.Include(p => p.User).ToList();
             var bills = context.Bills.ToList();
 
             seats.Should().OnlyContain(p => p.Bill_Id != null, "the seed puts everyone on a bill");
@@ -265,10 +269,25 @@ public class SeederRulesTests
                 bill.Total_Count.Should().BeGreaterThanOrEqualTo(onBill.Count, "everyone on a bill is one of its guests");
                 bill.Adult_Count.Should().BeGreaterThanOrEqualTo(1);
                 (bill.Adult_Count + bill.Senior_Count + bill.Child_Count + bill.Tot_Count).Should().Be(bill.Total_Count);
-                // Named after whoever joined first (two people can join in the same minute)
-                var firstJoined = onBill.Min(p => p.Joined_At);
-                onBill.Where(p => p.Joined_At == firstJoined).Select(p => p.User_Name).Should().Contain(bill.Bill_Name);
+                // Named after a registered customer on it, or its table when only guests are on it
+                var registered = onBill.Where(p => !GuestAccounts.IsGuest(p.User!.Email)).ToList();
+                if (registered.Count > 0)
+                {
+                    // The first of them (two people can join in the same minute)
+                    var firstJoined = registered.Min(p => p.Joined_At);
+                    registered.Where(p => p.Joined_At == firstJoined).Select(p => p.User_Name).Should().Contain(bill.Bill_Name);
+                }
+                else
+                {
+                    var table = context.DiningSessions.Include(s => s.Table).Single(s => s.Session_Id == bill.Session_Id).Table!;
+                    var tableName = System.Text.RegularExpressions.Regex.IsMatch(bill.Bill_Name, $@"^Table {table.table_number} - Bill [1-3]$");
+                    (tableName || BillSeeder.TypedBillNames.Contains(bill.Bill_Name)).Should().BeTrue(
+                        $"\"{bill.Bill_Name}\" should be a name a guest typed, or its table");
+                }
             }
+
+            bills.GroupBy(b => b.Session_Id).Should().OnlyContain(g => g.Select(b => b.Bill_Name).Distinct().Count() == g.Count(),
+                "staff tell a table's bills apart by name");
         }
     }
 

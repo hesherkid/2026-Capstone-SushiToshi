@@ -72,6 +72,8 @@ All seeded accounts are active and have a confirmed email. They're created by `U
 | Customer | `emma.wilson@email.com`       | `Customer123!`   | Seated at an open table at location 1, with a bill and orders, so signing in shows a table in progress. Also one of 10 customers with order history (see `UserSeeder.cs` for the rest) |
 | Customer | `noah.clarke@email.com`       | `Customer123!`   | No sessions, orders or bills. Use it to try the new-customer flow from scratch |
 
+About half of the other 9 customers are also seated at an open table each time the database is seeded, so the staff dashboards show real names next to the guests. Signing in as one of them then shows their table in progress too.
+
 "Continue as Guest" doesn't use any of these. It creates a new throwaway account each time, with an email ending in `@guest.sushitoshi.invalid` and no password (see `Helpers/GuestAccounts.cs`).
 
 > **These passwords are in the source code**, so none of these accounts are seeded outside Development. See [Default accounts](../setup/production-setup.md#4-default-accounts-security) in the production setup guide.
