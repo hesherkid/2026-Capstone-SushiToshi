@@ -31,6 +31,10 @@
       "askForPassword": true
     }
   ],
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "editor.formatOnSave": true
+  },
   "github.copilot.nextEditSuggestions.enabled": false,
   "cSpell.words": ["Swashbuckle", "Toshi"]
 }

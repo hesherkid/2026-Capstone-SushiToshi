@@ -130,10 +130,14 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - HolidayController
 - LocationController
 - MenuController
+- MenuAssignmentController
+- MenuItemController
 - MenuItemViewController
+- MenuLocationController
 - OrderController
 - PricingController
 - ServiceRequestController
+- SessionParticipantController
 - StaffController
 - Analytics: BrowsingBehavior, ItemPerformance, OrderTiming and TableTurnover controllers
 - Staff location lock, which covers Dashboard, DiningSession, MenuAssignment, Order, ServiceRequest and TableEntity controllers
@@ -146,7 +150,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Not yet tested:**
 
-- Controllers: MenuItemController, MenuLocationController, SessionController, SessionParticipantController, TableController, TableGroupController. MenuAssignmentController and TableEntityController are only covered by the staff location lock tests.
+- Controllers: TableController, TableGroupController. TableEntityController is only covered by the staff location lock tests.
 - Services: AuthTokenService, HolidayService, CanadaHolidaysClient, SendGridEmailService
 
 ### Frontend
