@@ -14,11 +14,16 @@ namespace back_end.domain.Seeders
     /// - Only diners are participants. Staff seat a table but never join it
     /// - Only one seat at a time can used, a user is never seated at two open tables, registered customers past 
     /// visits don't overlap
-    /// - Open tables are seated by throwaway guest accounts, same as "Continue as guest". 
-    /// - Regisitered customers appear only in ended sessions (history and analytics)
+    /// - Open tables are seated by throwaway guest accounts, same as "Continue as guest".
+    /// - Regisitered customers appear only in ended sessions (history and analytics), except the demo
+    /// customer (UserSeeder.DemoCustomerEmail), who is also seated at one open table
     /// </summary>
     public class SessionParticipantSeeder : ISeeder
     {
+        // Where the demo customer's open table is, if that location has one. Location 1's staff
+        // account (sarah.jones) can then see them on the dashboards
+        private const int DemoLocationId = 1;
+
         private readonly ApplicationDbContext _context;
         private readonly ILogger<SessionParticipantSeeder> _logger;
         private readonly Random _rng = new();
@@ -56,6 +61,17 @@ namespace back_end.domain.Seeders
             var now = DateTime.UtcNow;
             int registered = 0, guests = 0;
 
+            // Picked before the loop and marked busy, so none of the demo customer's past visits
+            // overlap the open table
+            var demo = customers.FirstOrDefault(c => c.Email == UserSeeder.DemoCustomerEmail);
+            var demoSession = demo == null ? null : sessions
+                .Where(s => s.Ended_At == null)
+                .OrderBy(s => s.Location_Id == DemoLocationId ? 0 : 1)
+                .ThenBy(_ => _rng.Next())
+                .FirstOrDefault();
+            if (demo != null && demoSession != null)
+                busy[demo.User_id].Add((demoSession.Started_At, now));
+
             foreach (var s in sessions)
             {
                 var isOpen = s.Ended_At == null;
@@ -64,6 +80,20 @@ namespace back_end.domain.Seeders
 
                 // Diners join within the first 30 minutes, and never after the table ended (or "now")
                 var latestJoinMinutes = Math.Max(0, Math.Min(30, (int)(end - s.Started_At).TotalMinutes));
+
+                // The demo customer sat down first, so their bill is likely named after them
+                if (s == demoSession)
+                {
+                    _context.SessionParticipants.Add(new SessionParticipant
+                    {
+                        Session_Id = s.Session_Id,
+                        User_Id = demo!.User_id,
+                        User_Name = DisplayName(demo),
+                        Joined_At = s.Started_At
+                    });
+                    registered++;
+                    seats--;
+                }
 
                 var free = isOpen
                     ? new List<User>()
@@ -107,7 +137,7 @@ namespace back_end.domain.Seeders
             }
 
             _logger.LogInformation(
-                "Created {Total} session participants ({Registered} registered customers in past sessions, {Guests} guest accounts)",
+                "Created {Total} session participants ({Registered} registered customers, {Guests} guest accounts)",
                 registered + guests, registered, guests);
         }
 

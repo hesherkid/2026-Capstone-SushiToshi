@@ -102,7 +102,7 @@ public class SeederRulesTests
         context.Users.AddRange(
             new User { User_id = 1, Email = "admin@sushitoshi.ca", Role = UserRoles.Admin, Password_hash = "x" },
             new User { User_id = 2, Email = "staff@sushitoshi.ca", Role = UserRoles.Staff, Location_id = LocationId, Password_hash = "x" },
-            new User { User_id = 3, Email = "emma@email.com", First_name = "Emma", Last_name = "Wilson", Role = UserRoles.Customer, Password_hash = "x" },
+            new User { User_id = 3, Email = UserSeeder.DemoCustomerEmail, First_name = "Emma", Last_name = "Wilson", Role = UserRoles.Customer, Password_hash = "x" },
             new User { User_id = 4, Email = "liam@email.com", First_name = "Liam", Last_name = "Brown", Role = UserRoles.Customer, Password_hash = "x" },
             new User { User_id = 5, Email = "olivia@email.com", First_name = "Olivia", Last_name = "Taylor", Role = UserRoles.Customer, Password_hash = "x" });
 
@@ -155,7 +155,7 @@ public class SeederRulesTests
     }
 
     [Fact]
-    public void OpenTables_AreSeatedOnlyByGuestAccountsNobodyCanSignInAs()
+    public void OpenTables_AreSeatedOnlyByGuestAccountsNobodyCanSignInAs_ExceptTheDemoCustomer()
     {
         for (var run = 0; run < Runs; run++)
         {
@@ -163,12 +163,31 @@ public class SeederRulesTests
 
             var openSeats = context.SessionParticipants
                 .Include(p => p.User)
-                .Where(p => p.Left_At == null && p.DiningSession.Ended_At == null)
+                .Where(p => p.Left_At == null && p.DiningSession.Ended_At == null && p.User!.Email != UserSeeder.DemoCustomerEmail)
                 .ToList();
 
             openSeats.Should().NotBeEmpty();
             openSeats.Should().OnlyContain(p => GuestAccounts.IsGuest(p.User!.Email) && p.User.Password_hash == null,
                 "a registered customer seated by the seed would look seated when they open the menu");
+        }
+    }
+
+    [Fact]
+    public void DemoCustomer_IsSeatedAtOneOpenTable_OnABill()
+    {
+        for (var run = 0; run < Runs; run++)
+        {
+            using var context = Seeded();
+
+            var openSeats = context.SessionParticipants
+                .Include(p => p.DiningSession)
+                .Where(p => p.User!.Email == UserSeeder.DemoCustomerEmail && p.Left_At == null && p.DiningSession.Ended_At == null)
+                .ToList();
+
+            var seat = openSeats.Should().ContainSingle("signing in as the demo customer shows one table in progress").Subject;
+            seat.DiningSession.Location_Id.Should().Be(LocationId);
+            seat.Bill_Id.Should().NotBeNull();
+            seat.Joined_At.Should().Be(seat.DiningSession.Started_At);
         }
     }
 
