@@ -1,6 +1,7 @@
-# Testing Documentation - 2026 C#Capstone - Sushi Toshi
+# Testing Documentation - 2026 C# Capstone - Sushi Toshi
 
-## Table of Contents
+<details>
+<summary>Table of Contents</summary>
 
 - [Overview](#overview)
 - [Testing Infrastructure](#testing-infrastructure)
@@ -12,8 +13,7 @@
 - [Testing Best Practices](#testing-best-practices)
 - [Troubleshooting](#troubleshooting)
 - [Resources](#resources)
-
----
+</details>
 
 ## Overview
 
@@ -122,7 +122,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 **Controllers with tests:**
 
 - AdminQrCodeController
-- AuthController (email login, guest login)
+- AuthController
 - BillController
 - CategoryController and TagController
 - CustomerController
