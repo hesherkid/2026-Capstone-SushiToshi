@@ -175,7 +175,7 @@ Generated QR codes are saved to disk and reused:
 - **Storage Location:** `storage/qrcodes/` under the folder the backend runs from (normally `src/back-end/storage/qrcodes/`). Created automatically the first time the service is used.
 - **Filenames:** `wifi_L{locationId}_T{table}.png`, `session_L{locationId}_T{table}.png`
 - **Cache Behavior:**
-  - `GET /api/admin/qr/wifi` and `/session` return the saved file if one exists; add `&refresh=true` to regenerate from current settings
+  - `GET /api/admin/qr/wifi` and `/session` return the saved file if one exists; add `&refresh=true` to regenerate from current settings. The admin QR Codes page always sends `refresh=true` for Preview and Download
   - `POST /api/admin/qr/bulk` always regenerates and overwrites
   - `DELETE /api/admin/qr/clear` removes a table's saved files
   - Responses send `Cache-Control: private, no-cache`, so browsers re-check instead of reusing old images

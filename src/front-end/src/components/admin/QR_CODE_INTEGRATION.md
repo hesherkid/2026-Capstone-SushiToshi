@@ -13,8 +13,9 @@ For how the QR images are generated, stored and configured on the backend, see t
 
 ```
 src/front-end/src/
-├── app/admin/qr-codes/
-│   └── page.jsx                  # Route; checks the user is an admin
+├── app/admin/
+│   ├── layout.jsx                # RequireRole guard for every /admin page
+│   └── qr-codes/page.jsx         # Route; loads QRCodeManagement in the browser only
 ├── components/admin/
 │   ├── QRCodeManagement.jsx      # The page's UI and API calls
 │   └── QR_CODE_INTEGRATION.md    # This file
@@ -26,7 +27,7 @@ src/front-end/src/
 
 - **Route:** `/admin/qr-codes`
 - **Menu:** **QR Codes**, in the admin navigation drawer
-- **Admins only.** Staff don't see the menu entry. `page.jsx` sends non-admins to `/unauthorized`, and the API (`AdminQrCodeController`) also requires the `Admin` role.
+- **Admins only.** Staff don't see the menu entry. `app/admin/layout.jsx` wraps the page in `RequireRole`, which sends signed-out visitors to `/auth/login` and non-admins to `/unauthorized`. The API (`AdminQrCodeController`) also requires the `Admin` role.
 
 ## Features
 
@@ -36,6 +37,8 @@ src/front-end/src/
 2. On the WiFi or Session card, click:
    - **Preview** to see the code in a dialog, or
    - **Download** to save it as `wifi_L{locationId}_T{table}.png` or `session_L{locationId}_T{table}.png`.
+
+Both send `refresh=true`, so the code is always built from the current WiFi and `SessionPageUrl` settings, and the backend saves the new image over the old one.
 
 ### Bulk generation
 
@@ -49,7 +52,9 @@ The download buttons only appear for the location you most recently generated co
 
 ### Clearing saved codes
 
-The backend saves each generated PNG and reuses it on later requests. After changing a location's WiFi credentials or the session URL, select the table and click **Clear Cache for Table N** so the next request makes a fresh code.
+The backend saves each generated PNG. Single-table **Preview** and **Download** always rebuild it, but the ZIP and PDF downloads use the saved files. After changing a location's WiFi credentials or the session URL, restart the backend and run **Generate QR Codes for All N Tables** again before downloading the ZIP or PDF.
+
+**Clear Cache for Table N** deletes one table's saved codes. It's rarely needed now, since bulk generation overwrites every file.
 
 ## API Endpoints Used
 
@@ -57,8 +62,8 @@ All are under `/api/admin/qr` and require the `Admin` role.
 
 | Action | Request |
 | --- | --- |
-| WiFi QR code | `GET /wifi?location_id={id}&table={number}` |
-| Session QR code | `GET /session?location_id={id}&table={number}` |
+| WiFi QR code | `GET /wifi?location_id={id}&table={number}&refresh=true` |
+| Session QR code | `GET /session?location_id={id}&table={number}&refresh=true` |
 | Bulk generate | `POST /bulk?location_id={id}` |
 | Download bulk as ZIP | `GET /bulk/download-zip?location_id={id}` |
 | Download bulk as PDF | `GET /bulk/download-pdf?location_id={id}` |
@@ -74,6 +79,7 @@ Messages appear in a snackbar at the bottom right. When the API returns an error
 | --- | --- |
 | "Please select a location and enter a table number" | Location or table number is empty |
 | "No tables found for this location. Please create tables first." | Bulk generation on a location with no tables |
+| "Please generate QR codes first" | ZIP or PDF download before bulk generation |
 | "Failed to fetch locations" / "Failed to fetch tables" | The backend isn't running, or the request was rejected |
 | "Location N not found or WiFi credentials not configured" | The location doesn't exist, or has no WiFi settings in the backend config |
 | "Failed to clear QR code cache" | The clear request failed |
