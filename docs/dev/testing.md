@@ -152,47 +152,50 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - Analytics: BrowsingBehavior, ItemPerformance, OrderTiming and TableTurnover controllers
 - Staff location lock, which covers Dashboard, DiningSession, MenuAssignment, Order, ServiceRequest and TableEntity controllers
 
-**Services with tests:** AdmintBootstrap, QrGeneratorService, LocationAccessService, GuestCleanup, GuestCleanupWorker, PricingService (restaurant time), and the four analytics services through their controller tests.
+**Services with tests:** AdminBootstrap, QrGeneratorService, LocationAccessService, GuestCleanup, GuestCleanupWorker, PricingService (restaurant time), and the four analytics services through their controller tests.
 
-**Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, analytics date ranges, DTO validation, and seeder rules.
+**Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, GoogleNames, GoogleAccounts, UserRoles, analytics date ranges, DTO validation, seeder rules, DTO JSON keys (`DtoJsonKeysTests`) and route names (`RouteNameTests`).
 
-**Integration tests:** QR code endpoints, the guest sign-in and auth endpoint rate limits, and forwarded headers.
+**Integration tests:** QR code endpoints, the guest sign-in and auth endpoint rate limits, forwarded headers, unknown JSON keys (`JsonUnknownKeyTests`) and query parameter names (`QueryParameterNameTests`).
 
 **Not yet tested:**
 
 - Services: AuthTokenService, HolidayService, CanadaHolidaysClient, SendGridEmailService, PricingNotConfiguredException
+- Helpers: BillLinks, BillLock, SessionAccess (covered only indirectly through controller tests)
 
 ### Frontend
 
 **Covered areas:**
 
 - Auth: LoginForm, RegisterForm
-- Admin: categories, customers, holidays, menu items, menu assignment, QR codes, staff, tags, pricing profiles
+- Admin: categories, customers, holidays, menu items (incl. MenuItemForm), menu assignment, QR codes, staff, tags, pricing profiles (incl. DefaultPricing)
+- Location management: LocationManagement, LocationPricingDialog, MenuManagement, MenuForm
 - Analytics: nav and all four reports
-- Staff: Order, Session and Table dashboards, plus the bill summary, new bill and leftover fee dialogs
+- Staff: Order, Session and Table dashboards, plus the new session, staff order, bill summary, new bill and leftover fee dialogs
 - Customer: bill dialog, side and bottom nav, service request form
 - Menu: item card, cart line, quantity stepper, review order button, item view tracking
 - Common: AppDialog, ConfirmDialog, ManagementPage, AppBarWithTitle
-- Hooks: useAutoRefresh, useOrderActions
+- Hooks: useAuth, useAutoRefresh, useOrderActions, and useItemViewTracker through `TrackedItem.test.jsx`
+- Route pages: tests next to the page in `app/` (home, menu, review, orders, bills, browse, visits, thank-you)
 - Utils and services: auth, serverMessage, tableVisit, tableSession
 
 **Not yet tested (highest value first):**
 
 - Auth: ForgotPasswordForm, ResetPasswordForm, VerifyEmailForm
-- Location management: LocationManagement, LocationForm, MenuManagement, MenuForm, MenuAssignmentForm, AddLocationToMenu
-- Staff dialogs: NewSessionDialog, SessionDetailDialog, AddTableDialog, OrderDetailDialog, and the TableDashboard dialogs
-- Admin: MenuItemForm, PasswordChangeDialog, DefaultPricing
+- Location management: LocationForm, MenuAssignmentForm, AddLocationToMenu
+- Staff dialogs: SessionDetailDialog, AddTableDialog, OrderDetailDialog, and the TableDashboard dialogs
+- Admin: PasswordChangeDialog
 - Analytics: AnalyticsOverview, ReportExport
-- Hooks: useAuth, useItemViewTracker
+- Menu: TagFilter (covered only through the full menu page test)
 
 ### E2E
 
-Two specs, run on five browser projects: Chromium, Firefox, WebKit(Safari), Mobile Chome (Pixel 5), and Mobile Safari (iPhone 12).
+Two specs, run on five browser projects: Chromium, Firefox, WebKit (Safari), Mobile Chrome (Pixel 5), and Mobile Safari (iPhone 12).
 
 - `admin-qr-codes.spec.js`: choosing a location, table number is required before preview/download, session QR preview, WiFi QR download, and no sideways scrolling for phones only.
-- `sign-in.spec.js`: login form, guest sign-in only from a tables QR code, failed sign-in, admin sign-in, and the table QR link keeps `locationId`/`tableNumber`
+- `sign-in.spec.js`: login form, guest sign-in only from a table's QR code, failed sign-in, admin sign-in, and the table QR link keeps `locationId`/`tableNumber`
 
-A `setup` project (`auth.setup.js`) signs in one as the seeded admin (`UserSeeder.cs`) and saves the browser state to `playwright/.auth/admin.json` which has been added to `.gitignore`. Every browser project starts from it. `sign-in.spec.js` resets to a signed out state with `test.use({ storageState: { cookies: [], origins: [] } })`.
+A `setup` project (`auth.setup.js`) signs in once as the seeded admin (`UserSeeder.cs`) and saves the browser state to `playwright/.auth/admin.json` which has been added to `.gitignore`. Every browser project starts from it. `sign-in.spec.js` resets to a signed out state with `test.use({ storageState: { cookies: [], origins: [] } })`.
 
 ### Coverage thresholds
 
@@ -326,7 +329,7 @@ npm run test:e2e:ui
 # One spec file
 npx playwright test admin-qr-codes
 
-# One browser (quotes needs for names with spaces)
+# One browser (quotes needed for names with spaces)
 npx playwright test --project=chromium
 npx playwright test --project="Mobile Safari"
 ```
