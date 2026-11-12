@@ -29,6 +29,8 @@ npm run test:coverage
 npm run test:e2e
 ```
 
+This guide covers Jest component tests. For the Playwright specs, the browser projects and the signed-in admin setup, see [E2E](testing.md#e2e) in the testing guide.
+
 ## File Structure
 
 Place test files in `__tests__` directories next to the code they test, under `src/front-end`. Hooks, services and utils follow the same pattern (`src/hooks/__tests__/`, `src/utils/__tests__/`):
@@ -39,6 +41,8 @@ src/components/
 └── __tests__/
     └── MyComponent.test.jsx
 ```
+
+Route pages are the exception: their test sits next to the page, e.g. `src/app/menu/full-menu/page.test.jsx`.
 
 ## Test Template
 
@@ -422,7 +426,7 @@ it("selects from dropdown", async () => {
 
 Aim for 70% coverage on each metric (branches, functions, lines, statements).
 
-`jest.config.js` currently enforces a much lower baseline (2–3%) so the build fails only if coverage drops. Raise those thresholds as coverage grows. See [Coverage thresholds](testing.md#coverage-thresholds) for the current values.
+`jest.config.js` enforces a threshold for each metric, set a few points below current coverage (65% to 75%), so the build fails if coverage drops. Raise them as coverage grows. See [Coverage thresholds](testing.md#coverage-thresholds) for the current values.
 
 ## Component Test Checklist
 

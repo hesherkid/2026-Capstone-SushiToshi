@@ -172,7 +172,7 @@ Each table's Session QR code has the site's address saved inside the image when 
 3. **Set WiFi credentials** for each location's guest network. See [wifi-configuration.md](wifi-configuration.md).
 4. **Restart the backend** so it reads the new values.
 5. **Bulk generate before downloading anything.** In the admin app, go to **QR Codes**, pick a location, and click **Generate QR Codes for All N Tables**. Repeat for every location.
-   - Bulk generation overwrites every table's saved image. Downloading a single code first would return the old saved image, with the old address.
+   - Bulk generation overwrites every table's saved image. The ZIP and PDF downloads use those saved images, so generating first makes sure none of them has the old address. (Previewing or downloading one table's code always builds it from the current settings.)
    - Optional extra precaution: delete everything in `storage/qrcodes/` (under the folder the backend runs from) before generating.
 6. **Test before printing.** Ask staff to start a dining session for one table. Then, with the phone's WiFi **turned off** so it can't reach anything on the local network:
    - Scan that table's Session code. It should open the real site's login page, not `localhost`.

@@ -50,7 +50,8 @@ To add an origin, someone with access to the project in Google Cloud Console ope
 
 - The login page shows an "or" divider and a Google button under **Sign In**.
 - Clicking it opens Google's account picker without an origin error.
-- After you pick an account, you land signed in. A first-time Google sign-in creates a new customer account.
+- After you pick an account, you land signed in. A first-time Google sign-in creates a new customer account, with the first and last names Google has (either can be empty).
+- If an account with that email already exists, Google signs in to it, whatever its role. Only names it's missing are filled in from Google. If its email was never verified, Google sign-in verifies it and **removes its password**, and any verification or reset links already sent stop working, because whoever set that password never proved they own the email. That person signs in with Google, or uses **Forgot password** to set a new one.
 - Optional: the same steps work on your phone through your ngrok URL.
 
 ## Troubleshooting

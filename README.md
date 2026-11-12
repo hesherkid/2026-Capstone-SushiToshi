@@ -19,14 +19,15 @@ Continuing project for **Sushi Toshi** to provide a comprehensive digital restau
 
 - **Backend**: .NET 9 API
 - **Frontend**: Next.js 16 using App Router, Material UI, CSS
-- **Database**: MariaDB
-- **Authentication**: JWT, with email/password and Google Sign-In
+- **Database**: MariaDB, run in Docker for local development
+- **Authentication**: JWT, with email/password, Google Sign-In and guest accounts
 - **Email**: Twilio SendGrid
-- **Deployment**: Docker
+- **Testing**: xUnit, Jest and React Testing Library, Playwright
 
 ## 📁 Project Structure
 
 ```bash
+├── .github/workflows             # CI: automated tests on pushes and pull requests to main
 ├── docs                          # Project documentation (index: docs/README.md)
 ├── src                           # Project code
 │   ├── back-end                  # .NET API application
@@ -36,7 +37,7 @@ Continuing project for **Sushi Toshi** to provide a comprehensive digital restau
 │   ├── maria-db                  # Database configuration
 │   └── src.sln                   # .NET solution file
 ├── docker-compose.yml            # MariaDB container
-└── run-all-tests.ps1             # Runs all automated tests
+└── run-all-tests.ps1             # Runs the backend and Jest tests
 ```
 
 ## 🚀 Getting Started
@@ -66,19 +67,13 @@ docker compose up -d
 
 #### Backend
 
-From `src/back-end`:
-
-- Apply the latest Entity Framework Core migrations:
-
-```bash
-dotnet ef database update
-```
-
-- Run the backend:
+From `src/back-end`, run the backend:
 
 ```bash
 dotnet run --launch-profile http
 ```
+
+On startup it applies any pending migrations and, on an empty database, loads the sample data, so you don't need `dotnet ef database update`. See [Database, migrations and seed data](docs/dev/database.md).
 
 #### Frontend
 
@@ -98,6 +93,7 @@ npm run dev
 
 - Open the project at [http://localhost:3000](http://localhost:3000) or click the link in the terminal
 - Open the API documentation at [http://localhost:5264/swagger/](http://localhost:5264/swagger/)
+- Sign in with one of the [seeded test accounts](docs/dev/database.md#seeded-accounts) (admin, staff or customer)
 
 ### Optional Setup
 
@@ -109,25 +105,25 @@ The app runs without these, but some features stay off until they're configured:
 
 ## 🧪 Running Tests
 
-From the repo root, run all automated tests with PowerShell:
+From the repo root, run the backend unit and integration tests and the frontend Jest tests with PowerShell:
 
 ```bash
 ./run-all-tests.ps1
 ```
 
-See [docs/dev/testing.md](docs/dev/testing.md) for running individual suites and for how CI works.
+The Playwright E2E tests aren't included. Run them from `src/front-end` with `npm run test:e2e`, with the backend running. See [docs/dev/testing.md](docs/dev/testing.md) for running individual suites and for how CI works.
 
 ## 📋 Usage
 
-Guides for admins, setup and development are listed in [docs/README.md](docs/README.md). For why the API uses snake_case JSON keys and why some C# names aren't standard, see [Naming conventions](docs/dev/naming-conventions.md).
+Guides for admins, setup and development are listed in [docs/README.md](docs/README.md). Before deploying, follow [Production setup](docs/setup/production-setup.md). For why the API uses snake_case JSON keys and why some C# names aren't standard, see [Naming conventions](docs/dev/naming-conventions.md).
 
 ## 👥 Roles & Permissions
 
 | Role            | Permissions                                                                         |
 | --------------- | ----------------------------------------------------------------------------------- |
-| Customers       | Browse menu, submit orders, request assistance, and manage billing.                 |
-| Staff           | Manage tables, sessions and customer requests.                                      |
-| Admins          | Full access to table, sessions, location, staff, and menu management and analytics. |
+| Customers       | At the table they're seated at: browse the menu, order, cancel pending orders, call a server, and choose and view their bill.|
+| Staff           | At their current location: run dining sessions and bills, tables, orders and service requests |
+| Admins          | Everything staff can do at any location, plus menus, pricing, holidays, staff, customers, QR codes and analytics |
 
 ## 👨‍💻 2026 Contributors
 

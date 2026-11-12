@@ -148,10 +148,10 @@ Reset API:
 POST /api/auth/reset-password
 Content-Type: application/json
 
-{"token":"RESET_TOKEN","newPassword":"ExampleNewPassword123!"}
+{"token":"RESET_TOKEN","new_password":"ExampleNewPassword123!"}
 ```
 
-The request bodies bind to `VerifyEmailDto` and `ResetPasswordDto` in `src/back-end/Dtos/`. Token consumption and user updates should occur within one database transaction.
+The request bodies bind to `VerifyEmailDto` and `ResetPasswordDto` in `src/back-end/Dtos/Auth/`. Their JSON keys are snake_case (see [naming conventions](../dev/naming-conventions.md)). New passwords must be 8 to 200 characters and not only spaces. Token consumption and user updates should occur within one database transaction.
 
 ## 8. API endpoints and frontend pages
 
@@ -160,7 +160,7 @@ The request bodies bind to `VerifyEmailDto` and `ResetPasswordDto` in `src/back-
 | POST | `/api/auth/register` | `/auth/register` |
 | POST | `/api/auth/login` | `/auth/login` |
 | POST | `/api/auth/verify-email` | `/auth/verify-email?token=...` |
-| POST | `/api/auth/resend-verification` | **Resend Verification Email** button on `/auth/register`, shown after signing up |
+| POST | `/api/auth/resend-verification` | `/auth/resend-verification`, linked from **Resend Verification Email** on the login page (after a sign-in fails because the email isn't verified, with the email filled in) and the verify-email page. `/auth/register` also has a resend button after signing up |
 | POST | `/api/auth/forgot-password` | `/auth/forgot-password` |
 | POST | `/api/auth/reset-password` | `/auth/reset-password?token=...` |
 
@@ -210,7 +210,7 @@ A response such as `202 Accepted` from SendGrid means the message was **accepted
 | Link gives 404 | Use `/auth/verify-email` or `/auth/reset-password` |
 | Token rejected | Expiry, incorrect purpose, already consumed |
 | Verified user cannot log in | `Status` / admin approval as well as `Is_email_confirmed` |
-| API returns 400 / null DTO fields | Check the frontend's JSON property names against the DTOs in `src/back-end/Dtos/` |
+| API returns 400 / null DTO fields | Check the frontend's JSON keys against the DTOs in `src/back-end/Dtos/Auth/` (snake_case, e.g. `new_password`). In Development, an unknown key gets a 400 that names it |
 
 ## 11. Production security checklist
 
