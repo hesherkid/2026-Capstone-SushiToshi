@@ -62,6 +62,7 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
   - **Mark done** (tick icon) clears a service request once it's handled.
   - **View Bill Summary** shows a bill's breakdown: guests by age, add-ons, over-limit charges, leftover fee, tax and total.
 - **New bill** (receipt icon): adds a bill to the session. Enter a bill name and the number of adults, seniors, children and toddlers (6 and under) on it. Use more than one bill when guests pay separately. Only available once the session has a table. If the table's bills would have more guests than the table has seats, a warning shows and the button changes to **Create Anyway**, for a party that pulled up extra chairs.
+- **Add Order** (on each open bill, in the session details): order for the table yourself, for example when a guest has no phone. Search the menu, add items, then select **Place Order**. The same menu, prices and limits apply as on the guests' phones, and the order is recorded under your name. It works even after the guests have asked for the bill.
 - **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can.
 - **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
 - **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed.
@@ -220,7 +221,7 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
   - Description
   - Start Time and End Time: when the menu is available
   - **Is Active Menu**: turn the menu on or off
-- **Assign Locations**: opens **Manage Locations** for the menu. It lists the **Assigned Locations**; use **Add Location** to add another, or remove one from the list. Changes save straight away.
+- **Assign Locations**: opens **Manage Locations** for the menu. It lists the **Assigned Locations**; use **Add Location** to add another, or remove one from the list. Changes save straight away. A location can't be removed while that location has orders on this menu that are still pending or being made; finish or cancel them first. Open orders at other locations don't block it.
 - **Delete**: delete a menu that has never been used. A menu with past sessions or orders can't be deleted, so turn off **Is Active Menu** instead.
 
 ---
