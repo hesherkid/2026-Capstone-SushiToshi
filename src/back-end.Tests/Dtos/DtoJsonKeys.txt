@@ -1,3 +1,4 @@
+back_end.Dtos.AccountDto: can_change_name, email, first_name, has_password, last_name, role
 back_end.Dtos.AccountStatusUpdateDto: status
 back_end.Dtos.Analytics.AnalyticsFilterOptionDto: id, name
 back_end.Dtos.Analytics.AnalyticsFiltersDto: categories, tags
@@ -32,6 +33,7 @@ back_end.Dtos.BillResponse: adult_count, bill_id, bill_name, child_count, closed
 back_end.Dtos.BillSummaryResponse: addon_items, addon_subtotal, adult_base_price, adult_count, base_charges_subtotal, bill_id, bill_name, child_base_price, child_count, closed_at, created_at, gratuity_amount, gratuity_min_party_size, gratuity_rate, holiday_name, leftover_charge, leftover_items, overlimit_items, overlimit_subtotal, party_size, prices_locked, pricing_type, requested_at, senior_base_price, senior_count, session_id, status, subtotal, table_numbers, tax_amount, tax_rate, toddler_base_price, tot_count, total_amount, total_count
 back_end.Dtos.CategoryOrderLimitDto: category_id, free_left, per_order, session_left
 back_end.Dtos.CategoryResponse: adult_limit, category_id, category_name, child_limit, description, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
+back_end.Dtos.ChangePasswordDto: current_password, new_password
 back_end.Dtos.ChooseBillDto: bill_id
 back_end.Dtos.CreateBill: adult_count, bill_name, child_count, senior_count, tot_count, total_count
 back_end.Dtos.CreateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
@@ -125,6 +127,7 @@ back_end.Dtos.TableGroupUpdateDto: group_name, is_active
 back_end.Dtos.TagBaseDto: tag_color, tag_id, tag_name
 back_end.Dtos.TagResponseDto: name, tag_id
 back_end.Dtos.TagUpdateDto: tag_color, tag_name
+back_end.Dtos.UpdateAccountDto: first_name, last_name
 back_end.Dtos.UpdateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
 back_end.Dtos.UpdateGuestCountsDto: adult_count, child_count, senior_count, tot_count
 back_end.Dtos.UserResponseDto: created_at, email, first_name, is_email_confirmed, last_interaction_at, last_name, role, status, user_id

@@ -21,6 +21,7 @@ export const MATERIAL_SYMBOL_NAMES = [
   "lock",
   "logout",
   "menu_book_2",
+  "person",
   "qr_code_scanner",
   "receipt_long",
   "remove",
