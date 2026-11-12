@@ -15,6 +15,7 @@ import storage from "@/utils/storage";
 const MENU_PATH = "/menu/full-menu";
 const LOGIN_PATH = "/auth/login";
 const VISITS_PATH = "/visits";
+const ACCOUNT_PATH = "/account";
 const BROWSE_PATH = "/menu/browse";
 // Log out waits on the visit ending, so this page checks sooner than the 15 s watcher
 const SEATED_CHECK_MS = 5000;
@@ -160,7 +161,7 @@ const CustomerHome = () => {
         </Box>
       </Paper>
 
-      {/* ---- Your account: the menu before you visit, and past visits ---- */}
+      {/* ---- Your account: the menu before you visit, past visits, and account details ---- */}
       <Paper variant="outlined" sx={{ mt: 2, borderRadius: 3, overflow: "hidden" }}>
         {/* Seated customers use their table's menu, from the button below */}
         {!seated && (
@@ -176,6 +177,12 @@ const CustomerHome = () => {
           title="Past visits"
           onClick={() => router.push(VISITS_PATH)}
           divided={!seated}
+        />
+        <LinkRow
+          symbol="person"
+          title="Account"
+          onClick={() => router.push(ACCOUNT_PATH)}
+          divided
         />
       </Paper>
 
