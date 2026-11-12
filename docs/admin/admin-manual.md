@@ -31,6 +31,8 @@ Staff accounts see only **Dining Sessions**, **Tables** and **Orders**. Everythi
 - **Location dropdown** (top bar): sets your working location. Dining Sessions, Tables, Orders and the "my location" view in Analytics all follow this choice. Admins can switch to any location; staff can only switch between the locations an admin assigned them.
 - **Home page**: shows today's active sessions, tables in use and pending requests for your location, with shortcut cards to every page in this manual.
 
+![Admin home page with the menu button and the working location dropdown outlined](images/getting-around.png)
+
 Most management pages share the same layout: a title with an **Add New …** button, a searchable, sortable table, and action icons at the end of each row. Hover over an icon to see what it does.
 
 ---
@@ -55,6 +57,8 @@ Each row shows:
 
 Rows with waiting service requests are highlighted and sorted to the top. Press **Refresh** to reload the list.
 
+![Dining Sessions page with counts at the top and three rows highlighted for waiting service requests](images/sessions-list.png)
+
 ### What you can do
 
 - **New Session**: seat a new party. Choose the location and menu, then pick a table (**Assign Individual Table**) or a table group (**Assign Table Group**). Only tables and groups that are active and free are listed.
@@ -66,6 +70,10 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
 - **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can.
 - **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
 - **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed.
+
+![Dining Session details with a service request and two open bills, each with Add Order, Edit Guests, Lock Guests, Merge and View Bill Summary](images/session-details.png)
+
+![Bill Summary showing guests by age, an add-on, GST and the total, with Add leftover fee and Close Bill](images/bill-summary.png)
 
 ### How guests use bills
 
@@ -84,10 +92,14 @@ Every bill charges per guest, so check the count whenever guests set it themselv
 - **Count changed by guest**: a guest changed its guest count on their phone.
 - **3 people on 2-guest bill** (for example): more people joined this bill on their phones than it has guests.
 
+![An open bill with a Started by guest chip under Check guests, and the Edit Guests and Lock Guests buttons outlined](images/guest-check.png)
+
 On each open bill:
 
 - **Edit Guests**: change the number of adults, seniors, children and toddlers. Works even after the guests have asked for the bill. Going past the table's seats shows a warning and **Save Anyway**. Saving clears the **Started by guest** and **Count changed by guest** chips.
 - **Lock Guests**: once you've checked the count, lock it so guests can't change it, or switch bills, from their phones. The bill shows **Guests locked**, and locking also clears the two chips above. You can still use **Edit Guests**. Select **Unlock Guests** to let guests change it again.
+
+![Edit Guests dialog with the Adults, Seniors, Children and Toddlers counts outlined, and a warning that the table is over its seats](images/edit-guests-dialog.png)
 
 ### Moving people between bills
 
@@ -96,11 +108,15 @@ On each open bill:
 - **Take their orders with them**: their orders move to the new bill, so any extras are charged there. Only possible while their current bill is open.
 - **Change both bills' guest counts**: also move guests from the old bill's count to the new one. Choose the **Kind of guest** and **How many**, for example when a couple moves together. The old bill always keeps at least one guest.
 
+![Move dialog with Move to, Take their orders with them, Change both bills' guest counts, Kind of guest and How many outlined](images/move-person-dialog.png)
+
 To split a bill by person, start a new bill and move each person onto it with their orders.
 
 ### Merging bills
 
 When a table wants one bill instead of several, select **Merge** on a bill (shown when the table has more than one open bill) and choose the bill to merge it into. Everything moves: its people, its orders, its leftover fee and its guest count, including guests who never joined on a phone. The merged bill is then cancelled. If either bill has asked for the bill, a warning reminds you to show them the new bill summary, because the total changes.
+
+![Merge dialog with the Merge into choice outlined, and a note of how the guest count and people change](images/merge-bill-dialog.png)
 
 A bill can't be cancelled once any of its orders are being made or have been served, since those still have to be paid for. Merge it or close it instead.
 
@@ -150,6 +166,8 @@ An order moves through these statuses:
 
 Items can also be **Cancelled**.
 
+![Orders page with pending, processing and delivered counts, status tabs and the Past Orders tab](images/orders-dashboard.png)
+
 ### What you can do
 
 - **View order** (eye icon): see each item and its status.
@@ -193,6 +211,8 @@ Generated codes are saved on the server. **Preview** and **Download** for one ta
 3. Download the result:
    - **Download as ZIP (Individual Files)**: one image per code.
    - **Download as PDF (16 QR per page)**: ready to print on letter paper (8.5" × 11"), 4 × 4 codes per page at 1.75" each.
+
+![Bulk QR Code Generation with the generate button and the ZIP and PDF download buttons](images/qr-bulk.png)
 
 ---
 
@@ -243,6 +263,8 @@ A pricing profile has:
   - **Gratuity from party of**: the party size at which gratuity starts. Enter 0 for no automatic gratuity.
   - **Leftover fee**: the default fee staff can add for leaving too much food (see [Dining Sessions](#dining-sessions)).
 
+![Default Pricing with prices per guest, the weekend days, the holiday prices switch, and tax and fees](images/pricing-form.png)
+
 Select **Save default pricing** to save. The button is only available once you've changed something, and **Unsaved changes** shows until you save. Open bills switch to the new prices; closed bills keep the prices they were charged.
 
 ### Location pricing
@@ -261,6 +283,8 @@ To go back to the default, turn custom pricing off and confirm. The location los
 ## Holidays
 
 Holiday prices only apply on holidays you have approved. The Holidays page lists holidays for one province and year at a time. Each location uses the holidays of its province code (set in [Location Management](#location-management)).
+
+![Holidays page with the province and year, Load holidays, the status filter and the approve and reject buttons](images/holidays.png)
 
 ### Loading holidays
 
@@ -307,6 +331,8 @@ The Menu Items page lists every dish with its image, name, category, description
   - **Per order limit**: the most the whole table can order in one order. 0 = no cap. Orders over this limit are always blocked.
   - **Past per-person limit**: **Block** stops guests ordering more, **Charge the item's price** lets them and bills the item's price for each extra.
 - **Delete**: remove the item. It will no longer be available to order.
+
+![Menu Assignments dialog with the item's current assignments and the form for adding a new one](images/menu-assignment-dialog.png)
 
 ---
 
