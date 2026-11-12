@@ -31,6 +31,8 @@ Staff accounts see only **Dining Sessions**, **Tables** and **Orders**. Everythi
 - **Location dropdown** (top bar): sets your working location. Dining Sessions, Tables, Orders and the "my location" view in Analytics all follow this choice. Admins can switch to any location; staff can only switch between the locations an admin assigned them.
 - **Home page**: shows today's active sessions, tables in use and pending requests for your location, with shortcut cards to every page in this manual.
 
+![Admin home page with the menu button and the working location dropdown outlined](images/getting-around.png)
+
 Most management pages share the same layout: a title with an **Add New …** button, a searchable, sortable table, and action icons at the end of each row. Hover over an icon to see what it does.
 
 ---
@@ -55,6 +57,8 @@ Each row shows:
 
 Rows with waiting service requests are highlighted and sorted to the top. Press **Refresh** to reload the list.
 
+![Dining Sessions page with counts at the top and three rows highlighted for waiting service requests](images/sessions-list.png)
+
 ### What you can do
 
 - **New Session**: seat a new party. Choose the location and menu, then pick a table (**Assign Individual Table**) or a table group (**Assign Table Group**). Only tables and groups that are active and free are listed.
@@ -62,9 +66,14 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
   - **Mark done** (tick icon) clears a service request once it's handled.
   - **View Bill Summary** shows a bill's breakdown: guests by age, add-ons, over-limit charges, leftover fee, tax and total.
 - **New bill** (receipt icon): adds a bill to the session. Enter a bill name and the number of adults, seniors, children and toddlers (6 and under) on it. Use more than one bill when guests pay separately. Only available once the session has a table. If the table's bills would have more guests than the table has seats, a warning shows and the button changes to **Create Anyway**, for a party that pulled up extra chairs.
+- **Add Order** (on each open bill, in the session details): order for the table yourself, for example when a guest has no phone. Search the menu, add items, then select **Place Order**. The same menu, prices and limits apply as on the guests' phones, and the order is recorded under your name. It works even after the guests have asked for the bill.
 - **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can.
 - **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
 - **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed.
+
+![Dining Session details with a service request and two open bills, each with Add Order, Edit Guests, Lock Guests, Merge and View Bill Summary](images/session-details.png)
+
+![Bill Summary showing guests by age, an add-on, GST and the total, with Add leftover fee and Close Bill](images/bill-summary.png)
 
 ### How guests use bills
 
@@ -83,10 +92,14 @@ Every bill charges per guest, so check the count whenever guests set it themselv
 - **Count changed by guest**: a guest changed its guest count on their phone.
 - **3 people on 2-guest bill** (for example): more people joined this bill on their phones than it has guests.
 
+![An open bill with a Started by guest chip under Check guests, and the Edit Guests and Lock Guests buttons outlined](images/guest-check.png)
+
 On each open bill:
 
 - **Edit Guests**: change the number of adults, seniors, children and toddlers. Works even after the guests have asked for the bill. Going past the table's seats shows a warning and **Save Anyway**. Saving clears the **Started by guest** and **Count changed by guest** chips.
 - **Lock Guests**: once you've checked the count, lock it so guests can't change it, or switch bills, from their phones. The bill shows **Guests locked**, and locking also clears the two chips above. You can still use **Edit Guests**. Select **Unlock Guests** to let guests change it again.
+
+![Edit Guests dialog with the Adults, Seniors, Children and Toddlers counts outlined, and a warning that the table is over its seats](images/edit-guests-dialog.png)
 
 ### Moving people between bills
 
@@ -95,11 +108,15 @@ On each open bill:
 - **Take their orders with them**: their orders move to the new bill, so any extras are charged there. Only possible while their current bill is open.
 - **Change both bills' guest counts**: also move guests from the old bill's count to the new one. Choose the **Kind of guest** and **How many**, for example when a couple moves together. The old bill always keeps at least one guest.
 
+![Move dialog with Move to, Take their orders with them, Change both bills' guest counts, Kind of guest and How many outlined](images/move-person-dialog.png)
+
 To split a bill by person, start a new bill and move each person onto it with their orders.
 
 ### Merging bills
 
 When a table wants one bill instead of several, select **Merge** on a bill (shown when the table has more than one open bill) and choose the bill to merge it into. Everything moves: its people, its orders, its leftover fee and its guest count, including guests who never joined on a phone. The merged bill is then cancelled. If either bill has asked for the bill, a warning reminds you to show them the new bill summary, because the total changes.
+
+![Merge dialog with the Merge into choice outlined, and a note of how the guest count and people change](images/merge-bill-dialog.png)
 
 A bill can't be cancelled once any of its orders are being made or have been served, since those still have to be paid for. Merge it or close it instead.
 
@@ -149,6 +166,8 @@ An order moves through these statuses:
 
 Items can also be **Cancelled**.
 
+![Orders page with pending, processing and delivered counts, status tabs and the Past Orders tab](images/orders-dashboard.png)
+
 ### What you can do
 
 - **View order** (eye icon): see each item and its status.
@@ -165,7 +184,7 @@ Use **Past Orders** to look up what a table ordered on an earlier visit at your 
 2. Optionally, enter a **Table #** or a **Guest or bill name** to narrow the search.
 3. Select **Search**.
 
-Each result is one visit, showing the table, session number, bills, when the first order was placed, and the number of orders, items and total. Select **View table orders** (eye icon) to see every order in the visit, grouped by bill, with each item, its quantity and who ordered it.
+Each result is one visit, showing the table, session number, bills, when the first order was placed, and the number of orders, items and total. Select **View table orders** (eye icon) to see every order in the visit. Each order shows its status, when it was placed, its bill and the guest who placed it (or the staff member, for orders placed with **Add Order**), with each item's quantity, price and status. Each bill's subtotal is shown at the bottom.
 
 ---
 
@@ -176,7 +195,7 @@ The QR Codes page generates the codes printed for each table. There are two kind
 - **Session QR code**: guests scan it to sign in and join the dining session staff started for that table.
 - **WiFi QR code**: guests scan it to join the restaurant's WiFi network. The network name and password for each location are set by your system administrator (see [WiFi configuration](../setup/wifi-configuration.md)).
 
-Generated codes are saved on the server and reused until they are regenerated.
+Generated codes are saved on the server. **Preview** and **Download** for one table always build the code from the current settings and save it. The ZIP and PDF downloads use the saved codes, so run bulk generation first after the WiFi or site address changes.
 
 > **Before printing codes for the first time**, make sure the site has been set up for production, or the codes won't open on customers' phones. See [Table QR codes](../setup/production-setup.md#5-table-qr-codes).
 
@@ -188,10 +207,12 @@ Generated codes are saved on the server and reused until they are regenerated.
 ### Codes for every table
 
 1. Choose the location.
-2. Under **Bulk QR Code Generation**, select **Generate QR Codes for All Tables**.
+2. Under **Bulk QR Code Generation**, select **Generate QR Codes for All N Tables** (N is the location's number of tables).
 3. Download the result:
    - **Download as ZIP (Individual Files)**: one image per code.
    - **Download as PDF (16 QR per page)**: ready to print on letter paper (8.5" × 11"), 4 × 4 codes per page at 1.75" each.
+
+![Bulk QR Code Generation with the generate button and the ZIP and PDF download buttons](images/qr-bulk.png)
 
 ---
 
@@ -206,7 +227,7 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
 - **Add New Location** / **Edit**: enter the location's details:
   - Name
   - Address Line 1 and Address Line 2
-  - City, Province and **Province code** (for example, AB). Holiday pricing uses the holidays of this province.
+  - City, Province and **Province code**, chosen from the list (for example, AB). Holiday pricing uses the holidays of this province.
   - Postal Code
   - Phone Number
 - **Assign Menus**: opens **Manage Menus** for the location. Add or remove each menu type it offers. Changes save straight away.
@@ -220,7 +241,7 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
   - Description
   - Start Time and End Time: when the menu is available
   - **Is Active Menu**: turn the menu on or off
-- **Assign Locations**: opens **Manage Locations** for the menu. It lists the **Assigned Locations**; use **Add Location** to add another, or remove one from the list. Changes save straight away.
+- **Assign Locations**: opens **Manage Locations** for the menu. It lists the **Assigned Locations**; use **Add Location** to add another, or remove one from the list. Changes save straight away. A location can't be removed while that location has orders on this menu that are still pending or being made; finish or cancel them first. Open orders at other locations don't block it.
 - **Delete**: delete a menu that has never been used. A menu with past sessions or orders can't be deleted, so turn off **Is Active Menu** instead.
 
 ---
@@ -242,6 +263,8 @@ A pricing profile has:
   - **Gratuity from party of**: the party size at which gratuity starts. Enter 0 for no automatic gratuity.
   - **Leftover fee**: the default fee staff can add for leaving too much food (see [Dining Sessions](#dining-sessions)).
 
+![Default Pricing with prices per guest, the weekend days, the holiday prices switch, and tax and fees](images/pricing-form.png)
+
 Select **Save default pricing** to save. The button is only available once you've changed something, and **Unsaved changes** shows until you save. Open bills switch to the new prices; closed bills keep the prices they were charged.
 
 ### Location pricing
@@ -260,6 +283,8 @@ To go back to the default, turn custom pricing off and confirm. The location los
 ## Holidays
 
 Holiday prices only apply on holidays you have approved. The Holidays page lists holidays for one province and year at a time. Each location uses the holidays of its province code (set in [Location Management](#location-management)).
+
+![Holidays page with the province and year, Load holidays, the status filter and the approve and reject buttons](images/holidays.png)
 
 ### Loading holidays
 
@@ -288,7 +313,7 @@ When a holiday falls on a weekend and is observed on a weekday (for example, a S
 
 The Menu Items page lists every dish with its image, name, category, description and tags.
 
-- **Add New Menu Item** / **Edit**: enter the item's name, description and category, and upload an image (**Change Image**).
+- **Add New Menu Item** / **Edit**: enter the item's name, description and category, and upload an image (**Change Image**). A new item needs a name and category. If the image upload fails, the item is still saved and a message says so; choose the image and save again to retry.
 - **Manage Tags** (tag icon in the Description & Tags column): add or remove tags on the item, such as Spicy or Vegetarian. See [Tags](#tags).
 - **Assign to Menus**: choose which menus offer the item and how. The **Menu Assignments** dialog lists the item's current assignments.
   - An assignment for **All locations (default)** puts the item on that menu everywhere.
@@ -306,6 +331,8 @@ The Menu Items page lists every dish with its image, name, category, description
   - **Per order limit**: the most the whole table can order in one order. 0 = no cap. Orders over this limit are always blocked.
   - **Past per-person limit**: **Block** stops guests ordering more, **Charge the item's price** lets them and bills the item's price for each extra.
 - **Delete**: remove the item. It will no longer be available to order.
+
+![Menu Assignments dialog with the item's current assignments and the form for adding a new one](images/menu-assignment-dialog.png)
 
 ---
 
@@ -374,6 +401,7 @@ The four report pages (all except Overview) share the same controls:
 - **Location**: reports start on your working location. Remove the location chip to see **All locations**, or select **Show my location only** to go back.
 - **Category** and **Tag** filters (item, browsing and order timing reports): narrow the report to some menu items. Item reports also have **Find an item**.
 - **Export report**: download the report as CSV, download charts as PNG images, or **Print or save as PDF**.
+- **Show data table**: under the **Orders by hour**, **Seatings by hour** and **Visit length by party size** charts, shows the chart's numbers as a table. The tables are always included when you print.
 
 ### Overview
 

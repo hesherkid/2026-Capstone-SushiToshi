@@ -55,7 +55,7 @@ There are also endpoints for verifying email, resending verification, and forgot
 
 **The token** contains the user's ID, email and role. How long a token lasts depends on the role: staff 12 hours (`Jwt:StaffExpiresInMinutes`, about a shift, so the dashboard doesn't log them out mid-service), admins 2 hours (`Jwt:AdminExpiresInMinutes`), and customers 2 hours (`Jwt:ExpiresInMinutes`). Guest tokens last 6 hours (`Jwt:GuestExpiresInMinutes`) and carry a `guest` claim. The signing key is `Jwt:Key`. Only `appsettings.Development.json` has one; production sets its own with the `Jwt__Key` environment variable (see [production setup](../../setup/production-setup.md)).
 
-**In the browser**, the token is stored in `localStorage` (`authToken`). The shared axios instance in `src/front-end/src/config/api.js` adds it to every request as `Authorization: Bearer ...`. On a 401 it clears the token and sends the user to `/auth/login`. Calls that must not send a token, such as before sign-in, use `config/publicApi.js`.
+**In the browser**, the token is stored in `localStorage` (`authToken`). The shared axios instance in `src/front-end/src/config/api.js` adds it to every request as `Authorization: Bearer ...`. It skips the token on `/auth/login` calls. On a 401 it clears the token and does a full reload to the login page: a customer who was seated goes back to their table's login (`/auth/login?locationId=…&tableNumber=…&resume=1`, from `getExpiredLoginPath` in `utils/tableVisit.js`), and everyone else to `/auth/login`.
 
 ### Guest account cleanup
 
@@ -79,7 +79,7 @@ head counts don't change. Set `GuestCleanup:Enabled` to `false` to turn it off.
 | `Staff`    | Run the floor: sessions, tables, orders and service requests, limited to their current location        |
 | `Admin`    | Everything staff can do at any location, plus menus, pricing, holidays, staff, customers, QR codes and analytics |
 
-The `UserRoles` enum also has `Employee`. **Nothing is defined for it at this time.** It has no authorization policy, no endpoints and no pages, and no account can be given it: `StaffController` only accepts `Staff` or `Admin`, and sign-up and guest accounts are always `Customer`. It's kept only because `users.Role` is stored as a number (`Admin = 0`, `Employee = 1`, `Customer = 2`, `Staff = 3`). Removing it would shift those numbers and give existing accounts the wrong role. The numbers are fixed in `enums.cs` and checked by `UserRolesTests`.
+The `UserRoles` enum also has `Employee`. **Nothing is defined for it at this time.** It has no authorization policy, no endpoints and no pages, and no account can be given it: `StaffController` only accepts `Staff` or `Admin`, and sign-up and guest accounts are always `Customer`. It's kept only because `users.Role` is stored as a number (`Admin = 0`, `Employee = 1`, `Customer = 2`, `Staff = 3`). Removing it would shift those numbers and give existing accounts the wrong role. The numbers are fixed in `domain/Enums.cs` and checked by `UserRolesTests`.
 
 
 **In the backend**, controllers use `[Authorize]` for any signed-in user, or one of two policies defined in `Program.cs`:
@@ -87,7 +87,7 @@ The `UserRoles` enum also has `Employee`. **Nothing is defined for it at this ti
 - `staffOnly`: Staff or Admin
 - `adminOnly`: Admin only
 
-**In the frontend**, each protected page reads the role with the `useAuth` hook and redirects if it's wrong (for example, `src/app/admin/staff/page.jsx`). There's no route middleware. These checks only control what the user sees. The backend is what actually enforces access, so every new endpoint needs the right `[Authorize]` attribute.
+**In the frontend**, `components/auth/RequireRole.jsx` guards whole route folders. `app/admin/layout.jsx` wraps every `/admin/*` page in `RequireRole` for admins, and `app/staff/layout.jsx` does the same for staff and admins. It shows a spinner while the role loads, sends signed-out visitors to `/auth/login` and other roles to `/unauthorized`. `/location/menu-location` and `/tags/tag-management` wrap their page in `RequireRole` for admins. `/analytics/*` has no guard yet, so a signed-in non-admin can open the pages, but every report call gets a 403. There's no Next.js middleware. These checks only control what the user sees. The backend is what actually enforces access, so every new endpoint needs the right `[Authorize]` attribute.
 
 ### Staff are limited to their location
 
@@ -166,6 +166,20 @@ The rules live in `Helpers/BillLinks.cs`:
 
 **Cancelling a bill** (`POST /api/bill/cancel-bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
 
+## Ordering rules at the table
+
+These are the limits and extras a seated customer sees on the menu, the orders page and Call server. There's no customer guide yet, so they're listed here.
+
+| Feature | How it works | Where |
+| --- | --- | --- |
+| **Tag filter** | A row of tag pills under the menu's search box. Picking several shows only items with **every** picked tag. **Clear filters** resets it | `components/menu/TagFilter.jsx` |
+| **Favourites and Order again** | Signed-in customers can heart items, and get **Favourites** and **Order again** pills in the tag filter. Order again lists up to 50 items they've ordered on any visit, most recent first, leaving out cancelled orders and items. Guests don't get either (the API answers 403) | `MyItemsController` (`/api/me/favourites`, `/api/me/ordered-before`), `components/menu/useMyItems.js`, `favourite_item` table |
+| **99 per item** | The cart never holds more than 99 of one item in an order, even for items with no limit, because the API only takes 1 to 99. Items with a limit are capped lower | `MAX_PER_ITEM` in `components/menu/cartRules.js`, `OrderController.AddOrderItems` |
+| **Cancelling an order** | On `/dashboard/orders`, a customer (guests too) can cancel a **Pending** order they placed, while they're still seated at that table. Once it's no longer pending, nobody can cancel it from the app, staff included (the API answers `409`) | `PATCH /api/order/{orderId}/cancel` |
+| **Wait between service requests** | A table can send one Call server request every 30 seconds. Sooner, the API answers `429` with `retry_after_seconds` (and a `Retry-After` header), and the form tells the guest how long to wait. The wait is per table, not per person | `ServiceRequestController.RequestCooldown`, `ServiceRequestForm.jsx` |
+
+Staff use the same cart rules when they order for a table (see the [Admin Manual](../../admin/admin-manual.md#what-you-can-do)), and their orders are recorded under the staff member.
+
 ## Where things live
 
 ### Backend (`src/back-end`)
@@ -207,25 +221,26 @@ Diners on the restaurant Wi-Fi share one IP address, so the per-IP limits are se
 
 ### Frontend (`src/front-end/src`)
 
-The frontend is Next.js with the App Router, React 19 and MUI. All pages are client components that call the API.
+The frontend is Next.js with the App Router, React 19 and MUI. The root layout (`app/layout.jsx`), the auth pages and some thin wrapper pages and layouts are server components. They render client components (`"use client"`), which do the data loading and call the API from the browser.
 
 | Folder        | Contents                                                                                                   |
 | ------------- | ---------------------------------------------------------------------------------------------------------- |
 | `app/`        | Routes. Each folder with a `page.jsx` is a URL, e.g. `app/staff/dashboard/sessions/page.jsx` → `/staff/dashboard/sessions` |
 | `components/` | UI, grouped by area (`admin/`, `staff/`, `customer/`, `menu/`, `analytics/`, `auth/`, `common/` ...). Pages stay thin and render these |
-| `config/`     | `api.js` (signed-in axios instance), `publicApi.js` (no token), `auth.js` (JWT decoding)                    |
+| `config/`     | `api.js` (the shared axios instance, which adds the token), `auth.js` (JWT decoding)                       |
 | `hooks/`      | Shared hooks, e.g. `useAuth`, `useAutoRefresh`, `useOrderActions`                                          |
 | `contexts/`   | React contexts shared across pages (menu, cart/orders, notifications)                                      |
 | `services/`   | API helpers used by several components (orders, pricing, holidays, table session)                         |
 | `utils/`      | Small helpers (auth token storage, table visit, server error messages)                                     |
 | `stories/`    | Storybook stories                                                                                          |
-| `styles/`     | Global CSS and CSS modules                                                                                 |
+
+Global CSS is `app/globals.css`. Components are styled with MUI's `sx` prop and theme.
 
 **Main routes:**
 
 | Area      | Routes                                                                                                    |
 | --------- | --------------------------------------------------------------------------------------------------------- |
-| Everyone  | `/` (home, different for each role), `/auth/*` (login, register, verify email, forgot/reset password)    |
+| Everyone  | `/` (home, different for each role), `/auth/*` (login, register, verify email, resend verification, forgot/reset password), `/unauthorized` |
 | Customers | `/menu/full-menu`, `/menu/review`, `/dashboard/orders`, `/dashboard/bills`, `/dashboard/call-server`, `/thank-you`; with an account only: `/menu/browse` (the menu before being seated, no ordering), `/visits` |
 | Staff     | `/staff/dashboard/sessions`, `/staff/dashboard/tables`, `/staff/dashboard/orders`                         |
 | Admins    | `/admin/*` (staff, customers, menu items, categories, pricing, holidays, QR codes), `/location/menu-location`, `/tags/tag-management`, `/analytics/*` |
@@ -242,5 +257,5 @@ A typical feature touches these places, in this order:
 4. **Service or helper**, if the logic is shared or worth testing on its own
 5. **Backend tests** in `src/back-end.Tests` (see [testing.md](../testing.md))
 6. **Component** in `components/<area>/`, calling the API through `@/config/api`
-7. **Page** in `app/`, with a role check if it isn't public
+7. **Page** in `app/`. Put it under `app/admin/` or `app/staff/` to get their `RequireRole` guard, or wrap it in `RequireRole` yourself if it isn't public
 8. **Frontend tests** in a `__tests__` folder next to the component (see [frontend-testing.md](../frontend-testing.md))

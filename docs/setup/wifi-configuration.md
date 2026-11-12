@@ -66,7 +66,7 @@ On a hosting platform, set the same names in its environment or secrets settings
 | Problem | Fix |
 | --- | --- |
 | Every location shows the same network | That location has no `Locations:N:WiFi` entry, so it uses the default. Check the location ID, then restart the backend. |
-| QR code still has the old network | Restart the backend, then regenerate. Bulk generation always overwrites; for one table, the API also accepts `&refresh=true`. |
+| QR code still has the old network | Restart the backend, then regenerate. Bulk generation always overwrites, and the admin page's single-table Preview and Download always build a fresh code. The ZIP and PDF use the saved images, so bulk generate before downloading them. |
 | "WiFi credentials not configured" error | Neither the location's entry nor the default has both an SSID and a password. |
 | Phone can't join from the code | Check the SSID and password match the router exactly. The codes always use WPA/WPA2 and mark the network as visible, so hidden networks and WPA3-only routers may not work. |
 

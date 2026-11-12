@@ -36,14 +36,14 @@ You don't need to run `dotnet ef database update` yourself. Every time the backe
 
 1. **Drops the database, if asked.** This happens only in Development, and only when `Seeding:ResetOnStartup` is `true` (see [Resetting the database](#resetting-the-database)).
 2. **Applies any pending migrations** (`Database.MigrateAsync()`). If the database doesn't exist yet, this creates it first. If the database server can't be reached, it fails here, and the backend carries on without a database (see below).
-3. **Checks default pricing exists.** The `LocationPricingAndHolidays` migration inserts the default pricing profile and its rates. If any are missing, startup logs an error and skips seeding, because every bill would be wrong.
+3. **Checks default pricing exists.** The `LocationPricingAndHolidays` migration inserts the default pricing profile and its rates. If any are missing, `PricingService.EnsureDefaultProfileAsync` throws `PricingNotConfiguredException` and **the backend stops**, because every bill would be wrong.
 4. **Seeds the data**, unless `Seeding:Enabled` is `false`:
    - **No menu items in the database:** runs the full seed (see [Seed data](#seed-data)). Outside Development it stops after tables and table groups, so no users or session data are seeded.
    - **Otherwise:** only re-adds any missing seeded user accounts, matched by email (Development only). Everything else is left alone.
 
 5. **Creates the first admin, if there is none,** from `Bootstrap:AdminEmail` and `Bootstrap:AdminPassword` (see [First admin account](../setup/production-setup.md#first-admin-account)). In Development the seeded admin already exists, so this does nothing.
 
-Errors during these steps are logged (`An error occurred during database initialization`), but they don't stop the backend from starting. If the app behaves oddly after a pull, scroll up in the backend console and look for that line.
+Apart from missing default pricing, errors during these steps are logged (`An error occurred during database initialization`), but they don't stop the backend from starting. If the app behaves oddly after a pull, scroll up in the backend console and look for that line.
 
 ## Seed data
 
@@ -148,7 +148,7 @@ If both branches add a migration, the second one to merge will usually have a me
 | Startup log says `Unable to connect to any of the specified MySQL hosts` | MariaDB isn't running, or isn't on port 3307 | `docker compose up -d` from the repo root, then restart the backend                                       |
 | `/db-test` returns a 500 with `Access denied`                     | Connection string doesn't match the container's user or password      | Compare `ConnectionStrings:MySqlConnection` (and any user secret overriding it) with `docker-compose.yml` |
 | Requests fail with `Unknown database` | The database was dropped while the backend was running. It only creates the database at startup | Restart the backend |
-| Log shows `Default pricing is missing ... prices`                 | The `LocationPricingAndHolidays` migration didn't apply               | Check the earlier log lines for a migration error. Reset the database if it's only local data             |
+| Backend won't start, and the log shows `Default pricing is missing ... prices` | The `LocationPricingAndHolidays` migration didn't apply   | Check the earlier log lines for a migration error. Reset the database if it's only local data             |
 | Error like `Unknown column` or `Table ... doesn't exist`          | A migration failed part-way, or someone edited an applied migration   | Read the startup log for the migration error. For local data, reset the database                          |
 | New seed data from a pull doesn't appear                          | The full seed only runs on an empty database                          | [Reset the database](#resetting-the-database)                                                             |
 | `dotnet ef migrations add` fails with a file lock or build error  | The backend is running and locks the build output                     | Stop the backend and run the command again                                                                |
