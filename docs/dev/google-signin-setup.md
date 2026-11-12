@@ -44,6 +44,8 @@ Google only lets the button work on origins listed on our OAuth client. Any othe
 
 To add an origin, someone with access to the project in Google Cloud Console opens the OAuth 2.0 Client ID, adds it under **Authorized JavaScript origins**, and saves. Use no trailing slash and no path. The change can take a few minutes to start working.
 
+Before the app is published for production, Google also asks for a privacy policy link on the OAuth consent screen. Use the app's privacy page, `https://<your-frontend-domain>/privacy` (see [Privacy policy](../setup/production-setup.md#6-privacy-policy) in the production setup guide).
+
 > **TODO:** Confirm who on the team has Console access to add origins. The Google sign-in code was added by Tim Torpy in commit `3e0446c`.
 
 ## 4. Check that it works

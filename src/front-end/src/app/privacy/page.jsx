@@ -7,6 +7,7 @@ export const metadata = {
 };
 
 // The restaurant must fill these in, and have the wording reviewed, before launch
+// (see "Privacy policy" in docs/setup/production-setup.md)
 const LAST_UPDATED = "November 12, 2026";
 // Privacy law needs someone accountable for privacy; the owner or a manager can be that person
 const PRIVACY_CONTACT = {
