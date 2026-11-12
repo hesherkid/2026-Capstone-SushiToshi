@@ -336,6 +336,17 @@ npx playwright test --project="Mobile Safari"
 
 > The setup project runs first automatically. The phone-only test shows as skipped on the three desktop projects. Each run signs in once, which keeps it under the API’s 20 sign-ins per minute limit.
 
+### Admin Manual Screenshots
+
+`e2e/screenshots/admin-manual.shots.js` retakes the screenshots in `docs/admin/images/` from the seeded Development data. It isn't a test suite: it has its own config (`playwright.screenshots.config.js`), and `npm run test:e2e` and CI don't run it. Rerun it after a UI change, with the backend running in Development:
+
+```bash
+# From src/front-end
+npm run docs:screenshots
+```
+
+Check the new images before committing them. The seed never puts people on bills or marks a bill as set by a guest, so the guest count and Move shots fill that in on the dashboard response in the browser (`showPeopleOnBills`); nothing is saved. The QR shot runs bulk generation for the first location, which rewrites the saved QR images in your local backend's `storage/qrcodes/`.
+
 ### Run All Tests (PowerShell Script)
 
 `run-all-tests.ps1` in the project root runs the backend unit tests, backend integration tests and frontend unit tests in order, then prints a pass/fail summary. It does not run E2E tests.
