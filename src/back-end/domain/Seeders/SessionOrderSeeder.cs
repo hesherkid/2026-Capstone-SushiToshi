@@ -10,7 +10,7 @@ namespace back_end.domain.Seeders
 {
     /// <summary>
     /// Seeds orders (waves) per bill, following the rules OrderController and BillController
-    /// - Orders are placed by someone seated at that session
+    /// - Orders are placed by someone seated at that session and on that bill
     /// - Orders are placed while the bill is open
     /// - Status follows the order workflow, Pending -> Processing (approved by staff) -> Delivered.
     /// Delivered/approved times never pass the bill's close time or "now".
@@ -42,10 +42,11 @@ namespace back_end.domain.Seeders
             if (!bills.Any()) throw new InvalidOperationException("No bills found. Seed bills first.");
 
             var sessions = _context.DiningSessions.ToDictionary(s => s.Session_Id);
+            // Only people on a bill can order onto it
             var participants = _context.SessionParticipants
-                .Where(p => p.User_Id != null)
+                .Where(p => p.User_Id != null && p.Bill_Id != null)
                 .ToList()
-                .GroupBy(p => p.Session_Id)
+                .GroupBy(p => p.Bill_Id!.Value)
                 .ToDictionary(g => g.Key, g => g.OrderBy(p => p.Joined_At).ToList());
 
             var staff = _context.Users
@@ -58,7 +59,7 @@ namespace back_end.domain.Seeders
             foreach (var bill in bills)
             {
                 if (!sessions.TryGetValue(bill.Session_Id, out var session) ||
-                    !participants.TryGetValue(bill.Session_Id, out var seated) || seated.Count == 0)
+                    !participants.TryGetValue(bill.Bill_Id, out var seated) || seated.Count == 0)
                 {
                     skippedBills++;
                     continue;
@@ -145,7 +146,7 @@ namespace back_end.domain.Seeders
                 }
             }
 
-            _logger.LogInformation("Created {Created} session orders ({Skipped} bills had no seated diner or no open window)",
+            _logger.LogInformation("Created {Created} session orders ({Skipped} bills had nobody on them or no open window)",
                 created, skippedBills);
         }
 

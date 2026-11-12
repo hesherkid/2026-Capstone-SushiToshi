@@ -204,7 +204,6 @@ namespace back_end.domain.Seeders
         CreateUserIdMapping();
 
         // Pass userSeedData to seeders that need it
-        _billSeeder.SetUserSeedData(_userIdSeedData);
         _sessionParticipantSeeder.SetUserSeedData(_userIdSeedData);
         _sessionOrderSeeder.SetUserSeedData(_userIdSeedData);
         _serviceRequestSeeder.SetUserSeedData(_userIdSeedData);
@@ -286,7 +285,7 @@ namespace back_end.domain.Seeders
                     tables == 68,                      // Exactly 68 tables (34 per location × 2 locations)
                     tableGroups == 8,                  // Exactly 8 table groups (4 per location × 2 locations)
                     diningSessions >= 100,             // At least 100 sessions (50 per location × 2 locations)
-                    activeSessions == 20,               // Exactly 10 active sessions (5 per location × 2 locations)
+                    activeSessions == 20,              // Exactly 20 active sessions (10 per location × 2 locations)
                     menuItemViews > 0                  // Browsing behavior has data
                 };
 
