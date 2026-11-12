@@ -22,6 +22,10 @@ namespace back_end.domain.Seeders
         // The session-driven seeders leave this account out
         public const string NewCustomerEmail = "noah.clarke@email.com";
 
+        // The one registered customer seated at an open table (see SessionParticipantSeeder), so
+        // signing in as them shows a table in progress: their bill, orders and Call Server
+        public const string DemoCustomerEmail = "emma.wilson@email.com";
+
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserSeeder> _logger;
         private readonly IHostEnvironment _environment;
