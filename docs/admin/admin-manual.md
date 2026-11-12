@@ -166,7 +166,7 @@ Use **Past Orders** to look up what a table ordered on an earlier visit at your 
 2. Optionally, enter a **Table #** or a **Guest or bill name** to narrow the search.
 3. Select **Search**.
 
-Each result is one visit, showing the table, session number, bills, when the first order was placed, and the number of orders, items and total. Select **View table orders** (eye icon) to see every order in the visit, grouped by bill, with each item, its quantity and who ordered it.
+Each result is one visit, showing the table, session number, bills, when the first order was placed, and the number of orders, items and total. Select **View table orders** (eye icon) to see every order in the visit. Each order shows its status, when it was placed, its bill and the guest who placed it (or the staff member, for orders placed with **Add Order**), with each item's quantity, price and status. Each bill's subtotal is shown at the bottom.
 
 ---
 
@@ -177,7 +177,7 @@ The QR Codes page generates the codes printed for each table. There are two kind
 - **Session QR code**: guests scan it to sign in and join the dining session staff started for that table.
 - **WiFi QR code**: guests scan it to join the restaurant's WiFi network. The network name and password for each location are set by your system administrator (see [WiFi configuration](../setup/wifi-configuration.md)).
 
-Generated codes are saved on the server and reused until they are regenerated.
+Generated codes are saved on the server. **Preview** and **Download** for one table always build the code from the current settings and save it. The ZIP and PDF downloads use the saved codes, so run bulk generation first after the WiFi or site address changes.
 
 > **Before printing codes for the first time**, make sure the site has been set up for production, or the codes won't open on customers' phones. See [Table QR codes](../setup/production-setup.md#5-table-qr-codes).
 
@@ -189,7 +189,7 @@ Generated codes are saved on the server and reused until they are regenerated.
 ### Codes for every table
 
 1. Choose the location.
-2. Under **Bulk QR Code Generation**, select **Generate QR Codes for All Tables**.
+2. Under **Bulk QR Code Generation**, select **Generate QR Codes for All N Tables** (N is the location's number of tables).
 3. Download the result:
    - **Download as ZIP (Individual Files)**: one image per code.
    - **Download as PDF (16 QR per page)**: ready to print on letter paper (8.5" × 11"), 4 × 4 codes per page at 1.75" each.
@@ -207,7 +207,7 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
 - **Add New Location** / **Edit**: enter the location's details:
   - Name
   - Address Line 1 and Address Line 2
-  - City, Province and **Province code** (for example, AB). Holiday pricing uses the holidays of this province.
+  - City, Province and **Province code**, chosen from the list (for example, AB). Holiday pricing uses the holidays of this province.
   - Postal Code
   - Phone Number
 - **Assign Menus**: opens **Manage Menus** for the location. Add or remove each menu type it offers. Changes save straight away.
@@ -289,7 +289,7 @@ When a holiday falls on a weekend and is observed on a weekday (for example, a S
 
 The Menu Items page lists every dish with its image, name, category, description and tags.
 
-- **Add New Menu Item** / **Edit**: enter the item's name, description and category, and upload an image (**Change Image**).
+- **Add New Menu Item** / **Edit**: enter the item's name, description and category, and upload an image (**Change Image**). A new item needs a name and category. If the image upload fails, the item is still saved and a message says so; choose the image and save again to retry.
 - **Manage Tags** (tag icon in the Description & Tags column): add or remove tags on the item, such as Spicy or Vegetarian. See [Tags](#tags).
 - **Assign to Menus**: choose which menus offer the item and how. The **Menu Assignments** dialog lists the item's current assignments.
   - An assignment for **All locations (default)** puts the item on that menu everywhere.
@@ -375,6 +375,7 @@ The four report pages (all except Overview) share the same controls:
 - **Location**: reports start on your working location. Remove the location chip to see **All locations**, or select **Show my location only** to go back.
 - **Category** and **Tag** filters (item, browsing and order timing reports): narrow the report to some menu items. Item reports also have **Find an item**.
 - **Export report**: download the report as CSV, download charts as PNG images, or **Print or save as PDF**.
+- **Show data table**: under the **Orders by hour**, **Seatings by hour** and **Visit length by party size** charts, shows the chart's numbers as a table. The tables are always included when you print.
 
 ### Overview
 
