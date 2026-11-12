@@ -69,10 +69,19 @@ jobs:
   # End-to-end tests against the full app: database + API + website.
   # Runs on every PR, after merges to main and from "Run workflow". Is a required check.
   e2e-tests:
-    name: E2E tests - Playwright, Chromium
+    name: E2E tests - Playwright, ${{ matrix.project }}
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: "chromium", browser: chromium, slug: chromium }
+          - { project: "firefox", browser: firefox, slug: firefox }
+          - { project: "webkit", browser: webkit, slug: webkit }
+          - { project: "Mobile Chrome", browser: chromium, slug: mobile-chrome }
+          - { project: "Mobile Safari", browser: webkit, slug: mobile-safari }
 
     services:
       mariadb:
@@ -128,15 +137,26 @@ jobs:
         run: |
           npm ci
           npm run build
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium ${{ matrix.browser }}
 
       - name: Run E2E tests
         working-directory: src/front-end
-        run: npx playwright test --project=chromium
+        run: npx playwright test --project="${{ matrix.project }}"
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.slug }}
           path: src/front-end/playwright-report
+  e2e-all-browsers:
+    # This gives one required check instead of multiple checks for each browser
+    # Adding or removing a browser will not require changing branch protection rules
+    name: E2E tests - all browsers
+    runs-on: ubuntu-latest
+    needs: [e2e-tests]
+    # always() is required so this job runs even if some browser tests fail
+    if: always()
+    steps:
+      - name: Check every browser passed
+        run: test "${{ needs.e2e-tests.result }}" = "success"

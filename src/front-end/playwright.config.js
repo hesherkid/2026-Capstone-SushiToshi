@@ -1,5 +1,11 @@
 // @ts-check
 const { defineConfig, devices } = require("@playwright/test");
+const { ADMIN_STATE } = require("./e2e/accounts");
+
+// Every browser starts signed in as the seeded admin user.
+// Specs that need a signed out browser reset with test.use({ storageState: ... })
+const signedIn = { storageState: ADMIN_STATE };
+const afterSetup = ["setup"];
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -28,29 +34,40 @@ module.exports = defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+    // Signs in one and saves the storage state for all tests.
+    {
+      name: "setup",
+      testMatch: /.*\.setup\.js/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], ...signedIn },
+      dependencies: afterSetup,
     },
 
     {
       name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
+      use: { ...devices["Desktop Firefox"], ...signedIn },
+      dependencies: afterSetup,
     },
 
     {
       name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      use: { ...devices["Desktop Safari"], ...signedIn },
+      dependencies: afterSetup,
     },
 
     /* Test against mobile viewports. */
     {
       name: "Mobile Chrome",
-      use: { ...devices["Pixel 5"] },
+      use: { ...devices["Pixel 5"], ...signedIn },
+      dependencies: afterSetup,
     },
     {
       name: "Mobile Safari",
-      use: { ...devices["iPhone 12"] },
+      use: { ...devices["iPhone 12"], ...signedIn },
+      dependencies: afterSetup,
     },
   ],
 

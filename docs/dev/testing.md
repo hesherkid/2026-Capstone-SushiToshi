@@ -109,7 +109,10 @@ src/front-end/
 │   ├── utils/__tests__/
 │   └── stories/                 # Storybook stories
 └── e2e/                         # Playwright E2E tests
-    └── qr-code-generation.spec.js
+    ├── auth.setup.js            # Signs in as the seeded admin once and saves the state
+    ├── accounts.js              # Seeded admin account + shared signIn() helper
+    ├── admin-qr-codes.spec.js   # QR Code Management, starts signed in as admin
+    ├── sign-in.spec.js          # Login page and table QR landing, starts signed out
 ```
 
 ---
@@ -184,7 +187,12 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 ### E2E
 
-One spec, `e2e/qr-code-generation.spec.js`. It covers the login page, admin navigation to QR codes, the customer ordering flow and mobile layout.
+Two specs, run on five browser projects: Chromium, Firefox, WebKit(Safari), Mobile Chome (Pixel 5), and Mobile Safari (iPhone 12).
+
+- `admin-qr-codes.spec.js`: choosing a location, table number is required before preview/download, session QR preview, WiFi QR download, and no sideways scrolling for phones only.
+- `sign-in.spec.js`: login form, guest sign-in only from a tables QR code, failed sign-in, admin sign-in, and the table QR link keeps `locationId`/`tableNumber`
+
+A `setup` project (`auth.setup.js`) signs in one as the seeded admin (`UserSeeder.cs`) and saves the browser state to `playwright/.auth/admin.json` which has been added to `.gitignore`. Every browser project starts from it. `sign-in.spec.js` resets to a signed out state with `test.use({ storageState: { cookies: [], origins: [] } })`.
 
 ### Coverage thresholds
 
@@ -297,8 +305,11 @@ Playwright starts the frontend itself (`npm run dev` locally, `npm run start` in
 
 ```bash
 cd src/front-end
-npx playwright install --with-deps
+npx playwright install
 ```
+
+On Linux, add `--with-deps` to also install the system libraries the browsers need.
+Without this step, tests fail with `browserType.launch: Executable doesn't exist at …`.
 
 #### Run E2E Tests
 
@@ -312,9 +323,15 @@ npm run test:e2e:headed
 # UI mode (interactive debugging)
 npm run test:e2e:ui
 
-# Chromium only (what CI runs)
+# One spec file
+npx playwright test admin-qr-codes
+
+# One browser (quotes needs for names with spaces)
 npx playwright test --project=chromium
+npx playwright test --project="Mobile Safari"
 ```
+
+> The setup project runs first automatically. The phone-only test shows as skipped on the three desktop projects. Each run signs in once, which keeps it under the API’s 20 sign-ins per minute limit.
 
 ### Run All Tests (PowerShell Script)
 
@@ -566,17 +583,22 @@ A new push to a branch or PR cancels its older, still-running workflow run.
 - Next.js production build (npm run build)
 ```
 
-#### 3. E2E tests - Playwright, Chromium (`ubuntu-latest`) - required
+#### 3. E2E tests - Playwright, <browser> (`ubuntu-latest`), one job per browser
 
 ```yaml
 - Runs after the backend and frontend jobs pass
-- Starts MariaDB as a service container on port 3307
-- Installs libfontconfig1 (needed by SkiaSharp for QR codes)
-- Starts the API on port 5264 and waits until /db-test confirms the database
-  (the API applies migrations and seeds the empty database on startup)
-- Builds the frontend; Playwright starts it with `npm run start`
-- Runs Playwright with Chromium only
-- Uploads the "playwright-report" artifact (screenshots of failures), even when tests fail
+- Matrix of five jobs running in parallel: chromium, firefox, webkit, Mobile Chrome, Mobile Safari (fail-fast: false, so one failure doesn't cancel the others)
+- Each job: starts MariaDB as a service container on port 3307, installs libfontconfig1 (needed by SkiaSharp for QR codes), starts the API on port 5264 and waits until /db-test confirms the database (the API applies migrations and seeds the empty database on startup), builds the frontend; Playwright starts it with `npm run start`
+- Installs Chromium plus that job's browser (`npx playwright install --with-deps chromium <browser>`). Chromium is always needed because the sign-in `setup` project runs in it
+- Runs `npx playwright test --project="<browser>"`
+- Uploads a `playwright-report-<browser>` artifact, even when tests fail
+```
+
+#### 4. E2E tests - all browsers - required
+
+```yaml
+- Waits for every browser job (if: always()) and fails unless all of them passed
+- Gives branch protection one checked name that doesn't change when browsers are added or removed
 ```
 
 **Not in CI:** Codecov (removed) and Storybook story tests. Results and coverage are shown in each job's log.
@@ -600,7 +622,7 @@ PRs cannot be merged until all of these pass. If a check fails, the PR author fi
 
 - `Backend - build, unit & integration tests`
 - `Frontend - lint, unit tests & build`
-- `E2E tests - Playwright, Chromium`
+- `E2E tests - all browsers`
 
 > If a job's `name:` is changed in the workflow file, the required check must be updated in Settings > Branches to match.
 
@@ -609,7 +631,7 @@ PRs cannot be merged until all of these pass. If a check fails, the PR author fi
 1. Open the PR and scroll to the checks section, or go to the **Actions** tab
 2. Select the workflow run
 3. Click a failed job, then the failed step, to read the log
-4. For E2E failures, download the "playwright-report" artifact (bottom of the run page), unzip it and open `index.html`
+4. For E2E failures, download the "playwright-report-<browser>" artifact for the failed browser (bottom of the run page), unzip it and open `index.html`
 
 ---
 
@@ -872,6 +894,21 @@ page.getByRole('button', { name: 'Sign In', exact: true })
 page.getByRole('heading', { name: /start your order/i })
 ```
 
+**Issue**: `browserType.launch: Executable doesn't exist at …`
+
+```
+Solution: The browsers for this Playwright version isn't installed. Run `npx playwright install` from src/front-end.
+```
+
+**Issue**: Every admin test fails, or fails with `ENOENT … playwright/.auth/admin.json`
+
+```
+Solution: The sign-in setup didn't run or failed.
+1. Check `e2e/auth.setup.js` exists
+2. Run `npx playwright test --project=setup` on its own
+3. Make sure the backend is running in Development, so the seeded admin exists
+```
+
 ---
 
 ## Resources
@@ -905,6 +942,9 @@ page.getByRole('heading', { name: /start your order/i })
 - [Playwright Documentation](https://playwright.dev/)
 - [Playwright Best Practices](https://playwright.dev/docs/best-practices)
 - [Playwright Test Generator](https://playwright.dev/docs/codegen)
+- [Playwright Authentication](https://playwright.dev/docs/auth)
+- [Playwright Projects](https://playwright.dev/docs/test-projects)
+- [Playwright Browsers](https://playwright.dev/docs/browsers)
 
 ### Articles & Guides
 
@@ -917,14 +957,14 @@ page.getByRole('heading', { name: /start your order/i })
 ## Next Steps
 
 1. **Fill the gaps** listed under [Not yet tested](#current-test-coverage), starting with the untested backend services and the front end auth forms.
-2. **Add E2E flows** for staff (open a session, take an order, close a bill) and for customers ordering from a QR code.
+2. **Add E2E flows** for staff (open a session, take an order, close a bill) and for a customer joining a table from its QR code and placing an order.
 3. **Raise the Jest coverage thresholds** in `jest.config.js` as coverage grows, so it can't slip back.
 4. **Keep this document current** when tests, CI jobs or required checks change.
 
 ---
 
-**Version**: 1.3
-**Last Updated**: 2026-11-10
+**Version**: 1.
+**Last Updated**: 2026-11-11
 **Status**: Active Development
 
 For questions or issues with testing, please contact the development team or submit an issue on GitHub.
