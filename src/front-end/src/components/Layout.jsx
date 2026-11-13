@@ -1,5 +1,6 @@
 import React from "react";
-import { Box, Toolbar, Typography } from "@mui/material";
+import NextLink from "next/link";
+import { Box, Link, Toolbar, Typography } from "@mui/material";
 import AppBarWithTitle from "./AppBarWithTitle";
 import CustomerBottomNav from "./customer/CustomerBottomNav";
 import CustomerSideNav, {
@@ -70,6 +71,10 @@ const Layout = ({ children }) => {
       >
         <Typography component="p" variant="body2" sx={{ fontSize: "0.75rem" }}>
           &copy; {new Date().getFullYear()} Sushi Toshi. All rights reserved.
+          {" · "}
+          <Link component={NextLink} href="/privacy" color="inherit" underline="hover">
+            Privacy Policy
+          </Link>
         </Typography>
       </Box>
 

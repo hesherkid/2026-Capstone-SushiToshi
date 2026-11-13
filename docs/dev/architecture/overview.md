@@ -259,3 +259,4 @@ A typical feature touches these places, in this order:
 6. **Component** in `components/<area>/`, calling the API through `@/config/api`
 7. **Page** in `app/`. Put it under `app/admin/` or `app/staff/` to get their `RequireRole` guard, or wrap it in `RequireRole` yourself if it isn't public
 8. **Frontend tests** in a `__tests__` folder next to the component (see [frontend-testing.md](../frontend-testing.md))
+9. **Privacy policy** in `app/privacy/page.jsx`, if the feature collects new personal information, uses it for a new purpose, or sends it to a new outside service. Canadian privacy law requires the policy to match what the app actually does

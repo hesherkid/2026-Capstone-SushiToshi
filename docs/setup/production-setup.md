@@ -108,7 +108,7 @@ The header is only read from trusted proxies, and a mistyped address stops the b
 | Integration | What to do |
 | --- | --- |
 | **Email (SendGrid)** | Set `SendGrid__ApiKey` and `SendGrid__FromEmail`, and authenticate your domain. See [email-sendgrid-setup.md](email-sendgrid-setup.md). |
-| **Google Sign-In** | Add the production frontend origin under **Authorized JavaScript origins** on the Google OAuth client. `Google:ClientId` can stay as committed if you're using the same OAuth client. See [google-signin-setup.md](../dev/google-signin-setup.md). |
+| **Google Sign-In** | Add the production frontend origin under **Authorized JavaScript origins** on the Google OAuth client, and the privacy page (`https://<your-frontend-domain>/privacy`) as the consent screen's privacy policy link. `Google:ClientId` can stay as committed if you're using the same OAuth client. See [google-signin-setup.md](../dev/google-signin-setup.md). |
 | **WiFi QR codes** | Set each location's guest network credentials. See [wifi-configuration.md](wifi-configuration.md). |
 | **Holidays** | `HolidayApi__DefaultProvince` is `AB` (Alberta). Change it if the restaurant is in another province, since it decides which statutory holidays are loaded. |
 
@@ -180,7 +180,24 @@ Each table's Session QR code has the site's address saved inside the image when 
    - Scan the table's WiFi code. The phone should offer to join the guest network.
 7. **Print.** Click **Download as PDF** (16 codes per page, sized for letter paper) and print.
 
-## 6. Pre-launch checklist
+## 6. Privacy policy
+
+The app's privacy policy is at `/privacy`, linked from the footer of every page and from the sign-in and sign-up forms. Canadian privacy law (PIPEDA, and PIPA in Alberta) requires it to name who is responsible for privacy and how to reach them, so it ships with placeholders that must be replaced.
+
+1. **Choose who answers privacy questions.** It doesn't need to be a dedicated Privacy Officer; the owner or a manager is fine. A shared address like `info@` works too, as long as someone checks it.
+2. **Fill in the details** at the top of `src/front-end/src/app/privacy/page.jsx`:
+
+   | Constant | Replace with |
+   | --- | --- |
+   | `PRIVACY_CONTACT.email` | The privacy contact's email (placeholder: `privacy@example.com`) |
+   | `PRIVACY_CONTACT.phone` | Their phone number (placeholder: `000-000-0000`) |
+   | `PRIVACY_CONTACT.address` | The restaurant's mailing address |
+   | `LAST_UPDATED` | The date the restaurant approves the policy |
+
+3. **Have the restaurant review the wording.** The page describes what the app collects and who it's shared with. It isn't legal advice, so have someone qualified check it before launch.
+4. **Rebuild the frontend** (`npm run build`) so the new details are included.
+
+## 7. Pre-launch checklist
 
 **Backend**
 
@@ -198,7 +215,8 @@ Each table's Session QR code has the site's address saved inside the image when 
 **Frontend**
 
 - [ ] `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and, if needed, `NEXT_PUBLIC_API_URL` were set **before** `npm run build`
-- [ ] The production origin is authorized on the Google OAuth client
+- [ ] The production origin is authorized on the Google OAuth client, and its consent screen links to `/privacy`
+- [ ] The privacy page has the restaurant's real contact details and approved wording (see [Privacy policy](#6-privacy-policy))
 - [ ] Served over HTTPS
 
 **After the first start**
