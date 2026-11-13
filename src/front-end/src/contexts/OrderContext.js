@@ -50,9 +50,9 @@ export const OrderProvider = ({ children }) => {
     completeOrder: baseCompleteOrder,
 
     // Order Items
-    addOrderItems: baseAddOrderItems,
-    updateOrderItem: baseUpdateOrderItem,
-    completeOrderItem: baseCompleteOrderItem,
+    addOrderItems,
+    updateOrderItem,
+    completeOrderItem,
 
     // Order Retrieval
     // getAllOrders,
@@ -146,107 +146,7 @@ export const OrderProvider = ({ children }) => {
     [baseCompleteOrder, orders, selectedOrder, groupOrdersByStatus],
   );
 
-  const addOrderItems = useCallback(
-    async (orderId, items) => {
-      const result = await baseAddOrderItems(orderId, items);
-      if (result) {
-        // Refresh the order to get updated items
-        const updatedOrder = await getOrderById(orderId);
-        if (updatedOrder) {
-          setOrders((prev) =>
-            prev.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          groupOrdersByStatus(
-            orders.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          if (selectedOrder?.order_id === orderId) {
-            setSelectedOrder(updatedOrder);
-          }
-        }
-        return result;
-      }
-      return null;
-    },
-    [
-      baseAddOrderItems,
-      getOrderById,
-      orders,
-      selectedOrder,
-      groupOrdersByStatus,
-    ],
-  );
-
-  const updateOrderItem = useCallback(
-    async (orderId, itemId, updateData) => {
-      const result = await baseUpdateOrderItem(orderId, itemId, updateData);
-      if (result) {
-        // Refresh the order to get updated items
-        const updatedOrder = await getOrderById(orderId);
-        if (updatedOrder) {
-          setOrders((prev) =>
-            prev.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          groupOrdersByStatus(
-            orders.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          if (selectedOrder?.order_id === orderId) {
-            setSelectedOrder(updatedOrder);
-          }
-        }
-        return result;
-      }
-      return null;
-    },
-    [
-      baseUpdateOrderItem,
-      getOrderById,
-      orders,
-      selectedOrder,
-      groupOrdersByStatus,
-    ],
-  );
-
-  const completeOrderItem = useCallback(
-    async (orderId, itemId) => {
-      const result = await baseCompleteOrderItem(orderId, itemId);
-      if (result) {
-        // Refresh the order to get updated items
-        const updatedOrder = await getOrderById(orderId);
-        if (updatedOrder) {
-          setOrders((prev) =>
-            prev.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          groupOrdersByStatus(
-            orders.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          if (selectedOrder?.order_id === orderId) {
-            setSelectedOrder(updatedOrder);
-          }
-        }
-        return result;
-      }
-      return null;
-    },
-    [
-      baseCompleteOrderItem,
-      getOrderById,
-      orders,
-      selectedOrder,
-      groupOrdersByStatus,
-    ],
-  );
+  // Item actions return only the changed item, so callers reload their own orders afterwards
 
   // Fetch and set orders
   const fetchOrdersBySession = useCallback(
