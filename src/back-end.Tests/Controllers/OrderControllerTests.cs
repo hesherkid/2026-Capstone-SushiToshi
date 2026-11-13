@@ -715,6 +715,29 @@ public class OrderControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task AddOrderItems_AfterApproval_AddsNothing()
+    {
+        // Arrange: staff approve the order before the guest's add goes through
+        var order = SeedOrder(OrderStatus.Pending, OrderStatus.Pending);
+        SetupUserClaims("42", "Server", "Staff");
+        await _controller.ApproveOrder(order.Order_Id);
+        _context.ChangeTracker.Clear();
+        SetupUserClaims("123");
+
+        // Act
+        var result = await _controller.AddOrderItems(order.Order_Id,
+            new List<OrderItemCreateDto> { new() { ItemId = 1, Quantity = 1 } });
+
+        // Assert: no Pending line is left inside the Processing order
+        result.Should().BeOfType<BadRequestObjectResult>();
+        var saved = await _context.SessionOrders.Include(o => o.OrderItems)
+            .SingleAsync(o => o.Order_Id == order.Order_Id);
+        saved.Status.Should().Be(OrderStatus.Processing);
+        saved.OrderItems.Should().ContainSingle()
+            .Which.Order_Item_Status.Should().Be(OrderStatus.Processing);
+    }
+
+    [Fact]
     public async Task GetOrderById_CustomerSeatedAtTable_ReturnsOrder()
     {
         // Arrange

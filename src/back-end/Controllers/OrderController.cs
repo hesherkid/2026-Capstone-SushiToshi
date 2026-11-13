@@ -34,6 +34,13 @@ namespace back_end.Controllers
         private bool BillOrderingClosed(Billing? bill) =>
             bill?.Requested_At != null && !User.IsInRole("Admin") && !User.IsInRole("Staff");
 
+        // The order's bill, looked up before taking the bill lock; null if there's no such order
+        private Task<int?> OrderBillIdAsync(int orderId) =>
+            _context.SessionOrders
+                .Where(o => o.Order_Id == orderId)
+                .Select(o => (int?)o.Bill_Id)
+                .FirstOrDefaultAsync();
+
         public OrderController(ApplicationDbContext context, ILogger<OrderController> logger, ILocationAccessService locationAccess)
         {
             _context = context;
@@ -419,6 +426,15 @@ namespace back_end.Controllers
         {
             try
             {
+                var billId = await OrderBillIdAsync(orderId);
+                if (billId is null)
+                {
+                    return NotFound("Order not found");
+                }
+
+                // Waits for items being added to this order, so they're approved along with the rest
+                await using var billLock = await BillLock.LockAsync(_context, billId.Value);
+
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.MenuItem)
@@ -470,6 +486,7 @@ namespace back_end.Controllers
 
                 _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
+                if (billLock != null) await billLock.CommitAsync();
 
                 return Ok(new OrderResponseDto
                 {
@@ -920,6 +937,15 @@ namespace back_end.Controllers
                     return BadRequest(new { message = payloadError });
                 }
 
+                var billId = await OrderBillIdAsync(orderId);
+                if (billId is null)
+                {
+                    return NotFound(new { message = $"Order {orderId} not found" });
+                }
+
+                // Waits for an approval or a bill close in progress, so the status checks below are current
+                await using var billLock = await BillLock.LockAsync(_context, billId.Value);
+
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                     .Include(o => o.DiningSession)
@@ -971,6 +997,7 @@ namespace back_end.Controllers
                     order.OrderItems.Add(line);
                 }
                 await _context.SaveChangesAsync();
+                if (billLock != null) await billLock.CommitAsync();
 
                 var namesById = plan.NamesById;
                 var overLimit = newLines.Where(l => l.Charge_Reason == ChargeReason.OverLimit).ToList();
