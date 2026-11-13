@@ -36,7 +36,7 @@ export const useSessionActions = (onSuccess) => {
       setActionError(errorMessage);
       notifyError(errorMessage);
     },
-    [notifyError]
+    [notifyError],
   );
 
   // Wrapper that handles all the repetitive loading/error logic
@@ -48,13 +48,13 @@ export const useSessionActions = (onSuccess) => {
         handleError,
         onSuccess,
       }),
-    [handleError, onSuccess]
+    [handleError, onSuccess],
   );
 
   // DINING SESSION OPERATION
 
   const createSession = useCallback(
-    async (sessionData) => { 
+    async (sessionData) => {
       return apiWrapper(
         "createSession",
         async () => {
@@ -67,7 +67,7 @@ export const useSessionActions = (onSuccess) => {
             table_group_id: sessionData?.table_group_id
               ? toInt(sessionData?.table_group_id)
               : null,
-            assignment_type: sessionData.assignment_type 
+            assignment_type: sessionData.assignment_type,
           };
 
           if (!payload.menu_id) throw new Error("Menu ID is required");
@@ -75,17 +75,18 @@ export const useSessionActions = (onSuccess) => {
 
           const response = await api.post(
             "/DiningSession/create-dining-session",
-            payload
+            payload,
           );
 
           return response.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Dining session created successfully"
-        }
+        {
+          triggerSuccess: true,
+          successMessage: "Dining session created successfully",
+        },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -101,10 +102,10 @@ export const useSessionActions = (onSuccess) => {
           });
           return res.data || [];
         },
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -120,7 +121,7 @@ export const useSessionActions = (onSuccess) => {
         return res.data;
       });
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -138,12 +139,13 @@ export const useSessionActions = (onSuccess) => {
 
           return res.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Dining session closed successfully"
-        }
+        {
+          triggerSuccess: true,
+          successMessage: "Dining session closed successfully",
+        },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -164,12 +166,13 @@ export const useSessionActions = (onSuccess) => {
 
           return res.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Table added to session successfully"
-        }
+        {
+          triggerSuccess: true,
+          successMessage: "Table added to session successfully",
+        },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -190,12 +193,13 @@ export const useSessionActions = (onSuccess) => {
 
           return res.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Table group added to session successfully"
-        }
+        {
+          triggerSuccess: true,
+          successMessage: "Table group added to session successfully",
+        },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -214,12 +218,13 @@ export const useSessionActions = (onSuccess) => {
 
           return res.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Table removed from session successfully"
-        }
+        {
+          triggerSuccess: true,
+          successMessage: "Table removed from session successfully",
+        },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -235,33 +240,31 @@ export const useSessionActions = (onSuccess) => {
           validateIds({ "session ID": sid, "table group ID": tgid });
 
           const res = await api.delete(
-            `/DiningSession/${sid}/table-groups/${tgid}`
+            `/DiningSession/${sid}/table-groups/${tgid}`,
           );
 
           return res.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Table group removed from session successfully"
-        }
+        {
+          triggerSuccess: true,
+          successMessage: "Table group removed from session successfully",
+        },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
    * Get active session ID for current user
    */
-  const getActiveSessionId = useCallback(
-    async () => {
-      return apiWrapper("getActiveSessionId", async () => {
-        const res = await api.get(
-          "/DiningSession/participants/active-session-id"
-        );
-        return res.data?.session_id || null;
-      });
-    },
-    [apiWrapper]
-  );
+  const getActiveSessionId = useCallback(async () => {
+    return apiWrapper("getActiveSessionId", async () => {
+      const res = await api.get(
+        "/DiningSession/participants/active-session-id",
+      );
+      return res.data?.session_id || null;
+    });
+  }, [apiWrapper]);
 
   /**
    * Get menu ID for a session
@@ -276,7 +279,7 @@ export const useSessionActions = (onSuccess) => {
         return res.data?.menu_id || null;
       });
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   // TABLE OPERATIONS
@@ -295,10 +298,10 @@ export const useSessionActions = (onSuccess) => {
           const res = await api.get("/TableEntity/empty", { params });
           return res.data || [];
         },
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   // TABLE GROUP OPERATIONS
@@ -317,10 +320,10 @@ export const useSessionActions = (onSuccess) => {
           const res = await api.get("/TableGroup/available", { params });
           return res.data || [];
         },
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   // BILL OPERATIONS
@@ -362,12 +365,10 @@ export const useSessionActions = (onSuccess) => {
 
           return res.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Bill created successfully"
-        }
+        { triggerSuccess: true, successMessage: "Bill created successfully" },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -387,10 +388,10 @@ export const useSessionActions = (onSuccess) => {
           const res = await api.get(`/Bill/get-bills/${sid}`, { params });
           return res.data || [];
         },
-        { defaultReturn: [] }
+        { defaultReturn: [] },
       );
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -409,7 +410,7 @@ export const useSessionActions = (onSuccess) => {
         return res.data;
       });
     },
-    [apiWrapper]
+    [apiWrapper],
   );
 
   /**
@@ -430,12 +431,10 @@ export const useSessionActions = (onSuccess) => {
 
           return res.data;
         },
-        { triggerSuccess: true,
-          successMessage: "Bill closed successfully"
-        }
+        { triggerSuccess: true, successMessage: "Bill closed successfully" },
       );
-},
-    [apiWrapper]
+    },
+    [apiWrapper],
   );
 
   /**
@@ -488,7 +487,12 @@ export const useSessionActions = (onSuccess) => {
           );
           return res.data;
         },
-        { triggerSuccess: true, successMessage: locked ? "Guest count locked" : "Guest count unlocked" },
+        {
+          triggerSuccess: true,
+          successMessage: locked
+            ? "Guest count locked"
+            : "Guest count unlocked",
+        },
       );
     },
     [apiWrapper],
@@ -505,7 +509,11 @@ export const useSessionActions = (onSuccess) => {
           const sid = toInt(sessionId);
           const bid = toInt(billId);
           const into = toInt(intoBillId);
-          validateIds({ "session ID": sid, "bill ID": bid, "bill to merge into": into });
+          validateIds({
+            "session ID": sid,
+            "bill ID": bid,
+            "bill to merge into": into,
+          });
 
           const res = await api.put(
             `/Bill/merge/${bid}`,
@@ -524,26 +532,48 @@ export const useSessionActions = (onSuccess) => {
    * Move someone at the table onto another open bill, with or without their orders.
    * guestType ("adult", "senior", "child" or "toddler") also moves guestCount guests of that kind from
    * the old bill's count to the new one's; null leaves both counts alone.
+   * newBill starts a new bill for them split off their current one instead (billId is ignored)
    */
   const moveGuest = useCallback(
-    async (sessionId, participantId, billId, moveOrders, guestType = null, guestCount = 1) => {
+    async (
+      sessionId,
+      participantId,
+      billId,
+      moveOrders,
+      guestType = null,
+      guestCount = 1,
+      newBill = false,
+    ) => {
       return apiWrapper(
         "moveGuest",
         async () => {
           const sid = toInt(sessionId);
           const pid = toInt(participantId);
-          const bid = toInt(billId);
-          validateIds({ "session ID": sid, "participant ID": pid, "bill ID": bid });
+          validateIds({ "session ID": sid, "participant ID": pid });
 
-          const res = await api.put(`/SessionParticipant/${sid}/participants/${pid}/bill`, {
-            bill_id: bid,
-            move_orders: moveOrders,
-            guest_type: guestType,
-            guest_count: guestCount,
-          });
+          // Either an existing bill or a new one, never both
+          const target = newBill
+            ? { new_bill: true }
+            : { bill_id: toInt(billId) };
+          if (!newBill) validateIds({ "bill ID": target.bill_id });
+          if (newBill && !guestType)
+            throw new Error("Pick which guests go on the new bill");
+
+          const res = await api.put(
+            `/SessionParticipant/${sid}/participants/${pid}/bill`,
+            {
+              ...target,
+              move_orders: moveOrders,
+              guest_type: guestType,
+              guest_count: guestCount,
+            },
+          );
           return res.data;
         },
-        { triggerSuccess: true, successMessage: "Guest moved" },
+        {
+          triggerSuccess: true,
+          successMessage: newBill ? "New bill started" : "Guest moved",
+        },
       );
     },
     [apiWrapper],

@@ -31,6 +31,8 @@ namespace back_end.Dtos
         public int ParticipantId { get; set; }
         public string? UserName { get; set; }
         public int? BillId { get; set; }
+        // A "Continue as Guest" account, so staff screens don't use their "Guest K7P2" name for a bill
+        public bool IsGuest { get; set; }
     }
 
     public class DashboardSessionsDto
@@ -62,7 +64,7 @@ namespace back_end.Dtos
         public int TotalTablesInUse { get; set; }
         public int TotalActiveBills { get; set; }
         public int TotalActiveParticipants { get; set; }
-        
+
     }
-    
+
 }
