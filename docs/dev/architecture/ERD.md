@@ -42,6 +42,10 @@ Entity Relationship Diagram for the `sushi_toshi_db` database used by the back e
 
 When an entity class or migration changes the schema, update the diagram and the verification date above.
 
+## Documentation
+
+[Mermaid Entity Relationship Diagram](https://mermaid.js.org/syntax/entityRelationshipDiagram.html)
+
 ## Diagram
 
 ```mermaid
