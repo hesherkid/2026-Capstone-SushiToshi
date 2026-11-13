@@ -25,7 +25,7 @@ export const SessionProvider = ({ children, live = false }) => {
 
   const refreshData = useCallback(
     () => fetchSessions({ silent: true }),
-    [fetchSessions]
+    [fetchSessions],
   );
 
   // Actions with triggerSuccess refresh the session list when they succeed
@@ -51,7 +51,7 @@ export const SessionProvider = ({ children, live = false }) => {
 
       return succeeded(await actions.createDiningSession(sessionData));
     },
-    [actions.createDiningSession]
+    [actions.createDiningSession],
   );
 
   const addTable = async (sessionId, tableId) =>
@@ -65,7 +65,7 @@ export const SessionProvider = ({ children, live = false }) => {
 
   const removeTableGroup = async (sessionId, tableGroupId) =>
     succeeded(
-      await actions.removeTableGroupFromSession(sessionId, tableGroupId)
+      await actions.removeTableGroupFromSession(sessionId, tableGroupId),
     );
 
   const createBill = async (sessionId, billData) =>
@@ -83,8 +83,27 @@ export const SessionProvider = ({ children, live = false }) => {
   const mergeBill = async (sessionId, billId, intoBillId) =>
     succeeded(await actions.mergeBill(sessionId, billId, intoBillId));
 
-  const moveGuest = async (sessionId, participantId, billId, moveOrders, guestType, guestCount) =>
-    succeeded(await actions.moveGuest(sessionId, participantId, billId, moveOrders, guestType, guestCount));
+  // newBill: starts a new bill split off their current bill
+  const moveGuest = async (
+    sessionId,
+    participantId,
+    billId,
+    moveOrders,
+    guestType,
+    guestCount,
+    newBill = false,
+  ) =>
+    succeeded(
+      await actions.moveGuest(
+        sessionId,
+        participantId,
+        billId,
+        moveOrders,
+        guestType,
+        guestCount,
+        newBill,
+      ),
+    );
 
   const endSession = async (sessionId) =>
     succeeded(await actions.closeDiningSession(sessionId));

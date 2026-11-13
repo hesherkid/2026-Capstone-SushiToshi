@@ -107,6 +107,7 @@ namespace back_end.Controllers
                 .ThenInclude(tg => tg!.Tables)
             .Include(ds => ds.Bills)
             .Include(ds => ds.Participants)
+                .ThenInclude(p => p.User)
             .Where(ds => ds.Ended_At == null);
 
         // Filter by location if provided
@@ -164,7 +165,13 @@ namespace back_end.Controllers
             People = session.Participants
                 .Where(p => p.Left_At == null)
                 .OrderBy(p => p.Joined_At)
-                .Select(p => new DashboardPersonDto { ParticipantId = p.Participant_Id, UserName = p.User_Name, BillId = p.Bill_Id })
+                .Select(p => new DashboardPersonDto
+                {
+                  ParticipantId = p.Participant_Id,
+                  UserName = p.User_Name,
+                  BillId = p.Bill_Id,
+                  IsGuest = GuestAccounts.IsGuest(p.User?.Email),
+                })
                 .ToList(),
             BillCount = session.Bills.Count(),
             IsClosable = isClosable

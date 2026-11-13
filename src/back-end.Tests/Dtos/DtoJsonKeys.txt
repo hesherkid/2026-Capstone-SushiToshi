@@ -40,7 +40,7 @@ back_end.Dtos.CreateCategory: adult_limit, child_limit, description, name, over_
 back_end.Dtos.CreateSessionRequestDto: assignment_type, location_id, menu_id, table_group_id, table_id
 back_end.Dtos.CreateStaffDto: email, first_name, last_name, location_id, location_ids, password, role, status
 back_end.Dtos.DashboardBillDto: adult_count, bill_id, bill_name, child_count, counts_changed_by_guest, counts_locked, created_at, people_on_bill, requested_at, senior_count, started_by_guest, status, tot_count, total_guests
-back_end.Dtos.DashboardPersonDto: bill_id, participant_id, user_name
+back_end.Dtos.DashboardPersonDto: bill_id, is_guest, participant_id, user_name
 back_end.Dtos.DashboardSessionsDto: active_participants, bill_count, bills, ended_at, first_order_at, is_closable, location_id, location_name, menu_id, people, seat_count, session_id, started_at, table_numbers
 back_end.Dtos.DashboardSummaryDto: location_id, location_name, total_active_bills, total_active_participants, total_active_sessions, total_tables_in_use
 back_end.Dtos.DiningSessionDetailDto: active_bill_count, active_participants, bills_count, ended_at, first_order_time, location_id, location_name, menu_id, orders_count, session_id, started_at, table_numbers, total_participant
@@ -84,7 +84,7 @@ back_end.Dtos.MenuLocationCreateDto: menu_id
 back_end.Dtos.MenuResponseDto: description, end_time, is_active, location_ids, menu_id, name, start_time
 back_end.Dtos.MenuUpdateDto: description, end_time, is_active, name, start_time
 back_end.Dtos.MergeBillDto: into_bill_id
-back_end.Dtos.MoveGuestDto: bill_id, guest_count, guest_type, move_orders
+back_end.Dtos.MoveGuestDto: bill_id, guest_count, guest_type, move_orders, new_bill
 back_end.Dtos.MyBillDto: adult_count, bill_id, bill_name, child_count, counts_locked, people_count, requested_at, senior_count, status, tot_count, total_count
 back_end.Dtos.MyBillResponseDto: change_blocked_reason, my_bill, open_bills
 back_end.Dtos.MyLocationsDto: all_locations, current_location, locations

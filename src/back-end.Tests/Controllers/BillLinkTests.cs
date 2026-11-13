@@ -769,6 +769,132 @@ public class BillLinkTests : IDisposable
         SeatBill(Ana).Should().Be(Lee);
     }
 
+    // Splitting guests off onto a new bill
+    private int BillsAtTable() => _context.Bills.AsNoTracking().Count(b => b.Session_Id == Table);
+
+    private int GuestsAtTable() => _context.Bills.AsNoTracking()
+        .Where(b => b.Session_Id == Table && b.Status == BillStatus.Open).Sum(b => b.Total_Count);
+
+    private static MoveGuestDto SplitOff(string guestType = "adult", int guestCount = 1) =>
+        new() { NewBill = true, GuestType = guestType, GuestCount = guestCount };
+
+    [Fact]
+    public async Task SplittingAGuestOff_StartsTheirBill_WithoutChangingTheTablesGuests()
+    {
+        AnaOrderedOnLee();
+        var before = GuestsAtTable();
+
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff());
+
+        result.Should().BeOfType<OkObjectResult>();
+        var anaBill = SavedBill(SeatBill(Ana)!.Value);
+        anaBill.Bill_Name.Should().Be("Ana");
+        anaBill.Status.Should().Be(BillStatus.Open);
+        anaBill.Adult_Count.Should().Be(1);
+        anaBill.Total_Count.Should().Be(1);
+        anaBill.Started_By_Guest.Should().BeFalse();
+        SavedBill(Lee).Adult_Count.Should().Be(1);
+        SavedBill(Lee).Total_Count.Should().Be(1);
+        OrderBill(500).Should().Be(anaBill.Bill_Id);
+        GuestsAtTable().Should().Be(before);
+    }
+
+    [Fact]
+    public async Task SplittingAGuestOff_WithNoName_NamesTheBillAfterTheOldOne()
+    {
+        _context.SessionParticipants.Single(sp => sp.User_Id == Ana).User_Name = null;
+        // "Lee 1" is already used at the table, so the next number
+        _context.Bills.Add(new Billing { Bill_Id = 72, Session_Id = Table, Bill_Name = "Lee 1", Adult_Count = 1, Total_Count = 1 });
+        _context.SaveChanges();
+
+        await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff());
+
+        SavedBill(SeatBill(Ana)!.Value).Bill_Name.Should().Be("Lee 2");
+    }
+
+    // Guest accounts are named "Guest K7P2", which brings no value to a bill. It is named after the old bill instead.
+    [Fact]
+    public async Task SplittingAGuestAccountOff_NamesTheBillAfterTheOldOne()
+    {
+        _context.Users.Single(u => u.User_id == Ana).Email = back_end.Helpers.GuestAccounts.NewEmail();
+        _context.SessionParticipants.Single(sp => sp.User_Id == Ana).User_Name = "Guest K7P2";
+        _context.SaveChanges();
+
+        await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff());
+
+        SavedBill(SeatBill(Ana)!.Value).Bill_Name.Should().Be("Lee 1");
+    }
+
+    [Fact]
+    public async Task SplittingAGuestOff_SharesTheLeftoverFeeWithTheNewBill()
+    {
+        (await _context.Bills.FindAsync(Lee))!.Leftover_Charge = 5.00m;
+        (await _context.Bills.FindAsync(Park))!.Leftover_Charge = 5.00m;
+        _context.SaveChanges();
+
+        await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff());
+
+        SavedBill(Lee).Leftover_Charge.Should().Be(3.34m);
+        SavedBill(Park).Leftover_Charge.Should().Be(3.33m);
+        SavedBill(SeatBill(Ana)!.Value).Leftover_Charge.Should().Be(3.33m);
+    }
+
+    // Staff locked the counts but staff can still split the guests onto a new bill
+    [Fact]
+    public async Task SplittingAGuestOff_WorksOnALockedBill()
+    {
+        (await _context.Bills.FindAsync(Lee))!.Counts_Locked = true;
+        _context.SaveChanges();
+
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff());
+
+        result.Should().BeOfType<OkObjectResult>();
+        SeatBill(Ana).Should().NotBe(Lee);
+    }
+
+    [Fact]
+    public async Task SplittingAGuestOff_CantLeaveTheOldBillEmpty()
+    {
+        var result = await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff(guestCount: 2));
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        BillsAtTable().Should().Be(2);
+        SeatBill(Ana).Should().Be(Lee);
+        SavedBill(Lee).Total_Count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task SplittingAGuestOff_NeedsThemOnAnOpenBill()
+    {
+        // Ben is seated but not on a bill
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ben), SplitOff()))
+            .Should().BeOfType<BadRequestObjectResult>();
+
+        (await _context.Bills.FindAsync(Lee))!.Status = BillStatus.Closed;
+        _context.SaveChanges();
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff()))
+            .Should().BeOfType<BadRequestObjectResult>();
+
+        BillsAtTable().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task MovingAGuest_NeedsEitherABillOrANewBill()
+    {
+        // Both
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDto { BillId = Park, NewBill = true, GuestType = "adult" }))
+            .Should().BeOfType<BadRequestObjectResult>();
+        // Neither
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDto()))
+            .Should().BeOfType<BadRequestObjectResult>();
+        // A new bill with no guests on it
+        (await StaffSeats().MoveGuest(Table, SeatOf(Ana), new MoveGuestDto { NewBill = true }))
+            .Should().BeOfType<BadRequestObjectResult>();
+
+        BillsAtTable().Should().Be(2);
+        SeatBill(Ana).Should().Be(Lee);
+    }
+
     // ---- What staff see ----
 
     private async Task<DashboardBillDto> DashboardBill(int billId)
