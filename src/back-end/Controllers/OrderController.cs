@@ -34,6 +34,13 @@ namespace back_end.Controllers
         private bool BillOrderingClosed(Billing? bill) =>
             bill?.Requested_At != null && !User.IsInRole("Admin") && !User.IsInRole("Staff");
 
+        // The order's bill, looked up before taking the bill lock; null if there's no such order
+        private Task<int?> OrderBillIdAsync(int orderId) =>
+            _context.SessionOrders
+                .Where(o => o.Order_Id == orderId)
+                .Select(o => (int?)o.Bill_Id)
+                .FirstOrDefaultAsync();
+
         public OrderController(ApplicationDbContext context, ILogger<OrderController> logger, ILocationAccessService locationAccess)
         {
             _context = context;
@@ -419,6 +426,15 @@ namespace back_end.Controllers
         {
             try
             {
+                var billId = await OrderBillIdAsync(orderId);
+                if (billId is null)
+                {
+                    return NotFound("Order not found");
+                }
+
+                // Waits for items being added to this order, so they're approved along with the rest
+                await using var billLock = await BillLock.LockAsync(_context, billId.Value);
+
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                         .ThenInclude(oi => oi.MenuItem)
@@ -470,6 +486,7 @@ namespace back_end.Controllers
 
                 _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
+                if (billLock != null) await billLock.CommitAsync();
 
                 return Ok(new OrderResponseDto
                 {
@@ -499,106 +516,6 @@ namespace back_end.Controllers
                 return StatusCode(500, "Internal Server Error");
             }
         }
-
-        /// <summary>
-        /// Deletes a specific item from an order.
-        /// </summary>
-        /// <param name="orderId">The unique identifier of the order</param>
-        /// <param name="orderItemId">The unique identifier of the order item to delete</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> indicating the result of the operation.
-        /// Returns HTTP 200 (OK) with a success message when the item is deleted.
-        /// Returns HTTP 400 (Bad Request) if the order item doesn't exist.
-        /// Returns HTTP 404 (Not Found) if the order doesn't exist.
-        /// Returns HTTP 409 (Conflict) if the order is not pending and the user lacks permission.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
-        /// </returns>
-        /// <response code="200">Returns a success message when the item is deleted</response>
-        /// <response code="400">If the order item is not found</response>
-        /// <response code="404">If the order is not found</response>
-        /// <response code="409">If the order is not pending and the user is not authorized to modify it</response>
-        /// <response code="500">If an internal error occurs while deleting the order item</response>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     DELETE /api/order/123/items/456
-        ///
-        /// This endpoint requires authentication.
-        /// Users can only delete items from their own pending orders.
-        /// Staff and Admin users can delete items from approved orders.
-        /// Deleting the last item that isn't cancelled cancels the order.
-        /// </remarks>
-        [HttpDelete("{orderId}/items/{orderItemId}")]
-        [Authorize(Policy = "staffOnly")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> RemoveOrderItem(
-            int orderId,
-            int orderItemId
-        )
-        {
-            try
-            {
-                var order = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync(so => so.Order_Id == orderId);
-                if (order is null)
-                {
-                    return NotFound("Order Data was not found");
-                }
-
-                if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
-                {
-                    return LocationResults.OtherLocation();
-                }
-                // Use authenticated user info
-                var userIdString = ClaimsHelpers.GetUserId(User);
-                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
-                if (string.IsNullOrEmpty(userIdString))
-                {
-                    return Unauthorized("User ID not found in claims.");
-                }
-
-                if (!int.TryParse(userIdString, out var userId))
-                {
-                    return Unauthorized("Invalid User ID format.");
-                }
-
-                if (order.Status != OrderStatus.Pending)
-                {
-                    if (!(userRole.Contains("Staff") || userRole.Contains("Admin")) && userId != order.User_Id)
-                    {
-                        return Conflict("Can not Modify a Approved Order");
-                    }
-                }
-                var item = order.OrderItems.FirstOrDefault(oi => oi.Order_Item_Id == orderItemId);
-                if (item is null)
-                {
-                    return BadRequest("Order Item was not found");
-                }
-                _context.OrderItems.Remove(item);
-
-                // Removing the last item cancels the order, so staff aren't left with an empty one
-                var orderCancelled = order.Status != OrderStatus.Cancelled
-                    && !order.OrderItems.Any(oi => oi != item && oi.Order_Item_Status != OrderStatus.Cancelled);
-                if (orderCancelled)
-                {
-                    order.Status = OrderStatus.Cancelled;
-                    order.Completed_At = DateTime.UtcNow;
-                }
-
-                await _context.SaveChangesAsync();
-                return Ok(orderCancelled ? "Item was Deleted. That was the last item, so the order was cancelled." : "Item was Deleted");
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting item {ItemId} from order {OrderId}", orderItemId, orderId);
-                return StatusCode(500, new { message = "An error occurred while deleting the order item", error = ex.Message });
-            }
-        }
-
 
         /// <summary>
         /// Marks an order item as completed/delivered.
@@ -920,6 +837,15 @@ namespace back_end.Controllers
                     return BadRequest(new { message = payloadError });
                 }
 
+                var billId = await OrderBillIdAsync(orderId);
+                if (billId is null)
+                {
+                    return NotFound(new { message = $"Order {orderId} not found" });
+                }
+
+                // Waits for an approval or a bill close in progress, so the status checks below are current
+                await using var billLock = await BillLock.LockAsync(_context, billId.Value);
+
                 var order = await _context.SessionOrders
                     .Include(o => o.OrderItems)
                     .Include(o => o.DiningSession)
@@ -971,6 +897,7 @@ namespace back_end.Controllers
                     order.OrderItems.Add(line);
                 }
                 await _context.SaveChangesAsync();
+                if (billLock != null) await billLock.CommitAsync();
 
                 var namesById = plan.NamesById;
                 var overLimit = newLines.Where(l => l.Charge_Reason == ChargeReason.OverLimit).ToList();

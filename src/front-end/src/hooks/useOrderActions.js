@@ -162,25 +162,6 @@ export const useOrderActions = (onSuccess) => {
     [apiWrapper, notifySuccess],
   );
 
-  const removeOrderItem = useCallback(
-    async (orderId, orderItemId, itemName = null) => {
-      return apiWrapper(
-        "removeOrderItem",
-        async () => {
-          const result = await orderService.removeOrderItem(
-            orderId,
-            orderItemId,
-          );
-          const name = itemName || result?.name || "Order item";
-          notifySuccess(`${name} removed successfully`);
-          return result;
-        },
-        { triggerSuccess: true },
-      );
-    },
-    [apiWrapper, notifySuccess],
-  );
-
   // ORDER RETRIEVAL
 
   const getAllOrdersByLocation = useCallback(
@@ -242,7 +223,6 @@ export const useOrderActions = (onSuccess) => {
     addOrderItems,
     updateOrderItem,
     completeOrderItem,
-    removeOrderItem,
 
     // Order Retrieval
     // getAllOrders,
