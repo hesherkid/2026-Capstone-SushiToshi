@@ -409,6 +409,10 @@ const LoginFormContent = () => {
           >
             Sign Up
           </Link>
+          <br />
+          <Link component={NextLink} href="/privacy" underline="hover">
+            Privacy
+          </Link>
         </Typography>
       }
     >

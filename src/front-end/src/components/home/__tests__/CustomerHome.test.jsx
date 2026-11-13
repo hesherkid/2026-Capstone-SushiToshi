@@ -44,4 +44,11 @@ describe("Customer home", () => {
     expect(screen.queryByRole("button", { name: /View the menu/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Past visits/ })).toBeInTheDocument();
   });
+
+  it("links to their account to change their name and password", async () => {
+    render(<CustomerHome />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Account/ }));
+    expect(mockPush).toHaveBeenCalledWith("/account");
+  });
 });

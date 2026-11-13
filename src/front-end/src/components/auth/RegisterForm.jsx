@@ -176,6 +176,10 @@ const RegisterFormContent = () => {
             >
               Sign in
             </Link>
+            <br />
+            <Link component={NextLink} href="/privacy" underline="hover">
+              Privacy
+            </Link>
           </Typography>
         )
       }

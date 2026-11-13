@@ -26,6 +26,7 @@ import {
   LogOut,
   DollarSign,
   CalendarDays,
+  UserRound,
 } from "lucide-react";
 import TableIcon from "@/components/common/TableIcon";
 import NextLink from "next/link";
@@ -43,6 +44,7 @@ const menuItemsByRole = {
     },
     { icon: TableIcon, label: "Tables", path: "/staff/dashboard/tables" },
     { icon: Users, label: "Orders", path: "/staff/dashboard/orders" },
+    { icon: UserRound, label: "My Account", path: "/account", divider: true },
   ],
   admin: [
     { icon: Home, label: "Home", path: "/" },
@@ -77,6 +79,7 @@ const menuItemsByRole = {
     { icon: CalendarDays, label: "Holidays", path: "/admin/holidays" },
     { icon: QrCode, label: "QR Codes", path: "/admin/qr-codes", divider: true },
     { icon: BarChart, label: "Analytics", path: "/analytics/analytic-page" },
+    { icon: UserRound, label: "My Account", path: "/account", divider: true },
   ],
 };
 
