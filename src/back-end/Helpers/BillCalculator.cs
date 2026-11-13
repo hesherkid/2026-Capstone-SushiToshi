@@ -25,10 +25,10 @@ namespace back_end.Helpers
 
         public static BillTotals Totals(decimal subtotal, decimal gratuityRate, decimal taxRate)
         {
-            var gratuity = Math.Round(subtotal * gratuityRate, 2);
+            var gratuity = Math.Round(subtotal * gratuityRate, 2, MidpointRounding.AwayFromZero);
 
             // A mandatory gratuity is part of the price, so GST applies to it too (unlike a tip)
-            var tax = Math.Round((subtotal + gratuity) * taxRate, 2);
+            var tax = Math.Round((subtotal + gratuity) * taxRate, 2, MidpointRounding.AwayFromZero);
 
             return new BillTotals(gratuity, tax, subtotal + gratuity + tax);
         }

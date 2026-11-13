@@ -68,5 +68,22 @@ namespace back_end.Tests.Helpers
             totals.Tax.Should().Be(1.97m);        // 5% of 39.33 = 1.9665
             totals.Total.Should().Be(41.30m);
         }
+
+        [Fact]
+        public void Totals_RoundsHalfCentsUp()
+        {
+            var totals = BillCalculator.Totals(subtotal: 40.50m, gratuityRate: 0m, taxRate: 0.05m);
+
+            totals.Tax.Should().Be(2.03m);        // 5% of 40.50 = 2.025
+            totals.Total.Should().Be(42.53m);
+        }
+
+        [Fact]
+        public void Totals_RoundsHalfCentGratuityUp()
+        {
+            var totals = BillCalculator.Totals(subtotal: 40.25m, gratuityRate: 0.18m, taxRate: 0m);
+
+            totals.Gratuity.Should().Be(7.25m);   // 18% of 40.25 = 7.245
+        }
     }
 }
