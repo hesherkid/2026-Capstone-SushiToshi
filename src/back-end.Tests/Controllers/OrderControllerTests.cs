@@ -1190,6 +1190,60 @@ public class OrderControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task RemoveOrderItem_LastItemBeingMade_MarksTheOrderDelivered()
+    {
+        // Arrange: one item delivered, the other still being made
+        SetupUserClaims("42", role: "Staff");
+        var order = SeedOrder(OrderStatus.Processing, OrderStatus.Delivered, OrderStatus.Processing);
+        var target = order.OrderItems.Last().Order_Item_Id;
+
+        // Act
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+        var saved = await _context.SessionOrders.AsNoTracking().SingleAsync(o => o.Order_Id == order.Order_Id);
+        saved.Status.Should().Be(OrderStatus.Delivered);
+        saved.Completed_At.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RemoveOrderItem_OtherItemsStillBeingMade_LeavesTheOrderProcessing()
+    {
+        SetupUserClaims("42", role: "Staff");
+        var order = SeedOrder(OrderStatus.Processing, OrderStatus.Processing, OrderStatus.Processing);
+        var target = order.OrderItems.First().Order_Item_Id;
+
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        result.Should().BeOfType<OkObjectResult>();
+        (await _context.SessionOrders.AsNoTracking().SingleAsync(o => o.Order_Id == order.Order_Id))
+            .Status.Should().Be(OrderStatus.Processing);
+    }
+
+    [Theory]
+    [InlineData(BillStatus.Closed)]
+    [InlineData(BillStatus.Paid)]
+    public async Task RemoveOrderItem_BillNotOpen_ReturnsBadRequest(BillStatus billStatus)
+    {
+        // Arrange
+        SetupUserClaims("42", role: "Staff");
+        var order = SeedOrder(OrderStatus.Delivered, OrderStatus.Delivered, OrderStatus.Delivered);
+        var bill = await _context.Bills.SingleAsync(b => b.Bill_Id == order.Bill_Id);
+        bill.Status = billStatus;
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+        var target = order.OrderItems.First().Order_Item_Id;
+
+        // Act
+        var result = await _controller.RemoveOrderItem(order.Order_Id, target);
+
+        // Assert: the bill keeps its items
+        result.Should().BeOfType<BadRequestObjectResult>();
+        ItemExists(target).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task RemoveOrderItem_NonOwnerCustomerApprovedOrder_ReturnsConflict()
     {
         SetupUserClaims("456");

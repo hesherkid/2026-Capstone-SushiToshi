@@ -544,6 +544,8 @@ namespace back_end.Controllers
         /// Users can only delete items from their own pending orders.
         /// Staff and Admin users can delete items from approved orders.
         /// Deleting the last item that isn't cancelled cancels the order.
+        /// Deleting the last item still being made marks the order delivered.
+        /// Items can't be deleted once the bill is closed or paid.
         /// </remarks>
         [HttpDelete("{orderId}/items/{orderItemId}")]
         [Authorize(Policy = "staffOnly")]
@@ -559,10 +561,28 @@ namespace back_end.Controllers
         {
             try
             {
-                var order = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync(so => so.Order_Id == orderId);
+                var billId = await OrderBillIdAsync(orderId);
+                if (billId is null)
+                {
+                    return NotFound("Order Data was not found");
+                }
+
+                // Waits for a close of this bill in progress, so the bill status read below is current
+                await using var billLock = await BillLock.LockAsync(_context, billId.Value);
+
+                var order = await _context.SessionOrders
+                    .Include(o => o.OrderItems)
+                    .Include(o => o.Bill)
+                    .FirstOrDefaultAsync(so => so.Order_Id == orderId);
                 if (order is null)
                 {
                     return NotFound("Order Data was not found");
+                }
+
+                // A closed or paid bill's total can't change
+                if (order.Bill.Status != BillStatus.Open)
+                {
+                    return BadRequest(new { message = "This bill is closed, so its items can't be removed." });
                 }
 
                 if (!await SessionAccess.CanViewSessionAsync(_context, User, order.session_id))
@@ -604,8 +624,16 @@ namespace back_end.Controllers
                     order.Status = OrderStatus.Cancelled;
                     order.Completed_At = DateTime.UtcNow;
                 }
+                // Removing the last item still being made finishes the order, as delivering it would
+                else if (order.Status == OrderStatus.Processing
+                    && !order.OrderItems.Any(oi => oi != item && oi.Order_Item_Status == OrderStatus.Processing))
+                {
+                    order.Status = OrderStatus.Delivered;
+                    order.Completed_At = DateTime.UtcNow;
+                }
 
                 await _context.SaveChangesAsync();
+                if (billLock != null) await billLock.CommitAsync();
                 return Ok(orderCancelled ? "Item was Deleted. That was the last item, so the order was cancelled." : "Item was Deleted");
 
             }
