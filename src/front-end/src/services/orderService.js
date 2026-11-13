@@ -106,17 +106,6 @@ export const orderService = {
     return response.data;
   },
 
-  /**
-   * Removes an item from an order (Staff/Admin only)
-   * @param {number} orderId - Order ID
-   * @param {number} orderItemId - Order Item ID to remove
-   * @returns {Promise<string>} Success message
-   */
-  removeOrderItem: async (orderId, orderItemId) => {
-    const response = await api.delete(`/Order/${orderId}/items/${orderItemId}`);
-    return response.data;
-  },
-
   // ORDER RETRIEVAL
 
   // Past orders use GET /Order/history via useOrderHistory; live orders use all-orders below

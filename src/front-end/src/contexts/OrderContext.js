@@ -53,7 +53,6 @@ export const OrderProvider = ({ children }) => {
     addOrderItems: baseAddOrderItems,
     updateOrderItem: baseUpdateOrderItem,
     completeOrderItem: baseCompleteOrderItem,
-    removeOrderItem: baseRemoveOrderItem,
 
     // Order Retrieval
     // getAllOrders,
@@ -249,40 +248,6 @@ export const OrderProvider = ({ children }) => {
     ],
   );
 
-  const removeOrderItem = useCallback(
-    async (orderId, orderItemId) => {
-      const result = await baseRemoveOrderItem(orderId, orderItemId);
-      if (result) {
-        // Refresh the order to get updated items
-        const updatedOrder = await getOrderById(orderId);
-        if (updatedOrder) {
-          setOrders((prev) =>
-            prev.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          groupOrdersByStatus(
-            orders.map((order) =>
-              order.order_id === orderId ? updatedOrder : order,
-            ),
-          );
-          if (selectedOrder?.order_id === orderId) {
-            setSelectedOrder(updatedOrder);
-          }
-        }
-        return result;
-      }
-      return null;
-    },
-    [
-      baseRemoveOrderItem,
-      getOrderById,
-      orders,
-      selectedOrder,
-      groupOrdersByStatus,
-    ],
-  );
-
   // Fetch and set orders
   const fetchOrdersBySession = useCallback(
     async (sessionId) => {
@@ -352,7 +317,6 @@ export const OrderProvider = ({ children }) => {
     addOrderItems,
     updateOrderItem,
     completeOrderItem,
-    removeOrderItem,
 
     // Order Retrieval
     // fetchAllOrders,
