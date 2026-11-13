@@ -56,11 +56,14 @@ namespace back_end.Dtos
         public int BillId { get; set; }
     }
 
-    // Staff moving someone at the table onto another bill
+    // Staff moving someone at the table onto another bill, or onto a new bill split off their old one
     public class MoveGuestDto
     {
-        [Required]
-        public int BillId { get; set; }
+        public int? BillId { get; set; }
+
+        // Start a new bill for them instead of picking an existing one, named after them, with guest_count
+        // of guest_type taken off theird old bill's counts.
+        public bool NewBill { get; set; }
 
         // Take the orders they placed on their old bill with them
         public bool MoveOrders { get; set; } = true;
@@ -99,5 +102,5 @@ namespace back_end.Dtos
         [Range(0, 50)]
         public int TotCount { get; set; }
     }
-    
+
 }
