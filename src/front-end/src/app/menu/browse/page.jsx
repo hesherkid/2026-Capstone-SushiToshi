@@ -80,7 +80,7 @@ const pill = (selected) => ({
   borderRadius: 999,
   fontSize: "0.85rem",
   whiteSpace: "nowrap",
-  fontWeight: selected ? 700 : 500,
+  fontWeight: 600,
   bgcolor: selected ? "primary.main" : "grey.100",
   color: selected ? "common.white" : "grey.800",
   transition: "background-color 150ms ease, color 150ms ease",

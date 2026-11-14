@@ -47,8 +47,9 @@ export const useSessionActions = (onSuccess) => {
         setActionError,
         handleError,
         onSuccess,
+        notifySuccess,
       }),
-    [handleError, onSuccess],
+    [handleError, onSuccess, notifySuccess],
   );
 
   // DINING SESSION OPERATION

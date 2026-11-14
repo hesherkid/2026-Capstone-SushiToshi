@@ -9,13 +9,15 @@ import { isHtmlPage } from "./serverMessage";
  * @param {Function} config.setActionError - Function to set error state
  * @param {Function} config.handleError - Function to handle errors
  * @param {Function} config.onSuccess - Success callback (optional)
+ * @param {Function} config.notifySuccess - Shows a call's successMessage
  * @returns {Function} Wrapper function for API calls
  */
-export const createApiWrapper = ({ 
-  setIsLoading, 
-  setActionError, 
-  handleError, 
-  onSuccess 
+export const createApiWrapper = ({
+  setIsLoading,
+  setActionError,
+  handleError,
+  onSuccess,
+  notifySuccess
 }) => {
   /**
    * Wraps an API call with standard error handling and loading states.
@@ -33,30 +35,30 @@ export const createApiWrapper = ({
     try {
       setActionError(null);
       setIsLoading(true);
-      
+
       const result = await apiCall();
-      
+
       // Show success notification if message provided
       if (successMessage && typeof notifySuccess === "function") {
         notifySuccess(successMessage);
       }
-      
+
       // Call onSuccess callback for data refresh
       if (triggerSuccess && typeof onSuccess === "function") {
         await onSuccess();
       }
-      
+
       return result;
     } catch (error) {
       const errorData = error.response?.data;
       const detailedError = {
         ...error,
         userMessage: errorData?.detail ||
-                    errorData?.message ||
-                    errorData?.error ||
-                    (isHtmlPage(errorData) ? "Couldn't reach the server. Please try again." : null) ||
-                    (typeof errorData === 'string' ? errorData : null) ||
-                    error.message
+          errorData?.message ||
+          errorData?.error ||
+          (isHtmlPage(errorData) ? "Couldn't reach the server. Please try again." : null) ||
+          (typeof errorData === 'string' ? errorData : null) ||
+          error.message
       };
 
       handleError(detailedError, context);
