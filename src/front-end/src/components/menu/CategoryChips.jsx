@@ -63,7 +63,7 @@ const CategoryChips = ({ categories, selected, onSelect }) => {
                 px: 2,
                 borderRadius: 999,
                 fontSize: "0.9rem",
-                fontWeight: isSelected ? 700 : 500,
+                fontWeight: 600,
                 whiteSpace: "nowrap",
                 bgcolor: isSelected ? "primary.main" : "grey.100",
                 color: isSelected ? "common.white" : "grey.800",

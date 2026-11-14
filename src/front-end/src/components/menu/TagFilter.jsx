@@ -63,7 +63,7 @@ const TagFilter = ({ tags, selected, onChange }) => {
             onClick={() => toggle(key)}
             sx={{
               ...pill,
-              fontWeight: isSelected ? 700 : 500,
+              fontWeight: 600,
               bgcolor: isSelected ? "primary.main" : "grey.100",
               color: isSelected ? "common.white" : "grey.800",
               "&:hover": { bgcolor: isSelected ? "primary.dark" : "grey.200" },

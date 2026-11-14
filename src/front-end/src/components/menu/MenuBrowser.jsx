@@ -138,7 +138,7 @@ const MenuBrowser = ({
   const chipBarRef = useRef(null);
   const [appBarHeight, setAppBarHeight] = useState(56);
   const [activeCategory, setActiveCategory] = useState(null);
-  // Set while a chip tap is scrolling the page, so the sections it passes don't light up
+  // Ends the jump while a chip tap is scrolling the page, so the sections it passes don't light up
   const jumping = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -189,31 +189,49 @@ const MenuBrowser = ({
     return () => window.removeEventListener("scroll", followScroll);
   }, [visibleKey, appBarHeight]);
 
-  useEffect(() => () => clearTimeout(jumping.current), []);
+  useEffect(() => () => jumping.current?.(), []);
 
   const jumpToCategory = (categoryId) => {
     const section = sectionRefs.current[categoryId];
     if (!section) return;
 
     setActiveCategory(categoryId);
-    clearTimeout(jumping.current);
-    const done = () => {
-      clearTimeout(jumping.current);
-      jumping.current = null;
-    };
-    // "scrollend" where the browser has it; the timer covers the rest
-    window.addEventListener("scrollend", done, { once: true });
-    jumping.current = setTimeout(done, 1000);
+    jumping.current?.();
+
+    const top =
+      section.getBoundingClientRect().top + window.scrollY - pinnedHeight() - 8;
+    // Where the page will stop, as it can't scroll past the bottom
+    const maxTop =
+      document.documentElement.scrollHeight - window.innerHeight;
+    const target = Math.max(0, Math.min(top, maxTop));
+
+    // The jump is over once the page gets there, or the customer scrolls for
+    // themselves. On a long menu the smooth scroll can stall and run for seconds,
+    // so timers alone end it too early; the timer is only a backstop
+    if (Math.abs(window.scrollY - target) > 1) {
+      const userInput = ["wheel", "touchstart", "keydown"];
+      const arrived = () => {
+        if (Math.abs(window.scrollY - target) <= 1) done();
+      };
+      const done = () => {
+        clearTimeout(timer);
+        window.removeEventListener("scroll", arrived);
+        userInput.forEach((type) => window.removeEventListener(type, done));
+        jumping.current = null;
+      };
+      const timer = setTimeout(done, 3000);
+      window.addEventListener("scroll", arrived, { passive: true });
+      userInput.forEach((type) =>
+        window.addEventListener(type, done, { passive: true }),
+      );
+      jumping.current = done;
+    }
 
     const reduceMotion =
       window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 
     window.scrollTo({
-      top:
-        section.getBoundingClientRect().top +
-        window.scrollY -
-        pinnedHeight() -
-        8,
+      top: target,
       behavior: reduceMotion ? "auto" : "smooth",
     });
 
