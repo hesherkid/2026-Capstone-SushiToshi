@@ -51,7 +51,7 @@ namespace back_end.Dtos
         // allow moving between Staff/Admin only
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public UserRoles? Role { get; set; }
-        
+
         public string? Location { get; set; }
     }
 
@@ -90,7 +90,7 @@ namespace back_end.Dtos
         [Required, MinLength(8), MaxLength(200)]
         public string CurrentPassword { get; set; } = string.Empty;
     }
-    
+
     public class StaffMemberUpdateDto
     {
         public DateTime CreatedAt { get; set; }
