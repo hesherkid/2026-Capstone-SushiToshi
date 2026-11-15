@@ -27,14 +27,20 @@ const settle = async (page) => {
   });
   await page
     .getByText("DEV · Reset")
-    .evaluateAll((els) => els.forEach((el) => (el.closest("button") ?? el).style.setProperty("display", "none")));
+    .evaluateAll((els) =>
+      els.forEach((el) =>
+        (el.closest("button") ?? el).style.setProperty("display", "none"),
+      ),
+    );
   await page.waitForTimeout(500);
 };
 
 /** @param {import('@playwright/test').Page} page */
 const openSessions = async (page) => {
   await page.goto("/staff/dashboard/sessions");
-  await expect(page.getByRole("button", { name: /^View session/ }).first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^View session/ }).first(),
+  ).toBeVisible();
   await settle(page);
 };
 
@@ -42,7 +48,10 @@ const openSessions = async (page) => {
 /** @param {import('@playwright/test').Page} page */
 const openBusiestSession = async (page) => {
   const multiBill = page.getByRole("row").filter({ hasText: / of [2-9]/ });
-  const row = (await multiBill.count()) > 0 ? multiBill.first() : page.getByRole("row").nth(1);
+  const row =
+    (await multiBill.count()) > 0
+      ? multiBill.first()
+      : page.getByRole("row").nth(1);
   await row.getByRole("button", { name: /^View session/ }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText(/^Dining Session #/)).toBeVisible();
@@ -52,7 +61,9 @@ const openBusiestSession = async (page) => {
 
 test("getting around", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /^Welcome back/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: /^Welcome back/ }),
+  ).toBeVisible();
   await settle(page);
   await highlight(page.getByLabel("Main menu"));
   await highlight(page.getByLabel(/^Working location/));
@@ -67,14 +78,19 @@ test("sessions list", async ({ page }) => {
 test("session details", async ({ page }) => {
   await openSessions(page);
   const dialog = await openBusiestSession(page);
-  await highlight(dialog.getByRole("button", { name: /^Add order to/ }).first());
+  await highlight(
+    dialog.getByRole("button", { name: /^Add order to/ }).first(),
+  );
   await dialog.screenshot({ path: file("session-details") });
 });
 
 test("bill summary", async ({ page }) => {
   await openSessions(page);
   const sessionDialog = await openBusiestSession(page);
-  await sessionDialog.getByRole("button", { name: /^View .* summary$/ }).first().click();
+  await sessionDialog
+    .getByRole("button", { name: /^View .* summary$/ })
+    .first()
+    .click();
   const summary = page.getByRole("dialog").last();
   await expect(summary).toBeVisible();
   await settle(page);
@@ -83,11 +99,15 @@ test("bill summary", async ({ page }) => {
 
 // The whole MUI text field or select, not just its input
 /** @param {import('@playwright/test').Locator} input */
-const fieldOf = (input) => input.locator('xpath=ancestor::div[contains(@class,"MuiFormControl-root")][1]');
+const fieldOf = (input) =>
+  input.locator(
+    'xpath=ancestor::div[contains(@class,"MuiFormControl-root")][1]',
+  );
 
 // The checkbox and its label text
 /** @param {import('@playwright/test').Locator} checkbox */
-const checkboxRowOf = (checkbox) => checkbox.locator("xpath=ancestor::label[1]");
+const checkboxRowOf = (checkbox) =>
+  checkbox.locator("xpath=ancestor::label[1]");
 
 // Opens each session with more than one open bill until `ready` finds what the shot needs.
 // Closes the dialog and tries the next session when it doesn't.
@@ -99,7 +119,10 @@ const openSessionWhere = async (page, ready) => {
   const rows = page.getByRole("row").filter({ hasText: / of [2-9]/ });
   const count = await rows.count();
   for (let i = 0; i < count; i++) {
-    await rows.nth(i).getByRole("button", { name: /^View session/ }).click();
+    await rows
+      .nth(i)
+      .getByRole("button", { name: /^View session/ })
+      .click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(/^Dining Session #/)).toBeVisible();
     await settle(page);
@@ -115,27 +138,53 @@ const openSessionWhere = async (page, ready) => {
 // In each session with two or more open bills, people are shared across the open bills
 // (two sample guests if nobody joined), and the first open bill is marked "Started by guest".
 // The keys used here, from DashboardSessionsDto, DashboardBillDto and DashboardPersonDto
-/** @typedef {{ bill_id: number, status: string, people_on_bill?: number, started_by_guest?: boolean }} DashboardBill */
-/** @typedef {{ participant_id: number, user_name: string, bill_id: number | null }} DashboardPerson */
+/** @typedef {{ bill_id: number, status: string, people_on_bill?: number, started_by_guest?: boolean, total_guests?: number, adult_count?: number }} DashboardBill */
+/** @typedef {{ participant_id: number, user_name: string, bill_id: number | null, is_guest?: boolean }} DashboardPerson */
 /** @typedef {{ bills?: DashboardBill[], people?: DashboardPerson[] }} DashboardSession */
-/** @param {import('@playwright/test').Page} page */
-const showPeopleOnBills = (page) =>
+// splittable: gives each open bill at least 2 guests (as adults), so Move can change counts and offer
+// "+ New bill" (a bill must keep one guest). Browser only, like the rest of this mock
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {{ splittable?: boolean }} [options]
+ */
+const showPeopleOnBills = (page, { splittable = false } = {}) =>
   page.route(/\/api\/dashboard\/sessions/i, async (route) => {
     const response = await route.fetch();
     /** @type {DashboardSession[]} */
     const sessions = await response.json();
     for (const session of Array.isArray(sessions) ? sessions : []) {
-      const open = (session.bills ?? []).filter((b) => /open/i.test(String(b.status)));
+      const open = (session.bills ?? []).filter((b) =>
+        /open/i.test(String(b.status)),
+      );
       if (open.length < 2) continue;
       if (!session.people?.length) {
         session.people = [
-          { participant_id: -1, user_name: "Guest 4F2A", bill_id: null },
-          { participant_id: -2, user_name: "Guest 9C1D", bill_id: null },
+          {
+            participant_id: -1,
+            user_name: "Guest 4F2A",
+            bill_id: null,
+            is_guest: true,
+          },
+          {
+            participant_id: -2,
+            user_name: "Guest 9C1D",
+            bill_id: null,
+            is_guest: true,
+          },
         ];
       }
-      session.people.forEach((person, i) => (person.bill_id = open[i % open.length].bill_id));
+      session.people.forEach(
+        (person, i) => (person.bill_id = open[i % open.length].bill_id),
+      );
       for (const bill of open) {
-        bill.people_on_bill = session.people.filter((p) => p.bill_id === bill.bill_id).length;
+        bill.people_on_bill = session.people.filter(
+          (p) => p.bill_id === bill.bill_id,
+        ).length;
+        const missing = 2 - (bill.total_guests ?? 0);
+        if (splittable && missing > 0) {
+          bill.adult_count = (bill.adult_count ?? 0) + missing;
+          bill.total_guests = 2;
+        }
       }
       open[0].started_by_guest = true;
     }
@@ -143,18 +192,26 @@ const showPeopleOnBills = (page) =>
   });
 
 // A bill a guest started or changed, or with more people than guests
-const GUEST_CHECK_CHIP = /^(Started by guest|Count changed by guest|\d+ people on \d+-guest bill)$/;
+const GUEST_CHECK_CHIP =
+  /^(Started by guest|Count changed by guest|\d+ people on \d+-guest bill)$/;
 
 test("checking guest counts", async ({ page }) => {
   await showPeopleOnBills(page);
   await openSessions(page);
-  const dialog = await openSessionWhere(page, async (d) => (await d.getByText(GUEST_CHECK_CHIP).count()) > 0);
+  const dialog = await openSessionWhere(
+    page,
+    async (d) => (await d.getByText(GUEST_CHECK_CHIP).count()) > 0,
+  );
   const chip = dialog.getByText(GUEST_CHECK_CHIP).first();
   // The bill card: the nearest ancestor that also holds the bill's Edit Guests button
-  const bill = chip.locator('xpath=ancestor::*[.//button[starts-with(@aria-label, "Edit guests on")]][1]');
+  const bill = chip.locator(
+    'xpath=ancestor::*[.//button[starts-with(@aria-label, "Edit guests on")]][1]',
+  );
   await highlight(chip);
   await highlight(bill.getByRole("button", { name: /^Edit guests on/ }));
-  await highlight(bill.getByRole("button", { name: /^(Lock|Unlock) guests on/ }));
+  await highlight(
+    bill.getByRole("button", { name: /^(Lock|Unlock) guests on/ }),
+  );
   await bill.screenshot({ path: file("guest-check") });
 
   await bill.getByRole("button", { name: /^Edit guests on/ }).click();
@@ -167,21 +224,41 @@ test("checking guest counts", async ({ page }) => {
   await edit.screenshot({ path: file("edit-guests-dialog") });
 });
 
+// Each Move button's row (its parent) shows the person's bill, or "Not on a bill yet"
+/** @param {import('@playwright/test').Locator} d */
+const onABill = (d) =>
+  d
+    .getByRole("button", { name: /^Move / })
+    .locator("xpath=..")
+    .filter({ hasNotText: "Not on a bill yet" });
+
 test("moving people between bills", async ({ page }) => {
-  await showPeopleOnBills(page);
+  await showPeopleOnBills(page, { splittable: true });
   await openSessions(page);
-  // Someone already on a bill, so every option in the dialog shows. Each Move button's
-  // row (its parent) shows the person's bill, or "Not on a bill yet"
-  const onABill = (/** @type {import('@playwright/test').Locator} */ d) =>
-    d.getByRole("button", { name: /^Move / }).locator("xpath=..").filter({ hasNotText: "Not on a bill yet" });
-  const dialog = await openSessionWhere(page, async (d) => (await onABill(d).count()) > 0);
-  await onABill(dialog).first().getByRole("button", { name: /^Move / }).click();
+  // Someone already on a bill, so every option in the dialog shows
+  const dialog = await openSessionWhere(
+    page,
+    async (d) => (await onABill(d).count()) > 0,
+  );
+  await onABill(dialog)
+    .first()
+    .getByRole("button", { name: /^Move / })
+    .click();
 
   const move = page.getByRole("dialog").last();
   await move.getByLabel("Move to").click();
-  await page.getByRole("option").first().click();
-  const changeCounts = move.getByRole("checkbox", { name: "Change both bills' guest counts" });
-  if (await changeCounts.isEnabled()) await changeCounts.check();
+  // An existing bill; "+ New bill" has its own shot
+  await page
+    .getByRole("option")
+    .filter({ hasNotText: /^\+ New bill/ })
+    .first()
+    .click();
+  // The label only reads this way when the counts can change, so don't wait for it otherwise
+  const changeCounts = move.getByRole("checkbox", {
+    name: "Change both bills' guest counts",
+  });
+  if ((await changeCounts.count()) > 0 && (await changeCounts.isEnabled()))
+    await changeCounts.check();
   await settle(page);
 
   await highlight(fieldOf(move.getByLabel("Move to")));
@@ -195,10 +272,44 @@ test("moving people between bills", async ({ page }) => {
   await move.screenshot({ path: file("move-person-dialog") });
 });
 
+test("splitting a bill", async ({ page }) => {
+  await showPeopleOnBills(page, { splittable: true });
+  await openSessions(page);
+  const dialog = await openSessionWhere(
+    page,
+    async (d) => (await onABill(d).count()) > 0,
+  );
+  await onABill(dialog)
+    .first()
+    .getByRole("button", { name: /^Move / })
+    .click();
+
+  const move = page.getByRole("dialog").last();
+  await move.getByLabel("Move to").click();
+  await page.getByRole("option", { name: /^\+ New bill:/ }).click();
+  const preview = move
+    .getByRole("alert")
+    .filter({ hasText: /starts with \d+ guests?\./ });
+  await expect(preview).toBeVisible();
+  await settle(page);
+
+  await highlight(fieldOf(move.getByLabel("Move to")));
+  await highlight(
+    checkboxRowOf(
+      move.getByRole("checkbox", { name: /count for the new bill$/ }),
+    ),
+  );
+  await highlight(preview);
+  await move.screenshot({ path: file("split-bill-dialog") });
+});
+
 test("merging bills", async ({ page }) => {
   await openSessions(page);
   const dialog = await openBusiestSession(page);
-  await dialog.getByRole("button", { name: /^Merge .* into another bill$/ }).first().click();
+  await dialog
+    .getByRole("button", { name: /^Merge .* into another bill$/ })
+    .first()
+    .click();
 
   const merge = page.getByRole("dialog").last();
   await merge.getByLabel("Merge into").click();
@@ -232,7 +343,9 @@ test("pricing form", async ({ page }) => {
   // Tall enough for the whole form, so the sticky save bar sits at the bottom
   await page.setViewportSize({ width: 1280, height: 1150 });
   await page.goto("/admin/pricing");
-  await expect(page.getByRole("heading", { name: "Default Pricing" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Default Pricing" }),
+  ).toBeVisible();
   await settle(page);
   await page.screenshot({ path: file("pricing-form") });
 });
@@ -251,10 +364,14 @@ test("bulk QR codes", async ({ page }) => {
   await page.goto("/admin/qr-codes");
   await page.getByLabel("Location", { exact: true }).click();
   await page.getByRole("option").first().click();
-  const generate = page.getByRole("button", { name: /^Generate QR Codes for All/ });
+  const generate = page.getByRole("button", {
+    name: /^Generate QR Codes for All/,
+  });
   await expect(generate).toBeEnabled();
   await generate.click();
-  await expect(page.getByRole("button", { name: /Download as PDF/ })).toBeVisible({ timeout: 60_000 });
+  await expect(
+    page.getByRole("button", { name: /Download as PDF/ }),
+  ).toBeVisible({ timeout: 60_000 });
   await settle(page);
   const bulk = page.locator(".MuiPaper-root", {
     has: page.getByRole("heading", { name: "Bulk QR Code Generation" }),

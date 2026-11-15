@@ -45,15 +45,15 @@ At the top are three counts: **Active Sessions**, **Tables In Use** and **Pendin
 
 Each row shows:
 
-| Column | What it shows |
-| --- | --- |
-| Session | The session number |
-| Table | The table or table group the party is seated at. A **Check guests** chip means a bill's guest count needs checking (see [Checking guest counts](#checking-guest-counts)); select it to open the session |
-| Requests | How many service requests ("call server") are waiting |
-| Started | When the party was seated |
-| Seated For | How long they have been seated. Turns orange after 90 minutes |
-| Guests | The number of guests across the session's bills. Cancelled bills aren't counted |
-| Open Bills | Open bills out of total bills, e.g. "1 of 2" |
+| Column     | What it shows                                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session    | The session number                                                                                                                                                                                      |
+| Table      | The table or table group the party is seated at. A **Check guests** chip means a bill's guest count needs checking (see [Checking guest counts](#checking-guest-counts)); select it to open the session |
+| Requests   | How many service requests ("call server") are waiting                                                                                                                                                   |
+| Started    | When the party was seated                                                                                                                                                                               |
+| Seated For | How long they have been seated. Turns orange after 90 minutes                                                                                                                                           |
+| Guests     | The number of guests across the session's bills. Cancelled bills aren't counted                                                                                                                         |
+| Open Bills | Open bills out of total bills, e.g. "1 of 2"                                                                                                                                                            |
 
 Rows with waiting service requests are highlighted and sorted to the top. Press **Refresh** to reload the list.
 
@@ -110,7 +110,18 @@ On each open bill:
 
 ![Move dialog with Move to, Take their orders with them, Change both bills' guest counts, Kind of guest and How many outlined](images/move-person-dialog.png)
 
-To split a bill by person, start a new bill and move each person onto it with their orders.
+#### Splitting a bill
+
+To split someone off onto their own bill, select **Move** next to them, then choose **+ New bill: {name}** from the **Move to** list. In one step this:
+
+- Starts a new bill named after them. Guest accounts (for example "Guest K7P2") and people with no name get the old bill's name with a number instead, such as "Birthday dinner 1".
+- Moves the guests you choose under **Kind of guest** and **How many** off the old bill's count and onto the new bill, so the table's guest total doesn't change. This is always on for a new bill.
+- Moves their orders too, if **Take their orders with them** is ticked, so their extras are charged on the new bill.
+- Shares the table's leftover fee, if one was applied, evenly across all open bills again, including the new one.
+
+**+ New bill** only appears when the person's bill is open and has at least two guests, since the old bill must keep at least one. It works even if their guest counts are locked. Repeat for each person to split a bill further.
+
+![The Move dialog with + New bill selected, showing the guests taken off the old bill](images/split-bill-dialog.png)
 
 ### Merging bills
 
@@ -330,6 +341,7 @@ The Menu Items page lists every dish with its image, name, category, description
   - **Limits per person** (Adult, Senior, Child, Toddler): the most each guest can order of this item during the visit. 0 = unlimited. Senior and child limits can't be more than the adult limit; a toddler limit of 0 uses the child limit.
   - **Per order limit**: the most the whole table can order in one order. 0 = no cap. Orders over this limit are always blocked.
   - **Past per-person limit**: **Block** stops guests ordering more, **Charge the item's price** lets them and bills the item's price for each extra.
+
 - **Delete**: remove the item. It will no longer be available to order.
 
 ![Menu Assignments dialog with the item's current assignments and the form for adding a new one](images/menu-assignment-dialog.png)

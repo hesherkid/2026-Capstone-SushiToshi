@@ -64,12 +64,24 @@ const StaffManagementForm = ({
   };
 
   const handleSubmit = async () => {
-    const { location_ids, ...account } = formData;
+    const { location_ids, password, ...account } = formData;
+    const isStaff = account.role === "staff";
+
+    if (mode === "edit") {
+      await onSubmit(isStaff ? { ...account, location_ids } : account);
+      return;
+    }
+
     // New staff start at the first location chosen
     await onSubmit(
-      account.role === "staff"
-        ? { ...account, location_ids, location_id: location_ids[0] ?? null }
-        : account,
+      isStaff
+        ? {
+            ...account,
+            password,
+            location_ids,
+            location_id: location_ids[0] ?? null,
+          }
+        : { ...account, password },
     );
   };
 
