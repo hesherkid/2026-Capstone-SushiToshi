@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.Dtos;
+using back_end.Helpers;
+using System.Net;
 
 namespace back_end.Controllers
 {
@@ -259,6 +261,85 @@ namespace back_end.Controllers
         _logger.LogError(ex, "An error occurred while updating the location {LocationId}.", locationId);
         return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
+    }
+
+    /// <summary>
+    /// The location's Wi-Fi check: the networks guests must join a table from.
+    /// </summary>
+    /// <remarks>
+    /// Also returns the admin's own address and network as the server sees them, so an admin at the
+    /// restaurant can add its Wi-Fi without looking it up. Admins only: the networks are the
+    /// restaurant's public addresses, so they aren't in the public location list.
+    /// </remarks>
+    /// <response code="200">The location's networks (empty when the check is off).</response>
+    /// <response code="404">The location doesn't exist.</response>
+    [Authorize(Policy = "adminOnly")]
+    [HttpGet("{locationId}/wifi-check")]
+    [ProducesResponseType(typeof(WifiCheckResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetWifiCheck(int locationId)
+    {
+      var location = await _context.Locations.AsNoTracking().FirstOrDefaultAsync(l => l.Location_Id == locationId);
+      if (location == null)
+      {
+        return NotFound(new { message = "Location was not found." });
+      }
+
+      return Ok(WifiCheckFor(location));
+    }
+
+    /// <summary>
+    /// Sets the networks guests must join a table from. An empty list turns the check off.
+    /// </summary>
+    /// <remarks>
+    /// Each entry is an address (203.0.113.10) or a network (192.168.1.0/24, 2001:db8:1:2::/64).
+    /// Sample request:
+    ///
+    ///     PUT /api/location/2/wifi-check
+    ///     { "allowed_networks": ["203.0.113.10"] }
+    /// </remarks>
+    /// <response code="200">Saved; returns the location's networks.</response>
+    /// <response code="400">An entry isn't a valid address or network, or there are too many.</response>
+    /// <response code="404">The location doesn't exist.</response>
+    [Authorize(Policy = "adminOnly")]
+    [HttpPut("{locationId}/wifi-check")]
+    [ProducesResponseType(typeof(WifiCheckResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateWifiCheck(int locationId, WifiCheckUpdateDto request)
+    {
+      var location = await _context.Locations.FirstOrDefaultAsync(l => l.Location_Id == locationId);
+      if (location == null)
+      {
+        return NotFound(new { message = "Location was not found." });
+      }
+
+      var (stored, error) = RestaurantNetwork.Normalize(request.AllowedNetworks);
+      if (error != null)
+      {
+        return BadRequest(new { message = error });
+      }
+
+      location.Allowed_Networks = stored;
+      location.Updated_At = DateTime.UtcNow;
+      await _context.SaveChangesAsync();
+
+      _logger.LogInformation("Wi-Fi check for location {LocationId} set to {Networks}", locationId, stored ?? "off");
+      return Ok(WifiCheckFor(location));
+    }
+
+    private WifiCheckResponseDto WifiCheckFor(Locations location)
+    {
+      var address = HttpContext?.Connection.RemoteIpAddress;
+      if (address?.IsIPv4MappedToIPv6 == true) address = address.MapToIPv4();
+
+      return new WifiCheckResponseDto
+      {
+        AllowedNetworks = RestaurantNetwork.Split(location.Allowed_Networks),
+        YourAddress = address?.ToString(),
+        YourNetwork = RestaurantNetwork.SuggestedNetwork(address),
+        CanSeeClientAddresses = address != null && !IPAddress.IsLoopback(address)
+      };
     }
 
     /// <summary>

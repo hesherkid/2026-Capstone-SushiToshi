@@ -9,6 +9,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
+using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 
@@ -380,5 +381,75 @@ public class LocationControllerTests : IDisposable
         var result = await _controller.RemoveMenuFromLocation(Quiet, LunchMenu);
 
         result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    private LocationController AdminFrom(string address) => new(_context, _logger.Object)
+    {
+        ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { Connection = { RemoteIpAddress = IPAddress.Parse(address) } }
+        }
+    };
+
+    private static WifiCheckResponseDto WifiBody(IActionResult result) =>
+        (WifiCheckResponseDto)result.Should().BeOfType<OkObjectResult>().Subject.Value!;
+
+    [Fact]
+    public async Task GetWifiCheck_Off_ReturnsNoNetworksAndTheAdminsOwnNetwork()
+    {
+        var body = WifiBody(await AdminFrom("203.0.113.10").GetWifiCheck(Northside));
+
+        body.AllowedNetworks.Should().BeEmpty();
+        body.YourAddress.Should().Be("203.0.113.10");
+        body.YourNetwork.Should().Be("203.0.113.10/32");
+        body.CanSeeClientAddresses.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetWifiCheck_FromLoopback_SaysTheServerCantSeeClientAddresses()
+    {
+        var body = WifiBody(await AdminFrom("127.0.0.1").GetWifiCheck(Northside));
+
+        body.CanSeeClientAddresses.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateWifiCheck_SavesNormalizedNetworks()
+    {
+        var body = WifiBody(await AdminFrom("203.0.113.10").UpdateWifiCheck(Southside,
+            new WifiCheckUpdateDto { AllowedNetworks = new() { "203.0.113.10", "2001:db8:1:2::/64" } }));
+
+        body.AllowedNetworks.Should().Equal("203.0.113.10/32", "2001:db8:1:2::/64");
+        Saved(Southside)!.Allowed_Networks.Should().Be("203.0.113.10/32,2001:db8:1:2::/64");
+        Saved(Northside)!.Allowed_Networks.Should().BeNull("other locations are left alone");
+    }
+
+    [Fact]
+    public async Task UpdateWifiCheck_EmptyList_TurnsItOff()
+    {
+        await AdminFrom("203.0.113.10").UpdateWifiCheck(Southside, new WifiCheckUpdateDto { AllowedNetworks = new() { "203.0.113.10" } });
+
+        var body = WifiBody(await AdminFrom("203.0.113.10").UpdateWifiCheck(Southside, new WifiCheckUpdateDto()));
+
+        body.AllowedNetworks.Should().BeEmpty();
+        Saved(Southside)!.Allowed_Networks.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateWifiCheck_InvalidEntry_IsRefusedAndNothingChanges()
+    {
+        var result = await AdminFrom("203.0.113.10").UpdateWifiCheck(Southside,
+            new WifiCheckUpdateDto { AllowedNetworks = new() { "the restaurant wifi" } });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        Saved(Southside)!.Allowed_Networks.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task WifiCheck_ALocationThatDoesntExist_ReturnsNotFound()
+    {
+        (await AdminFrom("203.0.113.10").GetWifiCheck(NoSuchLocation)).Should().BeOfType<NotFoundObjectResult>();
+        (await AdminFrom("203.0.113.10").UpdateWifiCheck(NoSuchLocation, new WifiCheckUpdateDto()))
+            .Should().BeOfType<NotFoundObjectResult>();
     }
 }

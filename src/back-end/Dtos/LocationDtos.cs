@@ -59,6 +59,25 @@ namespace back_end.Dtos
         };
     }
 
+    // PUT /api/location/{id}/wifi-check. An empty list turns the check off
+    public class WifiCheckUpdateDto
+    {
+        public List<string> AllowedNetworks { get; set; } = new();
+    }
+
+    public class WifiCheckResponseDto
+    {
+        // Empty = the check is off, anyone with the QR link can join
+        public List<string> AllowedNetworks { get; set; } = new();
+        // The admin's own address as the server sees it, and the network to add for it,
+        // so an admin at the restaurant can add its Wi-Fi in one click
+        public string? YourAddress { get; set; }
+        public string? YourNetwork { get; set; }
+        // False when the server sees a loopback address, e.g. forwarded headers are off and every
+        // request looks like it came from the Next.js server. The check can't work then
+        public bool CanSeeClientAddresses { get; set; }
+    }
+
     public class MenuLocationCreateDto
     {
         [Required]
