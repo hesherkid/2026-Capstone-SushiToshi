@@ -254,7 +254,7 @@ const BillChoiceDialog = ({ open, onClose, initialView = "choose" }) => {
             color="inherit"
             size="small"
             startIcon={<MaterialSymbol name="arrow_back" size={18} />}
-            sx={{ mb: 1.5, ml: -1 }}
+            sx={{ mb: 1.5, ml: -1, borderRadius: 999 }}
           >
             Back to bills
           </Button>
@@ -331,6 +331,7 @@ const BillChoiceDialog = ({ open, onClose, initialView = "choose" }) => {
                   startIcon={<MaterialSymbol name="add" size={20} />}
                   onClick={() => setView("start")}
                   disabled={busy}
+                  sx={{ borderRadius: 999 }}
                 >
                   Start a new bill
                 </Button>

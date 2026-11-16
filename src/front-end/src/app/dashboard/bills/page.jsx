@@ -140,7 +140,7 @@ const BillsPage = () => {
             <Typography color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
               Choose your party&apos;s bill, or start one, from the menu.
             </Typography>
-            <Button component={Link} href={MENU_PATH} variant="contained">
+            <Button component={Link} href={MENU_PATH} variant="contained" sx={{ borderRadius: 999, px: 3 }}>
               Go to the menu
             </Button>
           </Box>

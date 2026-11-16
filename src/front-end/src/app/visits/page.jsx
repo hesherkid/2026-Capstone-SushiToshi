@@ -93,7 +93,7 @@ const VisitCard = ({ visit }) => {
         <Button
           size="small"
           onClick={() => setShowAll(!showAll)}
-          sx={{ mt: 0.5, ml: -1 }}
+          sx={{ mt: 0.5, ml: -1, borderRadius: 999 }}
         >
           {showAll ? "Show less" : `Show all ${visit.items.length}`}
         </Button>

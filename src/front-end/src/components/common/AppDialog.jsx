@@ -13,23 +13,25 @@ import { Dialog, useMediaQuery, useTheme } from "@mui/material";
  *
  * Takes any other Dialog prop (open, onClose, slotProps, ...).
  */
-const AppDialog = ({ maxWidth = "sm", fullWidth = true, sx, slotProps, children, ...props }) => {
+const AppDialog = ({ maxWidth = "sm", fullWidth = true, fullScreen, sx, slotProps, children, ...props }) => {
   const theme = useTheme();
   const isPhone = useMediaQuery(theme.breakpoints.down("sm"));
+  // Pass fullScreen={false} to keep a short dialog floating on phones too
+  const isFullScreen = fullScreen ?? isPhone;
 
   // The theme rounds dialog corners; edge to edge on a phone they should be square.
   // Set on the paper itself so it wins over the theme's override.
   const paperSx = slotProps?.paper?.sx;
   const paperSlot = {
     ...slotProps?.paper,
-    sx: [...(Array.isArray(paperSx) ? paperSx : [paperSx]), isPhone && { borderRadius: 0 }],
+    sx: [...(Array.isArray(paperSx) ? paperSx : [paperSx]), isFullScreen && { borderRadius: 0 }],
   };
 
   return (
     <Dialog
       maxWidth={maxWidth}
       fullWidth={fullWidth}
-      fullScreen={isPhone}
+      fullScreen={isFullScreen}
       sx={[
         {
           "& .MuiDialogActions-root": { px: 3, py: 2, gap: 1 },
