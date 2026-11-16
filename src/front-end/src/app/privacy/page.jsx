@@ -30,6 +30,7 @@ const sections = [
     heading: "Why We Use It",
     paragraphs: [
       "We use this information to take your orders, prepare your bill, respond to your requests, show your favourites and past orders, and send emails you ask for, such as verifying your email address or resetting your password. We also use it to see how our menu and service are doing.",
+      "When you join a table, we may check your device's internet (IP) address to confirm you're on the restaurant's Wi-Fi. We use it only for that check and don't store it.",
       "By using the App, you consent to these uses. You can withdraw your consent at any time by contacting us, but some features, such as your account and favourites, may then stop working.",
     ],
   },

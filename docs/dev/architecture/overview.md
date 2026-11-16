@@ -126,6 +126,7 @@ Other parties' bills only ever show a customer their name and party size (`GET /
 3. **The login page saves the table** in `localStorage` (`utils/tableVisit.js`) and forgets any previous visit's session, bill and cart.
 4. **The customer signs in, registers, or continues as a guest.**
 5. **The frontend joins them to the table** with `POST /api/DiningSession/join`. If the table is in a group, they join the group's session. If staff haven't started the table yet, they're asked to get staff to start it. Joining a new table leaves any table they were at before.
+   - **Wi-Fi check:** if the location lists networks (`Locations.Allowed_Networks`, set by admins with `GET`/`PUT /api/location/{id}/wifi-check`), join answers `403` unless the request's address is in one of them, so the QR link can't be used from outside the restaurant. The rules are in `Helpers/RestaurantNetwork.cs`. It reads `HttpContext.Connection.RemoteIpAddress`, so it needs forwarded headers (see [Behind a reverse proxy](../../setup/production-setup.md#behind-a-reverse-proxy)). No networks means no check.
 6. **They're sent to the menu** (`/menu/full-menu`). Orders, service requests and the bill all use that session.
 7. **They pick their bill.** A guest who isn't on a bill yet sees `components/menu/BillChoiceDialog.jsx` and either joins one of the table's open bills or starts one for their party, then checks its guest count. They can't order until they're on a bill. If they rescan after their bill was closed or cancelled, `join` takes them off it so they pick again.
 

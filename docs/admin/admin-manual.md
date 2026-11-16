@@ -243,7 +243,30 @@ The list shows each location's address, the **Menus** it offers (**No menus** me
   - Phone Number
 - **Assign Menus**: opens **Manage Menus** for the location. Add or remove each menu type it offers. Changes save straight away.
 - **Pricing**: open this location's pricing. See [Location pricing](#location-pricing).
+- **Wi-Fi check**: limit who can join a table to phones on this location's Wi-Fi. See [Wi-Fi check](#wi-fi-check).
 - **Delete**: delete the location. This also removes all of its menu assignments and can't be undone.
+
+### Wi-Fi check
+
+Anyone who has a table's QR link (for example, from a photo of the code) could join that table from outside the restaurant once staff start it. The Wi-Fi check stops that: when it's on, a phone can only join a table while it's on the restaurant's network. Guests on mobile data or a VPN see **Please connect to the restaurant Wi-Fi to join this table**, with a **Try again** button.
+
+It works by the phone's internet address. Every phone on the restaurant Wi-Fi reaches the app from the restaurant's address, so you list that address for the location.
+
+To turn it on:
+
+1. Go to the restaurant and connect your computer or tablet to its **guest Wi-Fi**.
+2. Open **Locations & Menus**, then **Wi-Fi check** for the location.
+3. Select **Add this network**. It shows the address you're connecting from. If your Wi-Fi also uses IPv6, open the dialog again from a phone on the Wi-Fi and add that network too.
+4. Select **Save**.
+
+You can also type an address (`203.0.113.10`) or a network (`192.168.1.0/24`) and select **Add**. To turn the check off, remove every network and save. With no networks, anyone with the link can join, as before.
+
+Things to know:
+
+- **Check it from a phone** after saving: scan a table's QR code on the Wi-Fi (it should join), then on mobile data (it should be refused).
+- **If the restaurant's internet address changes**, for example after a new modem or internet plan, guests will be refused until you add the new one. Ask your internet provider for a **static IP address** if you rely on this.
+- **Staff can still help a refused guest** by getting them onto the Wi-Fi. Guests who are already seated aren't affected.
+- If the dialog warns that **the server sees every request as coming from one address**, the check can't tell phones apart. Ask whoever runs the server to turn on forwarded headers (see the production setup guide).
 
 ### Menu Management
 
