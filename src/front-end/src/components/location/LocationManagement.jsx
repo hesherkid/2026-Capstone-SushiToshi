@@ -8,9 +8,10 @@ import MenuAssignmentForm from "@/components/location/MenuAssignmentForm";
 import api from "@/config/api";
 import ManagementPage from "@/components/common/ManagementPage";
 import { actionsColumn } from "@/components/common/RowActions";
-import { Edit, Trash2, DollarSign } from "lucide-react";
+import { Edit, Trash2, DollarSign, Wifi } from "lucide-react";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
 import LocationPricingDialog from "@/components/location/LocationPricingDialog";
+import LocationWifiDialog from "@/components/location/LocationWifiDialog";
 import { getLocationPricingList } from "@/services/pricingService";
 
 // The menu book customers see on their Menu tab; RowActions passes it a size like a Lucide icon
@@ -27,6 +28,7 @@ const LocationManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState(null);
   const [pricingLocation, setPricingLocation] = useState(null);
+  const [wifiLocation, setWifiLocation] = useState(null);
   // Shown inside the location form and the delete confirmation
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -213,12 +215,17 @@ const LocationManagement = () => {
         onClick: () => setPricingLocation(row),
       },
       {
+        label: "Wi-Fi check",
+        icon: Wifi,
+        onClick: () => setWifiLocation(row),
+      },
+      {
         label: "Delete",
         icon: Trash2,
         color: "error",
         onClick: () => handleDeleteClick(row),
       },
-    ], { width: 190 }),   // four icons need more than the default 150, or Delete touches the border
+    ], { width: 230 }),   // five icons need more than the default 150, or Delete touches the border
   ];
 
   return (
@@ -270,6 +277,12 @@ const LocationManagement = () => {
           setPricingLocation(null);
           fetchPricingSources();   // custom pricing may have been switched on or off
         }}
+      />
+
+      <LocationWifiDialog
+        open={!!wifiLocation}
+        location={wifiLocation}
+        onClose={() => setWifiLocation(null)}
       />
 
       <ConfirmDialog
