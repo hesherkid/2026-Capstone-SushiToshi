@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Claims;
 using back_end.Services;
 using Xunit;
@@ -13,6 +14,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
+using back_end.Helpers;
 
 namespace back_end.Tests.Controllers;
 
@@ -97,6 +99,52 @@ public class DiningSessionJoinTests : IDisposable
         participant.User_Id.Should().Be(MiaUserId);
         participant.User_Name.Should().Be("Mia Chen");
         body.ParticipantId.Should().Be(participant.Participant_Id);
+    }
+
+    private DiningSessionController ControllerFrom(string address, int userId = MiaUserId)
+    {
+        var controller = ControllerAs(userId);
+        controller.HttpContext.Connection.RemoteIpAddress = IPAddress.Parse(address);
+        return controller;
+    }
+
+    private void SetWifiCheck(string? networks)
+    {
+        _context.Locations.Single(l => l.Location_Id == LocationId).Allowed_Networks = networks;
+        _context.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Join_WifiCheckOn_PhoneOnTheRestaurantNetworkJoins()
+    {
+        SetWifiCheck("203.0.113.10/32");
+
+        var result = await ControllerFrom("203.0.113.10").JoinTableSession(Table(1));
+
+        Body(result).SessionId.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task Join_WifiCheckOn_PhoneOffTheNetworkIsRefused()
+    {
+        SetWifiCheck("203.0.113.10/32");
+
+        var result = await ControllerFrom("198.51.100.7").JoinTableSession(Table(1));
+
+        var refused = result.Should().BeOfType<ObjectResult>().Subject;
+        refused.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        refused.Value.Should().BeEquivalentTo(new { message = RestaurantNetwork.OffSiteMessage });
+        (await _context.SessionParticipants.AnyAsync()).Should().BeFalse("nobody is seated from off site");
+    }
+
+    [Fact]
+    public async Task Join_WifiCheckOff_AnyNetworkJoins()
+    {
+        SetWifiCheck(null);
+
+        var result = await ControllerFrom("198.51.100.7").JoinTableSession(Table(1));
+
+        Body(result).SessionId.Should().Be(7);
     }
 
     [Fact]

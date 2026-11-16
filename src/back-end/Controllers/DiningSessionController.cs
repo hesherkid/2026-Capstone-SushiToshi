@@ -988,11 +988,13 @@ namespace back_end.Controllers
     /// </remarks>
     /// <response code="200">Joined (or already in) the table's session.</response>
     /// <response code="401">The request has no valid user.</response>
+    /// <response code="403">The location has a Wi-Fi check and the request isn't from its network.</response>
     /// <response code="404">The table doesn't exist, or it has no active session yet.</response>
     [HttpPost("join")]
     [Authorize]
     [ProducesResponseType(typeof(JoinTableSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> JoinTableSession([FromBody] JoinTableSessionDto request)
     {
@@ -1008,6 +1010,21 @@ namespace back_end.Controllers
       if (table == null)
       {
         return NotFound(new { message = $"Table {request.TableNumber} was not found at this location." });
+      }
+
+      // Wi-Fi check: when the location lists its networks, only phones on them can join,
+      // so the QR link can't be used from outside the restaurant
+      var allowedNetworks = await _context.Locations
+          .Where(l => l.Location_Id == request.LocationId)
+          .Select(l => l.Allowed_Networks)
+          .FirstOrDefaultAsync();
+      var clientIp = HttpContext.Connection.RemoteIpAddress;
+      if (!RestaurantNetwork.IsOnSite(clientIp, allowedNetworks))
+      {
+        // The address isn't logged: the privacy policy says it's only used for this check
+        _logger.LogInformation("Join refused for user {UserId} at location {LocationId}: not on the restaurant network",
+            userId, request.LocationId);
+        return StatusCode(StatusCodes.Status403Forbidden, new { message = RestaurantNetwork.OffSiteMessage });
       }
 
       // A grouped table seats guests in the group's session, otherwise the table's own
