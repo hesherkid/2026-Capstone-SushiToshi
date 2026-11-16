@@ -30,6 +30,11 @@ namespace back_end.domain.Entities
     // Two-letter code used for holidays and the canada-holidays.ca API, e.g. "AB"
     [MaxLength(2)]
     public string Province_Code { get; set; } = "AB";
+
+    // Wi-Fi check: comma-separated networks guests must join a table from, e.g. "203.0.113.10/32".
+    // NULL = no check, anyone with the QR link can join. See Helpers/RestaurantNetwork.cs
+    [MaxLength(500)]
+    public string? Allowed_Networks { get; set; }
     // NULL = this location uses the default pricing profile
     public PricingProfile? PricingProfile { get; set; }
 
