@@ -171,6 +171,8 @@ const BillDetails = ({ sessionId, billId }) => {
         confirmLabel="Ask for bill"
         onConfirm={requestBill}
         onClose={closeConfirm}
+        customer
+        icon="receipt_long"
       />
     </>
   );

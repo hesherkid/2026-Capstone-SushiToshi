@@ -6,6 +6,7 @@ export const MATERIAL_SYMBOL_NAMES = [
   "add",
   "arrow_back",
   "call_split",
+  "cancel",
   "check",
   "check_circle",
   "chevron_right",
@@ -31,6 +32,7 @@ export const MATERIAL_SYMBOL_NAMES = [
   "send",
   "shopping_bag",
   "smartphone",
+  "warning",
 ];
 
 // Google wants the icon names in alphabetical order

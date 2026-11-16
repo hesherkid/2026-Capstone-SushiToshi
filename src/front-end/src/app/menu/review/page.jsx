@@ -259,6 +259,7 @@ const ReviewOrderPage = () => {
             variant="contained"
             size="large"
             onClick={() => router.push(ORDERS_PATH)}
+            sx={{ minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
           >
             Track my order
           </Button>
@@ -266,6 +267,7 @@ const ReviewOrderPage = () => {
             variant="outlined"
             size="large"
             onClick={() => router.push(MENU_PATH)}
+            sx={{ minHeight: 52, borderRadius: 999, fontSize: "1rem" }}
           >
             Order more
           </Button>
@@ -339,7 +341,7 @@ const ReviewOrderPage = () => {
           <Typography color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
             Add something from the menu and it will show up here.
           </Typography>
-          <Button variant="contained" onClick={backToMenu}>
+          <Button variant="contained" onClick={backToMenu} sx={{ borderRadius: 999, px: 3 }}>
             Browse the menu
           </Button>
         </Box>
@@ -355,7 +357,7 @@ const ReviewOrderPage = () => {
               severity="warning"
               sx={{ mb: 3 }}
               action={
-                <Button color="inherit" size="small" onClick={() => openBillDialog()}>
+                <Button color="inherit" size="small" onClick={() => openBillDialog()} sx={{ borderRadius: 999 }}>
                   Choose bill
                 </Button>
               }
@@ -439,7 +441,7 @@ const ReviewOrderPage = () => {
                     size="small"
                     onClick={() => openBillDialog("guests")}
                     aria-label={`Edit guests on ${billName(selectedBill)}`}
-                    sx={{ flexShrink: 0 }}
+                    sx={{ flexShrink: 0, borderRadius: 999, px: 2 }}
                   >
                     Edit
                   </Button>
@@ -470,7 +472,7 @@ const ReviewOrderPage = () => {
             <Button
               size="small"
               onClick={backToMenu}
-              sx={{ minHeight: 0, py: 0.5 }}
+              sx={{ minHeight: 0, py: 0.5, borderRadius: 999, px: 2 }}
             >
               Add more
             </Button>

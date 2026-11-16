@@ -356,9 +356,10 @@ const OrdersPage = () => {
             <Divider />
             <Box sx={{ px: 1, py: 0.5 }}>
               <Button
-                color="error"
+                size="small"
                 onClick={() => setOrderToCancel(order)}
                 startIcon={<MaterialSymbol name="close" size={20} />}
+                sx={{ borderRadius: 999, px: 2 }}
               >
                 Cancel order
               </Button>
@@ -414,7 +415,7 @@ const OrdersPage = () => {
               severity="error"
               sx={{ mb: 3 }}
               action={
-                <Button color="inherit" size="small" onClick={() => fetchOrders()}>
+                <Button color="inherit" size="small" onClick={() => fetchOrders()} sx={{ borderRadius: 999 }}>
                   Retry
                 </Button>
               }
@@ -448,12 +449,16 @@ const OrdersPage = () => {
                       : "No one on your bill has ordered yet."}
                   </Typography>
                   <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                    <Button variant="contained" onClick={() => router.push(MENU_PATH)}>
+                    <Button
+                      variant="contained"
+                      onClick={() => router.push(MENU_PATH)}
+                      sx={{ borderRadius: 999, px: 3 }}
+                    >
                       Browse the menu
                     </Button>
                     {/* Someone else on their bill may have ordered for them */}
                     {view === VIEWS.MINE && !aloneOnBill && (
-                      <Button onClick={() => setView(VIEWS.TABLE)}>
+                      <Button onClick={() => setView(VIEWS.TABLE)} sx={{ borderRadius: 999, px: 3 }}>
                         See your bill&apos;s orders
                       </Button>
                     )}
@@ -510,6 +515,8 @@ const OrdersPage = () => {
         onConfirm={handleCancelOrder}
         onClose={closeCancelDialog}
         error={cancelError}
+        customer
+        icon="cancel"
       />
     </CustomerPageContainer>
   );

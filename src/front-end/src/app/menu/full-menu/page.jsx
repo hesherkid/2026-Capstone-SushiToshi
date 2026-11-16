@@ -152,6 +152,7 @@ const FullMenu = () => {
                       color="inherit"
                       size="small"
                       onClick={() => setBillDialogOpen(true)}
+                      sx={{ borderRadius: 999 }}
                     >
                       Choose bill
                     </Button>
@@ -206,6 +207,7 @@ const FullMenu = () => {
                     color="inherit"
                     size="small"
                     onClick={() => router.push(BROWSE_PATH)}
+                    sx={{ borderRadius: 999 }}
                   >
                     Browse the menu
                   </Button>
