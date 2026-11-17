@@ -97,6 +97,31 @@ public class MenuItemControllerTests : IDisposable
     }
 
     [Theory]
+    [InlineData("salmon")]
+    [InlineData("SALMON")]
+    [InlineData("  Salmon  ")]
+    public async Task CreateMenuItem_SameNameDifferentCaseOrSpaces_ReturnsConflictNamingTheItem(string name)
+    {
+        // Act
+        var result = await _controller.CreateMenuItem(new MenuItemCreateDto { Name = name, CategoryId = 1 });
+
+        // Assert
+        var conflict = result.Should().BeOfType<ConflictObjectResult>().Subject;
+        conflict.Value.Should().BeEquivalentTo(new { message = $"A menu item named \"{name.Trim()}\" already exists." });
+        _context.MenuItems.Count().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreateMenuItem_TrimsTheSavedName()
+    {
+        // Act
+        await _controller.CreateMenuItem(new MenuItemCreateDto { Name = "  Tamago  ", CategoryId = 1 });
+
+        // Assert
+        _context.MenuItems.AsNoTracking().Should().ContainSingle(mi => mi.Name == "Tamago");
+    }
+
+    [Theory]
     [InlineData(" ", 1)]
     [InlineData("Spicy Tuna", 0)]
     public async Task CreateMenuItem_BlankNameOrNoCategory_ReturnsBadRequest(string name, int categoryId)
@@ -256,6 +281,45 @@ public class MenuItemControllerTests : IDisposable
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Theory]
+    [InlineData("Salmon")]
+    [InlineData(" salmon ")]
+    public async Task UpdateMenuItem_RenameToAnotherItemsName_ReturnsConflictAndKeepsName(string name)
+    {
+        // Arrange
+        SeedTuna();
+
+        // Act
+        var result = await _controller.UpdateMenuItem(Tuna, new MenuItemUpdateDto { Name = name });
+
+        // Assert
+        var conflict = result.Should().BeOfType<ConflictObjectResult>().Subject;
+        conflict.Value.Should().BeEquivalentTo(new { message = $"A menu item named \"{name.Trim()}\" already exists." });
+        _context.MenuItems.AsNoTracking().Single(mi => mi.item_id == Tuna).Name.Should().Be("Bluefin Tuna");
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_KeepingOwnNameWithNewCase_SavesTrimmedName()
+    {
+        // Act
+        var result = await _controller.UpdateMenuItem(Salmon, new MenuItemUpdateDto { Name = " SALMON " });
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+        _context.MenuItems.AsNoTracking().Single(mi => mi.item_id == Salmon).Name.Should().Be("SALMON");
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_BlankName_ReturnsBadRequestAndKeepsName()
+    {
+        // Act
+        var result = await _controller.UpdateMenuItem(Salmon, new MenuItemUpdateDto { Name = "   " });
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
+        _context.MenuItems.AsNoTracking().Single(mi => mi.item_id == Salmon).Name.Should().Be("Salmon");
     }
 
     [Fact]

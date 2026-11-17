@@ -6,7 +6,7 @@ export const defaultRowName = (row, params) =>
   row?.name ??
   row?.tag_name ??
   row?.category_name ??
-  (params?.id != null ? "#${params.id}" : "");
+  (params?.id != null ? `#${params.id}` : "");
 
 // Icon buttons for a management grid's "actions" column.
 // actions: [{ label, icon: LucideIcon, onClick, color?, hidden? }]

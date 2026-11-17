@@ -28,6 +28,9 @@ namespace back_end.Dtos
         public int? SeniorLimit { get; set; }
         public MenuItemStatus Status { get; set; } = MenuItemStatus.Available;
         public bool IsAddOn { get; set; } = false;
+        // A location price on a menu the item isn't on yet also adds the default row.
+        // true = that default is Unavailable, so only this location sells the item
+        public bool OnlyAtLocation { get; set; } = false;
     }
 
     public class MenuAssignmentUpdateDto

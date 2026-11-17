@@ -71,6 +71,17 @@ const MenuItemManagement = () => {
     }
   };
 
+  // Menus can be added on Locations & Menus while this page is open,
+  // so reload them for the assignment dialog. On failure keep the current list.
+  const refreshMenus = async () => {
+    try {
+      const { data } = await api.get("/Menu");
+      if (Array.isArray(data)) setMenus(data);
+    } catch (err) {
+      console.error("Failed to refresh menus:", err);
+    }
+  };
+
   useEffect(() => {}, [items, categories, tags, menus]);
 
   useEffect(() => {
@@ -270,6 +281,7 @@ const MenuItemManagement = () => {
         onClick: () => {
           setSelectedItem(row);
           setAssignmentDialogOpen(true);
+          refreshMenus();
         },
       },
       {
