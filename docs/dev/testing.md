@@ -155,7 +155,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Services with tests:** AdminBootstrap, QrGeneratorService, LocationAccessService, GuestCleanup, GuestCleanupWorker, PricingService (restaurant time), and the four analytics services through their controller tests.
 
-**Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, GoogleNames, GoogleAccounts, UserRoles, RestaurantNetwork, passwork rules, leftover fee, analytics date ranges, DTO validation, seeder rules, DTO JSON keys (`DtoJsonKeysTests`) and route names (`RouteNameTests`).
+**Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, GoogleNames, GoogleAccounts, UserRoles, RestaurantNetwork, password rules, leftover fee, analytics date ranges, DTO validation, seeder rules, DTO JSON keys (`DtoJsonKeysTests`) and route names (`RouteNameTests`).
 
 **Integration tests:** QR code endpoints, the guest sign-in and auth endpoint rate limits, forwarded headers, unknown JSON keys (`JsonUnknownKeyTests`) and query parameter names (`QueryParameterNameTests`).
 
@@ -424,7 +424,7 @@ public class YourControllerTests : IDisposable
 
 Controllers that filter by the signed-in staff member's location take an `ILocationAccessService`. Most tests pass a real `new LocationAccessService(_context)` so the location rules are exercised too. See `StaffLocationLockTests.cs` or `OrderControllerTests.cs` for examples.
 
-To act as a signed-in user, set the controller's `ControllerContext` to an `HttpContext` whose `User` has `ClaimTypes.NamgeIdentifier` and `ClaimTypes.Role` claims. See `BillLinkTests.cs`.
+To act as a signed-in user, set the controller's `ControllerContext` to an `HttpContext` whose `User` has `ClaimTypes.NameIdentifier` and `ClaimTypes.Role` claims. See `BillLinkTests.cs`.
 
 #### Service Test Template
 
@@ -613,7 +613,7 @@ A new push to a branch or PR cancels its older, still-running workflow run.
 
 ```yaml
 - dotnet test on back-end.Tests (restores + builds the API automatically)
-- dotnet test on back-end.IntegrationTests (SendGrid__ApiKey and SEndGrid__FromEmail set to a placeholder - no email is sent)
+- dotnet test on back-end.IntegrationTests (SendGrid__ApiKey and SendGrid__FromEmail set to a placeholder - no email is sent)
 ```
 
 #### 2. Frontend - lint, unit tests & build (`ubuntu-latest`, Node 22) - required
@@ -941,7 +941,7 @@ page.getByRole('heading', { name: /start your order/i })
 **Issue**: `browserType.launch: Executable doesn't exist at …`
 
 ```
-Solution: The browsers for this Playwright version isn't installed. Run `npx playwright install` from src/front-end.
+Solution: The browsers for this Playwright version aren't installed. Run `npx playwright install` from src/front-end.
 ```
 
 **Issue**: Every admin test fails, or fails with `ENOENT … playwright/.auth/admin.json`
