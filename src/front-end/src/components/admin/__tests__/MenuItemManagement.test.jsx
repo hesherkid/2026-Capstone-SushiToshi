@@ -73,7 +73,14 @@ jest.mock("@/components/admin/TagsDialog", () => ({
 }));
 jest.mock("@/components/admin/MenuAssignmentDialog", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ open, menus }) =>
+    open ? (
+      <ul aria-label="Assignment menus">
+        {menus.map((m) => (
+          <li key={m.menu_id}>{m.name}</li>
+        ))}
+      </ul>
+    ) : null,
 }));
 jest.mock("@/components/admin/CategoryManagementDialog", () => ({
   __esModule: true,
@@ -551,5 +558,64 @@ describe("Removing a tag from the grid", () => {
       "Item does not exist on menu",
     );
     expect(screen.queryByTestId("page-success")).not.toBeInTheDocument();
+  });
+});
+
+describe("Assign to Menus", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("shows a menu added after the page loaded", async () => {
+    let menus = [{ menu_id: 1, name: "Lunch" }];
+    api.get.mockImplementation((url) => {
+      if (url === "/menuItem") return Promise.resolve({ data: [SALMON] });
+      if (url === "/Menu") return Promise.resolve({ data: menus });
+      return Promise.resolve({ data: [] });
+    });
+    render(<MenuItemManagement />);
+    const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
+
+    // A menu is created on Locations & Menus while this page stays open
+    menus = [...menus, { menu_id: 2, name: "Dinner" }];
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Assign to Menus Salmon Nigiri" }),
+    );
+
+    const list = screen.getByRole("list", { name: "Assignment menus" });
+    expect(await within(list).findByText("Dinner")).toBeInTheDocument();
+    expect(within(list).getByText("Lunch")).toBeInTheDocument();
+  });
+
+  it("keeps the loaded menus when reloading them fails", async () => {
+    let failMenus = false;
+    api.get.mockImplementation((url) => {
+      if (url === "/menuItem") return Promise.resolve({ data: [SALMON] });
+      if (url === "/Menu")
+        return failMenus
+          ? Promise.reject(new Error("network"))
+          : Promise.resolve({ data: [{ menu_id: 1, name: "Lunch" }] });
+      return Promise.resolve({ data: [] });
+    });
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    render(<MenuItemManagement />);
+    const row = (await screen.findByText("Salmon Nigiri")).closest("tr");
+
+    failMenus = true;
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Assign to Menus Salmon Nigiri" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        api.get.mock.calls.filter(([url]) => url === "/Menu"),
+      ).toHaveLength(2),
+    );
+    expect(
+      within(screen.getByRole("list", { name: "Assignment menus" })).getByText(
+        "Lunch",
+      ),
+    ).toBeInTheDocument();
+    console.error.mockRestore();
   });
 });

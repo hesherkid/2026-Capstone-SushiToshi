@@ -88,10 +88,9 @@ const editRow = async (menuName) => {
   fireEvent.click(within(row).getAllByRole("button")[0]);
 };
 
+// The button is in the dialog footer, linked to the form by its form attribute
 const submit = (buttonName) =>
-  fireEvent.submit(
-    screen.getByRole("button", { name: buttonName }).closest("form"),
-  );
+  fireEvent.submit(screen.getByRole("button", { name: buttonName }).form);
 
 const choose = (label, option) => {
   fireEvent.mouseDown(screen.getByRole("combobox", { name: label }));
@@ -102,6 +101,34 @@ describe("Menu assignment dialog", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockApi();
+  });
+
+  it("shows All locations as chosen for a new assignment", async () => {
+    renderDialog();
+    await screen.findByText("All Day Menu");
+
+    expect(
+      screen.getByRole("combobox", { name: "Location" }),
+    ).toHaveTextContent("All locations (default)");
+  });
+
+  it("saves from the footer button, which stays in view next to Close", async () => {
+    renderDialog();
+    await screen.findByText("All Day Menu");
+    choose("Menu", "Lunch Special");
+
+    const footer = screen
+      .getByText("Close", { selector: "button" })
+      .closest(".MuiDialogActions-root");
+    fireEvent.click(
+      within(footer).getByRole("button", { name: "Add Assignment" }),
+    );
+
+    await waitFor(() =>
+      expect(api).toHaveBeenCalledWith(
+        expect.objectContaining({ url: "/menuassignment" }),
+      ),
+    );
   });
 
   it("summarises each assignment's limits, including the charge past the limit", async () => {

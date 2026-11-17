@@ -24,7 +24,11 @@ import ManagementGrid from "@/components/common/ManagementGrid";
 import { actionsColumn } from "@/components/common/RowActions";
 import { Edit, Trash2 } from "lucide-react";
 
-const ALL_LOCATIONS = ""; // "" in the form = default row (location_id null)
+// "all" in the form = default row (location_id null). Not "", which the
+// Select treats as nothing chosen and shows blank.
+const ALL_LOCATIONS = "all";
+
+const FORM_ID = "menu-assignment-form";
 
 const emptyForm = {
   menu_id: "",
@@ -387,7 +391,7 @@ const MenuAssignmentDialog = ({
         onClose={onClose}
       />
       <DialogContent dividers>
-        <form onSubmit={handleSubmit}>
+        <form id={FORM_ID} onSubmit={handleSubmit}>
           <Box>
             {error && (
               <Alert
@@ -581,39 +585,34 @@ const MenuAssignmentDialog = ({
                 </FormControl>
               </Box>
 
-              <Stack direction="row" spacing={2}>
-                {editingAssignment && (
-                  <Button
-                    onClick={resetForm}
-                    disabled={submitting}
-                    sx={{ flex: 1 }}
-                  >
-                    Cancel Edit
-                  </Button>
-                )}
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={submitting}
-                  sx={{ flex: 1 }}
-                >
-                  {submitting ? (
-                    <CircularProgress size={24} />
-                  ) : editingAssignment ? (
-                    "Update Assignment"
-                  ) : selectedLocId != null ? (
-                    "Add Location Price"
-                  ) : (
-                    "Add Assignment"
-                  )}
-                </Button>
-              </Stack>
             </Stack>
           </Box>
         </form>
       </DialogContent>
+      {/* In the footer so the save button stays in view; it submits the form by id */}
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
+        {editingAssignment && (
+          <Button onClick={resetForm} disabled={submitting}>
+            Cancel Edit
+          </Button>
+        )}
+        <Button
+          type="submit"
+          form={FORM_ID}
+          variant="contained"
+          disabled={submitting}
+        >
+          {submitting ? (
+            <CircularProgress size={24} />
+          ) : editingAssignment ? (
+            "Update Assignment"
+          ) : selectedLocId != null ? (
+            "Add Location Price"
+          ) : (
+            "Add Assignment"
+          )}
+        </Button>
       </DialogActions>
     </AppDialog>
   );
