@@ -359,6 +359,35 @@ test("holidays", async ({ page }) => {
   await page.screenshot({ path: file("holidays") });
 });
 
+// Locally the server sees every request from one address, so the real dialog would only show its
+// "can't tell phones apart" warning. This fills in what an admin on a restaurant's Wi-Fi sees, in the
+// browser only, with a documentation address (203.0.113.0/24) so no real address ends up in the image.
+// The keys are from WifiCheckResponseDto
+test("Wi-Fi check dialog", async ({ page }) => {
+  await page.route(/\/api\/location\/\d+\/wifi-check/i, (route) =>
+    route.fulfill({
+      json: {
+        allowed_networks: [],
+        your_address: "203.0.113.10",
+        your_network: "203.0.113.10/32",
+        can_see_client_addresses: true,
+      },
+    }),
+  );
+  await page.goto("/location/menu-location");
+  const open = page.getByRole("button", { name: /^Wi-Fi check/ }).first();
+  await expect(open).toBeVisible();
+  await settle(page);
+  await open.click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("button", { name: /^Add this network/ }),
+  ).toBeVisible();
+  await settle(page);
+  await highlight(dialog.getByRole("button", { name: /^Add this network/ }));
+  await dialog.screenshot({ path: file("wifi-check-dialog") });
+});
+
 // Bulk generation rewrites the saved QR images in the local backend's storage/qrcodes
 test("bulk QR codes", async ({ page }) => {
   await page.goto("/admin/qr-codes");

@@ -260,6 +260,8 @@ To turn it on:
 3. Select **Add this network**. It shows the address you're connecting from. If your Wi-Fi also uses IPv6, open the dialog again from a phone on the Wi-Fi and add that network too.
 4. Select **Save**.
 
+![Wi-Fi check dialog with no networks yet and the Add this network button outlined](images/wifi-check-dialog.png)
+
 You can also type an address (`203.0.113.10`) or a network (`192.168.1.0/24`) and select **Add**. To turn the check off, remove every network and save. With no networks, anyone with the link can join, as before.
 
 Things to know:
