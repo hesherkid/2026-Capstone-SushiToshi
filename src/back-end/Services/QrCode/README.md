@@ -118,7 +118,7 @@ GET /api/admin/qr/bulk/download-pdf?location_id={locationId}
 
 - Both use the **saved** files, so run bulk generate first.
 - **ZIP:** individual PNGs.
-- **PDF:** US Letter pages, 16 QR codes each (4 × 4), each QR printed at 1.75" × 1.75" with a "Table N" and "WiFi"/"Session" label.
+- **PDF:** US Letter pages with a "{Location} - QR Codes (Page N)" header and 8 tables each (2 across, 4 down), so 16 QR codes per page. Each table has a "Table N" heading over its WiFi and Session codes, side by side, printed at 1.75" × 1.75" and labelled "Scan for WiFi" and "Scan to Order".
 
 ### 5. Clear Saved QR Codes
 
@@ -337,7 +337,7 @@ When scanned with a phone camera, this prompts the user to join the network (tap
 
 ## Session URL Format
 
-Session QR codes link to:
+Session QR codes link to the sign-in page for the table. After signing in, the guest joins the table's dining session. If the location has a Wi-Fi check, guests who aren't on the restaurant's network are refused (see [Wi-Fi check](../../../../docs/admin/admin-manual.md#wi-fi-check)). The link is:
 
 ```
 {SessionPageUrl}/auth/login?locationId={locationId}&tableNumber={tableNumber}
