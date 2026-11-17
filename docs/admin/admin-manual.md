@@ -27,7 +27,8 @@ Staff accounts see only **Dining Sessions**, **Tables** and **Orders**. Everythi
 
 ## Getting around
 
-- **Menu button** (top left): opens the navigation menu. Service pages are at the top, then the **Management** pages, then **Analytics**. **Logout** is at the bottom of the menu.
+- **Menu button** (top left): opens the navigation menu. Service pages are at the top, then the **Management** pages, then **Analytics**. **My Account** and **Logout** are at the bottom of the menu.
+- **My Account**: change your password, and (admins only) your first and last name. Staff names are changed by an admin in Staff Management. Your email can't be changed here, and if you only sign in with Google there's no password to change.
 - **Location dropdown** (top bar): sets your working location. Dining Sessions, Tables, Orders and the "my location" view in Analytics all follow this choice. Admins can switch to any location; staff can only switch between the locations an admin assigned them.
 - **Home page**: shows today's active sessions, tables in use and pending requests for your location, with shortcut cards to every page in this manual.
 
@@ -258,6 +259,8 @@ To turn it on:
 2. Open **Locations & Menus**, then **Wi-Fi check** for the location.
 3. Select **Add this network**. It shows the address you're connecting from. If your Wi-Fi also uses IPv6, open the dialog again from a phone on the Wi-Fi and add that network too.
 4. Select **Save**.
+
+![Wi-Fi check dialog with no networks yet and the Add this network button outlined](images/wifi-check-dialog.png)
 
 You can also type an address (`203.0.113.10`) or a network (`192.168.1.0/24`) and select **Add**. To turn the check off, remove every network and save. With no networks, anyone with the link can join, as before.
 
