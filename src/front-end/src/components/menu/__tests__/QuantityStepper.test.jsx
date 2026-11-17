@@ -72,4 +72,56 @@ describe("Quantity stepper", () => {
     expect(remove).not.toHaveAttribute("aria-disabled", "true");
     expect(remove).not.toHaveStyle({ cursor: "not-allowed" });
   });
+
+  it("takes a typed quantity on Enter or leaving the box", () => {
+    const onSetQuantity = jest.fn();
+    render(
+      <QuantityStepper
+        itemName="Miso Soup"
+        quantity={2}
+        onDecrease={jest.fn()}
+        onIncrease={jest.fn()}
+        onSetQuantity={onSetQuantity}
+      />,
+    );
+
+    const box = screen.getByRole("textbox", { name: "Quantity of Miso Soup" });
+    expect(box).toHaveValue("2");
+
+    // Only digits go in
+    fireEvent.change(box, { target: { value: "1a2" } });
+    expect(box).toHaveValue("12");
+    fireEvent.keyDown(box, { key: "Enter" });
+    fireEvent.blur(box);
+    expect(onSetQuantity).toHaveBeenCalledTimes(1);
+    expect(onSetQuantity).toHaveBeenCalledWith(12);
+
+    fireEvent.change(box, { target: { value: "5" } });
+    fireEvent.blur(box);
+    expect(onSetQuantity).toHaveBeenLastCalledWith(5);
+  });
+
+  it("puts the quantity back when the box is emptied or Escape is pressed", () => {
+    const onSetQuantity = jest.fn();
+    render(
+      <QuantityStepper
+        itemName="Miso Soup"
+        quantity={2}
+        onDecrease={jest.fn()}
+        onIncrease={jest.fn()}
+        onSetQuantity={onSetQuantity}
+      />,
+    );
+
+    const box = screen.getByRole("textbox", { name: "Quantity of Miso Soup" });
+    fireEvent.change(box, { target: { value: "" } });
+    fireEvent.blur(box);
+    expect(box).toHaveValue("2");
+
+    fireEvent.change(box, { target: { value: "7" } });
+    fireEvent.keyDown(box, { key: "Escape" });
+    expect(box).toHaveValue("2");
+    fireEvent.blur(box);
+    expect(onSetQuantity).not.toHaveBeenCalled();
+  });
 });

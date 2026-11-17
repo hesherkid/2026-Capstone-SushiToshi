@@ -67,6 +67,9 @@ const CartLine = ({
           onDecrease={() => onQuantityChange(categoryId, item.item_id, -1)}
           onIncrease={() => onQuantityChange(categoryId, item.item_id, 1)}
           canIncrease={!atLimit}
+          onSetQuantity={(typed) =>
+            onQuantityChange(categoryId, item.item_id, typed - quantity)
+          }
         />
       </Box>
 

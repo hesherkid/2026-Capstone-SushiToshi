@@ -210,6 +210,9 @@ const MenuItemCard = ({
                 }
                 onIncrease={() => onQuantityChange(categoryId, item.item_id, 1)}
                 canIncrease={!atLimit}
+                onSetQuantity={(typed) =>
+                  onQuantityChange(categoryId, item.item_id, typed - quantity)
+                }
               />
             ) : (
               // Browsing only (e.g. after the bill's been asked for)

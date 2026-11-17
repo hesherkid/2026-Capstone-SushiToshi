@@ -66,16 +66,20 @@ export const maxFor = (limits, cart, categoryId, itemId) => {
   return Math.min(MAX_PER_ITEM, ...caps);
 };
 
-// The cart with one more (or fewer) of an item; adding stops at the limit, removing always works
+// The cart with more (or fewer) of an item; adding stops at the limit, removing always works.
+// A typed quantity past the limit is cut down to the limit
 export const changeCartQuantity = (limits, cart, categoryId, itemId, delta) => {
   const current = cart[categoryId]?.[itemId] || 0;
   const max = maxFor(limits, cart, categoryId, itemId);
-  if (delta > 0 && max != null && current + delta > max) return cart;
+  if (delta > 0 && current >= max) return cart;
   return {
     ...cart,
     [categoryId]: {
       ...cart[categoryId],
-      [itemId]: Math.max(0, current + delta),
+      [itemId]:
+        delta > 0
+          ? Math.min(max, current + delta)
+          : Math.max(0, current + delta),
     },
   };
 };
