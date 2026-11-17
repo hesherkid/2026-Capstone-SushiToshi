@@ -97,6 +97,8 @@ ForwardedHeaders__KnownNetworks__0=10.0.0.0/24
 
 The header is only read from trusted proxies, and a mistyped address stops the backend from starting.
 
+The **Wi-Fi check** (a location's **Wi-Fi check** in Locations & Menus, see the [Admin Manual](../admin/admin-manual.md#wi-fi-check)) needs this too. It compares the phone's address with the restaurant's, so without forwarded headers every phone looks like `127.0.0.1` and the check refuses everyone. The Wi-Fi check dialog warns when that's the case. In Development, `appsettings.Development.json` turns forwarded headers on, so the check can be tried locally.
+
 **Only turn this on when a real reverse proxy (nginx, Caddy, a cloud load balancer) is the only public entry point and sets `X-Forwarded-For` itself.** The Next.js rewrite doesn't count: if the browser sends its own `X-Forwarded-For`, Next.js passes it on unchanged. If browsers could reach Next.js (or the backend) directly, anyone could send a new made-up address on every request and skip the limits completely. So:
 
 - Make the edge proxy **overwrite** the header with the address it sees. For nginx: `proxy_set_header X-Forwarded-For $remote_addr;` and `proxy_set_header X-Forwarded-Proto $scheme;`.

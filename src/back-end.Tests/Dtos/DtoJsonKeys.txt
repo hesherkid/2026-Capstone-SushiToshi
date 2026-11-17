@@ -131,3 +131,5 @@ back_end.Dtos.UpdateAccountDto: first_name, last_name
 back_end.Dtos.UpdateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
 back_end.Dtos.UpdateGuestCountsDto: adult_count, child_count, senior_count, tot_count
 back_end.Dtos.UserResponseDto: created_at, email, first_name, is_email_confirmed, last_interaction_at, last_name, role, status, user_id
+back_end.Dtos.WifiCheckResponseDto: allowed_networks, can_see_client_addresses, your_address, your_network
+back_end.Dtos.WifiCheckUpdateDto: allowed_networks

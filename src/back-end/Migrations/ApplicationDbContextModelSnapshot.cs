@@ -333,6 +333,10 @@ namespace back_end.Migrations
                     b.Property<string>("Address_Secondary")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Allowed_Networks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasColumnType("longtext");
