@@ -3,7 +3,7 @@
 Entity Relationship Diagram for the `sushi_toshi_db` database used by the back end.
 
 - **Built from:** the entity classes in `back_end.domain.Entities` and `Enums.cs`
-- **Verified against:** the live database schema, Nov 13, 2026
+- **Verified against:** the live database schema, Nov 13, 2026. `locations.Allowed_Networks` was added Nov 17, 2026 from the `LocationWifiCheck` migration
 
 ## Viewing and editing
 
@@ -62,6 +62,7 @@ erDiagram
         string Postal_Code
         string Phone_Number
         string Province_Code "max 2, default AB"
+        string Allowed_Networks "nullable, max 500, Wi-Fi check networks, NULL = no check"
         datetime Created_At
         datetime Updated_At
     }
