@@ -36,7 +36,6 @@ const customJestConfig = {
   // Coverage thresholds: increased to current baseline with a buffer (Nov 2026)
   // Nov 2026: branches 71.07, funcs 72.64, lines 78.11, statements 77
   // 81 suites, 807 tests passing
-  // TODO: Gradually increase thresholds as more tests are added
   // Target: 70% for all metrics
   coverageThreshold: {
     global: {
