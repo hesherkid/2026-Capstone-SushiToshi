@@ -130,6 +130,7 @@ ngrok version
   - A location's own entry (`Locations:{id}:WiFi`) overrides the default (`WiFi`).
   - **Forget** the network on your phone first, or scanning appears to do nothing.
   - Production credentials are set as server environment variables (e.g. `QRCodeSettings__WiFi__Password`), never committed.
+
 - **For production**, user secrets don't apply. See [Table QR codes](../setup/production-setup.md#5-table-qr-codes) for setting the real site URL and printing codes.
 
 ---
@@ -181,8 +182,9 @@ Do this the first time, and any time `SessionPageUrl` or WiFi settings change. T
 - Add `&refresh=true` to regenerate it from your current settings.
 - Bulk (step 4) always regenerates.
 
-> **Browser cache gotcha:** before the `refresh` change, these endpoints told browsers to cache images for 24 hours. A browser may still show an **old** image without contacting the backend at all. You can tell because the DevTools Network **Size** column shows `(disk cache)` and no new file appears in `storage/qrcodes/`.
-> Fix: DevTools → Network → right-click → **Clear browser cache**, and tick **Disable cache** while testing. New responses send `Cache-Control: private, no-cache`, so this won't recur once old copies are gone.
+> **Browser cache:** before the `refresh` change, these endpoints told browsers to cache images for 24 hours. A browser may still show an **old** image without contacting the backend at all. You can tell because the DevTools Network **Size** column shows `(disk cache)` and no new file appears in `storage/qrcodes/`.
+>
+> **Fix:** DevTools → Network → right-click → **Clear browser cache**, and tick **Disable cache** while testing. New responses send `Cache-Control: private, no-cache`, so this won't recur once old copies are gone.
 
 ### 9. Test on your phone
 
@@ -223,7 +225,7 @@ On your computer, open your **ngrok URL** (not localhost). Then open DevTools �
 | `/api/...` returns 500, Next terminal shows `ECONNREFUSED`                                                                       | Backend not running, or not on port 5264                                                                               | Start the backend with `--launch-profile http`                                                                                                                                                                                                     |
 | Pages show `AxiosError: Request failed with status code 500` right after a backend rebuild, with nothing in the backend terminal | Next's proxy couldn't reach .NET while it was restarting                                                               | Wait for `Now listening on`, then hard-refresh (Ctrl+Shift+R). Confirm the backend directly at `http://localhost:5264/api/Location`                                                                                                                |
 | Google "Sign in with Google" button returns 403                                                                                  | Your ngrok URL isn't an authorized origin on the Google OAuth client                                                   | Use email/password for now                                                                                                                                                                                                                         |
-| Joining a table says "Please connect to the restaurant Wi-Fi to join this table" | The location has a Wi-Fi check, and the address your phone connects from isn't in its networks | **Locations & Menus** → **Wi-Fi check**: remove every network and save to turn the check off, or open the dialog from your phone and select **Add this network** (see the [admin manual](../admin/admin-manual.md#wi-fi-check)) |
+| Joining a table says "Please connect to the restaurant Wi-Fi to join this table"                                                 | The location has a Wi-Fi check, and the address your phone connects from isn't in its networks                         | **Locations & Menus** → **Wi-Fi check**: remove every network and save to turn the check off, or open the dialog from your phone and select **Add this network** (see the [admin manual](../admin/admin-manual.md#wi-fi-check))                    |
 | Antivirus quarantines ngrok                                                                                                      | Expected "RiskWare" detection                                                                                          | See the warning box in step 4                                                                                                                                                                                                                      |
 
 **Quick proxy test:** open `https://<your-name>.ngrok-free.dev/api/Auth/login` in a browser.
