@@ -125,6 +125,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Controllers with tests:**
 
+- AccountController
 - AdminQrCodeController
 - AuthController
 - BillController
@@ -154,7 +155,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Services with tests:** AdminBootstrap, QrGeneratorService, LocationAccessService, GuestCleanup, GuestCleanupWorker, PricingService (restaurant time), and the four analytics services through their controller tests.
 
-**Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, GoogleNames, GoogleAccounts, UserRoles, analytics date ranges, DTO validation, seeder rules, DTO JSON keys (`DtoJsonKeysTests`) and route names (`RouteNameTests`).
+**Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, GoogleNames, GoogleAccounts, UserRoles, RestaurantNetwork, passwork rules, leftover fee, analytics date ranges, DTO validation, seeder rules, DTO JSON keys (`DtoJsonKeysTests`) and route names (`RouteNameTests`).
 
 **Integration tests:** QR code endpoints, the guest sign-in and auth endpoint rate limits, forwarded headers, unknown JSON keys (`JsonUnknownKeyTests`) and query parameter names (`QueryParameterNameTests`).
 
@@ -167,23 +168,26 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 
 **Covered areas:**
 
-- Auth: LoginForm, RegisterForm
+- Auth: LoginForm, RegisterForm, ResendVerification, RequireRole
 - Admin: categories, customers, holidays, menu items (incl. MenuItemForm), menu assignment, QR codes, staff, tags, pricing profiles (incl. DefaultPricing)
 - Location management: LocationManagement, LocationPricingDialog, MenuManagement, MenuForm
+- Tags: TagManagement, TagFormDialog
 - Analytics: nav and all four reports
-- Staff: Order, Session and Table dashboards, plus the new session, staff order, bill summary, new bill and leftover fee dialogs
+- Staff: Order, Session and Table dashboards, `SeatedFor`, session helpers, plus the new session, staff order, bill summary, new bill, leftover fee, edit guests and move guest dialogs
+- Bills: BillBreakdown
 - Customer: bill dialog, side and bottom nav, service request form
+- Home: CustomerHome and the staff/admin home dashboards
 - Menu: item card, cart line, quantity stepper, review order button, item view tracking
-- Common: AppDialog, ConfirmDialog, ManagementPage, AppBarWithTitle
-- Hooks: useAuth, useAutoRefresh, useOrderActions, and useItemViewTracker through `TrackedItem.test.jsx`
+- Common: AppDialog, ConfirmDialog, FormDialog, ManagementGrid, ManagementPage, AppBarWithTitle
+- Hooks: useAuth, useAutoRefresh, useOrderActions, useTagMenuItem, and useItemViewTracker through `TrackedItem.test.jsx`
 - Route pages: tests next to the page in `app/` (home, menu, review, orders, bills, browse, visits, thank-you)
-- Utils and services: auth, serverMessage, tableVisit, tableSession
+- Utils and services: auth, apiWrapper, colorGenerator, missingKeyWarnings, serverMessage, tableVisit, and tableSession
 
 **Not yet tested (highest value first):**
 
 - Auth: ForgotPasswordForm, ResetPasswordForm, VerifyEmailForm
 - Location management: LocationForm, MenuAssignmentForm, AddLocationToMenu
-- Staff dialogs: SessionDetailDialog, AddTableDialog, OrderDetailDialog, and the TableDashboard dialogs
+- Staff dialogs: SessionDetailDialog, AddTableDialog, MergeBillDialog, OrderDetailDialog, and the TableDashboard dialogs
 - Admin: PasswordChangeDialog
 - Analytics: AnalyticsOverview, ReportExport
 - Menu: TagFilter (covered only through the full menu page test)
@@ -203,7 +207,7 @@ A `setup` project (`auth.setup.js`) signs in once as the seeded admin (`UserSeed
 
 | Metric     | Threshold |
 | ---------- | --------- |
-| Branches   | 65%       |
+| Branches   | 70%       |
 | Functions  | 70%       |
 | Lines      | 75%       |
 | Statements | 75%       |
@@ -311,8 +315,7 @@ cd src/front-end
 npx playwright install
 ```
 
-On Linux, add `--with-deps` to also install the system libraries the browsers need.
-Without this step, tests fail with `browserType.launch: Executable doesn't exist at …`.
+On Linux, add `--with-deps` to also install the system libraries the browsers need. Without this step, tests fail with `browserType.launch: Executable doesn't exist at …`.
 
 #### Run E2E Tests
 
@@ -368,8 +371,13 @@ using Xunit;
 using Moq;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using back_end.domain;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using back_end.domain.DbContexts;
 using back_end.Controllers;
+using back_end.domain.Entities;
+
+namespace back_end.Tests.Controllers;
 
 public class YourControllerTests : IDisposable
 {
@@ -414,11 +422,18 @@ public class YourControllerTests : IDisposable
 }
 ```
 
-Controllers that filter by the signed-in staff member's location take an `ILocationAccessService`. Most tests pass a real `new LocationAccessService(_context)` so the location rules are exercised too. See `StaffLocationLockTests.cs` for examples.
+Controllers that filter by the signed-in staff member's location take an `ILocationAccessService`. Most tests pass a real `new LocationAccessService(_context)` so the location rules are exercised too. See `StaffLocationLockTests.cs` or `OrderControllerTests.cs` for examples.
+
+To act as a signed-in user, set the controller's `ControllerContext` to an `HttpContext` whose `User` has `ClaimTypes.NamgeIdentifier` and `ClaimTypes.Role` claims. See `BillLinkTests.cs`.
 
 #### Service Test Template
 
 ```csharp
+using Moq;
+using FluentAssertions;
+
+namespace back_end.Tests.Services;
+
 public class YourServiceTests
 {
     private readonly Mock<IDependency> _mockDependency;
@@ -449,6 +464,19 @@ public class YourServiceTests
 #### Integration Test Template
 
 ```csharp
+using System.Net;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+using back_end.domain.DbContexts;
+
+namespace back_end.IntegrationTests;
+
 public class YourIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
@@ -550,7 +578,7 @@ describe("YourComponent", () => {
 });
 ```
 
-Components that use the MUI `DataGrid` need a little extra setup in jsdom (virtualization off, a `ResizeObserver` stub). Copy it from `src/components/admin/__tests__/CustomerManagement.test.jsx`.
+Components that use the MUI `DataGrid` need a little extra setup in jsdom (virtualization off, a `ResizeObserver` stub). See [Testing MUI DataGrid](frontend-testing.md#testing-mui-datagrid).
 
 See [Frontend Testing Guide](frontend-testing.md) for more templates and patterns.
 
@@ -585,7 +613,7 @@ A new push to a branch or PR cancels its older, still-running workflow run.
 
 ```yaml
 - dotnet test on back-end.Tests (restores + builds the API automatically)
-- dotnet test on back-end.IntegrationTests (SendGrid__ApiKey set to a placeholder - no email is sent)
+- dotnet test on back-end.IntegrationTests (SendGrid__ApiKey and SEndGrid__FromEmail set to a placeholder - no email is sent)
 ```
 
 #### 2. Frontend - lint, unit tests & build (`ubuntu-latest`, Node 22) - required
@@ -800,7 +828,9 @@ Coverage is collected from `src/**`, excluding `*.stories.*` files. The threshol
 5. **Mock API Calls** through `@/config/api`
    ```jsx
    api.get.mockResolvedValueOnce({ data: mockData });
-   api.post.mockRejectedValueOnce(new Error("API Error"));
+   api.post.mockRejectedValueOnce({
+     response: { status: 400, data: { message: "Invalid request" } },
+   });
    ```
 
 ---
@@ -977,8 +1007,8 @@ Solution: The sign-in setup didn't run or failed.
 
 ---
 
-**Version**: 1.
-**Last Updated**: 2026-11-11
+**Version**: 1.4
+**Last Updated**: 2026-11-17
 **Status**: Active Development
 
 For questions or issues with testing, please contact the development team or submit an issue on GitHub.

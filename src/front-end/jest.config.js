@@ -34,13 +34,13 @@ const customJestConfig = {
     "/app/dashboard/call-server/",
   ],
   // Coverage thresholds: increased to current baseline with a buffer (Nov 2026)
-  // Nov 2026: branches 69.83, funcs 72.11, lines 77.24, statements 76.22
-  // 77 suites, 775 tests passing
+  // Nov 2026: branches 71.07, funcs 72.64, lines 78.11, statements 77
+  // 81 suites, 807 tests passing
   // TODO: Gradually increase thresholds as more tests are added
   // Target: 70% for all metrics
   coverageThreshold: {
     global: {
-      branches: 65,
+      branches: 70,
       functions: 70,
       lines: 75,
       statements: 75,
