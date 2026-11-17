@@ -29,6 +29,18 @@ namespace back_end.Controllers
             _logger = logger;
             _env = env;
         }
+
+        // True if another item already uses this name, ignoring case.
+        // Callers pass the name already trimmed. exceptItemId skips the item being edited.
+        private Task<bool> NameTakenAsync(string name, int? exceptItemId = null)
+        {
+            var key = name.ToLower();
+            return _context.MenuItems.AnyAsync(mi =>
+                mi.Name.ToLower() == key && (exceptItemId == null || mi.item_id != exceptItemId));
+        }
+
+        private static object NameTakenError(string name) =>
+            new { message = $"A menu item named \"{name}\" already exists." };
         /// <summary>
         /// Creates a new menu item with optional tags.
         /// </summary>
@@ -41,7 +53,7 @@ namespace back_end.Controllers
         /// </returns>
         /// <response code="200">Returns the newly created menu item</response>
         /// <response code="400">If the name is blank or category_id is missing</response>
-        /// <response code="409">If a menu item with the same name already exists</response>
+        /// <response code="409">If a menu item with the same name already exists (ignoring case and surrounding spaces)</response>
         /// <response code="500">If an internal error occurs while creating the menu item</response>
         /// <remarks>
         /// Sample request:
@@ -77,13 +89,14 @@ namespace back_end.Controllers
                 if (itemData.CategoryId <= 0)
                     return BadRequest("category_id is required.");
 
-                if (await _context.MenuItems.AnyAsync(mi => mi.Name == itemData.Name))
+                var name = itemData.Name.Trim();
+                if (await NameTakenAsync(name))
                 {
-                    return Conflict("Menu Item already Exist");
+                    return Conflict(NameTakenError(name));
                 }
                 Menu_Item newMenuItem = new Menu_Item
                 {
-                    Name = itemData.Name,
+                    Name = name,
                     Description = itemData.Description ?? string.Empty,
                     Category_id = itemData.CategoryId,
                     image_url = itemData.ItemImageUrl,
@@ -216,11 +229,15 @@ namespace back_end.Controllers
         /// <returns>
         /// An <see cref="IActionResult"/> containing the updated <see cref="MenuItemResponseDto"/> object.
         /// Returns HTTP 200 (OK) with the updated menu item on success.
+        /// Returns HTTP 400 (Bad Request) if the new name is blank.
         /// Returns HTTP 404 (Not Found) if the menu item doesn't exist.
+        /// Returns HTTP 409 (Conflict) if another menu item already has the new name.
         /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the update.
         /// </returns>
         /// <response code="200">Returns the updated menu item</response>
+        /// <response code="400">If the new name is blank</response>
         /// <response code="404">If the menu item is not found</response>
+        /// <response code="409">If another menu item already has the new name (ignoring case and surrounding spaces)</response>
         /// <response code="500">If an internal error occurs while updating the menu item</response>
         /// <remarks>
         /// Sample request:
@@ -242,7 +259,9 @@ namespace back_end.Controllers
         [Authorize(Policy = "staffOnly")]
         [HttpPut("{itemId}")]
         [ProducesResponseType(typeof(MenuItemResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateMenuItem(
             int itemId,
@@ -258,7 +277,12 @@ namespace back_end.Controllers
                 }
                 if (menuItemUpdate.Name != null)
                 {
-                    itemUpdate.Name = menuItemUpdate.Name;
+                    var name = menuItemUpdate.Name.Trim();
+                    if (name.Length == 0)
+                        return BadRequest("name cannot be blank.");
+                    if (await NameTakenAsync(name, exceptItemId: itemId))
+                        return Conflict(NameTakenError(name));
+                    itemUpdate.Name = name;
                 }
                 if (menuItemUpdate.Description != null)
                 {

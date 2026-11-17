@@ -68,7 +68,7 @@ back_end.Dtos.LocationPricingSummary: location_id, location_name, province_code,
 back_end.Dtos.LocationResponseDto: address_one, address_two, city, location_id, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LocationUpdateDto: address_one, address_two, city, name, phone_number, postal_code, province, province_code
 back_end.Dtos.LockGuestCountsDto: locked
-back_end.Dtos.MenuAssignmentCreate: adult_limit, child_limit, is_add_on, item_id, location_id, menu_id, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
+back_end.Dtos.MenuAssignmentCreate: adult_limit, child_limit, is_add_on, item_id, location_id, menu_id, only_at_location, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
 back_end.Dtos.MenuAssignmentResponseDto: adult_limit, assignment_id, child_limit, is_add_on, item_id, location_id, menu_id, menu_name, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
 back_end.Dtos.MenuAssignmentUpdateDto: adult_limit, child_limit, is_add_on, over_limit_behavior, per_order_limit, price, senior_limit, status, tot_limit
 back_end.Dtos.MenuBaseDto: description, end_time, is_active, name, start_time

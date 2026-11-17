@@ -214,6 +214,63 @@ public class MenuAssignmentControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_LocationPriceForNewItem_AlsoAddsAvailableDefault()
+    {
+        var data = ValidCreate(locationId: Northside);
+        data.Price = 4.00m;
+
+        var result = await Admin().CreateMenuItemAssignment(data);
+
+        result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeOfType<MenuAssignmentResponseDto>()
+            .Which.LocationId.Should().Be(Northside);
+        var def = await Reload(DinnerMenu, NewItem, null);
+        def.Should().NotBeNull();
+        def!.Price.Should().Be(4.00m);
+        def.Adult_Limit.Should().Be(6);
+        def.Status.Should().Be(MenuItemStatus.Available);
+        (await Reload(DinnerMenu, NewItem, Northside))!.Status.Should().Be(MenuItemStatus.Available);
+    }
+
+    [Fact]
+    public async Task Create_OnlyAtLocation_AddsUnavailableDefault()
+    {
+        var data = ValidCreate(locationId: Northside);
+        data.OnlyAtLocation = true;
+
+        var result = await Admin().CreateMenuItemAssignment(data);
+
+        result.Should().BeOfType<OkObjectResult>();
+        (await Reload(DinnerMenu, NewItem, null))!.Status.Should().Be(MenuItemStatus.Unavailable);
+        (await Reload(DinnerMenu, NewItem, Northside))!.Status.Should().Be(MenuItemStatus.Available);
+    }
+
+    [Fact]
+    public async Task Create_LocationPriceWithExistingDefault_LeavesDefaultAlone()
+    {
+        var data = ValidCreate(itemId: MisoSoup, locationId: Northside);
+        data.Price = 2.00m;
+        data.OnlyAtLocation = true; // only used when adding the default
+
+        var result = await Admin().CreateMenuItemAssignment(data);
+
+        result.Should().BeOfType<OkObjectResult>();
+        var def = await Reload(DinnerMenu, MisoSoup, null);
+        def!.Price.Should().Be(0m);
+        def.Status.Should().Be(MenuItemStatus.Available);
+    }
+
+    [Fact]
+    public async Task Create_OnlyAtLocationWithoutLocation_ReturnsBadRequest()
+    {
+        var data = ValidCreate();
+        data.OnlyAtLocation = true;
+
+        ShouldBeStatus(await Admin().CreateMenuItemAssignment(data), StatusCodes.Status400BadRequest);
+        (await Reload(DinnerMenu, NewItem, null)).Should().BeNull();
+    }
+
+    [Fact]
     public async Task Update_MissingAssignment_ReturnsNotFound()
     {
         var result = await Admin().UpdateMenuItemAssignment(DinnerMenu, NewItem, new MenuAssignmentUpdateDto { Price = 1m }, locationId: null);
