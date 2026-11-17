@@ -199,7 +199,7 @@ On your computer, open your **ngrok URL** (not localhost). Then open DevTools â†
 - [ ] The POST `login` request URL is `https://<your-name>.ngrok-free.dev/api/auth/login`. It should **not** be `localhost:5264`.
 - [ ] Status is `200`.
 - [ ] Scanning the QR code on your phone opens your ngrok URL at `/auth/login?locationId=...&tableNumber=...`, **not** `localhost`.
-- [ ] Optional: `GET /api/admin/qr/bulk/download-pdf?location_id=1` shows each QR with one centered "Table N" line and one "WiFi"/"Session" line.
+- [ ] Optional: `GET /api/admin/qr/bulk/download-pdf?location_id=1` shows a centered "Table N" over each table's pair of codes, with "Scan for WiFi" and "Scan to Order" under them.
 - [ ] Logging in on the phone works.
 
 ---
