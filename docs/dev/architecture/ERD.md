@@ -3,12 +3,13 @@
 Entity Relationship Diagram for the `sushi_toshi_db` database used by the back end.
 
 - **Built from:** the entity classes in `back_end.domain.Entities` and `Enums.cs`
-- **Verified against:** the live database schema, Nov 13, 2026
+- **Verified against:** the live database schema, Nov 17, 2026.
 
 ## Viewing and editing
 
 - **GitHub / VS Code:** the diagram below renders automatically in the markdown preview.
 - **mermaid.live:** copy everything inside the `mermaid` code block (starting at `erDiagram`) and paste it into https://mermaid.live to edit or export it as PNG/SVG.
+  - **mermaid preview extension:** add **Mermaid Preview** extension from **Mermaid OSS** in VS Code to preview the diagram and export PNG/SVG
 
 ## Legend
 
@@ -62,6 +63,7 @@ erDiagram
         string Postal_Code
         string Phone_Number
         string Province_Code "max 2, default AB"
+        string Allowed_Networks "nullable, max 500, Wi-Fi check networks, NULL = no check"
         datetime Created_At
         datetime Updated_At
     }
