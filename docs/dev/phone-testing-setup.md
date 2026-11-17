@@ -119,7 +119,7 @@ ngrok version
 - No trailing slash on the URL.
 - User secrets apply only in the Development environment, which is what the `http` launch profile uses.
 - **Restart the backend after setting or changing a secret.** Settings are read when the backend starts. If it was already running, new QR codes will still use the old value (`http://localhost:3000`).
-- **WiFi QR credentials:** `appsettings.json` has placeholders (`Location-Test` / `Location-Password`), which are enough to generate and scan WiFi QR codes.
+- **WiFi QR credentials:** `appsettings.json` has placeholders (`Location-Test` / `Location-password!`), which are enough to generate and scan WiFi QR codes.
   - To test actually **joining** a network, set your own SSID and password in user secrets (never in `appsettings.json`), restart the backend, then regenerate (bulk, or `&refresh=true`):
 
     ```bash
@@ -223,6 +223,7 @@ On your computer, open your **ngrok URL** (not localhost). Then open DevTools â†
 | `/api/...` returns 500, Next terminal shows `ECONNREFUSED`                                                                       | Backend not running, or not on port 5264                                                                               | Start the backend with `--launch-profile http`                                                                                                                                                                                                     |
 | Pages show `AxiosError: Request failed with status code 500` right after a backend rebuild, with nothing in the backend terminal | Next's proxy couldn't reach .NET while it was restarting                                                               | Wait for `Now listening on`, then hard-refresh (Ctrl+Shift+R). Confirm the backend directly at `http://localhost:5264/api/Location`                                                                                                                |
 | Google "Sign in with Google" button returns 403                                                                                  | Your ngrok URL isn't an authorized origin on the Google OAuth client                                                   | Use email/password for now                                                                                                                                                                                                                         |
+| Joining a table says "Please connect to the restaurant Wi-Fi to join this table" | The location has a Wi-Fi check, and the address your phone connects from isn't in its networks | **Locations & Menus** â†’ **Wi-Fi check**: remove every network and save to turn the check off, or open the dialog from your phone and select **Add this network** (see the [admin manual](../admin/admin-manual.md#wi-fi-check)) |
 | Antivirus quarantines ngrok                                                                                                      | Expected "RiskWare" detection                                                                                          | See the warning box in step 4                                                                                                                                                                                                                      |
 
 **Quick proxy test:** open `https://<your-name>.ngrok-free.dev/api/Auth/login` in a browser.
@@ -236,7 +237,7 @@ On your computer, open your **ngrok URL** (not localhost). Then open DevTools â†
 
 - Phone testing via ngrok + Next.js `/api` proxy (`api.js`, `next.config.mjs`).
 - `SessionPageUrl` moved to per-developer user secrets; `appsettings.json` defaults to `http://localhost:3000`.
-- WiFi QR credentials in `appsettings.json` replaced with placeholders (`DefaufltWifi` | `Location-Test` / `DefaultPass` | `Location-Password`).
+- WiFi QR credentials in `appsettings.json` replaced with placeholders (`DefaultWifi` | `Location-Test` / `DefaultPass` | `Location-password!`).
 - `AdminQrCodeController.GetWifiQr` / `GetSessionQr`: added an optional `refresh` query parameter. Caching is now handled by the service, and `Cache-Control` changed from `public, max-age=86400` to `private, no-cache` (the WiFi images contain the network password).
 - `AdminQrCodeController.DownloadBulkPdf` updated to the current SkiaSharp text API (`SKFont` + `SKTextAlign.Center`). This removed 24 `CS0618` warnings and a duplicated label.
 

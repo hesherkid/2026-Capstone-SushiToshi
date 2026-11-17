@@ -54,6 +54,7 @@ On a hosting platform, set the same names in its environment or secrets settings
 3. Regenerate that location's QR codes. The credentials are baked into each image, and saved images are reused until regenerated.
    - In the admin app: **QR Codes** → pick the location → **Generate QR Codes for All N Tables**. This overwrites the old images.
    - Then download the new PDF or ZIP and reprint.
+4. **If the location uses the Wi-Fi check**, check it still lets guests join. A new router, modem or internet plan can change the restaurant's internet address, and then every guest is refused until the new address is added. See [Wi-Fi check](../admin/admin-manual.md#wi-fi-check) in the admin manual.
 
 ## Check that it works
 
