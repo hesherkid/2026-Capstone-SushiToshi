@@ -58,9 +58,11 @@ const HOT_STONE_ROW = {
   over_limit_behavior: "Charge",
 };
 
+const LOCATIONS = [{ location_id: 7, name: "North" }];
+
 const mockApi = (assignments = [HOT_STONE_ROW]) => {
   api.get.mockImplementation((url) => {
-    if (url === "/Location") return Promise.resolve({ data: [] });
+    if (url === "/Location") return Promise.resolve({ data: LOCATIONS });
     if (url === "/menuItem/66")
       return Promise.resolve({
         data: { item_id: 66, menu_assignments: assignments },
@@ -221,6 +223,103 @@ describe("Menu assignment dialog", () => {
       await screen.findByText("Child limit cannot exceed Adult limit."),
     ).toBeInTheDocument();
     expect(api).not.toHaveBeenCalled();
+  });
+
+  it("lets a new item get a location price that all locations also sell", async () => {
+    mockApi([]);
+    renderDialog();
+    await screen.findByText("No current assignments");
+
+    choose("Location", "North");
+    choose("Menu", "All Day Menu");
+    expect(
+      screen.getByText(/Saving also adds it for all locations at the same price/),
+    ).toBeInTheDocument();
+    fireEvent.change(priceInput(), { target: { value: "4" } });
+    submit("Add Location Price");
+
+    await waitFor(() => expect(api).toHaveBeenCalledTimes(1));
+    expect(api).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        url: "/menuassignment",
+        data: expect.objectContaining({
+          menu_id: 1,
+          location_id: 7,
+          price: 4,
+          only_at_location: false,
+        }),
+      }),
+    );
+  });
+
+  it("lets a new item be sold at only one location", async () => {
+    mockApi([]);
+    renderDialog();
+    await screen.findByText("No current assignments");
+
+    choose("Location", "North");
+    choose("Menu", "All Day Menu");
+    fireEvent.click(screen.getByLabelText("Only sell at North"));
+    expect(
+      screen.getByText(/so only this location sells it/),
+    ).toBeInTheDocument();
+    submit("Add Location Price");
+
+    await waitFor(() => expect(api).toHaveBeenCalled());
+    expect(api.mock.calls[0][0].data).toMatchObject({
+      location_id: 7,
+      only_at_location: true,
+    });
+  });
+
+  it("doesn't offer only-this-location when the menu already has a default", async () => {
+    renderDialog();
+    await screen.findByText("All Day Menu");
+
+    choose("Location", "North");
+    choose("Menu", "All Day Menu");
+    expect(screen.queryByLabelText("Only sell at North")).not.toBeInTheDocument();
+    submit("Add Location Price");
+
+    await waitFor(() => expect(api).toHaveBeenCalled());
+    expect(api.mock.calls[0][0].data).not.toHaveProperty("only_at_location");
+  });
+
+  it("asks in the app's confirm dialog before removing a default, naming the location prices it takes", async () => {
+    mockApi([HOT_STONE_ROW, { ...HOT_STONE_ROW, assignment_id: 4, location_id: 7, price: 6 }]);
+    api.delete.mockResolvedValue({});
+    renderDialog();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Remove from menu/ }),
+    );
+
+    expect(screen.getByText("Remove from menu?")).toBeInTheDocument();
+    expect(
+      screen.getByText(/This also removes the prices for North\./),
+    ).toBeInTheDocument();
+    expect(api.delete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() =>
+      expect(api.delete).toHaveBeenCalledWith("/menuassignment/1/66"),
+    );
+    expect(await screen.findByText("No current assignments")).toBeInTheDocument();
+  });
+
+  it("keeps a default when its removal is cancelled", async () => {
+    renderDialog();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Remove from menu/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Remove from menu?")).not.toBeInTheDocument(),
+    );
+    expect(api.delete).not.toHaveBeenCalled();
+    expect(screen.getByText("All Day Menu")).toBeInTheDocument();
   });
 
   it("shows the server's reason when a save is rejected", async () => {

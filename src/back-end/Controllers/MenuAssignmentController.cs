@@ -83,6 +83,8 @@ namespace back_end.Controllers
         /// over_limit_behavior "Charge" requires price greater than 0.
         /// Add-on items must have a price greater than 0.
         /// per_order_limit is the max units of this item per order for the whole table (0 = no limit cap, always blocks).
+        /// A location_id price on a menu the item isn't on yet also adds the default (all locations) row with the same values.
+        /// only_at_location: true makes that default Unavailable, so only this location sells the item.
         /// Item views are recorded separately (POST api/menu-item-views).
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
@@ -109,14 +111,10 @@ namespace back_end.Controllers
                     return BadRequest("Add-on items must have a price greater than 0");
                 }
 
-                if (assignmentData.LocationId != null &&
-                    !await _context.MenuItemAssignments.AnyAsync(a => a.Menu_Id == assignmentData.MenuId && a.Item_Id == assignmentData.ItemId
-                    && a.Location_Id == null))
-                {
-                    return BadRequest("Add the item to the menu (default price) before adding a location price");
-                }
+                if (assignmentData.OnlyAtLocation && assignmentData.LocationId == null)
+                    return BadRequest("only_at_location needs a location_id");
 
-                var assignment = new MenuItemAssignment
+                MenuItemAssignment NewRow(int? locationId, MenuItemStatus status) => new()
                 {
                     Menu_Id = assignmentData.MenuId,
                     Item_Id = assignmentData.ItemId,
@@ -127,10 +125,23 @@ namespace back_end.Controllers
                     Senior_limit = assignmentData.SeniorLimit!.Value,
                     Tot_Limit = assignmentData.TotLimit ?? 0,
                     Per_Order_Limit = assignmentData.PerOrderLimit ?? 0,
-                    Status = assignmentData.Status,
+                    Status = status,
                     Is_Add_On = assignmentData.IsAddOn,
-                    Location_Id = assignmentData.LocationId,
+                    Location_Id = locationId,
                 };
+
+                // A location price needs the menu's default row. If the item isn't on the menu yet,
+                // add the default with the same values in the same save, so both rows save or neither does.
+                // OnlyAtLocation makes the default Unavailable, so only this location sells the item
+                if (assignmentData.LocationId != null &&
+                    !await _context.MenuItemAssignments.AnyAsync(a => a.Menu_Id == assignmentData.MenuId && a.Item_Id == assignmentData.ItemId
+                    && a.Location_Id == null))
+                {
+                    await _context.MenuItemAssignments.AddAsync(NewRow(null,
+                        assignmentData.OnlyAtLocation ? MenuItemStatus.Unavailable : assignmentData.Status));
+                }
+
+                var assignment = NewRow(assignmentData.LocationId, assignmentData.Status);
 
                 await _context.MenuItemAssignments.AddAsync(assignment);
                 await _context.SaveChangesAsync();
