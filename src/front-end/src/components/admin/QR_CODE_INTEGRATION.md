@@ -5,7 +5,7 @@
 The QR Code Management page lets admins generate, preview and download two kinds of QR code for each table:
 
 - **WiFi QR code:** customers scan it to join the location's WiFi network.
-- **Session QR code:** opens sign-in for that table, then joins the customer to the dining session staff started for it.
+- **Session QR code:** opens sign-in for that table, then joins the customer to the dining session staff started for it. If the location has a [Wi-Fi check](../../../../../docs/admin/admin-manual.md#wi-fi-check), customers must be on the restaurant Wi-Fi to join, so they may need to scan the WiFi code first.
 
 For how the QR images are generated, stored and configured on the backend, see the [QR code service README](../../../../back-end/Services/QrCode/README.md).
 
@@ -46,7 +46,7 @@ Both send `refresh=true`, so the code is always built from the current WiFi and 
 2. Click **Generate QR Codes for All N Tables**. This creates a WiFi and a Session code for every table at that location and saves them on the server.
 3. Download the results:
    - **Download as ZIP**: one PNG per code
-   - **Download as PDF**: 16 codes per page (4 × 4, 1.75" each), sized for 8.5" × 11" paper
+   - **Download as PDF**: 8 tables per page, each with its WiFi and Session codes side by side (16 codes, 1.75" each), sized for 8.5" × 11" paper
 
 The download buttons only appear for the location you most recently generated codes for.
 

@@ -27,7 +27,7 @@ Start with the section for your role.
 - [Testing](dev/testing.md): test suites, E2E (Playwright), coverage thresholds, running tests and CI
 - [Frontend testing](dev/frontend-testing.md): React component test templates and patterns
 - [Team norms](dev/team-norms.md)
-- [Database ERD](dev/architecture/erd.drawio) (open with draw.io).
+- [Database ERD](dev/architecture/ERD.md): Mermaid diagram of every table, renders on GitHub and in VS Code
 ### Docs that live next to the code
 
 - [QR code service](../src/back-end/Services/QrCode/README.md): QR generation endpoints, folder layout and configuration

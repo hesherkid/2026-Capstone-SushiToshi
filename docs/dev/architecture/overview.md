@@ -253,7 +253,7 @@ The staff dashboards (`components/staff/Order`, `SessionDashboard`, `TableDashbo
 A typical feature touches these places, in this order:
 
 1. **Entity and migration**, if the data model changes (see [database.md](../database.md#changing-the-schema))
-2. **DTOs** for the request and response, with snake_case keys and query parameters (see [JSON and query parameter names](#backend-src-back-end))
+2. **DTOs** for the request and response, with snake_case keys and query parameters (see [JSON and query parameter names](#backend-srcback-end))
 3. **Controller endpoint**, with the right `[Authorize]` attribute and, for location data, `ILocationAccessService`
 4. **Service or helper**, if the logic is shared or worth testing on its own
 5. **Backend tests** in `src/back-end.Tests` (see [testing.md](../testing.md))

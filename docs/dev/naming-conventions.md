@@ -1,6 +1,6 @@
 # Naming Conventions
 
-This page lists the naming rules for the backend and the API, and explains why some of them aren't the usual C# and ASP.NET defaults. For the short version, see [JSON and query parameter names](architecture/overview.md#backend-src-back-end) in the architecture overview.
+This page lists the naming rules for the backend and the API, and explains why some of them aren't the usual C# and ASP.NET defaults. For the short version, see [JSON and query parameter names](architecture/overview.md#backend-srcback-end) in the architecture overview.
 
 ## The rules
 
