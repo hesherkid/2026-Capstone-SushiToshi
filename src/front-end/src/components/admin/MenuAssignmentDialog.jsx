@@ -198,6 +198,15 @@ const MenuAssignmentDialog = ({
     setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
   };
 
+  // The dialog stays mounted between items, so start each open with a clean form.
+  // Otherwise a menu picked for the last item can be missing from this one's options.
+  useEffect(() => {
+    if (!open) return;
+    setFormData(emptyForm);
+    setEditingAssignment(null);
+    setError(null);
+  }, [open, selectedItem]);
+
   useEffect(() => {
     if (!selectedItem) return;
     loadAssignments().catch((err) => {
