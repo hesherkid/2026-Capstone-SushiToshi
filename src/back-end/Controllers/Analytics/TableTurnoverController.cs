@@ -1,4 +1,3 @@
-using back_end.Controllers;
 using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +28,12 @@ namespace back_end.Controllers
         /// <param name="from">Custom range start, yyyy-MM-dd (inclusive, restaurant time). Required when range=custom.</param>
         /// <param name="to">Custom range end, yyyy-MM-dd (inclusive, restaurant time). Required when range=custom.</param>
         /// <param name="locationId">Limit to one location. Omit for all locations.</param>
+        /// <response code="200">The table turnover report (lists can be empty).</response>
+        /// <response code="400">Invalid range or from/to.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The location_id doesn't exist.</response>
+        /// <response code="500">The report couldn't be loaded.</response>
         /// <remarks>
         /// Sample requests:
         ///
@@ -52,6 +57,8 @@ namespace back_end.Controllers
         [HttpGet("table-turnover")]
         [ProducesResponseType(typeof(TableTurnoverResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetTableTurnover(

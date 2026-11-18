@@ -29,8 +29,23 @@ namespace back_end.Controllers
         }
 
         // GET: /api/customers?skip=0&limit=100
-        // List customer accounts, newest first. Deleted accounts are left out.
+        /// <summary>Lists customer accounts, newest first.</summary>
+        /// <param name="skip">How many to skip (0 or more).</param>
+        /// <param name="limit">How many to return (1-100, default 100).</param>
+        /// <remarks>
+        /// Deleted accounts and "Continue as Guest" accounts are left out; Active, Inactive and
+        /// Suspended accounts are included. To get everyone, keep calling with skip += 100 until a page has
+        /// fewer than 100.
+        /// </remarks>
+        /// <response code="200">The page of customers.</response>
+        /// <response code="400">skip or limit is out of range.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<IEnumerable<UserResponseDto>>> ListCustomers(
             [FromQuery] int skip = 0,
             [FromQuery] int limit = 100)
@@ -63,8 +78,22 @@ namespace back_end.Controllers
         }
 
         // PUT: /api/customers/5/status
-        // Deactivate or reactivate a customer. Inactive accounts can't log in.
+        /// <summary>Deactivates or reactivates a customer account.</summary>
+        /// <remarks>
+        /// Status must be Active or Inactive. Inactive accounts can't log in (email or Google),
+        /// but a login token they already have keeps working until it expires.
+        /// </remarks>
+        /// <response code="200">The updated account.</response>
+        /// <response code="400">Status isn't Active or Inactive.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">No customer with that ID (staff, admins and deleted accounts don't count).</response>
         [HttpPut("{userId:int}/status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserResponseDto>> UpdateCustomerStatus(
             int userId,
             [FromBody] AccountStatusUpdateDto request)
@@ -81,9 +110,23 @@ namespace back_end.Controllers
         }
 
         // DELETE: /api/customers/5
-        // Orders, session history and service requests still reference the user, so the row is kept
-        // but anonymised: personal details and sign-in methods are removed and it's marked Deleted.
+        /// <summary>Deletes a customer account.</summary>
+        /// <remarks>
+        /// Orders, visits and service requests still point to the account, so the row is kept
+        /// but anonymous. The email becomes deleted-{id}@deleted.invalid, the name "Deleted Customer", the
+        /// password, Google sign-in and location are removed, and the status is set to Deleted. Outstanding
+        /// verification and reset links stop working, and the email can be used to register again.
+        /// A login token the customer already has keeps working until it expires.
+        /// </remarks>
+        /// <response code="204">Deleted.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">No customer with that ID, or it's already deleted.</response>
         [HttpDelete("{userId:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteCustomer(int userId)
         {
             var user = await FindCustomer(userId);

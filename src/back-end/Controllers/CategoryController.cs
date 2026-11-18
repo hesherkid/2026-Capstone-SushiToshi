@@ -39,11 +39,6 @@ namespace back_end.Controllers
         /// <summary>
         /// Retrieves all categories from the database.
         /// </summary>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of <see cref="Category"/> objects.
-        /// Returns HTTP 200 (OK) with the list of all categories on success.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
         /// <response code="200">Returns the list of all categories</response>
         /// <response code="500">If an internal error occurs while retrieving categories</response>
         /// <remarks>
@@ -76,15 +71,11 @@ namespace back_end.Controllers
         /// Creates a new category in the system.
         /// </summary>
         /// <param name="category">The category data including name, description, and limits</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the created <see cref="Category"/> object.
-        /// Returns HTTP 200 (OK) with the created category on success.
-        /// Returns HTTP 409 (Conflict) if a category with the same name already exists.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-        /// </returns>
         /// <response code="200">Returns the newly created category</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
         /// <response code="409">If a category with the same name already exists</response>
-        /// <response code="400">If the provided limits are invalid</response>
+        /// <response code="400">If a required limit is missing, or the limits are invalid</response>
         /// <response code="500">If an internal error occurs while creating the category</response>
         /// <remarks>
         /// Sample request:
@@ -106,18 +97,20 @@ namespace back_end.Controllers
         /// adult_limit, child_limit, and senior_limit are required (0 = unlimited).
         /// toddler_limit is optional: 0 or omitted = same as child_limit.
         /// Rules: child and senior ≤ adult, toddler ≤ child.
-        /// per_order_limit: max combined units from this category per order for the whole table (0 = no limit cap, always blocks).
-        /// over_limit_behavior ("Block" or "Charge", default "Block") controls what happens when a limit is exceeded;
-        /// "Charge" bills each item's price from its menu assignment.
+        /// Because 0 means unlimited, a capped adult_limit needs capped child and senior limits too.
+        /// per_order_limit = units from this category in one order for the whole table (0 = no cap);
+        /// going over it always blocks, even when over_limit_behavior is Charge.
+        /// over_limit_behavior: "Block" (default) refuses units past a per-guest limit; "Charge" bills them
+        /// at the item's menu price on a separate over-limit line (refused if the item has no price).
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
         [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateCategory(CreateCategory category)
         {
             try
@@ -161,12 +154,6 @@ namespace back_end.Controllers
         /// Retrieves a specific category by its ID.
         /// </summary>
         /// <param name="categoryId">The unique identifier of the category</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the <see cref="Category"/> object.
-        /// Returns HTTP 200 (OK) with the category details on success.
-        /// Returns HTTP 404 (Not Found) if the category doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
         /// <response code="200">Returns the category with the specified ID</response>
         /// <response code="404">If the category is not found</response>
         /// <response code="500">If an internal error occurs while retrieving the category</response>
@@ -207,13 +194,10 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="categoryId">The unique identifier of the category to update</param>
         /// <param name="updatedCategory">The updated category data</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated category object.
-        /// Returns HTTP 200 (OK) with the updated category on success.
-        /// Returns HTTP 404 (Not Found) if the category doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the update.
-        /// </returns>
         /// <response code="200">Returns the updated category</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="400">If the request data is invalid</response>
         /// <response code="404">If the category is not found</response>
         /// <response code="500">If an internal error occurs while updating the category</response>
         /// <remarks>
@@ -232,20 +216,23 @@ namespace back_end.Controllers
         ///     }
         ///
         /// Updates the category information and limits.
-        /// Name and description are optional - if not provided, existing values are retained.
+        /// Every field is optional: anything left out keeps its current value.
         /// A limit of 0 means unlimited, except toddler_limit: 0 means "same as child_limit".
         /// Rules: child and senior ≤ adult, toddler ≤ child.
-        /// per_order_limit: max combined units from this category per order for the whole table (0 = no limit cap, always blocks).
-        /// Over limit behavior determines how the system handles situations where the specified limits are exceeded. Accepts Block or Charge.
+        /// Because 0 means unlimited, a capped adult_limit needs capped child and senior limits too.
+        /// per_order_limit = units from this category in one order for the whole table (0 = no cap);
+        /// going over it always blocks, even when over_limit_behavior is Charge.
+        /// over_limit_behavior: "Block" refuses units past a per-guest limit; "Charge" bills them
+        /// at the item's menu price on a separate over-limit line (refused if the item has no price).
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPut("update-category/{categoryId}")]
         [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateCategory(int categoryId, UpdateCategory updatedCategory)
         {
             try
@@ -292,14 +279,11 @@ namespace back_end.Controllers
         /// Deletes a category from the system.
         /// </summary>
         /// <param name="categoryId">The unique identifier of the category to delete</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> indicating the result of the operation.
-        /// Returns HTTP 200 (OK) with a success message when the category is deleted.
-        /// Returns HTTP 404 (Not Found) if the category doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during deletion.
-        /// </returns>
         /// <response code="200">Returns a success message when the category is deleted</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
         /// <response code="404">If the category is not found</response>
+        /// <response code="409">If the category has associated menu items and cannot be deleted</response>
         /// <response code="500">If an internal error occurs while deleting the category</response>
         /// <remarks>
         /// Sample request:
@@ -312,11 +296,11 @@ namespace back_end.Controllers
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("delete-category/{categoryId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteCategory(int categoryId)
         {
             try
@@ -350,13 +334,9 @@ namespace back_end.Controllers
         /// <param name="categoryId">The unique identifier of the category</param>
         /// <param name="skip">The number of items to skip for pagination (default: 0)</param>
         /// <param name="limit">The maximum number of items to return (default: 10)</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing a collection of <see cref="MenuItemResponseDto"/> objects.
-        /// Returns HTTP 200 (OK) with the list of menu items on success.
-        /// Returns HTTP 404 (Not Found) if no menu items exist for the category.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
         /// <response code="200">Returns the list of menu items for the specified category</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
         /// <response code="404">If no menu items are found for the category</response>
         /// <response code="500">If an internal error occurs while retrieving menu items</response>
         /// <remarks>
@@ -374,10 +354,10 @@ namespace back_end.Controllers
         [HttpGet("get-menu-by-category/{categoryId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(IEnumerable<MenuItemResponseDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetMenuItemsByCategory(int categoryId, int skip = 0, int limit = 10)
         {
             try

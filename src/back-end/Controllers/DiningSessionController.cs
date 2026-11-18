@@ -14,7 +14,7 @@ namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
-  public class DiningSessionController : Controller
+  public class DiningSessionController : ControllerBase
   {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
@@ -43,15 +43,10 @@ namespace back_end.Controllers
     /// Creates a new dining session with a specified menu and optionally assigns a table or table group.
     /// </summary>
     /// <param name="sessionData">The session creation data containing the menu ID and optional table/table group</param>
-    /// <param name="assignmentType">Specifies what to assign: "table", "table_group", or "none" (default: "none")</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the created <see cref="DiningSessionResponseDto"/> object.
-    /// Returns HTTP 200 (OK) with the created session details on success.
-    /// Returns HTTP 400 (Bad Request) if validation fails or resources don't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-    /// </returns>
     /// <response code="200">Returns the newly created dining session</response>
     /// <response code="400">If validation fails or resources are not found</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at another location, or the caller isn’t staff.</response>
     /// <response code="500">If an internal error occurs while creating the session</response>
     /// <remarks>
     /// Sample requests:
@@ -68,7 +63,7 @@ namespace back_end.Controllers
     ///     {
     ///         "menu_id": 123,
     ///         "location_id": 1,
-    ///         "assignment_type": "table_group",
+    ///         "assignment_type": "tablegroup",
     ///         "table_group_id": 789
     ///     }
     ///
@@ -81,12 +76,14 @@ namespace back_end.Controllers
     /// Creates a new dining session with the specified menu.
     /// The session is automatically marked as started with the current UTC timestamp.
     /// Use assignmentType to control whether a table, table group, or neither is assigned during creation.
+    /// Staff seat tables; guests join an existing session through POST /api/DiningSession/join
     /// </remarks>
     [HttpPost("create-dining-session")]
-    // Staff seat tables; guests join an existing session through POST /api/DiningSession/join
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(DiningSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateDiningSession(
         [FromBody] CreateSessionRequestDto sessionData)
@@ -204,12 +201,9 @@ namespace back_end.Controllers
     /// Retrieves a list of dining sessions filtered by their active status.
     /// </summary>
     /// <param name="act">Query parameters to filter sessions by active status</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of <see cref="DiningSessionResponseDto"/> objects.
-    /// Returns HTTP 200 (OK) with the list of filtered sessions sorted by start time (newest first).
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the list of dining sessions filtered by active status</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The caller isn't staff.</response>
     /// <response code="500">If an internal error occurs while retrieving sessions</response>
     /// <remarks>
     /// Sample requests:
@@ -226,6 +220,8 @@ namespace back_end.Controllers
     [Authorize(Policy = "staffOnly")]
     [HttpGet("get-list-dining-sessions")]
     [ProducesResponseType(typeof(IEnumerable<DiningSessionResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ListDiningSessions([FromQuery] ListDiningSessionsRequestDto act)
     {
@@ -289,14 +285,10 @@ namespace back_end.Controllers
     /// Retrieves detailed information about a specific dining session.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing a <see cref="DiningSessionDetailDto"/> object with session details.
-    /// Returns HTTP 200 (OK) with the session details on success.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns detailed information about the dining session</response>
-    /// <response code="404">If the session is not found</response>
+    /// <response code="400">If the session is not found</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at another location, or the caller isn’t staff.</response>
     /// <response code="500">If an internal error occurs while retrieving the session</response>
     /// <remarks>
     /// Sample request:
@@ -311,6 +303,11 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpGet("get-location/{sessionId}")]
+    [ProducesResponseType(typeof(DiningSessionDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDiningSession(int sessionId)
     {
       try
@@ -369,15 +366,10 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="tableData">The table assignment data containing the table ID</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDto"/> object.
-    /// Returns HTTP 200 (OK) with the updated session details on success.
-    /// Returns HTTP 400 (Bad Request) if the session has ended, has bills, or the table is unavailable.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
-    /// </returns>
     /// <response code="200">Returns the updated dining session with the added table</response>
     /// <response code="400">If the session has ended, has bills, or the table is inactive/assigned to another session</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="404">If the session is not found</response>
     /// <response code="500">If an internal error occurs while adding the table to the session</response>
     /// <remarks>
@@ -399,6 +391,8 @@ namespace back_end.Controllers
     [HttpPost("{sessionId}/tables")]
     [ProducesResponseType(typeof(DiningSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddTableToDiningSession(int sessionId, [FromBody] TableAssignmentDto tableData)
@@ -490,8 +484,26 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>Sets the table group for an open dining session that has no bills yet.</summary>
+    /// <remarks>
+    /// Refused when the session has ended, has any bills, or already has a single table (remove it first).
+    /// The group must be active and at the session's location, and none of its tables can be in another
+    /// open session.
+    /// </remarks>
+    /// <response code="200">The session with the group's table numbers.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="400">One of the rules above isn't met.</response>
+    /// <response code="403">The table is at another location, or the caller isn’t staff.</response>
+    /// <response code="404">The session wasn't found.</response>
+    /// <response code="500">An unexpected error occurred.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("{sessionId}/table-groups")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddTableGroupToDiningSession(int sessionId, [FromBody] TableGroupAssignmentDto tableGroupData)
     {
       try
@@ -589,15 +601,10 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="tableId">The unique identifier of the table to remove</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> indicating the result of the operation.
-    /// Returns HTTP 200 (OK) with a success message when the table is removed.
-    /// Returns HTTP 400 (Bad Request) if the session has ended / has open bills.
-    /// Returns HTTP 404 (Not Found) if the session, table, or table-session association doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during removal.
-    /// </returns>
     /// <response code="200">Returns a success message when the table is removed from the session</response>
     /// <response code="400">If the session has ended / has open bills preventing table removal</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at another location, or the caller isn’t staff.</response>
     /// <response code="404">If the session, table, or table-session association is not found</response>
     /// <response code="500">If an internal error occurs while removing the table from the session</response>
     /// <remarks>
@@ -611,6 +618,12 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpDelete("{sessionId}/tables/{tableId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RemoveTableFromSession(int sessionId, int tableId)
     {
       try
@@ -670,8 +683,25 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>Removes the table group from an open dining session.</summary>
+    /// <remarks>
+    /// Refused when the session has ended or has open bills. Guests already seated stay in the
+    /// session, which then has no table until one is set.
+    /// </remarks>
+    /// <response code="200">Removed.</response>
+    /// <response code="400">The session has ended or has open bills.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at another location, or the caller isn’t staff.</response>
+    /// <response code="404">The session wasn't found, or that group isn't on it.</response>
+    /// <response code="500">An unexpected error occurred.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpDelete("{sessionId}/table-groups/{tableGroupId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RemoveTableGroupFromSession(int sessionId, int tableGroupId)
     {
       try
@@ -725,13 +755,6 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves the active dining session ID for the current authenticated user.
     /// </summary>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the active session ID.
-    /// Returns HTTP 200 (OK) with the session ID on success.
-    /// Returns HTTP 401 (Unauthorized) if the user is not authenticated.
-    /// Returns HTTP 404 (Not Found) if no active session exists for the user.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the active session ID for the authenticated user</response>
     /// <response code="401">If the user is not authenticated</response>
     /// <response code="404">If no active session is found for the user</response>
@@ -794,12 +817,6 @@ namespace back_end.Controllers
     /// Retrieves the menu ID associated with a specific dining session.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
-    /// <returns>
-    /// An <see cref="ActionResult"/> containing a <see cref="SessionMenuResponseDto"/> object with the menu ID.
-    /// Returns HTTP 200 (OK) with the menu ID on success.
-    /// Returns HTTP 404 (Not Found) if the dining session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the menu ID for the specified session</response>
     /// <response code="401">If the user is not signed in</response>
     /// <response code="403">If a customer asks about a table they aren't seated at</response>
@@ -855,21 +872,16 @@ namespace back_end.Controllers
     /// Closes an active dining session by setting the end timestamp.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session to close</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the updated <see cref="DiningSessionResponseDto"/> object.
-    /// Returns HTTP 200 (OK) with the updated session details on success.
-    /// Returns HTTP 400 (Bad Request) if the session is already closed or has open bills.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
-    /// </returns>
     /// <response code="200">Returns the closed dining session with the end timestamp</response>
     /// <response code="400">If the session is already closed or has open bills</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at another location, or the caller isn’t staff.</response>
     /// <response code="404">If the session is not found</response>
     /// <response code="500">If an internal error occurs while closing the session</response>
     /// <remarks>
     /// Sample request:
     ///
-    ///     POST /api/diningsession/123/close
+    ///     PUT /api/diningsession/123/close
     ///
     /// Closes an active dining session by setting the Ended_At timestamp to the current UTC time.
     /// Everyone still seated leaves with the table (Left_At is set to the same time), so no seat
