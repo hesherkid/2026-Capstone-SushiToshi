@@ -1,4 +1,3 @@
-using back_end.Controllers;
 using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Authorization;

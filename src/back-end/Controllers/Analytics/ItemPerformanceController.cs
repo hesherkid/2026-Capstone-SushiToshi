@@ -43,8 +43,9 @@ namespace back_end.Controllers
         /// - Items included: anything with delivered sales in the window (even if unavailable or off the menu now),
         ///   plus anything currently orderable (not Unavailable, on an active menu; at the location when given).
         ///   Items that are unavailable now and had no sales are excluded, because availability history isn't stored.
-        /// - Add-on sales use MenuItemAssignment.Is_Add_On for the (menu, item) the sale was ordered from.
-        ///   add_on_days = number of local days in the window with at least one add-on sale.
+        /// - Add-on sales use Is_Add_On from the all-locations assignment for the (menu, item); 
+        /// location overrides are ignored. add_on_days = number of local days in the window
+        /// with at least one add-on sale.
         /// - Best and worst never overlap; zero-sales items are returned separately.
         /// </remarks>
         [HttpGet("item-performance")]

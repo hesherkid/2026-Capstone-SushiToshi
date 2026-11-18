@@ -10,7 +10,7 @@ using SkiaSharp;
 namespace back_end.Controllers
 {
     /// <summary>
-    /// Admin/Staff QR Code endpoints for WiFi and session (menu redirect).
+    /// Admin QR Code endpoints for WiFi and session (menu redirect).
     /// </summary>
     [ApiController]
     [Route("api/admin/qr")]

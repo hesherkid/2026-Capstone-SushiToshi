@@ -74,9 +74,11 @@ namespace back_end.Controllers
     /// Requirements:
     /// - Session must be active (not ended)
     /// - Session must have at least one table assigned
-    /// - At least one guest (adult, senior, or child) must be specified
+    /// - At least one guest (adult, senior, child or toddler) must be specified, not negative
     /// - A guest's bill can't take the table's open bills past its seats; staff's can,
     ///   for a party that pulled up extra chairs
+    /// - Bill must have a name specified
+    /// - Guests can't start a new bill when the counts have been locked by staff.
     /// 
     /// The bill is automatically created with 'Open' status.
     ///
@@ -228,12 +230,12 @@ namespace back_end.Controllers
     /// Retrieves all bills for a specific dining session, optionally filtered by table.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
-    /// <param name="tableId">Optional table ID to filter bills by a specific table</param>
+    /// <param name="tableId">Optional table ID is only checked to see if the bill belongs to that session, it does not filer</param>
     /// <returns>
     /// An <see cref="IActionResult"/> containing a collection of <see cref="BillResponse"/> objects.
     /// Returns HTTP 200 (OK) with the list of bills on success.
     /// Returns HTTP 400 (Bad Request) if the specified table is not associated with the session.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist or no bills are found.
+    /// Returns HTTP 404 (Not Found) if the session doesn't exist.
     /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
     /// </returns>
     /// <response code="200">Returns the list of bills for the session</response>
@@ -681,7 +683,7 @@ namespace back_end.Controllers
     /// Closes the specified bill and sets the closed_at timestamp.
     /// Requirements:
     /// - Bill must not already be closed
-    /// - All orders associated with the bill must be completed (no pending orders)
+    /// - All orders associated with the bill must not be at a state of pending
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpPut("close-bill/{billId}")]
@@ -1181,7 +1183,7 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError($"Database error retrieving bills: {ex.Message}");
-        return StatusCode(500, new { detail = "Error retrieving bills" });
+        return StatusCode(500, new { message = "Error retrieving bills" });
       }
     }
 

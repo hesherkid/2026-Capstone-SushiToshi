@@ -101,15 +101,11 @@ namespace back_end.Controllers
         /// <param name="request">The login credentials containing email and password</param>
         /// <returns>
         /// An <see cref="IActionResult"/> containing the JWT token and authentication details.
-        /// Returns HTTP 200 (OK) with the access token on successful authentication.
-        /// Returns HTTP 401 (Unauthorized) if the credentials are invalid.
-        /// Returns HTTP 403 (Forbidden) if the account is inactive or its email isn't verified yet.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during authentication.
         /// </returns>
         /// <response code="200">Returns the JWT access token and token metadata</response>
         /// <response code="401">If the email or password is invalid</response>
-        /// <response code="403">If the account is inactive, or its email isn't verified (requires_email_verification is true)</response>
-        /// <response code="429">Too many sign-in attempts from this network in the last minute</response>
+        /// <response code="403">If the account is not active or email is not confirmed</response>
+        /// <response code="429">If too many login attempts are made from the same network in a short period</response>
         /// <response code="500">If an internal error occurs during authentication</response>
         /// <remarks>
         /// Sample request:
@@ -194,15 +190,12 @@ namespace back_end.Controllers
         /// <param name="request">The registration data containing email, password, first name, and last name</param>
         /// <returns>
         /// An <see cref="IActionResult"/> indicating the result of the registration.
-        /// Returns HTTP 200 (OK) with a success message when the user is created.
-        /// Returns HTTP 400 (Bad Request) if validation fails or required fields are missing.
-        /// Returns HTTP 409 (Conflict) if the email is already in use.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during registration.
         /// </returns>
         /// <response code="200">Returns a success message when the user is created</response>
         /// <response code="400">If validation fails or required fields are missing</response>
         /// <response code="409">If the email is already registered</response>
         /// <response code="500">If an internal error occurs during registration</response>
+        /// <response code="429">If too many registration attempts are made from the same network in a short period</response>
         /// <remarks>
         /// Sample request:
         ///
@@ -297,7 +290,17 @@ namespace back_end.Controllers
             });
         }
 
-
+        /// <summary>
+        ///  Verifies a new account's email from the link in the sent email.
+        /// </summary>
+        /// <remarks>
+        /// The token works once and expires after AuthEmail:VerificationExpiryMinutes (default 24 hours).
+        /// If the link is opened twice, only one request succeeds; the other gets 400.
+        /// Rate limited like login.
+        /// </remarks>
+        /// <response code="200">Email confirmed; the user can now log in.</response>
+        /// <response code="400">The token is invalid, expired or already used.</response>
+        /// <response code="429">Too many attempts from this network in the last minute.</response>
         [HttpPost("verify-email")]
         [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto request)
@@ -345,6 +348,14 @@ namespace back_end.Controllers
             });
         }
 
+        /// <summary>
+        /// Sends a password reset link to the user's email if an account exists for the provided email.
+        /// </summary>
+        /// <remarks>
+        /// Always returns the same message, regardless of whether the email exists. Can't be used to find accounts. Accounts that only sign in with Google get no email. 
+        /// </remarks>
+        /// <response code="200">If the request is processed successfully, regardless of whether the email exists.</response>
+        /// <response code="429">Too many attempts from this network in the last minute.</response>
         [HttpPost("forgot-password")]
         [EnableRateLimiting(AuthRateLimits.EmailPolicy)]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
@@ -381,6 +392,16 @@ namespace back_end.Controllers
             });
         }
 
+        /// <summary>
+        /// Resets the user's password using a valid password reset token.
+        /// </summary>
+        /// <remarks>
+        /// New Password must be between 8 and 200 characters and not only spaces. Token works once. 
+        /// Devices already signed in stay signed in until their login token expires.
+        /// </remarks>
+        /// <response code="200">If the password is reset successfully.</response>
+        /// <response code="400">If the token is invalid or expired, or if the user is not found.</response>
+        /// <response code="429">Too many attempts from this network in the last minute.</response>
         [HttpPost("reset-password")]
         [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
@@ -431,6 +452,15 @@ namespace back_end.Controllers
             });
         }
 
+        /// <summary>
+        /// Sends a new email verification link to the user if their account requires verification.
+        /// </summary>
+        /// <remarks>
+        /// Always returns the same message, so it can't be used to find accounts. A new link cancels any
+        /// earlier unused verification link. Rate limited to 5 per minute per network.
+        /// </remarks>
+        /// <response code="200">Always, with the same message.</response>
+        /// <response code="429">Too many requests from this network in the last minute.</response>
         [HttpPost("resend-verification")]
         [EnableRateLimiting(AuthRateLimits.EmailPolicy)]
         public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationDto request)
@@ -463,6 +493,18 @@ namespace back_end.Controllers
             return Ok(new { message });
         }
 
+        /// <summary>
+        /// Signs in a user using their Google account.
+        /// </summary>
+        /// <remarks>
+        /// The user must provide a valid Google ID token obtained from the client-side Google sign-in flow.
+        /// </remarks>
+        /// <response code="200">If the sign-in is successful.</response>
+        /// <response code="400">If the request is invalid, such as missing token.</response>
+        /// <response code="401">If the Google token is invalid.</response>
+        /// <response code="403">If the Google email is not verified.</response>
+        /// <response code="429">Too many attempts from this network in the last minute.</response>
+        /// <response code="500">If there is a server error, such as missing Google client ID configuration.</response>
         [HttpPost("google")]
         [EnableRateLimiting(AuthRateLimits.SignInPolicy)]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -606,6 +648,8 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="user">The authenticated user for whom to generate the token</param>
         /// <returns>A JWT token string containing user claims and authentication information</returns>
+        /// <response code="200">If the token is successfully generated.</response>
+        /// <response code="500">If there is a server error during token generation.</response>
         /// <remarks>
         /// The generated token includes the following claims:
         /// - NameIdentifier: User's unique ID
