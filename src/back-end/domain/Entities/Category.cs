@@ -31,6 +31,10 @@ namespace back_end.domain.Entities
 
         public int per_order_limit { get; set; } = 0;
 
+        // True = per order limit is for each guest at the table, one order can have
+        //  per order limit * everyone on the table's bills (Sashimi: 30 per guest = 120 for a 4-top)
+        public bool per_order_per_guest { get; set; } = false;
+
         public OverLimitBehavior over_limit_behavior { get; set; } = OverLimitBehavior.Block;
 
         public ICollection<Menu_Item> MenuItems { get; set; } = new List<Menu_Item>();
