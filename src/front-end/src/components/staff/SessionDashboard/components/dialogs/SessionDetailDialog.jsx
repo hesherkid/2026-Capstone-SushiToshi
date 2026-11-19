@@ -30,6 +30,7 @@ import {
   Merge,
   Lock,
   LockOpen,
+  IceCreamCone,
 } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
@@ -43,6 +44,7 @@ import {
 } from "../../utils/sessionHelpers";
 import { tableLabel, isOpenBill, SeatedFor } from "../SessionColumns";
 import BillSummaryDialog from "./BillSummaryDialog";
+import SendIceCreamDialog from "./SendIceCreamDialog";
 
 const SectionHeading = ({ icon: Icon, children }) => (
   <Typography
@@ -122,10 +124,11 @@ const guestCheckChips = (bill) => {
 };
 
 const SessionDetailDialog = () => {
-  const { selectedSession: session, closeSession, requestsBySession, lockGuestCounts, isSaving } =
+  const { selectedSession: session, closeSession, requestsBySession, lockGuestCounts, refreshData, isSaving } =
     useSession();
   const actions = useSessionDashboardActions();
   const [summaryBillId, setSummaryBillId] = useState(null);
+  const [iceCreamBill, setIceCreamBill] = useState(null);
 
   const requests = session ? requestsBySession[session.session_id] || [] : [];
   const bills = sortBillsByStatus(session?.bills || []);
@@ -215,6 +218,9 @@ const SessionDetailDialog = () => {
                       {bills.map((bill) => {
                         const open = isOpenBill(bill);
                         const checks = guestCheckChips(bill);
+                        // The guests want free ice cream: staff ask which flavours and send it once, even after closing
+                        const iceCreamToSend =
+                          bill.wants_ice_cream && !bill.ice_cream_sent_at && String(bill.status).toUpperCase() !== "CANCELLED";
                         return (
                           <Paper
                             key={bill.bill_id}
@@ -242,6 +248,17 @@ const SessionDetailDialog = () => {
                                   {open && bill.requested_at && (
                                     <Chip icon={<Bell size={14} />} label="Asked for bill" color="warning" size="small" />
                                   )}
+                                  {iceCreamToSend && (
+                                    <Chip icon={<IceCreamCone size={14} />} label="Wants ice cream" color="warning" size="small" />
+                                  )}
+                                  {bill.ice_cream_sent_at && (
+                                    <Chip
+                                      icon={<IceCreamCone size={14} />}
+                                      label={`Ice cream sent ${formatTime(bill.ice_cream_sent_at)}`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
                                   {open && bill.counts_locked && (
                                     <Tooltip title="Staff checked the number of guests. Guests can't change it on their phones.">
                                       <Chip icon={<Lock size={14} />} label="Guests locked" size="small" variant="outlined" />
@@ -253,6 +270,18 @@ const SessionDetailDialog = () => {
                                 </Typography>
                               </Box>
                               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                                {iceCreamToSend && (
+                                  <Button
+                                    variant="contained"
+                                    color="warning"
+                                    disableElevation
+                                    aria-label={`Send free ice cream for ${bill.bill_name}`}
+                                    onClick={() => setIceCreamBill(bill)}
+                                    startIcon={<IceCreamCone size={18} />}
+                                  >
+                                    Send Ice Cream
+                                  </Button>
+                                )}
                                 {open && (
                                   <Button
                                     variant="contained"
@@ -431,6 +460,14 @@ const SessionDetailDialog = () => {
         sessionId={session?.session_id}
         billId={summaryBillId}
         onClose={() => setSummaryBillId(null)}
+      />
+
+      <SendIceCreamDialog
+        open={iceCreamBill !== null}
+        sessionId={session?.session_id}
+        bill={iceCreamBill}
+        onClose={() => setIceCreamBill(null)}
+        onSent={refreshData}
       />
     </>
   );

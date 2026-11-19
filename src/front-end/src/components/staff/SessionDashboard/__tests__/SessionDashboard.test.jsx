@@ -331,6 +331,89 @@ describe("Session dashboard", () => {
     );
   });
 
+  // Guests ask for ice cream with the bill; it comes after, so staff can send it once the bill is closed
+  const withIceCream = (bill) => {
+    const changed = sessions.map((s) =>
+      s.session_id === 8 ? { ...s, bills: [{ ...s.bills[0], ...bill }] } : s,
+    );
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url.startsWith("/Dashboard/sessions")
+        ? Promise.resolve({ status: 200, data: changed })
+        : defaultGet(url),
+    );
+  };
+
+  it("lets staff pick flavours and send the free ice cream, even after closing the bill", async () => {
+    withIceCream({ status: "Closed", total_guests: 4, wants_ice_cream: true });
+    await renderDashboard();
+
+    fireEvent.click(rowAction("#8", "View session"));
+    const sessionDialog = await screen.findByRole("dialog");
+    expect(within(sessionDialog).getByText("Wants ice cream")).toBeInTheDocument();
+    fireEvent.click(
+      within(sessionDialog).getByRole("button", { name: "Send free ice cream for Lee" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Lee/ });
+    const send = within(dialog).getByRole("button", { name: /to kitchen/ });
+    expect(send).toBeDisabled(); // nothing chosen yet
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Vanilla" }));
+    expect(send).toHaveTextContent("Send 3 to kitchen");
+    fireEvent.click(send);
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/Bill/send-ice-cream/80",
+        { flavours: [{ flavour: "Mango", quantity: 2 }, { flavour: "Vanilla", quantity: 1 }] },
+        { params: { session_id: 8 } },
+      ),
+    );
+  });
+
+  it("stops at one ice cream each for the party", async () => {
+    withIceCream({ total_guests: 2, wants_ice_cream: true });
+    await renderDashboard();
+
+    fireEvent.click(rowAction("#8", "View session"));
+    const sessionDialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(sessionDialog).getByRole("button", { name: "Send free ice cream for Lee" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Lee/ });
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Strawberry" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Chocolate" }));
+    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Fewer Chocolate" }));
+    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeEnabled();
+  });
+
+  it("shows when the ice cream was sent, with nothing more to send", async () => {
+    withIceCream({ wants_ice_cream: true, ice_cream_sent_at: "2026-10-18T04:30:00Z" });
+    await renderDashboard();
+
+    fireEvent.click(rowAction("#8", "View session"));
+    const sessionDialog = await screen.findByRole("dialog");
+    expect(within(sessionDialog).getByText(/Ice cream sent/)).toBeInTheDocument();
+    expect(within(sessionDialog).queryByText("Wants ice cream")).not.toBeInTheDocument();
+    expect(
+      within(sessionDialog).queryByRole("button", { name: /free ice cream/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no ice cream button when nobody asked for it", async () => {
+    await renderDashboard();
+
+    fireEvent.click(rowAction("#8", "View session"));
+    const sessionDialog = await screen.findByRole("dialog");
+    expect(
+      within(sessionDialog).queryByRole("button", { name: /free ice cream/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("lets staff fix a bill's guest counts", async () => {
     await renderDashboard();
 
