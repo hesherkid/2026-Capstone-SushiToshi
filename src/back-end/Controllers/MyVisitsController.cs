@@ -55,6 +55,10 @@ namespace back_end.Controllers
         /// - Bills are the ones the customer's orders went on; if they didn't order, every bill at the table.
         ///   Cancelled bills are left out. Totals include gratuity and GST, worked out as on the bill.
         /// </remarks>
+        /// <response code="200">The visits (empty if none have ended yet).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">A guest account, or the account doesn't have the Customer role.</response>
+        /// <response code="500">The visits couldn't be loaded.</response>
         [HttpGet]
         [ProducesResponseType(typeof(List<PastVisitDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

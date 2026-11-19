@@ -26,11 +26,6 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves all locations from the database.
     /// </summary>
-    /// <returns>
-    /// An <see cref="ActionResult"/> containing a collection of <see cref="LocationResponseDto"/> objects.
-    /// Returns HTTP 200 (OK) with the list of all locations on success.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the list of all locations</response>
     /// <response code="500">If an internal error occurs while retrieving locations</response>
     /// <remarks>
@@ -45,8 +40,6 @@ namespace back_end.Controllers
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<LocationResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-
-
     public async Task<ActionResult<IEnumerable<LocationResponseDto>>> GetAllLocations()
     {
       try
@@ -65,14 +58,10 @@ namespace back_end.Controllers
     /// Creates a new location in the system.
     /// </summary>
     /// <param name="createLocation">The location data including name, address, city, province, postal code, and phone number</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the created <see cref="LocationResponseDto"/> object.
-    /// Returns HTTP 200 (OK) with the created location on success.
-    /// Returns HTTP 409 (Conflict) if a location with the same name already exists.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-    /// </returns>
     /// <response code="200">Returns the newly created location</response>
-    /// <response code="409">If a location with the same name already exists</response>
+    /// <response code="400">If the request data is invalid</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
     /// <response code="500">If an internal error occurs while creating the location</response>
     /// <remarks>
     /// Sample request:
@@ -80,12 +69,13 @@ namespace back_end.Controllers
     ///     POST /api/location
     ///     {
     ///         "name": "Downtown Branch",
-    ///         "address_One": "123 Main Street",
-    ///         "address_Two": "Suite 100",
+    ///         "address_one": "123 Main Street",
+    ///         "address_two": "Suite 100",
     ///         "city": "Calgary",
     ///         "province": "Alberta",
-    ///         "postal_Code": "T2P 1A1",
-    ///         "phone_Number": "403-555-0100"
+    ///         "province_code": "AB",
+    ///         "postal_code": "T2P 1A1",
+    ///         "phone_number": "4035550100"
     ///     }
     ///
     /// Creates a new location with the provided information.
@@ -93,7 +83,9 @@ namespace back_end.Controllers
     [Authorize(Policy = "adminOnly")]
     [HttpPost]
     [ProducesResponseType(typeof(LocationResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateLocation(
         LocationCreateDto createLocation
@@ -128,12 +120,6 @@ namespace back_end.Controllers
     /// Retrieves a specific location by its ID.
     /// </summary>
     /// <param name="locationId">The unique identifier of the location</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the <see cref="Location"/> object.
-    /// Returns HTTP 200 (OK) with the location details on success.
-    /// Returns HTTP 404 (Not Found) if the location doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the location with the specified ID</response>
     /// <response code="404">If the location is not found</response>
     /// <response code="500">If an internal error occurs while retrieving the location</response>
@@ -177,13 +163,10 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="locationId">The unique identifier of the location to update</param>
     /// <param name="locationUpdate">The updated location data</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the updated location object.
-    /// Returns HTTP 200 (OK) with the updated location on success.
-    /// Returns HTTP 404 (Not Found) if the location doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the update.
-    /// </returns>
     /// <response code="200">Returns the updated location</response>
+    /// <response code="400">If the request data is invalid</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
     /// <response code="404">If the location is not found</response>
     /// <response code="500">If an internal error occurs while updating the location</response>
     /// <remarks>
@@ -192,12 +175,13 @@ namespace back_end.Controllers
     ///     PUT /api/location/123
     ///     {
     ///         "name": "Downtown Branch",
-    ///         "address_One": "123 Main Street",
-    ///         "address_Two": "Suite 100",
+    ///         "address_one": "123 Main Street",
+    ///         "address_two": "Suite 100",
     ///         "city": "Calgary",
     ///         "province": "Alberta",
-    ///         "postal_Code": "T2P 1A1",
-    ///         "phone_Number": "403-555-0100"
+    ///         "province_code": "AB",
+    ///         "postal_code": "T2P 1A1",
+    ///         "phone_number": "4035550100"
     ///     }
     ///
     /// All fields in the request body are optional - only provided fields will be updated.
@@ -205,6 +189,9 @@ namespace back_end.Controllers
     [Authorize(Policy = "adminOnly")]
     [HttpPut("{locationId}")]
     [ProducesResponseType(typeof(LocationResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateLocation(
@@ -272,10 +259,14 @@ namespace back_end.Controllers
     /// restaurant's public addresses, so they aren't in the public location list.
     /// </remarks>
     /// <response code="200">The location's networks (empty when the check is off).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
     /// <response code="404">The location doesn't exist.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpGet("{locationId}/wifi-check")]
     [ProducesResponseType(typeof(WifiCheckResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetWifiCheck(int locationId)
     {
@@ -300,11 +291,15 @@ namespace back_end.Controllers
     /// </remarks>
     /// <response code="200">Saved; returns the location's networks.</response>
     /// <response code="400">An entry isn't a valid address or network, or there are too many.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
     /// <response code="404">The location doesn't exist.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpPut("{locationId}/wifi-check")]
     [ProducesResponseType(typeof(WifiCheckResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateWifiCheck(int locationId, WifiCheckUpdateDto request)
     {
@@ -346,13 +341,10 @@ namespace back_end.Controllers
     /// Deletes a location from the system.
     /// </summary>
     /// <param name="locationId">The unique identifier of the location to delete</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> indicating the result of the operation.
-    /// Returns HTTP 200 (OK) with a success message when the location is deleted.
-    /// Returns HTTP 404 (Not Found) if the location doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during deletion.
-    /// </returns>
     /// <response code="200">Returns a success message when the location is deleted</response>
+    /// <response code="400">The location has an open dining session, tables, or table groups.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
     /// <response code="404">If the location is not found</response>
     /// <response code="500">If an internal error occurs while deleting the location</response>
     /// <remarks>
@@ -361,12 +353,13 @@ namespace back_end.Controllers
     ///     DELETE /api/location/123
     ///
     /// Permanently removes the location from the database.
-    /// This may also remove associated menu-location relationships depending on cascade settings.
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
     [HttpDelete("{locationId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeleteLocation(int locationId)
@@ -438,33 +431,28 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="locationId">The unique identifier of the location</param>
     /// <param name="menuLocationCreate">The menu location data containing the menu ID</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> indicating the result of the operation.
-    /// Returns HTTP 200 (OK) with a success message when the menu is added to the location.
-    /// Returns HTTP 404 (Not Found) if the location or menu doesn't exist.
-    /// Returns HTTP 409 (Conflict) if the menu is already assigned to this location.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-    /// </returns>
     /// <response code="200">Returns a success message when the menu is added to the location</response>
-    /// <response code="404">If the location or menu is not found</response>
-    /// <response code="409">If the menu is already assigned to this location</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
+    /// <response code="404">If the location is not found</response>
     /// <response code="500">If an internal error occurs while adding the menu to the location</response>
     /// <remarks>
     /// Sample request:
     ///
-    ///     POST /api/menulocation/123/menus
+    ///     POST /api/location/123/menus
     ///     {
     ///         "menu_id": 456
     ///     }
     ///
     /// Creates an association between the specified menu and location.
-    /// The menu and location must both exist before creating the association.
+    /// The location must exist. An unknown menu or one already assigned here will result in an error.
     /// </remarks>
     [Authorize(Policy = "adminOnly")]
     [HttpPost("{locationId}/menus")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddMenuToLocation(
        int locationId,
@@ -502,19 +490,15 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="locationId">The unique identifier of the location</param>
     /// <param name="menuId">The unique identifier of the menu</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> indicating the result of the operation.
-    /// Returns HTTP 200 (OK) with a success message when the menu is removed from the location.
-    /// Returns HTTP 404 (Not Found) if the menu-location association doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during removal.
-    /// </returns>
     /// <response code="200">Returns a success message when the menu is removed from the location</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
     /// <response code="404">If the menu-location association is not found</response>
     /// <response code="500">If an internal error occurs while removing the menu from the location</response>
     /// <remarks>
     /// Sample request:
     ///
-    ///     DELETE /api/menulocation/123/menus/456
+    ///     DELETE /api/location/123/menus/456
     ///
     /// Removes the association between the specified menu and location.
     /// The menu itself is not deleted, only its assignment to this location.
@@ -522,6 +506,8 @@ namespace back_end.Controllers
     [Authorize(Policy = "adminOnly")]
     [HttpDelete("{locationId}/menus/{menuId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RemoveMenuFromLocation(
@@ -552,19 +538,13 @@ namespace back_end.Controllers
     /// Retrieves all menu IDs associated with a specific location.
     /// </summary>
     /// <param name="locationId">The unique identifier of the location</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of menu IDs.
-    /// Returns HTTP 200 (OK) with the list of menu IDs on success.
-    /// Returns HTTP 404 (Not Found) if the location doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the list of menu IDs for the specified location</response>
     /// <response code="404">If the location is not found</response>
     /// <response code="500">If an internal error occurs while retrieving menu IDs</response>
     /// <remarks>
     /// Sample request:
     ///
-    ///     GET /api/menulocation/123/menus
+    ///     GET /api/location/123/menus
     ///
     /// Returns an array of menu IDs associated with the specified location.
     /// </remarks>

@@ -12,7 +12,7 @@ namespace back_end.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class MenuAssignmentController : Controller
+    public class MenuAssignmentController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<MenuAssignmentController> _logger;
@@ -47,14 +47,10 @@ namespace back_end.Controllers
         /// Creates a new menu item assignment, associating an item with a menu at a specific price.
         /// </summary>
         /// <param name="assignmentData">The assignment data including menu ID, item ID, price, limits, and status</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the created <see cref="MenuAssignmentResponseDto"/> object.
-        /// Returns HTTP 200 (OK) with the created assignment on success.
-        /// Returns HTTP 400 (Bad Request) if validation fails.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-        /// </returns>
         /// <response code="200">Returns the newly created menu item assignment</response>
         /// <response code="400">If the request data is invalid</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
         /// <response code="409">If there is a conflict, such as a duplicate assignment</response>
         /// <response code="500">If an internal error occurs while creating the assignment</response>
         /// <remarks>
@@ -91,6 +87,8 @@ namespace back_end.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(MenuAssignmentResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateMenuItemAssignment(
@@ -168,15 +166,10 @@ namespace back_end.Controllers
         /// <param name="itemId">The unique identifier of the menu item</param>
         /// <param name="updateData">The updated assignment data</param>
         /// <param name="locationId">Optional location override; omit for the default (all locations) assignment</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuAssignmentResponseDto"/> object.
-        /// Returns HTTP 200 (OK) with the updated assignment on success.
-        /// Returns HTTP 400 (Bad Request) if the limit validation fails.
-        /// Returns HTTP 404 (Not Found) if the menu item assignment doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the update.
-        /// </returns>
         /// <response code="200">Returns the updated menu item assignment</response>
         /// <response code="400">If limit validation fails</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Caller isn't staff. Or staff are changing another location's price, which only admins can do.</response>
         /// <response code="404">If the menu item assignment is not found</response>
         /// <response code="500">If an internal error occurs while updating the assignment</response>
         /// <remarks>
@@ -207,6 +200,8 @@ namespace back_end.Controllers
         [HttpPut("{menuId}/{itemId}")]
         [ProducesResponseType(typeof(MenuAssignmentResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateMenuItemAssignment(
@@ -273,13 +268,10 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="menuId">The unique identifier of the menu</param>
         /// <param name="itemId">The unique identifier of the menu item</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> indicating the result of the operation.
-        /// Returns HTTP 200 (OK) with a success message when the assignment is deleted.
-        /// Returns HTTP 404 (Not Found) if the menu item assignment doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during deletion.
-        /// </returns>
+        /// <param name="locationId">Optional; omit to remove the item from the menu everywhere.</param>
         /// <response code="200">Returns a success message when the assignment is deleted</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Caller isn't staff. Or staff are changing another location's price, which only admins can do.</response>
         /// <response code="404">If the menu item assignment is not found</response>
         /// <response code="500">If an internal error occurs while deleting the assignment</response>
         /// <remarks>
@@ -289,10 +281,13 @@ namespace back_end.Controllers
         ///
         /// This endpoint requires Admin or Staff role authorization.
         /// Removes the association between the specified menu item and menu.
+        /// Without location_id, the item is removed from the menu everywhere (the default row and every location's override; admins only).
         /// </remarks>
         [Authorize(Policy = "staffOnly")]
         [HttpDelete("{menuId}/{itemId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteMenuItemAssignment(
@@ -331,13 +326,10 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="sourceMenuId">The unique identifier of the menu to copy from</param>
         /// <param name="newMenuName">The name for the new menu</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> summary of the new menu.
-        /// Returns HTTP 200 (OK) with the list of copied assignments on success.
-        /// Returns HTTP 409 (Conflict) if a menu with the new name already exists.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
-        /// </returns>
         /// <response code="200">Returns menu_id, name, assignments_copied</response>
+        /// <response code="400">If the request is invalid, such as missing the new menu name</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
         /// <response code="409">If a menu with the specified name already exists</response>
         /// <response code="500">If an internal error occurs while copying the menu</response>
         /// <remarks>
@@ -351,11 +343,13 @@ namespace back_end.Controllers
         [Authorize(Policy = "adminOnly")]   // copies every location's overrides
         [HttpPost("copy-menu/{sourceMenuId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CopyMenuAssignments(
-            int sourceMenuId,
-[FromQuery(Name = "new_menu_name")] string newMenuName
+        public async Task<IActionResult> CopyMenuAssignments(int sourceMenuId,
+            [FromQuery(Name = "new_menu_name")] string newMenuName
         )
         {
             try

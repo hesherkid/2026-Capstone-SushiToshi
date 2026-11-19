@@ -26,8 +26,30 @@ namespace back_end.Controllers
             _env = env;
         }
 
+        /// <summary>
+        /// Offers a menu at a location.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PUT /api/menulocation/menu/3/location/1
+        ///
+        /// Safe to repeat: if the menu is already offered there, nothing changes and it still returns 200.
+        /// </remarks>
+        /// <response code="200">The menu is offered at the location.</response>
+        /// <response code="400">menuId or locationId isn't a positive number.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The menu or location doesn't exist.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [Authorize(Policy = "adminOnly")]
         [HttpPut("menu/{menuId}/location/{locationId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddLocationToMenu(
             [FromRoute] int menuId = -1,
             [FromRoute] int locationId = -1
@@ -69,8 +91,31 @@ namespace back_end.Controllers
             }
         }
 
+        /// <summary>
+        /// Stops offering a menu at a location.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     DELETE /api/menulocation/menu/3/location/1
+        ///
+        /// Refused while that location has Pending or Processing order items on this menu.
+        /// Open orders at other locations don't block it. The menu itself isn't deleted.
+        /// </remarks>
+        /// <response code="200">The menu is no longer offered at the location.</response>
+        /// <response code="400">An ID isn't a positive number, or the location has open orders on this menu.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The menu isn't offered at that location.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("menu/{menuId}/location/{locationId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteLocationToMenu(
         [FromRoute] int menuId,
         [FromRoute] int locationId

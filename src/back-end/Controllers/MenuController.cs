@@ -23,10 +23,31 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Creates a new menu.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/menu/createmenu
+        ///     { "name": "Dinner", "description": "Evening menu", "start_time": "17:00:00",
+        ///       "end_time": "22:00:00", "is_active": true }
+        ///
+        /// Menu names must be unique. The new menu isn't offered anywhere until it's added to a 
+        /// location (POST /api/location/{id}/menus).
+        /// </remarks>
+        /// <response code="200">Returns the new menu.</response>
+        /// <response code="400">The body is missing or invalid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="409">A menu with that name already exists.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [Authorize(Policy = "adminOnly")]
         [HttpPost("createmenu")]
         [ProducesResponseType(typeof(MenuResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateMenu(
@@ -64,24 +85,18 @@ namespace back_end.Controllers
         }
 
         /// <summary>
-        /// Retrieves all active menus from the database.
+        /// Retrieves every menu, active or not, with the locations each is offered at.
         /// </summary>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of <see cref="MenuResponseDto"/> objects.
-        /// Returns HTTP 200 (OK) with the list of active menus on success.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the list of all active menus</response>
+        /// <response code="200">Returns every menu, active or not</response>
         /// <response code="500">If an internal error occurs while retrieving menus</response>
         /// <remarks>
         /// Sample request:
         ///
         ///     GET /api/menu
         ///
-        /// Returns only menus where Is_active is true.
+        /// Returns all menus; is_active shows which are in use. For a location's active menus, 
+        /// use GET /api/menu/location/{id}.
         /// </remarks>
-        //GET: api/menu
-        //Get all Menus
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<MenuResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -104,12 +119,6 @@ namespace back_end.Controllers
         /// Retrieves a specific menu by its ID.
         /// </summary>
         /// <param name="id">The unique identifier of the menu</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing the <see cref="MenuResponseDto"/> object.
-        /// Returns HTTP 200 (OK) with the menu details on success.
-        /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
         /// <response code="200">Returns the menu with the specified ID</response>
         /// <response code="404">If the menu is not found</response>
         /// <response code="500">If an internal error occurs while retrieving the menu</response>
@@ -120,8 +129,6 @@ namespace back_end.Controllers
         ///
         /// Returns the complete menu details for the specified ID.
         /// </remarks>
-        //GET: api/menu/{id}
-        //Get a specific menu by its ID number
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(MenuResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -150,12 +157,7 @@ namespace back_end.Controllers
         /// Retrieves all available items from a specific menu with their details, prices, categories, and tags.
         /// </summary>
         /// <param name="menu">The unique identifier of the menu</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of menu item objects with pricing and tag information.
-        /// Returns HTTP 200 (OK) with the list of available menu items on success.
-        /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
+        /// <param name="locationId">The optional location ID to filter menu items by location</param>
         /// <response code="200">Returns the list of available menu items with details, prices, categories, and tags</response>
         /// <response code="404">If the menu is not found</response>
         /// <response code="500">If an internal error occurs while retrieving menu items</response>
@@ -171,9 +173,6 @@ namespace back_end.Controllers
         /// - Category and item limits per person / per order
         /// - Associated tags with names and color codes
         /// </remarks>
-        //GET: api/menu/{menu}/items
-        //Get items from a Menu
-        //Display: price, category and diet tags
         [HttpGet("{menu}/item")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -253,12 +252,6 @@ namespace back_end.Controllers
         /// Retrieves all active menus for a specific location.
         /// </summary>
         /// <param name="location">The unique identifier of the location</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of <see cref="Menu"/> objects.
-        /// Returns HTTP 200 (OK) with the list of active menus on success.
-        /// Returns HTTP 404 (Not Found) if the location doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
         /// <response code="200">Returns the list of active menus for the specified location</response>
         /// <response code="404">If the location is not found</response>
         /// <response code="500">If an internal error occurs while retrieving menus</response>
@@ -307,14 +300,9 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="menuId">The unique identifier of the menu to update</param>
         /// <param name="menuData">The updated menu data</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="MenuResponseDto"/> object.
-        /// Returns HTTP 200 (OK) with the updated menu on success.
-        /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
-        /// Returns HTTP 409 (Conflict) if a menu with the new name already exists.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the update.
-        /// </returns>
         /// <response code="200">Returns the updated menu</response>
+        /// <response code="401">If the user is not authenticated</response>
+        /// <response code="403">If the user is not authorized</response>
         /// <response code="404">If the menu is not found</response>
         /// <response code="409">If a menu with the same name already exists</response>
         /// <response code="500">If an internal error occurs while updating the menu</response>
@@ -337,6 +325,8 @@ namespace back_end.Controllers
         [Authorize(Policy = "adminOnly")]
         [HttpPut("{menuId}")]
         [ProducesResponseType(typeof(MenuResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -397,14 +387,9 @@ namespace back_end.Controllers
         /// Deletes a menu from the system.
         /// </summary>
         /// <param name="menuId">The unique identifier of the menu to delete</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> indicating the result of the operation.
-        /// Returns HTTP 200 (OK) with a success message when the menu is deleted.
-        /// Returns HTTP 404 (Not Found) if the menu doesn't exist.
-        /// Returns HTTP 409 (Conflict) if the menu has past dining sessions or orders.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during deletion.
-        /// </returns>
         /// <response code="200">Returns a success message when the menu is deleted</response>
+        /// <response code="401">If the user is not authenticated</response>
+        /// <response code="403">If the user is not authorized</response>
         /// <response code="404">If the menu is not found</response>
         /// <response code="409">If the menu has past dining sessions or orders</response>
         /// <response code="500">If an internal error occurs while deleting the menu</response>
@@ -420,6 +405,8 @@ namespace back_end.Controllers
         [Authorize(Policy = "adminOnly")]
         [HttpDelete("{menuId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

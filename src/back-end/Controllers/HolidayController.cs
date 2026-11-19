@@ -30,8 +30,15 @@ namespace back_end.Controllers
         /// <summary>
         /// Provinces, loadable years and defaults for the Holidays page.
         /// </summary>
+        /// <response code="200">Returns the holiday options for the Holidays page.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [HttpGet("options")]
         [ProducesResponseType(typeof(HolidayOptionsResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetOptions()
         {
             var years = _holidays.GetAllowedYears();
@@ -51,9 +58,17 @@ namespace back_end.Controllers
         /// <remarks>
         ///     GET /api/holidays?province=AB&amp;year=2026&amp;status=Pending
         /// </remarks>
+        /// <response code="200">Returns the list of holidays for the specified province, year, and status.</response>
+        /// <response code="400">If the request parameters are invalid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<HolidayResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> List([FromQuery] string? province, [FromQuery] int? year, [FromQuery] HolidayStatus? status) =>
           Run("listing holidays", async () =>
           {
@@ -71,9 +86,20 @@ namespace back_end.Controllers
         /// Dates already stored are skipped whatever their status, so loading again is safe.
         /// Nothing affects prices until it is approved.
         /// </remarks>
+        /// <response code="200">Returns the result of the import, including added and skipped holidays.</response>
+        /// <response code="400">If the request parameters are invalid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="409">Another admin saved the same dates at the same time.</response>
+        /// <response code="500">An unexpected error occurred.</response>
+        /// <response code="502">Holiday API couldn't be reached or returned an error.</response>
         [HttpPost("import")]
         [ProducesResponseType(typeof(HolidayImportResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(StatusCodes.Status502BadGateway)]
         public Task<IActionResult> Import(HolidayImportRequest request) =>
           Run("loading holidays", async () =>
@@ -94,15 +120,33 @@ namespace back_end.Controllers
         ///     POST /api/holidays/approve
         ///     { "ids": [12, 13, 14] }
         /// </remarks>
+        /// <response code="200">How many holidays were approved (IDs that don't exist are ignored).</response>
+        /// <response code="400">If the request parameters are invalid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [HttpPost("approve")]
         [ProducesResponseType(typeof(HolidayReviewResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> Approve(HolidayReviewRequest request) => Review(request, HolidayStatus.Approved);
 
         /// <summary>
         /// Rejects holidays. They stay listed (so loading again won't bring them back) but don't affect prices.
         /// </summary>
+        /// <response code="200">How many holidays were rejected (IDs that don't exist are ignored).</response>
+        /// <response code="400">If the request parameters are invalid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [HttpPost("reject")]
         [ProducesResponseType(typeof(HolidayReviewResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> Reject(HolidayReviewRequest request) => Review(request, HolidayStatus.Rejected);
 
         /// <summary>
@@ -112,9 +156,19 @@ namespace back_end.Controllers
         ///     POST /api/holidays
         ///     { "province_code": "AB", "date": "2026-12-26", "name": "Boxing Day" }
         /// </remarks>
+        /// <response code="201">Returns the created holiday.</response>
+        /// <response code="400">Unknown province, or the name is blank.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="409">If there is already a holiday on that date.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [HttpPost]
         [ProducesResponseType(typeof(HolidayResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> Create(HolidayCreateRequest request) =>
           Run("adding a holiday", async () =>
           {
@@ -130,10 +184,21 @@ namespace back_end.Controllers
         /// <summary>
         /// Changes a holiday's date or name. Its status stays the same.
         /// </summary>
+        /// <response code="200">Returns the updated holiday.</response>
+        /// <response code="404">If the holiday was not found.</response>
+        /// <response code="409">There is already a holiday on that date.</response>
+        /// <response code="400">The name is blank.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [HttpPut("{holidayId}")]
         [ProducesResponseType(typeof(HolidayResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> Update(int holidayId, HolidayUpdateRequest request) =>
           Run("updating a holiday", async () =>
           {
@@ -146,9 +211,17 @@ namespace back_end.Controllers
         /// <summary>
         /// Deletes a holiday. Unlike rejecting, loading the year again would bring it back as Pending.
         /// </summary>
+        /// <response code="204">If the holiday was successfully deleted.</response>
+        /// <response code="404">If the holiday was not found.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The caller isn’t an admin.</response>
+        /// <response code="500">An unexpected error occurred.</response>
         [HttpDelete("{holidayId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public Task<IActionResult> Delete(int holidayId) =>
           Run("deleting a holiday", async () =>
             await _holidays.DeleteAsync(holidayId)

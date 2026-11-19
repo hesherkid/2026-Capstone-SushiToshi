@@ -187,17 +187,21 @@ namespace back_end.Controllers
         /// that blocks would reject it, so the menu can stop guests before they hit an error.
         /// </summary>
         /// <param name="sessionId">The dining session</param>
-        /// <response code="200">The remaining amounts; null means no blocking limit</response>
-        /// <response code="403">If a customer asks about a table they aren't seated at</response>
-        /// <response code="404">If the session doesn't exist</response>
         /// <remarks>
         /// Uses the same headcount and usage as adding items to an order. Per-order limits are
         /// for a new order. Limits set to Charge don't count in session_left: going over them is
         /// allowed and billed at extra_price. free_left says how many are left before that.
         /// </remarks>
+        /// <response code="200">The remaining amounts; null means no blocking limit</response>
+        /// <response code="401">If the user is not authenticated</response>
+        /// <response code="403">If a customer asks about a table they aren't seated at</response>
+        /// <response code="404">If the session doesn't exist</response>
         [Authorize]
         [HttpGet("session/{sessionId}/limits")]
         [ProducesResponseType(typeof(SessionOrderLimitsDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetSessionOrderLimits(int sessionId)
         {
             if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
@@ -266,19 +270,6 @@ namespace back_end.Controllers
         /// Creates a new order for a dining session, with its items.
         /// </summary>
         /// <param name="orderData">The order creation data including session ID, bill ID and items</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing the created <see cref="OrderResponseDto"/> object.
-        /// Returns HTTP 200 (OK) with the created order on success.
-        /// Returns HTTP 400 (Bad Request) if there are no items, or an item is unavailable or over a limit.
-        /// Returns HTTP 404 (Not Found) if the session or bill doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-        /// </returns>
-        /// <response code="200">Returns the newly created order and its items</response>
-        /// <response code="400">If there are no items, an item can't be ordered, or the bill isn't open</response>
-        /// <response code="401">If the caller isn't signed in</response>
-        /// <response code="403">If the caller isn't staff or seated at the session's table</response>
-        /// <response code="404">If the dining session is not found or the bill is not found/open</response>
-        /// <response code="500">If an internal error occurs while creating the order</response>
         /// <remarks>
         /// Sample request:
         ///
@@ -300,9 +291,20 @@ namespace back_end.Controllers
         /// That includes staff ordering for a table; the bill says who pays.
         /// The bill must be in 'Open' status to create an order.
         /// </remarks>
+        /// <response code="200">Returns the newly created order and its items</response>
+        /// <response code="400">If there are no items, an item can't be ordered, or the bill isn't open</response>
+        /// <response code="401">If the caller isn't signed in</response>
+        /// <response code="403">If the caller isn't staff or seated at the session's table</response>
+        /// <response code="404">If the dining session is not found or the bill is not found/open</response>
+        /// <response code="500">If an internal error occurs while creating the order</response>
         [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<OrderResponseDto>> CreateOrder(OrderCreateDto orderData)
         {
             try
@@ -409,7 +411,8 @@ namespace back_end.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while creating the order", error = ex.Message });
+                _logger.LogError(ex, "An error occurred while creating the order.");
+                return StatusCode(500, new { message = "An error occurred while creating the order" });
             }
         }
 
@@ -417,11 +420,29 @@ namespace back_end.Controllers
         /// <summary>
         /// Approves a pending order and transitions to Approved/Processing status.
         /// </summary>
+        /// <param name="orderId">The order to approve</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PATCH /api/order/123/approve
+        ///
+        /// Records who approved it and when. Items already cancelled stay cancelled, with their
+        /// quantity set to 0.
+        /// </remarks>
+        /// <response code="200">The approved order and its items.</response>
+        /// <response code="400">The order isn't pending, or has no items.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The table is at another location, or the caller isn't staff.</response>
+        /// <response code="404">The order doesn't exist.</response>
+        /// <response code="500">The order couldn't be approved.</response>
         [HttpPatch("{orderId}/approve")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ApproveOrder(int orderId)
         {
             try
@@ -520,27 +541,28 @@ namespace back_end.Controllers
         /// <summary>
         /// Marks an order item as completed/delivered.
         /// </summary>
+        /// <param name="orderId">The order the item is on</param>
         /// <param name="itemId">The unique identifier of the order item to complete</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="OrderItemResponseDto"/> object.
-        /// Returns HTTP 200 (OK) with the completed order item on success.
-        /// Returns HTTP 404 (Not Found) if the order item doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
-        /// </returns>
-        /// <response code="200">Returns the completed order item</response>
-        /// <response code="404">If the order item is not found</response>
-        /// <response code="500">If an internal error occurs while completing the order item</response>
         /// <remarks>
         /// Sample request:
         ///
-        ///     POST /api/order/items/123/complete
+        ///     PATCH /api/order/items/123/complete
         ///
         /// This endpoint requires Admin or Staff role authorization.
         /// The order item status will be updated to 'Delivered' and the completion timestamp will be set.
         /// </remarks>
+        /// <response code="200">The delivered item.</response>
+        /// <response code="400">The item isn't approved (Processing).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The table is at another location, or the caller isn't staff.</response>
+        /// <response code="404">The order doesn't exist, or the item isn't on it.</response>
+        /// <response code="500">The item couldn't be updated.</response>
         [HttpPatch("{orderId}/items/{itemId}/complete")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderItemResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CompleteOrderItem(int orderId, int itemId)
@@ -598,11 +620,28 @@ namespace back_end.Controllers
         /// <summary>
         /// Marks the whole order as delivered/completed.
         /// </summary>
+        /// <param name="orderId">The order to complete</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PATCH /api/order/123/complete
+        ///
+        /// Items already delivered or cancelled keep their status and time.
+        /// </remarks>
+        /// <response code="200">The completed order and its items.</response>
+        /// <response code="400">The order isn't approved (Processing).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The table is at another location, or the caller isn't staff.</response>
+        /// <response code="404">The order doesn't exist.</response>
+        /// <response code="500">The order couldn't be completed.</response>
         [HttpPatch("{orderId}/complete")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CompleteOrder(int orderId)
         {
             try
@@ -676,23 +715,10 @@ namespace back_end.Controllers
         /// Cancels a pending order.
         /// </summary>
         /// <param name="orderId">The unique identifier of the order to cancel</param>
-        /// <returns>
-        /// An <see cref="IActionResult"/> containing the updated <see cref="OrderResponseDto"/> object.
-        /// Returns HTTP 200 (OK) with the cancelled order on success.
-        /// Returns HTTP 400 (Bad Request) if the order has already been delivered.
-        /// Returns HTTP 404 (Not Found) if the order doesn't exist.
-        /// Returns HTTP 409 (Conflict) if the order is not in pending status.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during cancellation.
-        /// </returns>
-        /// <response code="200">Returns the cancelled order</response>
-        /// <response code="400">If the order has already been delivered and cannot be cancelled</response>
-        /// <response code="404">If the order is not found</response>
-        /// <response code="409">If the order is not in pending status</response>
-        /// <response code="500">If an internal error occurs while cancelling the order</response>
         /// <remarks>
         /// Sample request:
         ///
-        ///     POST /api/order/123/cancel
+        ///     PATCH /api/order/123/cancel
         ///
         /// This endpoint requires authentication.
         /// Only orders with 'Pending' status can be cancelled.
@@ -700,10 +726,19 @@ namespace back_end.Controllers
         /// Staff can cancel any order at their location. Customers (guests included) can cancel
         /// orders they placed, while they're seated at that table.
         /// </remarks>
+        /// <response code="200">Returns the cancelled order</response>
+        /// <response code="400">If the order has already been delivered and cannot be cancelled</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Staff at another location, or a customer cancelling an order they didn't
+        /// place or at a table they've left.</response>
+        /// <response code="404">If the order is not found</response>
+        /// <response code="409">If the order is not in pending status</response>
+        /// <response code="500">If an internal error occurs while cancelling the order</response>
         [HttpPatch("{orderId}/cancel")]
         [Authorize]
         [ProducesResponseType(typeof(OrderResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -789,19 +824,6 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="orderId">The order to add items to (from POST api/Order)</param>
         /// <param name="items">The list of items to add to the order. Duplicate item IDs are combined</param>
-        /// <returns>
-        /// Returns HTTP 200 (OK) with the lines added, including any over-limit charges.
-        /// Returns HTTP 400 (Bad Request) if the payload is invalid, the order is not pending,
-        /// an item is unavailable, or a Block limit would be exceeded (nothing is added).
-        /// Returns HTTP 404 (Not Found) if the order doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs.
-        /// </returns>
-        /// <response code="200">Items added; response lists each line and any over-limit charges</response>
-        /// <response code="400">Invalid request or a limit was exceeded; errors lists every problem</response>
-        /// <response code="401">If the caller isn't signed in</response>
-        /// <response code="403">If the caller isn't staff or seated at the order's table</response>
-        /// <response code="404">If the order is not found</response>
-        /// <response code="500">If an internal error occurs while adding items</response>
         /// <remarks>
         /// Sample request:
         ///
@@ -821,10 +843,18 @@ namespace back_end.Controllers
         /// Staff edits to pending orders (PATCH) are not limit-checked, so staff can override.
         /// Guests can't add items once the bill has been requested ("Ready for Bill"); staff can.
         /// </remarks>
+        /// <response code="200">Items added; response lists each line and any over-limit charges</response>
+        /// <response code="400">Invalid request or a limit was exceeded; errors lists every problem</response>
+        /// <response code="401">If the caller isn't signed in</response>
+        /// <response code="403">If the caller isn't staff or seated at the order's table</response>
+        /// <response code="404">If the order is not found</response>
+        /// <response code="500">If an internal error occurs while adding items</response>
         [HttpPost("{orderId}/items")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddOrderItems(int orderId, [FromBody] List<OrderItemCreateDto> items)
@@ -933,11 +963,35 @@ namespace back_end.Controllers
         /// <summary>
         /// Updates order items before approval (pending orders only).
         /// </summary>
+        /// <param name="orderId">The order the item is on</param>
+        /// <param name="itemId">The order item (order_item_id) to change</param>
+        /// <param name="updateData">The fields to change; leave out the ones to keep</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PATCH /api/order/123/items/456
+        ///     { "quantity": 3, "price_at_time": 4.50 }
+        ///
+        /// - quantity: 1–99, or 0 for an item that's already cancelled.
+        /// - price_at_time: 0 or more.
+        /// - status: an order status name (e.g. Processing, Cancelled). Delivered and Cancelled set the
+        ///   completion time; moving back to Pending or Processing clears it.
+        /// - Not limit-checked, so staff can override limits.
+        /// </remarks>
+        /// <response code="200">The updated item.</response>
+        /// <response code="400">The order isn't pending, or a quantity, price or status isn't valid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The table is at another location, or the caller isn't staff.</response>
+        /// <response code="404">The order doesn't exist, or the item isn't on it.</response>
+        /// <response code="500">The item couldn't be updated.</response>
         [HttpPatch("{orderId}/items/{itemId}")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(OrderItemResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateOrderItem(
                    int orderId,
                    int itemId,
@@ -981,7 +1035,7 @@ namespace back_end.Controllers
 
                 if (!isOwner && !isStaff)
                 {
-                    return Forbid("You don't have permission to modify this order");
+                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "You don't have permission to modify this order" });
                 }
 
                 // Can only modify pending orders
@@ -1033,7 +1087,7 @@ namespace back_end.Controllers
                 {
                     if (!isStaff)
                     {
-                        return Forbid("Only staff can modify prices");
+                        return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only staff can modify prices" });
                     }
                     if (updateData.PriceAtTime.Value < 0)
                     {
@@ -1047,7 +1101,7 @@ namespace back_end.Controllers
                 {
                     if (!isStaff)
                     {
-                        return Forbid("Only staff can modify order item status");
+                        return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only staff can modify order item status" });
                     }
                     if (!Enum.TryParse<OrderStatus>(updateData.Status, true, out var newStatus))
                     {
@@ -1098,19 +1152,22 @@ namespace back_end.Controllers
         /// </summary>
         /// <param name="locationId">Optional location filter</param>
         /// <param name="deliveredOpenSessionsOnly"> When true, delivered orders are only returned if the dining session is still open(Ended_At = null) Pending and Processing orders are always returned</param>
-        /// <returns>The list of filtered orders</returns>
-        /// <response code="200">Returns the list of filtered orders</response>
-        /// <response code="500">If an internal error occurs while retrieving orders</response>
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/order/all-orders?location_id=1&delivered_open_sessions_only=true
+        ///     GET /api/order/all-orders?location_id=1&amp;delivered_open_sessions_only=true
         ///
         /// Returns all orders filtered by the specified location and delivered open sessions.
         /// </remarks>
+        /// <response code="200">The orders (can be empty).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff, or a staff member with no working location.</response>
+        /// <response code="500">The orders couldn't be loaded.</response>
         [HttpGet("all-orders")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<object>>> GetAllOrdersByLocation([FromQuery(Name = "location_id")] int? locationId = null, [FromQuery(Name = "delivered_open_sessions_only")] bool deliveredOpenSessionsOnly = false)
         {
@@ -1160,17 +1217,22 @@ namespace back_end.Controllers
         /// <param name="locationId">Optional location filter. Staff always get their current location</param>
         /// <param name="tableNumber">Optional table number. Matches single tables and tables in a group</param>
         /// <param name="name">Optional guest or bill name. Partial, case-insensitive match</param>
-        /// <returns>Orders placed in the range, newest first, in the same shape as all-orders</returns>
         /// <remarks>
         /// Sample request:
         ///
         ///     GET /api/order/history?from=2026-10-20&amp;to=2026-10-26&amp;table_number=14&amp;name=lee
         ///
         /// </remarks>
+        /// <response code="200">The orders placed in the range (can be empty).</response>
+        /// <response code="400">from or to is missing or invalid, to is in the future, or the range is over 31 days.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff, or a staff member with no working location.</response>
+        /// <response code="500">The orders couldn't be loaded.</response>
         [HttpGet("history")]
         [Authorize(Policy = "staffOnly")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<object>>> GetOrderHistory(
@@ -1295,39 +1357,27 @@ namespace back_end.Controllers
         };
 
         /// <summary>
-        /// Retrieves detailed information about a specific order including all items and customer details.
+        /// One order with its items and totals.
         /// </summary>
-        /// <param name="id">The unique identifier of the order</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing detailed order information.
-        /// Returns HTTP 200 (OK) with the order details on success.
-        /// Returns HTTP 404 (Not Found) if the order doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the detailed order information</response>
-        /// <response code="401">If the caller isn't signed in</response>
-        /// <response code="403">If the caller isn't staff or seated at the order's table</response>
-        /// <response code="404">If the order is not found</response>
-        /// <response code="500">If an internal error occurs while retrieving the order</response>
+        /// <param name="id">The order</param>
         /// <remarks>
         /// Sample request:
         ///
         ///     GET /api/order/789
         ///
-        /// Returns comprehensive order details including:
-        /// - Order metadata (ID, session, bill, status, timestamps)
-        /// - Customer information (name and email)
-        /// - Complete list of ordered items with:
-        ///   - Item details (ID, name, quantity, price)
-        ///   - Individual item status
-        ///   - Item subtotals
-        /// - Total order cost
+        /// Includes who placed it (user_id, user_name), each item with its price and line total,
+        /// and the order total.
         /// </remarks>
-        //GET: api/order/{id}
-        //Get an Order with all the items
+        /// <response code="200">The order.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">A customer asking about an order on someone else's bill.</response>
+        /// <response code="404">The order doesn't exist.</response>
+        /// <response code="500">The order couldn't be loaded.</response>
         [HttpGet("{id}")]
         [Authorize]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<object>> GetOrderById(int id)
@@ -1394,40 +1444,38 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving order {OrderId}", id);
-                return StatusCode(500, new { message = "An error occurred while retrieving the order", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while retrieving the order" });
             }
         }
 
         /// <summary>
-        /// Retrieves all orders associated with a specific dining session.
+        /// The orders at a dining session, oldest first.
         /// </summary>
-        /// <param name="sessionId">The unique identifier of the dining session</param>
-        /// <returns>
-        /// An <see cref="ActionResult"/> containing a collection of order summary objects.
-        /// Returns HTTP 200 (OK) with the list of orders sorted by creation time on success.
-        /// Returns HTTP 404 (Not Found) if the session doesn't exist.
-        /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-        /// </returns>
-        /// <response code="200">Returns the list of all orders for the specified session</response>
-        /// <response code="404">If the session is not found</response>
-        /// <response code="500">If an internal error occurs while retrieving orders</response>
+        /// <param name="sessionId">The dining session</param>
+        /// <param name="billId">Optional bill filter for staff. Customers always get their own bill</param>
         /// <remarks>
         /// Sample request:
         ///
-        ///     GET /api/order/session/456
+        ///     GET /api/order/session/456?bill_id=12
         ///
-        /// Returns order summaries including:
-        /// - Order and customer details (ID, name)
-        /// - Order status
-        /// - Item count and total price
-        /// - Timestamps (created and completed)
-        /// 
-        /// Orders are sorted by creation date in ascending order (oldest first).
+        /// - Staff see every order at the table. Customers see every order on their own bill,
+        ///   including ones others placed for them, or nothing if they aren't on a bill yet.
+        /// - item_total is the number of lines on the order; order_total counts only add-ons
+        ///   and over-limit charges.
         /// </remarks>
-        //GET: api/order/session/{id}
-        //Get all orders tied to a Dining Session
+        /// <response code="200">The orders (can be empty).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not seated at this table, staff at another location, or a customer asking
+        /// for another bill.</response>
+        /// <response code="404">The session doesn't exist.</response>
+        /// <response code="500">The orders couldn't be loaded.</response>
         [HttpGet("session/{sessionId}")]
         [Authorize]
+        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<object>>> GetOrderBySession(int sessionId, [FromQuery(Name = "bill_id")] int? billId = null)
         {
             try
@@ -1520,15 +1568,32 @@ namespace back_end.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving orders for session {SessionId}", sessionId);
-                return StatusCode(500, new { message = "An error occurred while retrieving session orders", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while retrieving session orders" });
             }
         }
 
-        //GET: api/Order/active-session/orders
-        //Get all of the orders for the user's ACTIVE session
-        //Add an optional Bill ID parameter in-case of bill splitting
+        /// <summary>
+        /// The signed-in user's own orders at the table they're seated at now, newest first.
+        /// </summary>
+        /// <param name="billId">Optional: only orders on this bill</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/order/active-session/orders?bill_id=12
+        ///
+        /// Only orders this user placed; for everything on their bill use GET /api/order/session/{sessionId}.
+        /// price_at_time is 0 except on add-ons and over-limit lines.
+        /// </remarks>
+        /// <response code="200">The orders (can be empty).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="404">The user isn't seated at an open table.</response>
+        /// <response code="500">The orders couldn't be loaded.</response>
         [HttpGet("active-session/orders")]
         [Authorize]
+        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<object>>> GetOrdersForActiveSession([FromQuery(Name = "bill_id")] int? billId = null)
         {
 
