@@ -331,11 +331,12 @@ describe("Session dashboard", () => {
     );
   });
 
-  // Guests ask for ice cream with the bill; it comes after, so staff can send it once the bill is closed
-  const withIceCream = (bill) => {
-    const changed = sessions.map((s) =>
-      s.session_id === 8 ? { ...s, bills: [{ ...s.bills[0], ...bill }] } : s,
-    );
+  // Guests say yes on their bill; staff send it for the bills that are ready, even after closing
+  const LEE = sessions[1].bills[0];
+  const PARK = { bill_id: 81, bill_name: "Park", status: "Open", total_guests: 2, adult_count: 2 };
+
+  const withBills = (bills) => {
+    const changed = sessions.map((s) => (s.session_id === 8 ? { ...s, bills } : s));
     const defaultGet = api.get.getMockImplementation();
     api.get.mockImplementation((url) =>
       url.startsWith("/Dashboard/sessions")
@@ -344,18 +345,29 @@ describe("Session dashboard", () => {
     );
   };
 
-  it("lets staff pick flavours and send the free ice cream, even after closing the bill", async () => {
-    withIceCream({ status: "Closed", total_guests: 4, wants_ice_cream: true });
+  const openSession = async () => {
+    fireEvent.click(rowAction("#8", "View session"));
+    return screen.findByRole("dialog");
+  };
+
+  const openIceCream = async (saidYes) => {
+    const sessionDialog = await openSession();
+    expect(within(sessionDialog).getByText("Table wants ice cream")).toBeInTheDocument();
+    expect(within(sessionDialog).getByText(`${saidYes} said yes. Ask the table which flavours.`)).toBeInTheDocument();
+    fireEvent.click(
+      within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }),
+    );
+    return screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
+  };
+
+  it("lets staff pick flavours and send ice cream for the bill that said yes, even after closing it", async () => {
+    withBills([{ ...LEE, status: "Closed", wants_ice_cream: true }, PARK]);
     await renderDashboard();
 
-    fireEvent.click(rowAction("#8", "View session"));
-    const sessionDialog = await screen.findByRole("dialog");
-    expect(within(sessionDialog).getByText("Wants ice cream")).toBeInTheDocument();
-    fireEvent.click(
-      within(sessionDialog).getByRole("button", { name: "Free ice cream for Lee" }),
-    );
-
-    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Lee/ });
+    const dialog = await openIceCream("Lee");
+    // Lee said yes, so it starts ticked; Park can be added
+    expect(within(dialog).getByRole("checkbox", { name: /Lee/ })).toBeChecked();
+    expect(within(dialog).getByRole("checkbox", { name: /Park/ })).not.toBeChecked();
     const send = within(dialog).getByRole("button", { name: /to kitchen/ });
     expect(send).toBeDisabled(); // nothing chosen yet
     fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
@@ -365,52 +377,67 @@ describe("Session dashboard", () => {
     fireEvent.click(send);
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith(
-        "/Bill/send-ice-cream/80",
-        { flavours: [{ flavour: "Mango", quantity: 2 }, { flavour: "Vanilla", quantity: 1 }] },
-        { params: { session_id: 8 } },
-      ),
+      expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
+        bill_ids: [80],
+        flavours: [{ flavour: "Mango", quantity: 2 }, { flavour: "Vanilla", quantity: 1 }],
+      }),
     );
   });
 
-  it("stops at one ice cream each for the party", async () => {
-    withIceCream({ total_guests: 2, wants_ice_cream: true });
+  it("caps at one each for the ticked bills, and lets staff add another party", async () => {
+    withBills([{ ...LEE, total_guests: 1, wants_ice_cream: true }, PARK]);
     await renderDashboard();
 
-    fireEvent.click(rowAction("#8", "View session"));
-    const sessionDialog = await screen.findByRole("dialog");
-    fireEvent.click(
-      within(sessionDialog).getByRole("button", { name: "Free ice cream for Lee" }),
-    );
-
-    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Lee/ });
+    const dialog = await openIceCream("Lee");
     fireEvent.click(within(dialog).getByRole("button", { name: "More Strawberry" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Chocolate" }));
-    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeDisabled();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Fewer Chocolate" }));
-    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeDisabled(); // Lee is 1 guest
+
+    // Park's 2 guests want some too
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /Park/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    expect(within(dialog).getByRole("button", { name: "More Vanilla" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: /to kitchen/ }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
+        bill_ids: [80, 81],
+        flavours: [{ flavour: "Strawberry", quantity: 1 }, { flavour: "Mango", quantity: 2 }],
+      }),
+    );
   });
 
-  it("shows when the ice cream was sent, with nothing more to send", async () => {
-    withIceCream({ wants_ice_cream: true, ice_cream_sent_at: "2026-10-18T04:30:00Z" });
+  it("gives a bill that says yes later its own turn", async () => {
+    withBills([
+      { ...LEE, wants_ice_cream: true, ice_cream_sent_at: "2026-10-18T04:30:00Z" },
+      { ...PARK, wants_ice_cream: true },
+    ]);
     await renderDashboard();
 
-    fireEvent.click(rowAction("#8", "View session"));
-    const sessionDialog = await screen.findByRole("dialog");
+    const dialog = await openIceCream("Park");
+    // Lee already had theirs, so only Park is offered
+    expect(within(dialog).queryByRole("checkbox", { name: /Lee/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("checkbox", { name: /Park/ })).toBeChecked();
+  });
+
+  it("shows which bills had their ice cream, with nothing more to send", async () => {
+    withBills([{ ...LEE, wants_ice_cream: true, ice_cream_sent_at: "2026-10-18T04:30:00Z" }, PARK]);
+    await renderDashboard();
+
+    const sessionDialog = await openSession();
     expect(within(sessionDialog).getByText(/Ice cream sent/)).toBeInTheDocument();
-    expect(within(sessionDialog).queryByText("Wants ice cream")).not.toBeInTheDocument();
+    expect(within(sessionDialog).queryByText("Table wants ice cream")).not.toBeInTheDocument();
     expect(
-      within(sessionDialog).queryByRole("button", { name: /free ice cream/ }),
+      within(sessionDialog).queryByRole("button", { name: /free ice cream/i }),
     ).not.toBeInTheDocument();
   });
 
   it("offers no ice cream button when nobody asked for it", async () => {
     await renderDashboard();
 
-    fireEvent.click(rowAction("#8", "View session"));
-    const sessionDialog = await screen.findByRole("dialog");
+    const sessionDialog = await openSession();
     expect(
-      within(sessionDialog).queryByRole("button", { name: /free ice cream/ }),
+      within(sessionDialog).queryByRole("button", { name: /free ice cream/i }),
     ).not.toBeInTheDocument();
   });
 

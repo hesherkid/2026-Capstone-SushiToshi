@@ -306,20 +306,33 @@ public class BillControllerTests : IDisposable
         Bill(LeeBill).Closed_At.Should().BeNull();
     }
 
-    // ---- Free ice cream: guests say yes with the bill, staff choose flavours and send it ----
+    // ---- Free ice cream: guests say yes on their bill; staff send it for the bills that are ready ----
+
+    private const int ParkBill = 902; // a second party at the same table
+
+    private void AddParkBill(int guests = 3)
+    {
+        _context.Bills.Add(new Billing { Bill_Id = ParkBill, Session_Id = TableSession, Bill_Name = "Park", Adult_Count = guests, Total_Count = guests });
+        _context.SaveChanges();
+    }
 
     private async Task GuestsWantIceCream() =>
         await Bills(SeatedGuest, "Customer").RequestBill(TableSession, LeeBill, iceCream: true);
 
-    private static SendIceCreamDto Scoops(params (string Flavour, int Quantity)[] flavours) =>
-        new() { Flavours = flavours.Select(f => new IceCreamFlavourDto { Flavour = f.Flavour, Quantity = f.Quantity }).ToList() };
+    private static SendIceCreamDto Scoops(int[] billIds, params (string Flavour, int Quantity)[] flavours) => new()
+    {
+        BillIds = billIds.ToList(),
+        Flavours = flavours.Select(f => new IceCreamFlavourDto { Flavour = f.Flavour, Quantity = f.Quantity }).ToList(),
+    };
 
-    private Task<IActionResult> Send(SendIceCreamDto request, int sessionId = TableSession, int billId = LeeBill) =>
-        Bills().SendIceCream(sessionId, billId, request);
+    private static SendIceCreamDto ForLee(params (string Flavour, int Quantity)[] flavours) => Scoops(new[] { LeeBill }, flavours);
 
-    private SessionOrder IceCreamOrder() =>
+    private Task<IActionResult> Send(SendIceCreamDto request, int sessionId = TableSession) =>
+        Bills().SendIceCream(sessionId, request);
+
+    private List<SessionOrder> IceCreamOrders() =>
         _context.SessionOrders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).ThenInclude(mi => mi.Category)
-            .Single(o => o.Bill_Id == LeeBill);
+            .Where(o => o.session_id == TableSession).OrderBy(o => o.Order_Id).ToList();
 
     [Fact]
     public async Task SendIceCream_AddsAFreePendingOrderWithALinePerFlavour()
@@ -327,10 +340,11 @@ public class BillControllerTests : IDisposable
         await GuestsWantIceCream();
 
         // Vanilla listed first, but the kitchen gets them in the usual flavour order
-        (await Send(Scoops(("Vanilla", 1), ("mango", 1), ("Chocolate", 0)))).Should().BeOfType<OkObjectResult>();
+        (await Send(ForLee(("Vanilla", 1), ("mango", 1), ("Chocolate", 0)))).Should().BeOfType<OkObjectResult>();
 
-        var order = IceCreamOrder();
+        var order = IceCreamOrders().Should().ContainSingle().Subject;
         order.Status.Should().Be(OrderStatus.Pending);
+        order.Bill_Id.Should().Be(LeeBill);
         order.User_Id.Should().Be(StaffHere);
         order.OrderItems.Select(oi => (oi.MenuItem.Name, oi.Quantity)).Should().Equal(
             ("Mango Ice Cream", 1), ("Vanilla Ice Cream", 1));
@@ -341,11 +355,84 @@ public class BillControllerTests : IDisposable
         Bill(LeeBill).Ice_Cream_Sent_At.Should().NotBeNull();
     }
 
+    // Lee says yes first; Park asks for their bill later and still gets a turn
+    [Fact]
+    public async Task SendIceCream_ABillThatSaysYesLater_GetsItsOwnTurn()
+    {
+        AddParkBill();
+        await GuestsWantIceCream();
+        await Send(ForLee(("Mango", 2)));
+
+        Bill(ParkBill).Wants_Ice_Cream = true;
+        _context.SaveChanges();
+        (await Send(Scoops(new[] { ParkBill }, ("Vanilla", 3)))).Should().BeOfType<OkObjectResult>();
+
+        IceCreamOrders().Select(o => o.Bill_Id).Should().Equal(LeeBill, ParkBill);
+        Bill(ParkBill).Ice_Cream_Sent_At.Should().NotBeNull();
+    }
+
+    // Staff can serve a party that hasn't asked yet at the same visit; then it's done for them too
+    [Fact]
+    public async Task SendIceCream_ForSeveralBills_SharesTheCapAndMarksThemAll()
+    {
+        AddParkBill(guests: 3);
+        await GuestsWantIceCream(); // Lee (2 guests) said yes; Park hasn't asked
+
+        // Lee 2 + Park 3 = 5
+        (await Send(Scoops(new[] { LeeBill, ParkBill }, ("Mango", 6)))).Should().BeOfType<BadRequestObjectResult>();
+        (await Send(Scoops(new[] { LeeBill, ParkBill }, ("Mango", 3), ("Strawberry", 2)))).Should().BeOfType<OkObjectResult>();
+
+        var order = IceCreamOrders().Should().ContainSingle().Subject;
+        order.Bill_Id.Should().Be(LeeBill); // the bill that said yes
+        order.OrderItems.Sum(oi => oi.Quantity).Should().Be(5);
+        Bill(LeeBill).Ice_Cream_Sent_At.Should().NotBeNull();
+        Bill(ParkBill).Ice_Cream_Sent_At.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task SendIceCream_GoesOnTheBillThatAskedForIt()
+    {
+        AddParkBill();
+        Bill(ParkBill).Wants_Ice_Cream = true;
+        Bill(ParkBill).Requested_At = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        await Send(Scoops(new[] { LeeBill, ParkBill }, ("Vanilla", 2)));
+
+        IceCreamOrders().Single().Bill_Id.Should().Be(ParkBill);
+    }
+
+    [Fact]
+    public async Task SendIceCream_SendingAgainForTheSameBills_DoesNothing()
+    {
+        await GuestsWantIceCream();
+
+        await Send(ForLee(("Mango", 2)));
+        var again = await Send(ForLee(("Vanilla", 1)));
+
+        again.Should().BeOfType<OkObjectResult>();
+        IceCreamOrders().Should().ContainSingle()
+            .Which.OrderItems.Should().ContainSingle().Which.MenuItem.Name.Should().Be("Mango Ice Cream");
+    }
+
+    [Fact]
+    public async Task SendIceCream_IncludingABillThatAlreadyHadIt_Returns400()
+    {
+        AddParkBill();
+        await GuestsWantIceCream();
+        await Send(ForLee(("Mango", 2)));
+
+        (await Send(Scoops(new[] { LeeBill, ParkBill }, ("Vanilla", 1)))).Should().BeOfType<BadRequestObjectResult>();
+
+        IceCreamOrders().Should().ContainSingle();
+        Bill(ParkBill).Ice_Cream_Sent_At.Should().BeNull();
+    }
+
     [Fact]
     public async Task SendIceCream_MakesEachFlavourItsOwnItem_OnNoMenu()
     {
         await GuestsWantIceCream();
-        await Send(Scoops(("Strawberry", 1)));
+        await Send(ForLee(("Strawberry", 1)));
 
         var items = _context.MenuItems.Where(i => i.Category.Category_name == FreeIceCream.CategoryName).ToList();
         items.Select(i => i.Name).Should().BeEquivalentTo(
@@ -360,22 +447,10 @@ public class BillControllerTests : IDisposable
         await GuestsWantIceCream();
         OkValue<BillResponse>(await Bills().CloseBill(TableSession, LeeBill));
 
-        (await Send(Scoops(("Chocolate", 2)))).Should().BeOfType<OkObjectResult>();
+        (await Send(ForLee(("Chocolate", 2)))).Should().BeOfType<OkObjectResult>();
 
-        IceCreamOrder().Status.Should().Be(OrderStatus.Pending);
+        IceCreamOrders().Single().Status.Should().Be(OrderStatus.Pending);
         Bill(LeeBill).Status.Should().Be(BillStatus.Closed);
-    }
-
-    [Fact]
-    public async Task SendIceCream_OnlySendsOnce()
-    {
-        await GuestsWantIceCream();
-
-        await Send(Scoops(("Mango", 2)));
-        var again = await Send(Scoops(("Vanilla", 1)));
-
-        again.Should().BeOfType<OkObjectResult>();
-        IceCreamOrder().OrderItems.Should().ContainSingle().Which.MenuItem.Name.Should().Be("Mango Ice Cream");
     }
 
     [Theory]
@@ -387,27 +462,39 @@ public class BillControllerTests : IDisposable
     {
         await GuestsWantIceCream();
 
-        (await Send(Scoops((flavour, quantity)))).Should().BeOfType<BadRequestObjectResult>();
+        (await Send(ForLee((flavour, quantity)))).Should().BeOfType<BadRequestObjectResult>();
 
         _context.SessionOrders.Any().Should().BeFalse();
         Bill(LeeBill).Ice_Cream_Sent_At.Should().BeNull();
     }
 
     [Fact]
-    public async Task SendIceCream_OnACancelledBill_Returns400()
+    public async Task SendIceCream_RefusesNoBills_BillsFromAnotherTable_AndCancelledBills()
     {
-        await GuestsWantIceCream();
+        (await Send(Scoops(Array.Empty<int>(), ("Mango", 1)))).Should().BeOfType<BadRequestObjectResult>();
+        (await Send(Scoops(new[] { OtherLocationBill }, ("Mango", 1)))).Should().BeOfType<BadRequestObjectResult>();
+
         Bill(LeeBill).Status = BillStatus.Cancelled;
         _context.SaveChanges();
+        (await Send(ForLee(("Mango", 1)))).Should().BeOfType<BadRequestObjectResult>();
 
-        (await Send(Scoops(("Mango", 1)))).Should().BeOfType<BadRequestObjectResult>();
+        _context.SessionOrders.Any().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SendIceCream_AfterTheTableLeft_Returns400()
+    {
+        _context.Bills.Add(new Billing { Bill_Id = 903, Session_Id = EndedSession, Bill_Name = "Late", Total_Count = 2, Status = BillStatus.Closed });
+        _context.SaveChanges();
+
+        (await Send(Scoops(new[] { 903 }, ("Mango", 1)), EndedSession)).Should().BeOfType<BadRequestObjectResult>();
         _context.SessionOrders.Any().Should().BeFalse();
     }
 
     [Fact]
     public async Task SendIceCream_StaffAtAnotherLocation_Returns403()
     {
-        ShouldBeOtherLocation(await Send(Scoops(("Mango", 1)), OtherLocationSession, OtherLocationBill));
+        ShouldBeOtherLocation(await Send(Scoops(new[] { OtherLocationBill }, ("Mango", 1)), OtherLocationSession));
         _context.SessionOrders.Any().Should().BeFalse();
     }
 

@@ -8,9 +8,9 @@ using back_end.domain.Entities;
 
 namespace back_end.Helpers
 {
-    // The free ice cream guests get when they ask for the bill. Guests only say yes or no; staff ask
-    // the table which flavours and how many, then send them to the kitchen as a $0 order
-    // (BillController.SendIceCream). Each flavour is its own menu item, so analytics count them.
+    // The free ice cream guests get when they ask for the bill. Guests only say yes or no on their
+    // bill; staff ask the table which flavours and how many, then send them for every bill that's
+    // ready as one $0 order (BillController.SendIceCream). Each flavour is its own menu item, so analytics count them.
     // The items are on no menu, so guests can't order them, and their Dessert category stays off
     // the customer menu because the menu hides empty sections.
     public static class FreeIceCream

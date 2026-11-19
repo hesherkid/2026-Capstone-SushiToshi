@@ -104,7 +104,7 @@ back_end.Dtos.PricingProfileRequest: apply_holiday_pricing, gratuity_min_party_s
 back_end.Dtos.PricingProfileResponse: apply_holiday_pricing, gratuity_min_party_size, gratuity_rate, leftover_fee, location_id, pricing_profile_id, rates, source, tax_rate, updated_at, weekend_days
 back_end.Dtos.PricingRateDto: adult_price, child_price, day_type, senior_price, toddler_price
 back_end.Dtos.ResetPasswordRequestDto: new_password
-back_end.Dtos.SendIceCreamDto: flavours
+back_end.Dtos.SendIceCreamDto: bill_ids, flavours
 back_end.Dtos.ServiceRequestCreateDto: notes
 back_end.Dtos.ServiceRequestResponseDto: claimed_at, claimed_by, completed_at, created_at, notes, request_id, requested_by, session_id, status, table_id, table_number
 back_end.Dtos.SessionIdResponseDto: session_id

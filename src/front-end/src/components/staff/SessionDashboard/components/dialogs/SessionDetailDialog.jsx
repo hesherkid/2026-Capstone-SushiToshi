@@ -128,7 +128,7 @@ const SessionDetailDialog = () => {
     useSession();
   const actions = useSessionDashboardActions();
   const [summaryBillId, setSummaryBillId] = useState(null);
-  const [iceCreamBill, setIceCreamBill] = useState(null);
+  const [iceCreamOpen, setIceCreamOpen] = useState(false);
 
   const requests = session ? requestsBySession[session.session_id] || [] : [];
   const bills = sortBillsByStatus(session?.bills || []);
@@ -138,6 +138,11 @@ const SessionDetailDialog = () => {
   // Everyone still seated, and which bill they're on
   const people = session?.people || [];
   const billNameOf = (billId) => bills.find((b) => b.bill_id === billId)?.bill_name;
+  // Free ice cream: guests say yes on their bill; staff send it for the bills that are ready, once each
+  const iceCreamReady = bills.filter(
+    (b) => String(b.status).toUpperCase() !== "CANCELLED" && !b.ice_cream_sent_at,
+  );
+  const iceCreamBills = iceCreamReady.filter((b) => b.wants_ice_cream).map((b) => b.bill_name);
 
   return (
     <>
@@ -164,6 +169,45 @@ const SessionDetailDialog = () => {
                     {requests.length}
                   </Stat>
                 </Box>
+
+                {/* A bill said yes to free ice cream: ask the table which flavours, then send it for whoever's ready */}
+                {iceCreamBills.length > 0 && (
+                  <Box
+                    sx={(theme) => ({
+                      px: 2,
+                      py: 1.25,
+                      borderRadius: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      flexWrap: "wrap",
+                      bgcolor: alpha(theme.palette.info.main, 0.08),
+                    })}
+                  >
+                    <Box sx={{ flex: "1 1 200px", minWidth: 0 }}>
+                      <Typography
+                        fontWeight={600}
+                        color="info.main"
+                        sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
+                      >
+                        <IceCreamCone size={18} aria-hidden />
+                        Table wants ice cream
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {iceCreamBills.join(", ")} said yes. Ask the table which flavours.
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="outlined"
+                      color="info"
+                      aria-label="Free ice cream for the table"
+                      onClick={() => setIceCreamOpen(true)}
+                      startIcon={<IceCreamCone size={18} />}
+                    >
+                      Free Ice Cream
+                    </Button>
+                  </Box>
+                )}
 
                 {requests.length > 0 && (
                   <Box component="section">
@@ -218,9 +262,6 @@ const SessionDetailDialog = () => {
                       {bills.map((bill) => {
                         const open = isOpenBill(bill);
                         const checks = guestCheckChips(bill);
-                        // The guests want free ice cream: staff ask which flavours and send it once, even after closing
-                        const iceCreamToSend =
-                          bill.wants_ice_cream && !bill.ice_cream_sent_at && String(bill.status).toUpperCase() !== "CANCELLED";
                         return (
                           <Paper
                             key={bill.bill_id}
@@ -252,6 +293,7 @@ const SessionDetailDialog = () => {
                                     <Chip
                                       icon={<IceCreamCone size={14} />}
                                       label={`Ice cream sent ${formatTime(bill.ice_cream_sent_at)}`}
+                                      color="info"
                                       size="small"
                                       variant="outlined"
                                     />
@@ -323,47 +365,6 @@ const SessionDetailDialog = () => {
                                 </Tooltip>
                               </Box>
                             </Box>
-
-                            {/* The guests said yes to free ice cream: ask the table which flavours, then send it */}
-                            {iceCreamToSend && (
-                              <Box
-                                sx={(theme) => ({
-                                  mt: 1.5,
-                                  px: 1.5,
-                                  py: 1,
-                                  borderRadius: 1.5,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1.5,
-                                  flexWrap: "wrap",
-                                  bgcolor: alpha(theme.palette.info.main, 0.08),
-                                })}
-                              >
-                                <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={600}
-                                    color="info.main"
-                                    sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                                  >
-                                    <IceCreamCone size={16} aria-hidden />
-                                    Wants ice cream
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    Ask the table which flavours
-                                  </Typography>
-                                </Box>
-                                <Button
-                                  variant="outlined"
-                                  color="info"
-                                  aria-label={`Free ice cream for ${bill.bill_name}`}
-                                  onClick={() => setIceCreamBill(bill)}
-                                  startIcon={<IceCreamCone size={18} />}
-                                >
-                                  Free Ice Cream
-                                </Button>
-                              </Box>
-                            )}
 
                             {/* Why this bill's guest count needs a look; Edit Guests clears the guest flags */}
                             {checks.length > 0 && (
@@ -489,10 +490,11 @@ const SessionDetailDialog = () => {
       />
 
       <SendIceCreamDialog
-        open={iceCreamBill !== null}
+        open={iceCreamOpen}
         sessionId={session?.session_id}
-        bill={iceCreamBill}
-        onClose={() => setIceCreamBill(null)}
+        tableName={session ? tableLabel(session.table_numbers) : ""}
+        bills={iceCreamReady}
+        onClose={() => setIceCreamOpen(false)}
         onSent={refreshData}
       />
     </>
