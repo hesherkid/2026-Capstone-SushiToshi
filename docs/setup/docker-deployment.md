@@ -49,7 +49,7 @@ ForwardedHeaders__Enabled=true
 ForwardedHeaders__KnownNetworks__0=172.30.0.0/24   # the subnet of the compose network below
 ```
 
-Without `KnownNetworks`, the backend ignores `X-Forwarded-For`. Every guest then shares one rate limit, and the Wi-Fi check refuses everyone. The Wi-Fi check dialog warns when this happens.
+Without `KnownNetworks`, the backend ignores `X-Forwarded-For` and sees every request as coming from the proxy container. Every guest then shares one rate limit, and the Wi-Fi check can't tell guests apart. The Wi-Fi check dialog **doesn't warn** about this: it only warns when requests come from loopback, and the proxy's address isn't loopback. Instead, the dialog says "You're connecting from" a Docker address such as `172.30.0.5` and offers to add it. **Don't add it:** every request comes from that address, so the check would let everyone join from anywhere. If you see a `172.30.0.x` address there, fix `KnownNetworks` first.
 
 The proxy must **overwrite** `X-Forwarded-For` with the address it sees, not append to whatever the browser sent. By default, Caddy ignores the incoming header from clients it doesn't trust and sets its own. For nginx, see the lines in [Behind a reverse proxy](production-setup.md#behind-a-reverse-proxy). The proxy should also send `X-Forwarded-Proto` (Caddy does by default). The backend turns on HTTPS redirection in Production, and this header is how it knows the browser's request was already HTTPS.
 
@@ -93,7 +93,7 @@ Copy the backup off the server. Test restoring it on a spare machine at least on
 
 None of these are in the repo. Copy them in when you're ready to try a Docker deployment.
 
-### Backend: `src/back-end/Dockerfile`
+### Backend: `src/back-end/Dockerfile` and `src/.dockerignore`
 
 ```dockerfile
 # Build context: src/
@@ -118,6 +118,19 @@ ENTRYPOINT ["dotnet", "back-end.dll"]
 ```
 
 The .NET 9 runtime image listens on port 8080 by default.
+
+The build context is `src/`, so it also needs a `src/.dockerignore`. Without one, every build sends the frontend's `node_modules` (close to 1 GB) to Docker, and `COPY back-end/` copies your local `bin/` and `obj/` folders over the restore the image just did:
+
+```text
+front-end
+back-end.Tests
+back-end.IntegrationTests
+**/bin
+**/obj
+back-end/storage
+```
+
+This file also applies to the development database build in `docker-compose.yml`, which uses the same context. That build only needs `maria-db/`, so it still works.
 
 ### Frontend: `src/front-end/Dockerfile` and `src/front-end/.dockerignore`
 
@@ -257,5 +270,5 @@ Then work through the [pre-launch checklist](production-setup.md#7-pre-launch-ch
 - [ ] Only ports 80 and 443 are open on the server (`docker compose -f compose.prod.yml ps` shows no other published ports)
 - [ ] An uploaded menu item image shows on the customer menu
 - [ ] A QR code preview shows a readable label
-- [ ] The Wi-Fi check dialog doesn't warn that every request comes from one address
+- [ ] On the restaurant Wi-Fi, the Wi-Fi check dialog shows the restaurant's public address after "You're connecting from", not a `172.30.0.x` Docker address
 - [ ] A database backup has been taken and copied off the server
