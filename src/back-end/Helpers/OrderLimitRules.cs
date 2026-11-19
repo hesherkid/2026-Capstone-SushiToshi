@@ -7,10 +7,12 @@ namespace back_end.Helpers
     ///
     /// Two scopes, category and item limits both apply:
     ///   - Per-order: the whole table, reset for every order. Always blocks.
+    ///     Generally a flat number, with PerOrderPerGuest it's that number for each guest at the table.
+    ///     Sashimi: 30 per guest * 4 guests at the table = 120 in an order.
     ///   - Per-person: per dining session; cap = limit x headcount per age group.
     ///     Block limits are hard stops, whichever is tighter. Units over a Charge limit
     ///     (but within every Block limit) go on a separate line at Price (Charge_Reason = OverLimit).
-    ///     /// 0 = unlimited; toddler 0 = same as child (see LimitRules).
+    /// 0 = unlimited; toddler 0 = same as child (see LimitRules).
     /// </summary>
 
     public static class OrderLimitRules
@@ -21,10 +23,18 @@ namespace back_end.Helpers
             /// Used when a session has no bills yet, so limits still apply to at least one guest.
             /// </summary>
             public static readonly Headcount Fallback = new(1, 0, 0, 0);
-            public bool IsEmpty => Adults + Children + Seniors + Toddlers == 0;
+
+            /// <summary>Everyone at the table, toddlers included.</summary>
+            public int Total => Adults + Children + Seniors + Toddlers;
+
+            public bool IsEmpty => Total == 0;
         }
 
-        public sealed record Limits(int Adult, int Child, int Senior, int Toddler, int PerOrder, OverLimitBehavior Behavior);
+        /// <summary>
+        /// paramater = "PerOrderPerGuest"
+        /// True when PerOrder is for each guest, so the order's cap is PerOrder * everyone at the table.
+        /// </summary>
+        public sealed record Limits(int Adult, int Child, int Senior, int Toddler, int PerOrder, OverLimitBehavior Behavior, bool PerOrderPerGuest = false);
 
         /// <summary>
         /// Units already ordered, used to work out what is left.
@@ -63,8 +73,16 @@ namespace back_end.Helpers
 
         /// <summary>
         /// Per-order cap that always blocks, or null when there is none.
+        /// A per guest cap is multiplied by everyone at the table (at least 1)
         /// </summary>
-        public static int? PerOrderCap(Limits limits) => limits.PerOrder == 0 ? null : limits.PerOrder;
+        public static int? PerOrderCap(Limits limits, Headcount? heads = null)
+        {
+            if (limits.PerOrder == 0) return null;
+            if (!limits.PerOrderPerGuest) return limits.PerOrder;
+
+            var guests = Math.Max(1, (heads ?? Headcount.Fallback).Total);
+            return (int)Math.Min((long)limits.PerOrder * guests, int.MaxValue);
+        }
 
         /// <summary>
         /// Units the table can still order this session before a Block limit stops them, or null
@@ -104,13 +122,15 @@ namespace back_end.Helpers
         )
         {
             // Per-order limits = always block
-            var itemOrderLeft = LimitRules.Cap(item.PerOrder) - used.OrderItem;
+            var itemOrderCap = PerOrderCap(item, heads);
+            var itemOrderLeft = (itemOrderCap ?? int.MaxValue) - used.OrderItem;
             if (requested > itemOrderLeft)
-                return Fail($"{itemName}: maximum {item.PerOrder} per order ({Math.Max(0, itemOrderLeft)} left in this order).");
+                return Fail($"{itemName}: maximum {itemOrderCap} per order{PerGuestNote(item, heads)} ({Math.Max(0, itemOrderLeft)} left in this order).");
 
-            var categoryOrderLeft = LimitRules.Cap(category.PerOrder) - used.OrderCategory;
+            var categoryOrderCap = PerOrderCap(category, heads);
+            var categoryOrderLeft = (categoryOrderCap ?? int.MaxValue) - used.OrderCategory;
             if (requested > categoryOrderLeft)
-                return Fail($"{categoryName}: maximum {category.PerOrder} combined per order ({Math.Max(0, categoryOrderLeft)} left in this order).");
+                return Fail($"{categoryName}: maximum {categoryOrderCap} combined per order{PerGuestNote(category, heads)} ({Math.Max(0, categoryOrderLeft)} left in this order).");
 
             // Per-person limits for the dining session (category and item both apply)
             var categoryCap = SessionCap(category, heads);
@@ -136,6 +156,14 @@ namespace back_end.Helpers
             if (overQty > 0) lines.Add(new LimitLine(overQty, price, ChargeReason.OverLimit));
 
             return new LimitResult(lines, null);
+        }
+
+        // " (30 per guest * 4 guests)" for a per-guest cap, so guests see where the number comes from
+        private static string PerGuestNote(Limits limits, Headcount heads)
+        {
+            if (!limits.PerOrderPerGuest) return string.Empty;
+            var guests = Math.Max(1, heads.Total);
+            return $" ({limits.PerOrder} per guest x {guests} guest{(guests == 1 ? "" : "s")})";
         }
 
         private static LimitResult Fail(string message) => new(Array.Empty<LimitLine>(), message);

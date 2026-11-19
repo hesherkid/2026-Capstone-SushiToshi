@@ -19,10 +19,9 @@ namespace back_end.domain.Seeders
     ///   - Leftovers are a flat fee per table on the bill, not per item.
     ///
     /// Limits (0 = unlimited; toddler 0 = same as child):
-    ///   - Per-order limits apply to each item type, set from the category config below.
-    ///   - Chop Chop nigiri adds a per-person limit of 2 per dining session.
-    ///   - Sashimi (30 per order) and Hot Stone (1 per person) are category limits, set in CategorySeeder.
-    ///
+    ///   - Nothing has a per-order limit. Chop Chop Nigiri is limited to 2 per person per dining session.
+    ///   - "2 per order" or "1 per order" on the dine in menu is the serving size and not a cap.
+    ///   - Sashimi (30 per guest in each order) and Hot Stone (1 per person) are category limits, set in CategorySeeder.
     /// Item names must be unique, so items that appear in more than one section
     /// carry their section in the name "Salmon Sashimi", "Salmon Nigiri".
     /// </summary>
@@ -40,15 +39,15 @@ namespace back_end.domain.Seeders
         private static readonly Dictionary<string, CategoryConfig> CategoryConfigs = new()
         {
             // AYCE
-            ["Sashimi"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m), // 30 per order is a category limit
-            ["Nigiri"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, OverLimitPrice: 0m),
-            ["Maki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, OverLimitPrice: 0m),
-            ["Rolls"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, OverLimitPrice: 0m),
-            ["Temaki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, OverLimitPrice: 0m),
+            ["Sashimi"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m), // 30 per guest per order is a category limit
+            ["Nigiri"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Maki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Rolls"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Temaki"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
             ["Hot Stone"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 5.00m),
             ["Cooked/Hot"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
-            ["Kitchen"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 1, OverLimitPrice: 0m),
-            ["Deep Fried"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 2, OverLimitPrice: 0m),
+            ["Kitchen"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
+            ["Deep Fried"] = new CategoryConfig(IsAddOn: false, PerOrderLimit: 0, OverLimitPrice: 0m),
 
             // Charged
             ["Add On"] = new CategoryConfig(IsAddOn: true, PerOrderLimit: 0, OverLimitPrice: 0m),
@@ -191,7 +190,7 @@ namespace back_end.domain.Seeders
                 new("Saba Nigiri", "Mackerel over seasoned rice", T("Raw")),
                 new("Chop Chop Nigiri", "Chopped scallop gunkan. Limit 2 per person.", T("Raw", "Contains Shellfish", "Chef's Special"))
                 {
-                    AdultLimit = 2, ChildLimit = 2, SeniorLimit = 2, TotLimit = 0   // per person per session; still 1 per order
+                    AdultLimit = 2, ChildLimit = 2, SeniorLimit = 2, TotLimit = 0, PerOrderLimit = 1   // per person per session
                 },
                 new("Masago Nigiri", "Capelin roe gunkan", T("Raw")),
                 new("Shredded Crab Nigiri", "Shredded crab gunkan", T("Cooked", "Contains Shellfish")),
