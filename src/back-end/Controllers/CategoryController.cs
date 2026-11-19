@@ -32,6 +32,7 @@ namespace back_end.Controllers
             SeniorLimit = c.senior_limit,
             ToddlerLimit = c.toddler_limit,
             PerOrderLimit = c.per_order_limit,
+            PerOrderPerGuest = c.per_order_per_guest,
             OverLimitBehavior = c.over_limit_behavior,
         };
 
@@ -89,6 +90,7 @@ namespace back_end.Controllers
         ///         "senior_limit": 5,
         ///         "toddler_limit": 2,
         ///         "per_order_limit": 0,
+        ///         "per_order_per_guest": false,
         ///         "over_limit_behavior": "Block"
         ///     }
         ///
@@ -102,6 +104,8 @@ namespace back_end.Controllers
         /// going over it always blocks, even when over_limit_behavior is Charge.
         /// over_limit_behavior: "Block" (default) refuses units past a per-guest limit; "Charge" bills them
         /// at the item's menu price on a separate over-limit line (refused if the item has no price).
+        /// per_order_per_guest = true makes per_order_limit a cap for each guest. 
+        /// The orders cap becomes per_order_limit * number of guests. 
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPost]
@@ -133,6 +137,7 @@ namespace back_end.Controllers
                     senior_limit = category.SeniorLimit!.Value,
                     toddler_limit = category.ToddlerLimit,
                     per_order_limit = category.PerOrderLimit,
+                    per_order_per_guest = category.PerOrderPerGuest,
                     over_limit_behavior = category.OverLimitBehavior
                 };
 
@@ -212,6 +217,7 @@ namespace back_end.Controllers
         ///         "senior_limit": 5,
         ///         "toddler_limit": 2,
         ///         "per_order_limit": 0,
+        ///         "per_order_per_guest": false,
         ///         "over_limit_behavior": "Block"
         ///     }
         ///
@@ -224,6 +230,8 @@ namespace back_end.Controllers
         /// going over it always blocks, even when over_limit_behavior is Charge.
         /// over_limit_behavior: "Block" refuses units past a per-guest limit; "Charge" bills them
         /// at the item's menu price on a separate over-limit line (refused if the item has no price).
+        /// per_order_per_guest = true makes per_order_limit a cap for each guest. 
+        /// The orders cap becomes per_order_limit * number of guests. 
         /// </remarks>
         [Authorize(Policy = "adminOnly")]
         [HttpPut("update-category/{categoryId}")]
@@ -259,6 +267,7 @@ namespace back_end.Controllers
                 existingCategory.senior_limit = senior;
                 existingCategory.toddler_limit = toddler;
                 existingCategory.per_order_limit = perOrder;
+                existingCategory.per_order_per_guest = updatedCategory.PerOrderPerGuest ?? existingCategory.per_order_per_guest;
                 existingCategory.Category_name = updatedCategory.Name ?? existingCategory.Category_name;
                 existingCategory.Description = updatedCategory.Description ?? existingCategory.Description;
                 existingCategory.over_limit_behavior = updatedCategory.OverLimitBehavior ?? existingCategory.over_limit_behavior;

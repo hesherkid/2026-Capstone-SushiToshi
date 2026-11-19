@@ -140,7 +140,8 @@ namespace back_end.Controllers
                     categoryName: category.Category_name,
                     requested: quantity,
                     category: new OrderLimitRules.Limits(category.adult_limit, category.child_limit,
-                        category.senior_limit, category.toddler_limit, category.per_order_limit, category.over_limit_behavior),
+                        category.senior_limit, category.toddler_limit, category.per_order_limit, category.over_limit_behavior,
+                        category.per_order_per_guest),
                     item: new OrderLimitRules.Limits(assignment.Adult_Limit, assignment.Child_limit,
                         assignment.Senior_limit, assignment.Tot_Limit, assignment.Per_Order_Limit, assignment.Over_Limit_Behavior),
                     heads: heads,
@@ -228,7 +229,7 @@ namespace back_end.Controllers
             var categoryUsed = used.GroupBy(u => u.CategoryId).ToDictionary(g => g.Key, g => g.Sum(u => u.Quantity));
 
             static OrderLimitRules.Limits CategoryLimits(Category c) => new(c.adult_limit, c.child_limit,
-                c.senior_limit, c.toddler_limit, c.per_order_limit, c.over_limit_behavior);
+                c.senior_limit, c.toddler_limit, c.per_order_limit, c.over_limit_behavior, c.per_order_per_guest);
             static OrderLimitRules.Limits ItemLimits(MenuItemAssignment a) => new(a.Adult_Limit, a.Child_limit,
                 a.Senior_limit, a.Tot_Limit, a.Per_Order_Limit, a.Over_Limit_Behavior);
 
@@ -241,7 +242,7 @@ namespace back_end.Controllers
                     {
                         ItemId = a.Item_Id,
                         CategoryId = a.MenuItem.Category_id,
-                        PerOrder = OrderLimitRules.PerOrderCap(limits),
+                        PerOrder = OrderLimitRules.PerOrderCap(limits, heads),
                         SessionLeft = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
                         FreeLeft = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, itemUsed.GetValueOrDefault(a.Item_Id)),
                         ExtraPrice = a.Price,
@@ -256,7 +257,7 @@ namespace back_end.Controllers
                         return new CategoryOrderLimitDto
                         {
                             CategoryId = c.Category_id,
-                            PerOrder = OrderLimitRules.PerOrderCap(limits),
+                            PerOrder = OrderLimitRules.PerOrderCap(limits, heads),
                             SessionLeft = OrderLimitRules.SessionLeftBeforeBlock(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
                             FreeLeft = OrderLimitRules.SessionLeftBeforeCharge(limits, heads, categoryUsed.GetValueOrDefault(c.Category_id)),
                         };
@@ -834,7 +835,8 @@ namespace back_end.Controllers
         ///     ]
         ///
         /// Limits (category and item both apply; 0 = unlimited, toddler 0 = same as child):
-        /// - Per order (whole table, resets each order): always blocks.
+        /// - Per order (whole table, resets each order): always blocks. 
+        ///     A per guest cap is the limit * everyone on the session's bills.
         /// - Per person (per dining session, limit x headcount from the session's bills):
         ///   Block rejects the request; Charge adds the excess as a separate line at full price.
         /// Cancelled orders and cancelled items don't count toward limits.
