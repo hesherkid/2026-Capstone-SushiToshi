@@ -250,7 +250,22 @@ const SessionDetailDialog = () => {
                 )}
 
                 <Box component="section">
-                  <SectionHeading icon={Receipt}>Bills ({bills.length})</SectionHeading>
+                  <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
+                    <SectionHeading icon={Receipt}>Bills ({bills.length})</SectionHeading>
+                    {/* For when the table asks a server in person, or has no phones: the strip above covers app yeses */}
+                    {iceCreamReady.length > 0 && iceCreamBills.length === 0 && (
+                      <Button
+                        size="small"
+                        color="info"
+                        aria-label="Free ice cream for the table"
+                        onClick={() => setIceCreamOpen(true)}
+                        startIcon={<IceCreamCone size={16} />}
+                        sx={{ mt: -0.5 }}
+                      >
+                        Free Ice Cream
+                      </Button>
+                    )}
+                  </Box>
                   {bills.length === 0 ? (
                     <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, borderStyle: "dashed", textAlign: "center" }}>
                       <Typography color="text.secondary">

@@ -420,19 +420,62 @@ describe("Session dashboard", () => {
     expect(within(dialog).getByRole("checkbox", { name: /Park/ })).toBeChecked();
   });
 
-  it("shows which bills had their ice cream, with nothing more to send", async () => {
+  it("shows which bills had their ice cream, and only offers the rest", async () => {
     withBills([{ ...LEE, wants_ice_cream: true, ice_cream_sent_at: "2026-10-18T04:30:00Z" }, PARK]);
     await renderDashboard();
 
     const sessionDialog = await openSession();
     expect(within(sessionDialog).getByText(/Ice cream sent/)).toBeInTheDocument();
+    // Nobody waiting, so no strip; Park can still have some if they ask the server
     expect(within(sessionDialog).queryByText("Table wants ice cream")).not.toBeInTheDocument();
-    expect(
-      within(sessionDialog).queryByRole("button", { name: /free ice cream/i }),
-    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
+    expect(within(dialog).queryByRole("checkbox", { name: /Lee/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("checkbox", { name: /Park/ })).toBeInTheDocument();
   });
 
-  it("offers no ice cream button when nobody asked for it", async () => {
+  // The table asks a server in person, or has no phones: staff can still send it
+  it("lets staff send ice cream when nobody asked in the app, with no bill ticked to start", async () => {
+    withBills([LEE, PARK]);
+    await renderDashboard();
+
+    const sessionDialog = await openSession();
+    expect(within(sessionDialog).queryByText("Table wants ice cream")).not.toBeInTheDocument();
+    fireEvent.click(
+      within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
+    expect(within(dialog).getByRole("checkbox", { name: /Lee/ })).not.toBeChecked();
+    expect(within(dialog).getByRole("checkbox", { name: /Park/ })).not.toBeChecked();
+    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeDisabled(); // tick someone first
+
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /Park/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /to kitchen/ }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
+        bill_ids: [81],
+        flavours: [{ flavour: "Mango", quantity: 1 }],
+      }),
+    );
+  });
+
+  it("shows one ice cream button: the strip's, when a bill said yes", async () => {
+    withBills([{ ...LEE, wants_ice_cream: true }, PARK]);
+    await renderDashboard();
+
+    const sessionDialog = await openSession();
+    expect(
+      within(sessionDialog).getAllByRole("button", { name: "Free ice cream for the table" }),
+    ).toHaveLength(1);
+  });
+
+  it("offers no ice cream once every bill has had it", async () => {
+    withBills([{ ...LEE, ice_cream_sent_at: "2026-10-18T04:30:00Z" }]);
     await renderDashboard();
 
     const sessionDialog = await openSession();
