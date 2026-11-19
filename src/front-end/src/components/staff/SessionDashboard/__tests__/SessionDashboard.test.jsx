@@ -352,7 +352,7 @@ describe("Session dashboard", () => {
     const sessionDialog = await screen.findByRole("dialog");
     expect(within(sessionDialog).getByText("Wants ice cream")).toBeInTheDocument();
     fireEvent.click(
-      within(sessionDialog).getByRole("button", { name: "Send free ice cream for Lee" }),
+      within(sessionDialog).getByRole("button", { name: "Free ice cream for Lee" }),
     );
 
     const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Lee/ });
@@ -380,7 +380,7 @@ describe("Session dashboard", () => {
     fireEvent.click(rowAction("#8", "View session"));
     const sessionDialog = await screen.findByRole("dialog");
     fireEvent.click(
-      within(sessionDialog).getByRole("button", { name: "Send free ice cream for Lee" }),
+      within(sessionDialog).getByRole("button", { name: "Free ice cream for Lee" }),
     );
 
     const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Lee/ });

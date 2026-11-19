@@ -248,9 +248,6 @@ const SessionDetailDialog = () => {
                                   {open && bill.requested_at && (
                                     <Chip icon={<Bell size={14} />} label="Asked for bill" color="warning" size="small" />
                                   )}
-                                  {iceCreamToSend && (
-                                    <Chip icon={<IceCreamCone size={14} />} label="Wants ice cream" color="warning" size="small" />
-                                  )}
                                   {bill.ice_cream_sent_at && (
                                     <Chip
                                       icon={<IceCreamCone size={14} />}
@@ -270,18 +267,6 @@ const SessionDetailDialog = () => {
                                 </Typography>
                               </Box>
                               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                                {iceCreamToSend && (
-                                  <Button
-                                    variant="contained"
-                                    color="warning"
-                                    disableElevation
-                                    aria-label={`Send free ice cream for ${bill.bill_name}`}
-                                    onClick={() => setIceCreamBill(bill)}
-                                    startIcon={<IceCreamCone size={18} />}
-                                  >
-                                    Send Ice Cream
-                                  </Button>
-                                )}
                                 {open && (
                                   <Button
                                     variant="contained"
@@ -338,6 +323,47 @@ const SessionDetailDialog = () => {
                                 </Tooltip>
                               </Box>
                             </Box>
+
+                            {/* The guests said yes to free ice cream: ask the table which flavours, then send it */}
+                            {iceCreamToSend && (
+                              <Box
+                                sx={(theme) => ({
+                                  mt: 1.5,
+                                  px: 1.5,
+                                  py: 1,
+                                  borderRadius: 1.5,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1.5,
+                                  flexWrap: "wrap",
+                                  bgcolor: alpha(theme.palette.info.main, 0.08),
+                                })}
+                              >
+                                <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    color="info.main"
+                                    sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                                  >
+                                    <IceCreamCone size={16} aria-hidden />
+                                    Wants ice cream
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    Ask the table which flavours
+                                  </Typography>
+                                </Box>
+                                <Button
+                                  variant="outlined"
+                                  color="info"
+                                  aria-label={`Free ice cream for ${bill.bill_name}`}
+                                  onClick={() => setIceCreamBill(bill)}
+                                  startIcon={<IceCreamCone size={18} />}
+                                >
+                                  Free Ice Cream
+                                </Button>
+                              </Box>
+                            )}
 
                             {/* Why this bill's guest count needs a look; Edit Guests clears the guest flags */}
                             {checks.length > 0 && (
