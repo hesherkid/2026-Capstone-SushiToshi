@@ -28,29 +28,33 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
-
         /// <summary>
-        /// Leaves the specified dining session.
+        /// Leaves a dining session (the caller gets up from the table).
         /// </summary>
-        /// <param name="sessionId">The session identifier to leave.</param>
+        /// <param name="sessionId">The session to leave</param>
         /// <remarks>
-        /// - You must currently be an active participant.  
-        /// - You cannot leave if you have any non-delivered orders in the session.  
-        /// - Sets <c>Left_At</c> to the current UTC time.
+        /// Sample request:
+        ///
+        ///     POST /api/sessionparticipant/123/leave
+        ///
+        /// - The caller must be seated at the table (joined and not left).
+        /// - They can't leave while an order they placed is still pending or being prepared.
+        ///   Delivered and cancelled orders don't count.
+        /// - Records when they left; their bill and orders stay as they are.
         /// </remarks>
-        /// <response code="200">Left the session successfully.</response>
-        /// <response code="401">The request is unauthenticated or the user claim is missing.</response>
-        /// <response code="404">The session or user record was not found.</response>
-        /// <response code="400">The user is not an active participant, or has active orders.</response>
-        /// <response code="500">An unexpected error occurred while leaving the session.</response>
+        /// <response code="200">Left the table.</response>
+        /// <response code="400">The caller isn't seated at this table, or has orders that haven't been delivered.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="404">The session doesn't exist.</response>
+        /// <response code="500">The change couldn't be saved.</response>
         [Authorize]
         [HttpPost("{sessionId:int}/leave")]
         [Produces("application/json")]
-        [SwaggerOperation(
-            OperationId = "LeaveSession",
-            Summary = "Leave a dining session",
-            Description = "Marks the current user as having left the specified session, provided there are no active orders."
-        )]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> LeaveSession(
                 int sessionId
             )
@@ -99,15 +103,18 @@ namespace back_end.Controllers
         /// <summary>
         /// The bill you're on at your table, and the table's open bills you could join.
         /// </summary>
+        /// <param name="sessionId">The dining session</param>
         /// <remarks>
         /// Guests pick their party's bill (or start one with POST /api/bill/create-bill) before ordering.
         /// Other bills show only their name and party size.
         /// </remarks>
-        /// <response code="200">Your bill (null if you haven't picked one) and the open bills.</response>
+        /// <response code="200">Your bill and the table's open bills.</response>
+        /// <response code="401">Not signed in.</response>
         /// <response code="403">You aren't seated at this table.</response>
         [Authorize]
         [HttpGet("{sessionId:int}/bill")]
         [ProducesResponseType(typeof(MyBillResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetMyBill(int sessionId)
         {
@@ -155,22 +162,30 @@ namespace back_end.Controllers
         /// <summary>
         /// Puts you on one of your table's open bills.
         /// </summary>
+        /// <param name="sessionId">The dining session</param>
+        /// <param name="request">The bill to join</param>
         /// <remarks>
         /// Sample request:
         ///
         ///     PUT /api/sessionparticipant/123/bill
         ///     { "bill_id": 45 }
         ///
-        /// You can switch bills until you've ordered on one; after that, ask staff to move you.
-        /// Bills that have asked for the bill can't be joined.
+        /// - You can switch bills until you've ordered on yours, or staff have confirmed (locked) its
+        ///   guest counts; after that, ask staff to move you.
+        /// - Bills that have asked for the bill can't be joined.
+        /// - Joining doesn't change either bill's guest counts.
+        /// - Choosing the bill you're already on changes nothing.
         /// </remarks>
         /// <response code="200">You're on the bill; returns the same as GET.</response>
-        /// <response code="400">The bill can't be joined, or you've already ordered on another bill.</response>
+        /// <response code="400">The bill isn't at this table, isn't open, or has asked for the bill; or you've
+        /// ordered on your current bill, or staff locked its counts.</response>
+        /// <response code="401">Not signed in.</response>
         /// <response code="403">You aren't seated at this table.</response>
         [Authorize]
         [HttpPut("{sessionId:int}/bill")]
         [ProducesResponseType(typeof(MyBillResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> ChooseBill(int sessionId, ChooseBillDto request)
         {
@@ -214,12 +229,15 @@ namespace back_end.Controllers
         /// Once staff lock the counts (Counts_Locked), only staff can change them.
         /// </remarks>
         /// <response code="200">The counts are saved; returns the same as GET.</response>
-        /// <response code="400">You aren't on a bill, it can't be changed or staff locked its counts, or the counts aren't valid.</response>
+        /// <response code="400">You aren't on a bill; it's closed, has asked for the bill, or staff locked its
+        /// counts; a count is outside 0–50; the total is 0; or the table doesn't have the seats.</response>
+        /// <response code="401">Not signed in.</response>
         /// <response code="403">You aren't seated at this table.</response>
         [Authorize]
         [HttpPut("{sessionId:int}/bill/guests")]
         [ProducesResponseType(typeof(MyBillResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UpdateGuestCounts(int sessionId, UpdateGuestCountsDto request)
         {
@@ -269,39 +287,46 @@ namespace back_end.Controllers
         }
 
         /// <summary>
-        /// Staff: moves someone at the table to another of its open bills, or onto one if they have none,
-        /// or onto a new bill split off their old one.
+        /// Staff: moves someone at the table to another of its open bills, or onto a new bill split off their old one.
         /// </summary>
+        /// <param name="sessionId">The dining session</param>
+        /// <param name="participantId">The person's seat (participant ID)</param>
+        /// <param name="request">Where to move them, and what goes with them</param>
         /// <remarks>
-        /// Sample request:
+        /// Sample requests:
         ///
         ///     PUT /api/sessionparticipant/123/participants/45/bill
         ///     { "bill_id": 67, "move_orders": true, "guest_type": "adult", "guest_count": 1 }
-        /// 
+        ///
         ///     PUT /api/sessionparticipant/123/participants/45/bill
         ///     { "new_bill": true, "move_orders": true, "guest_type": "adult", "guest_count": 1 }
         ///
-        /// With move_orders, the orders they placed on their old bill go with them (cancelled ones
-        /// stay), so their extras are charged on the new bill. With guest_type, guest_count guests of
-        /// that kind also move from the old bill's count to the new one's; the old bill keeps at least one.
-        /// Moving everyone who ordered something onto a new bill this way splits a bill by person.
-        /// Orders can only move off a bill that's still open, since a closed bill's total is final.
-        /// Staff can move someone even after they've ordered, and onto a bill that has asked for the bill.
-        /// 
-        /// With new_bill instead of bill_id, the bill they move to is started for them. It's name after 
-        /// them or {old bill} 1, {old bill} 2, if they have no name, it's guest are the guest_count guests taken
-        /// off the old bill, so the table's counts remain accurate. This will split the bill in one step, with no
-        /// counts being entered twice. The table's left over fee is then shared evenly across its open bills 
-        /// again, the new one included. new_bill needs guest_type, and someone already on an open bill.
+        /// - Send bill_id or new_bill, not both.
+        /// - move_orders (default true): the orders they placed on their old bill go with them (cancelled ones
+        ///   stay), so their extras are charged on the new bill. Orders can only move off a bill that's still open.
+        /// - guest_type: guest_count guests of that kind (adult, senior, child, toddler; 1–50) move from the old
+        ///   bill's count to the new one's. The old bill keeps at least one guest. Leave it out to keep both counts.
+        /// - Staff can move someone after they've ordered, and onto a bill that has asked for the bill.
+        ///
+        /// new_bill starts the bill for them, split off their current one in one step:
+        /// - It's named after them, or "{old bill} 1", "{old bill} 2"... if they have no name or a guest account.
+        /// - Its guests are the guest_count taken off the old bill, so the table's total doesn't change.
+        /// - The table's leftover fee is shared evenly across its open bills again, the new one included.
+        /// - Needs guest_type, and the person must already be on an open bill.
         /// </remarks>
-        /// <response code="200">They're on the bill.</response>
-        /// <response code="400">The bill isn't open, isn't at the table, or their orders can't move.</response>
-        /// <response code="403">The table is at another location.</response>
+        /// <response code="200">They're on the bill: bill_id, new_bill, orders_moved and counts_moved.</response>
+        /// <response code="400">Both or neither of bill_id and new_bill; new_bill without guest_type or without a
+        /// current bill; the target bill isn't at this table or isn't open; the old bill isn't open; the old bill
+        /// doesn't have enough of that kind of guest, or would be left with none; or guest_type or guest_count
+        /// isn't valid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">The table is at another location, or the caller isn't staff.</response>
         /// <response code="404">Nobody with that seat is at the table.</response>
         [Authorize(Policy = "staffOnly")]
         [HttpPut("{sessionId:int}/participants/{participantId:int}/bill")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> MoveGuest(int sessionId, int participantId, MoveGuestDto request)

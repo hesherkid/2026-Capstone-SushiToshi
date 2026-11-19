@@ -24,8 +24,32 @@ namespace back_end.Controllers
       _locationAccess = locationAccess;
     }
 
+    /// <summary>
+    /// Creates a table group at a location, for seating a big party across several tables.
+    /// </summary>
+    /// <param name="groupData">The group's name, active flag and location</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     POST /api/tablegroup
+    ///     { "group_name": "Patio", "is_active": true, "location_id": 1 }
+    ///
+    /// - Group names must be unique within a location.
+    /// - is_active defaults to true. The group starts with no tables; add them with
+    ///   POST /api/tablegroup/{tableGroupId}/tables/{tableId}.
+    /// </remarks>
+    /// <response code="200">message and the new group.</response>
+    /// <response code="400">The location doesn't exist, or the name is already used there.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the location isn't one the caller works at.</response>
+    /// <response code="500">The group couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateTableGroup([FromBody] TableGroupCreateDto groupData)
     {
       try
@@ -74,14 +98,30 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error creating table group");
-        return StatusCode(500, new { detail = "Error creating table group" });
+        return StatusCode(500, new { message = "Error creating table group" });
       }
     }
 
-
-
+    /// <summary>
+    /// Every table group with its tables, by location then name. Staff get their own location.
+    /// </summary>
+    /// <param name="activeOnly">true to leave out inactive groups</param>
+    /// <param name="locationId">Optional location filter</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     GET /api/tablegroup?active_only=true&amp;location_id=1
+    /// </remarks>
+    /// <response code="200">The groups (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or a staff member with no working location.</response>
+    /// <response code="500">The groups couldn't be loaded.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpGet]
+    [ProducesResponseType(typeof(List<TableGroupResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAllTableGroups([FromQuery(Name = "active_only")] bool? activeOnly, [FromQuery(Name = "location_id")] int? locationId)
     {
       try
@@ -121,8 +161,27 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Active table groups with no open dining session, by name. Staff get their own location.
+    /// </summary>
+    /// <param name="locationId">Optional location filter</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     GET /api/tablegroup/available?location_id=1
+    ///
+    /// A group counts as available even if one of its tables is seated on its own.
+    /// </remarks>
+    /// <response code="200">The available groups (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or a staff member with no working location.</response>
+    /// <response code="500">The groups couldn't be loaded.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpGet("available")]
+    [ProducesResponseType(typeof(List<TableGroupResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<TableGroupResponseDto>>> GetAvailableTableGroups([FromQuery(Name = "location_id")] int? locationId)
     {
       try
@@ -157,9 +216,29 @@ namespace back_end.Controllers
       }
     }
 
-
+    /// <summary>
+    /// One table group, with its tables and whether it's in an open dining session.
+    /// </summary>
+    /// <param name="tableGroupId">The group</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     GET /api/tablegroup/3
+    ///
+    /// total_seats adds up the seats of every table in the group, active or not.
+    /// </remarks>
+    /// <response code="200">The group, its tables (with QR codes) and is_in_active_session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the group is at a location the caller doesn't work at.</response>
+    /// <response code="404">The group doesn't exist.</response>
+    /// <response code="500">The group couldn't be loaded.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpGet("{tableGroupId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTableGroup(int tableGroupId)
     {
       try
@@ -207,8 +286,34 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Renames a table group, or turns it on or off.
+    /// </summary>
+    /// <param name="tableGroupId">The group</param>
+    /// <param name="groupData">The fields to change; leave out the ones to keep</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     PUT /api/tablegroup/3
+    ///     { "group_name": "Patio", "is_active": false }
+    ///
+    /// - A new name must be unused at the group's location.
+    /// - A group can't be turned off while it has an open dining session.
+    /// </remarks>
+    /// <response code="200">message and the updated group.</response>
+    /// <response code="400">The name is already used at this location, or the group is in an open session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the group is at a location the caller doesn't work at.</response>
+    /// <response code="404">The group doesn't exist.</response>
+    /// <response code="500">The group couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPut("{tableGroupId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateTableGroup(int tableGroupId, [FromBody] TableGroupUpdateDto groupData)
     {
       try
@@ -278,8 +383,32 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Deletes a table group that has no tables and has never been used.
+    /// </summary>
+    /// <param name="tableGroupId">The group</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     DELETE /api/tablegroup/3
+    ///
+    /// A group that has ever had a dining session can't be deleted, so its history stays intact;
+    /// turn it off instead. Remove its tables first.
+    /// </remarks>
+    /// <response code="200">The group was deleted.</response>
+    /// <response code="400">The group is in use, has been used before, or still has tables.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the group is at a location the caller doesn't work at.</response>
+    /// <response code="404">The group doesn't exist.</response>
+    /// <response code="500">The group couldn't be deleted.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpDelete("{tableGroupId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeleteTableGroup(int tableGroupId)
     {
       try
@@ -333,8 +462,34 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Adds a table to a table group at the same location.
+    /// </summary>
+    /// <param name="tableGroupId">The group</param>
+    /// <param name="tableId">The table</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     POST /api/tablegroup/3/tables/7
+    ///
+    /// The table can't already be in a group (remove it from the other group first), and can't be
+    /// seated on its own right now.
+    /// </remarks>
+    /// <response code="200">message, table_group_id and table_id.</response>
+    /// <response code="400">Different locations, the table is already in this or another group, or the
+    /// table is in an open session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the group is at a location the caller doesn't work at.</response>
+    /// <response code="404">The group or the table doesn't exist.</response>
+    /// <response code="500">The change couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("{tableGroupId}/tables/{tableId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AddTableToGroup(int tableGroupId, int tableId)
     {
       try
@@ -403,8 +558,32 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Takes a table out of a table group.
+    /// </summary>
+    /// <param name="tableGroupId">The group the table is in</param>
+    /// <param name="tableId">The table</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     DELETE /api/tablegroup/3/tables/7
+    ///
+    /// Not allowed while the group has an open dining session.
+    /// </remarks>
+    /// <response code="200">message and table_id.</response>
+    /// <response code="400">The table isn't in this group, or the group is in an open session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the table is at a location the caller doesn't work at.</response>
+    /// <response code="404">The table doesn't exist.</response>
+    /// <response code="500">The change couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpDelete("{tableGroupId}/tables/{tableId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RemoveTableFromGroup(int tableGroupId, int tableId)
     {
       try
@@ -454,8 +633,31 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Switches a table group between active and inactive.
+    /// </summary>
+    /// <param name="tableGroupId">The group</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     POST /api/tablegroup/3/toggle-status
+    ///
+    /// A group can't be turned off while it has an open dining session; turning it on is always allowed.
+    /// </remarks>
+    /// <response code="200">message and the group with its new is_active value.</response>
+    /// <response code="400">The group is in an open session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the group is at a location the caller doesn't work at.</response>
+    /// <response code="404">The group doesn't exist.</response>
+    /// <response code="500">The change couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("{tableGroupId}/toggle-status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ToggleTableGroupStatus(int tableGroupId)
     {
       try
@@ -504,8 +706,30 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Whether a table group is free: no open dining session on the group.
+    /// </summary>
+    /// <param name="tableGroupId">The group</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     GET /api/tablegroup/3/active-session
+    ///
+    /// success is true when the group is free, false when it's in use; message says which.
+    /// Only sessions on the group count, not tables in it seated on their own.
+    /// </remarks>
+    /// <response code="200">success and message.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The group is at a location the caller doesn't work at.</response>
+    /// <response code="404">The group doesn't exist.</response>
+    /// <response code="500">The check couldn't be done.</response>
     [Authorize]
     [HttpGet("{tableGroupId}/active-session")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CheckTableGroupActiveSession(int tableGroupId)
     {
       try

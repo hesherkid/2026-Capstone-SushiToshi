@@ -26,21 +26,31 @@ namespace back_end.Controllers
 
 
     /// <summary>
-    /// Creates a new table.
+    /// Creates a table at a location.
     /// </summary>
-    /// <param name="tableData">The table payload including table number, seat count, active flag, and optional QR code URL.</param>
+    /// <param name="tableData">The table number, seats, active flag, QR code URL and location</param>
     /// <remarks>
-    /// Returns <c>201 Created</c> with the created table and a <c>Location</c> header pointing to <see cref="GetTable(int)"/>.
-    /// Table numbers must be unique.
+    /// Sample request:
+    ///
+    ///     POST /api/tableentity
+    ///     { "table_number": 14, "seat_count": 4, "is_active": true, "location_id": 1 }
+    ///
+    /// - Table numbers must be unique within a location.
+    /// - Staff can only add tables at a location they work at.
+    /// - is_active defaults to true; qr_code_url defaults to empty.
     /// </remarks>
-    /// <response code="201">The table was created successfully.</response>
-    /// <response code="400">The request body is invalid or missing required fields.</response>
-    /// <response code="401">The user is not authenticated.</response>
-    /// <response code="403">The user is not authorized to create tables.</response>
-    /// <response code="409">A table with the specified number already exists.</response>
-    /// <response code="500">An unexpected error occurred while creating the table.</response>
+    /// <response code="200">The new table.</response>
+    /// <response code="400">The location doesn't exist, the table number is already used there, or a number is negative.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the location isn't one the caller works at.</response>
+    /// <response code="500">The table couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost()]
+    [ProducesResponseType(typeof(TableEntityResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateTable(TableEntityCreateDto tableData)
     {
       try
@@ -85,21 +95,31 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error creating table");
-        return StatusCode(500, new { detail = "Error creating table" });
+        return StatusCode(500, new { message = "Error creating table" });
       }
     }
 
     /// <summary>
-    /// Retrieves all tables from the system.
+    /// Every table, by location then table number. Staff get their own location.
     /// </summary>
+    /// <param name="locationId">Optional location filter</param>
     /// <remarks>
-    /// Returns a list of all tables, regardless of whether they are active or in use.  
-    /// Requires authentication.
+    /// Sample request:
+    ///
+    ///     GET /api/tableentity?location_id=1
+    ///
+    /// Includes inactive tables and tables in use.
     /// </remarks>
-    /// <response code="200">A list of all tables was returned successfully.</response>
-    /// <response code="500">An internal server error occurred while retrieving tables.</response>
-    [Authorize]
+    /// <response code="200">The tables (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or a staff member with no working location.</response>
+    /// <response code="500">The tables couldn't be loaded.</response>
+    [Authorize(Policy = "staffOnly")]
     [HttpGet]
+    [ProducesResponseType(typeof(List<TableEntityResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> GetAllTables([FromQuery(Name = "location_id")] int? locationId)
     {
       try
@@ -132,16 +152,26 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// Lists all active tables that are not currently in an ongoing dining session.
+    /// Active tables that nobody is sitting at, alone or as part of a group. Staff get their own location.
     /// </summary>
+    /// <param name="locationId">Optional location filter</param>
     /// <remarks>
-    /// A table is considered <em>empty</em> if it is marked as active and it is not part of any dining session
-    /// where <c>Ended_At == null</c>.
+    /// Sample request:
+    ///
+    ///     GET /api/tableentity/empty?location_id=1
+    ///
+    /// A table is empty when it's active, it has no open dining session, and its group (if any) has none either.
     /// </remarks>
-    /// <response code="200">A list of empty (available) tables was returned successfully.</response>
-    /// <response code="500">An unexpected error occurred while retrieving the tables.</response>
-    [Authorize]
+    /// <response code="200">The empty tables (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or a staff member with no working location.</response>
+    /// <response code="500">The tables couldn't be loaded.</response>
+    [Authorize(Policy = "staffOnly")]
     [HttpGet("empty")]
+    [ProducesResponseType(typeof(List<TableEntityResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<TableEntityResponseDto>>> ListEmptyTables([FromQuery(Name = "location_id")] int? locationId)
     {
       try
@@ -173,18 +203,21 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// Retrieves a table by its unique identifier.
+    /// One table.
     /// </summary>
-    /// <param name="tableId">The unique identifier of the table to retrieve.</param>
-    /// <remarks>
-    /// Returns the table’s complete record, including its number, seat count, active state, and QR code information.
-    /// Requires authorization.
-    /// </remarks>
-    /// <response code="200">The table was found and returned successfully.</response>
-    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
-    /// <response code="500">An unexpected error occurred while retrieving the table.</response>
+    /// <param name="tableId">The table</param>
+    /// <response code="200">The table, including its group (if any) and QR code URL.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at a location the caller doesn't work at.</response>
+    /// <response code="404">The table doesn't exist.</response>
+    /// <response code="500">The table couldn't be loaded.</response>
     [Authorize]
     [HttpGet("{tableId}")]
+    [ProducesResponseType(typeof(TableEntityResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTable(int tableId)
     {
       try
@@ -213,24 +246,34 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// Updates a table by its identifier.
+    /// Changes a table's number, seats, active flag or QR code URL.
     /// </summary>
-    /// <param name="tableId">The unique identifier of the table to update.</param>
-    /// <param name="tableData">Fields to update for the table (partial updates supported).</param>
+    /// <param name="tableId">The table</param>
+    /// <param name="tableData">The fields to change; leave out the ones to keep</param>
     /// <remarks>
-    /// This endpoint performs a <em>partial</em> update using <c>PUT</c> for convenience:
-    /// only the non-null properties in <c>TableEntityUpdateDto</c> are applied.
-    /// <br/><br/>
-    /// - If <c>Table_Number</c> is provided and differs from the current value, it must be unique.
-    /// - Returns the updated table in the response body.
+    /// Sample request:
+    ///
+    ///     PUT /api/tableentity/7
+    ///     { "seat_count": 6 }
+    ///
+    /// - Only the fields sent are changed; an empty body changes nothing.
+    /// - A new table_number must be unused at the table's location.
+    /// - Unlike toggle-status, setting is_active here isn't blocked while the table is in use.
     /// </remarks>
-    /// <response code="200">The table was updated successfully.</response>
-    /// <response code="400">Invalid request body or no updatable fields provided.</response>
-    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
-    /// <response code="409">A different table already uses the requested table number.</response>
-    /// <response code="500">An unexpected error occurred while updating the table.</response>
+    /// <response code="200">The updated table.</response>
+    /// <response code="400">The table number is already used at this location, or a number is negative.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the table is at a location the caller doesn't work at.</response>
+    /// <response code="404">The table doesn't exist.</response>
+    /// <response code="500">The table couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPut("{tableId}")]
+    [ProducesResponseType(typeof(TableEntityResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateTable(int tableId, TableEntityUpdateDto tableData)
     {
       try
@@ -292,18 +335,29 @@ namespace back_end.Controllers
     /// <summary>
     /// Deletes a table by its identifier.
     /// </summary>
-    /// <param name="tableId">The unique identifier of the table to delete.</param>
+    /// <param name="tableId">The table</param>
     /// <remarks>
-    /// Returns <c>204 No Content</c> on successful deletion.  
-    /// If the table is associated with an active dining session (<c>Ended_At == null</c>), deletion is blocked and a <c>409 Conflict</c> is returned.
+    /// Sample request:
+    ///
+    ///     DELETE /api/tableentity/7
+    ///
+    /// A table that has ever had a dining session can't be deleted, so its history stays intact;
+    /// deactivate it instead. A table whose group is in an open session can't be deleted either.
     /// </remarks>
-    /// <response code="204">The table was deleted successfully.</response>
-    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
-    /// <response code="403">Only admins can delete tables.</response>
-    /// <response code="409">The table cannot be deleted because it is currently in use.</response>
-    /// <response code="500">An unexpected error occurred while deleting the table.</response>
+    /// <response code="200">The table was deleted.</response>
+    /// <response code="400">The table is in use, has been used before, or its group is in use.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
+    /// <response code="404">The table doesn't exist.</response>
+    /// <response code="500">The table couldn't be deleted.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpDelete("{tableId}")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeleteTable(int tableId)
     {
       try
@@ -361,19 +415,29 @@ namespace back_end.Controllers
     /// <summary>
     /// Toggles a table's active status.
     /// </summary>
-    /// <param name="tableId">The unique identifier of the table.</param>
+    /// <param name="tableId">The table</param>
     /// <remarks>
-    /// - If the table is <c>inactive</c>, this endpoint **activates** it.  
-    /// - If the table is <c>active</c>, this endpoint attempts to **deactivate** it.  
-    /// - Deactivation is **blocked** when the table is part of an active dining session (<c>Ended_At == null</c>).  
-    /// Returns the new status in the response body.
+    /// Sample request:
+    ///
+    ///     POST /api/tableentity/7/toggle-status
+    ///
+    /// Not allowed while the table, or its group, has an open dining session. Inactive tables
+    /// aren't offered for seating.
     /// </remarks>
-    /// <response code="200">The table status was toggled; response includes the current status.</response>
-    /// <response code="404">No table exists with the specified <paramref name="tableId"/>.</response>
-    /// <response code="409">The table cannot be deactivated because it is currently in use.</response>
-    /// <response code="500">An unexpected error occurred while toggling the table status.</response>
+    /// <response code="200">The table with its new is_active value.</response>
+    /// <response code="400">The table, or its group, is in an open session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the table is at a location the caller doesn't work at.</response>
+    /// <response code="404">The table doesn't exist.</response>
+    /// <response code="500">The change couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("{tableId}/toggle-status")]
+    [ProducesResponseType(typeof(TableEntityResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ToggleTableStatus(int tableId)
     {
       try
@@ -428,18 +492,28 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// Checks whether a table currently has an active dining session.
+    /// Whether a table is free: no open dining session on it, or on its group.
     /// </summary>
-    /// <param name="tableId">The unique identifier of the table.</param>
+    /// <param name="tableId">The table</param>
     /// <remarks>
-    /// Returns <c>success=true</c> if the table has **no** active session (available), otherwise <c>success=false</c>.
-    /// An active session is defined as a <c>DiningSession</c> where <c>Ended_At == null</c> and the session includes the given table.
+    /// Sample request:
+    ///
+    ///     POST /api/tableentity/7/active-session
+    ///
+    /// success is true when the table is free, false when it's in use; message says which.
     /// </remarks>
-    /// <response code="200">Request succeeded; response indicates availability via the <c>success</c> flag.</response>
-    /// <response code="403">The user is not authorized to perform this action.</response>
-    /// <response code="500">An unexpected error occurred while checking availability.</response>
+    /// <response code="200">success and message.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at a location the caller doesn't work at.</response>
+    /// <response code="404">The table doesn't exist.</response>
+    /// <response code="500">The check couldn't be done.</response>
     [Authorize]
     [HttpPost("{tableId}/active-session")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CheckTableActiveSession(int tableId)
     {
       try
@@ -488,8 +562,33 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Puts a table into a table group at the same location.
+    /// </summary>
+    /// <param name="tableId">The table</param>
+    /// <param name="tableGroupId">The group</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     POST /api/tableentity/7/assign-to-group/3
+    ///
+    /// A table already in another group is moved to this one. Not allowed while the table has its
+    /// own open dining session.
+    /// </remarks>
+    /// <response code="200">message and the updated table.</response>
+    /// <response code="400">The table and group are at different locations, or the table is in an open session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the table is at a location the caller doesn't work at.</response>
+    /// <response code="404">The table or the group doesn't exist.</response>
+    /// <response code="500">The change couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("{tableId}/assign-to-group/{tableGroupId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> AssignTableToGroup(int tableId, int tableGroupId)
     {
       try
@@ -542,8 +641,31 @@ namespace back_end.Controllers
       }
     }
 
+    /// <summary>
+    /// Takes a table out of its table group.
+    /// </summary>
+    /// <param name="tableId">The table</param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     DELETE /api/tableentity/7/remove-from-group
+    ///
+    /// Not allowed while the group has an open dining session.
+    /// </remarks>
+    /// <response code="200">message and the updated table.</response>
+    /// <response code="400">The table isn't in a group, or the group is in an open session.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or the table is at a location the caller doesn't work at.</response>
+    /// <response code="404">The table doesn't exist.</response>
+    /// <response code="500">The change couldn't be saved.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpDelete("{tableId}/remove-from-group")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RemoveTableFromGroup(int tableId)
     {
       try

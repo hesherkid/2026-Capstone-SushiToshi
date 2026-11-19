@@ -29,9 +29,15 @@ namespace back_end.Controllers
         /// <summary>
         /// The default pricing, used by every location without its own.
         /// </summary>
+        /// <response code="200">The default pricing and its rates.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">There's no default pricing profile.</response>
         [HttpGet("default")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetDefault()
         {
@@ -46,6 +52,7 @@ namespace back_end.Controllers
         /// <summary>
         /// Updates the default pricing.
         /// </summary>
+        /// <param name="request">The new rates, tax, gratuity and weekend days</param>
         /// <remarks>
         /// Sample request:
         ///
@@ -63,11 +70,21 @@ namespace back_end.Controllers
         ///
         /// Open bills pick up the new prices; closed bills keep the prices they closed with.
         /// </remarks>
+        /// <response code="200">The updated default pricing.</response>
+        /// <response code="400">A value is out of range, rates doesn't have exactly one of each day type,
+        /// or a weekend day is repeated.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">There's no default pricing profile.</response>
+        /// <response code="500">The pricing couldn't be saved.</response>
         [HttpPut("default")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateDefault(PricingProfileRequest request)
         {
             try
@@ -94,9 +111,14 @@ namespace back_end.Controllers
         /// <summary>
         /// Every location and whether it uses the default pricing or its own.
         /// </summary>
+        /// <response code="200">The locations, by ID.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
         [HttpGet("locations")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(IEnumerable<LocationPricingSummary>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetLocations()
         {
             var locations = await _context.Locations
@@ -115,9 +137,16 @@ namespace back_end.Controllers
         /// <summary>
         /// The pricing a location uses: its own if it has one, otherwise the default ("source" says which).
         /// </summary>
+        /// <param name="locationId">The location</param>
+        /// <response code="200">The pricing the location uses.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The location doesn't exist.</response>
         [HttpGet("locations/{locationId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetLocation(int locationId)
         {
@@ -131,11 +160,26 @@ namespace back_end.Controllers
         /// <summary>
         /// Gives a location its own pricing, or replaces it. Same body as PUT /api/pricing/default.
         /// </summary>
+        /// <param name="locationId">The location</param>
+        /// <param name="request">The new rates, tax, gratuity and weekend days</param>
+        /// <remarks>
+        /// Open bills at this location pick up the new prices; closed bills keep the prices they closed with.
+        /// </remarks>
+        /// <response code="200">The location's own pricing.</response>
+        /// <response code="400">A value is out of range, rates doesn't have exactly one of each day type,
+        /// or a weekend day is repeated.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The location doesn't exist.</response>
+        /// <response code="500">The pricing couldn't be saved.</response>
         [HttpPut("locations/{locationId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateLocation(int locationId, PricingProfileRequest request)
         {
             try
@@ -168,9 +212,19 @@ namespace back_end.Controllers
         /// <summary>
         /// Removes a location's own pricing so it uses the default again. Returns the default pricing.
         /// </summary>
+        /// <param name="locationId">The location</param>
+        /// <remarks>
+        /// Open bills at this location switch to the default prices; closed bills keep theirs.
+        /// </remarks>
+        /// <response code="200">The default pricing the location now uses.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The location already uses the default pricing, or doesn't exist.</response>
         [HttpDelete("locations/{locationId}")]
         [Authorize(Policy = "adminOnly")]
         [ProducesResponseType(typeof(PricingProfileResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteLocation(int locationId)
         {

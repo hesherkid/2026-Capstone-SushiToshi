@@ -10,7 +10,7 @@ using SkiaSharp;
 namespace back_end.Controllers
 {
     /// <summary>
-    /// Admin/Staff QR Code endpoints for WiFi and session (menu redirect).
+    /// Admin QR Code endpoints for WiFi and session (menu redirect).
     /// </summary>
     [ApiController]
     [Route("api/admin/qr")]
@@ -28,16 +28,25 @@ namespace back_end.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Gets or generates the WiFi QR code for a specific location and table.
+        /// </summary>
+        /// <param name="locationId">Restaurant location ID</param>
+        /// <param name="table">Restaurant table number</param>
+        /// <param name="ct">Cancel token</param>
+        /// <param name="refresh">Set refresh=true to regenerate the QR code instead of using the saved image. Use this after changing WiFi credentials.</param>
+        /// <returns>An image file containing the WiFi QR code</returns>
+        /// <response code="200">Returns the WiFi QR code image</response>
+        /// <response code="404">Location not found or WiFi credentials not configured</response>
+        /// <response code="400">Invalid location_id or table number</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is not an admin</response>
         [HttpGet("wifi")]
-        [SwaggerOperation(
-            Summary = "Get WiFi QR code",
-            Description = "Returns the saved WiFi QR code for a location and table, generating it if none exists. " +
-                          "Set refresh=true to regenerate from current settings (use after changing WiFi credentials)."
-        )]
-        [Produces("image/png")]
         [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetWifiQr(
             [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table,
@@ -61,17 +70,25 @@ namespace back_end.Controllers
             return File(bytes, "image/png", $"wifi_L{locationId}_T{table}.png");
         }
 
+        /// <summary>
+        /// Gets or generates the session QR code for a specific location and table.
+        /// </summary>
+        /// <param name="locationId">Restaurant location ID</param>
+        /// <param name="table">Restaurant table number</param>
+        /// <param name="ct">Cancel token</param>
+        /// <param name="refresh">Set refresh=true to regenerate the QR code instead of using the saved image. Use this after changing SessionPageUrl.</param>
+        /// <returns>An image file containing the session QR code</returns>
+        /// <response code="200">Returns the session QR code image</response>
+        /// <response code="404">Location not found</response>
+        /// <response code="400">Invalid location_id or table number</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is not an admin</response>
         [HttpGet("session")]
-        [SwaggerOperation(
-            Summary = "Get session QR code",
-            Description = "Returns the saved session QR code for a location and table, generating it if none exists. " +
-                          "Scanning it opens the login page with the location and table pre-filled. " +
-                          "Set refresh=true to regenerate from current settings (use after changing SessionPageUrl)."
-        )]
-        [Produces("image/png")]
         [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetSessionQr(
             [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table,
@@ -95,11 +112,28 @@ namespace back_end.Controllers
             return File(bytes, "image/png", $"session_L{locationId}_T{table}.png");
         }
 
+        /// <summary>
+        /// Generates and saves the WiFi and session QR codes for every table at a location,
+        /// overwriting any saved images.
+        /// </summary>
+        /// <remarks>
+        /// A WiFi QR is skipped when the location has no WiFi credentials, so files_generated
+        /// can be lower than table_count × 2.
+        /// </remarks>
+        /// <param name="locationId">Restaurant location ID</param>
+        /// <param name="ct">Cancel token</param>
+        /// <returns>All QR codes generated for the location specified</returns>
+        /// <response code="200">QR codes successfully generated</response>
+        /// <response code="404">Location not found</response>
+        /// <response code="400">Invalid location_id or no tables found for the location</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is not an admin</response>
         [HttpPost("bulk")]
-        [SwaggerOperation(
-            Summary = "Bulk generate QR codes",
-            Description = "Generate WiFi and Session QR codes for all tables at a location. Saves to storage/qrcodes/."
-        )]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> BulkGenerate(
             [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             CancellationToken ct)
@@ -143,12 +177,27 @@ namespace back_end.Controllers
             });
         }
 
+        /// <summary>
+        /// Downloads a location's saved QR codes as a ZIP file.
+        /// </summary>
+        /// <remarks>
+        /// Only includes images already saved; run POST /api/admin/qr/bulk first.
+        /// Tables with no saved image are left out.
+        /// </remarks>
+        /// <param name="locationId">Restaurant location ID</param>
+        /// <param name="ct">Cancel token</param>
+        /// <returns>ZIP file containing all QR codes for the location</returns>
+        /// <response code="200">ZIP file successfully generated</response>
+        /// <response code="404">Location not found</response>
+        /// <response code="400">Invalid location_id or no tables found for the location</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is not an admin</response>
         [HttpGet("bulk/download-zip")]
-        [SwaggerOperation(
-            Summary = "Download all QR codes as ZIP",
-            Description = "Download all generated QR codes for a location as individual PNG files in a ZIP archive."
-        )]
-        [Produces("application/zip")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> DownloadBulkZip(
             [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             CancellationToken ct)
@@ -203,12 +252,27 @@ namespace back_end.Controllers
             return File(memoryStream.ToArray(), "application/zip", fileName);
         }
 
+        /// <summary>
+        /// Downloads a location's saved QR codes as a printable PDF (8 tables per page).
+        /// </summary>
+        /// <remarks>
+        /// Only includes images already saved; run POST /api/admin/qr/bulk first.
+        /// Tables with no saved image are left out.
+        /// </remarks>
+        /// <param name="locationId">Restaurant location ID</param>
+        /// <param name="ct">Cancel token</param>
+        /// <returns>PDF file containing all QR codes for the location</returns>
+        /// <response code="200">PDF file successfully generated</response>
+        /// <response code="404">Location not found</response>
+        /// <response code="400">Invalid location_id or no tables found for the location</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is not an admin</response>
         [HttpGet("bulk/download-pdf")]
-        [SwaggerOperation(
-            Summary = "Download all QR codes as PDF",
-            Description = "Download all generated QR codes for a location as a PDF with 16 QR codes per page (4 across × 4 down). QR codes are sized at exactly 1.75\" × 1.75\" for printing on 8.5\" × 11\" paper at 300 DPI."
-        )]
-        [Produces("application/pdf")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> DownloadBulkPdf(
             [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             CancellationToken ct)
@@ -339,11 +403,19 @@ namespace back_end.Controllers
             return File(pdfStream.ToArray(), "application/pdf", fileName);
         }
 
+        /// <summary>
+        /// Clear cached QR codes for a specific table at a location.
+        /// </summary>
+        /// <param name="locationId">Restaurant location ID</param>
+        /// <param name="table">Table number</param>
+        /// <returns>Result of the clear operation</returns>
+        /// <response code="200">QR codes successfully cleared</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is not an admin</response>
         [HttpDelete("clear")]
-        [SwaggerOperation(
-            Summary = "Clear cached QR codes",
-            Description = "Delete cached WiFi and Session QR codes for a specific table."
-        )]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public IActionResult Clear(
             [FromQuery(Name = "location_id"), SwaggerParameter("Location ID", Required = true)] int locationId,
             [FromQuery, SwaggerParameter("Table number", Required = true)] int table)

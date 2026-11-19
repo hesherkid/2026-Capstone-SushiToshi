@@ -47,15 +47,9 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="billData">The bill creation data including guest counts and bill name</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the created <see cref="BillResponse"/> object.
-    /// Returns HTTP 200 (OK) with the created bill details on success.
-    /// Returns HTTP 400 (Bad Request) if validation fails.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-    /// </returns>
     /// <response code="200">Returns the newly created bill</response>
     /// <response code="400">If the session has ended, has no tables, or guest counts are invalid</response>
+    /// <response code="403">The table is at another location, or a customer isn't seated at this table.</response>
     /// <response code="404">If the session is not found</response>
     /// <response code="500">If an internal error occurs while creating the bill</response>
     /// <remarks>
@@ -74,9 +68,14 @@ namespace back_end.Controllers
     /// Requirements:
     /// - Session must be active (not ended)
     /// - Session must have at least one table assigned
-    /// - At least one guest (adult, senior, or child) must be specified
+    /// - At least one guest (adult, senior, child or toddler) must be specified, not negative
+    /// - At least one guest (adult, senior, child or toddler) must be specified, not negative
     /// - A guest's bill can't take the table's open bills past its seats; staff's can,
     ///   for a party that pulled up extra chairs
+    /// - Bill must have a name specified
+    /// - Guests can't start a new bill when the counts have been locked by staff.
+    /// - Bill must have a name specified
+    /// - Guests can't start a new bill when the counts have been locked by staff.
     /// 
     /// The bill is automatically created with 'Open' status.
     ///
@@ -88,6 +87,7 @@ namespace back_end.Controllers
     [HttpPost("create-bill/{sessionId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateBill(int sessionId, CreateBill billData)
@@ -225,19 +225,13 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// Retrieves all bills for a specific dining session, optionally filtered by table.
+    /// Retrieves bills for a specific dining session.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
-    /// <param name="tableId">Optional table ID to filter bills by a specific table</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of <see cref="BillResponse"/> objects.
-    /// Returns HTTP 200 (OK) with the list of bills on success.
-    /// Returns HTTP 400 (Bad Request) if the specified table is not associated with the session.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist or no bills are found.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
+    /// <param name="tableId">Optional. If given, it must belong to the session (400 if not).</param>
     /// <response code="200">Returns the list of bills for the session</response>
     /// <response code="400">If the specified table is not associated with the session</response>
+    /// <response code="403">If the user is not authorized to view the session</response>
     /// <response code="404">If the session is not found</response>
     /// <response code="500">If an internal error occurs while retrieving bills</response>
     /// <remarks>
@@ -250,9 +244,15 @@ namespace back_end.Controllers
     ///     (Returns bills for session 123, filtered by table 456)
     ///
     /// Bills are ordered by creation date (newest first).
+    /// Staff see every bill, customers only see the bill they're on.
     /// </remarks>
     [HttpGet("get-bills/{sessionId}")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetBills(int sessionId, [FromQuery(Name = "table_id")] int? tableId = null)
     {
       try
@@ -338,13 +338,8 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="billId">The unique identifier of the bill</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the <see cref="BillResponse"/> object.
-    /// Returns HTTP 200 (OK) with the bill details on success.
-    /// Returns HTTP 404 (Not Found) if the bill or session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the bill details</response>
+    /// <response code="403">If the caller isn't staff and isn't on this bill</response>
     /// <response code="404">If the bill or session is not found</response>
     /// <response code="500">If an internal error occurs while retrieving the bill</response>
     /// <remarks>
@@ -356,6 +351,10 @@ namespace back_end.Controllers
     /// </remarks>
     [HttpGet("get-bill/{billId}")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
@@ -662,15 +661,9 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="billId">The unique identifier of the bill to close</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the closed <see cref="BillResponse"/> object.
-    /// Returns HTTP 200 (OK) with the closed bill details on success.
-    /// Returns HTTP 400 (Bad Request) if the bill is already closed or has pending orders.
-    /// Returns HTTP 404 (Not Found) if the bill or session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during closure.
-    /// </returns>
     /// <response code="200">Returns the closed bill details</response>
-    /// <response code="400">If the bill is already closed or has pending orders</response>
+    /// <response code="400">If the bill is already closed/cancelled or has pending orders</response>
+    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="404">If the bill or session is not found</response>
     /// <response code="500">If an internal error occurs while closing the bill</response>
     /// <remarks>
@@ -680,11 +673,17 @@ namespace back_end.Controllers
     ///
     /// Closes the specified bill and sets the closed_at timestamp.
     /// Requirements:
-    /// - Bill must not already be closed
-    /// - All orders associated with the bill must be completed (no pending orders)
+    /// - Bill must be open (not already closed or cancelled)
+    /// - Freezes the bill's prices and gratuity, so later pricing changes don't alter it.
+    /// - All orders associated with the bill must not be at a state of pending
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpPut("close-bill/{billId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CloseBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
@@ -770,6 +769,7 @@ namespace back_end.Controllers
     /// <param name="sessionId">The dining session (table)</param>
     /// <response code="200">The default fee, the current total and each open bill's share</response>
     /// <response code="404">If the session doesn't exist</response>
+    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="500">If there was an error retrieving the leftover fee</response>
     /// <remarks>
     /// Used to fill in the "Add leftover fee" dialog before staff apply it.
@@ -777,6 +777,7 @@ namespace back_end.Controllers
     [HttpGet("leftover-fee/{sessionId}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetLeftoverFee(int sessionId)
@@ -812,6 +813,7 @@ namespace back_end.Controllers
     /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
     /// <response code="200">The fee was applied; returns each open bill's share</response>
     /// <response code="400">If the amount is negative or the table has no open bills</response>
+    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="404">If the session doesn't exist</response>
     /// <remarks>
     /// Sample request:
@@ -828,6 +830,7 @@ namespace back_end.Controllers
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ApplyLeftoverFee(int sessionId, [FromBody] LeftoverFeeRequest request)
     {
@@ -919,11 +922,17 @@ namespace back_end.Controllers
     /// Only guests on this bill (or staff) can ask.
     /// </remarks>
     /// <response code="200">The bill is requested; returns when it was first requested.</response>
-    /// <response code="400">The bill isn't open.</response>
+    /// <response code="400">The bill isn't open, or the session has no table to send the request to.</response>
+    /// <response code="401">The caller is not authenticated.</response>
     /// <response code="403">The caller isn't on this bill.</response>
     /// <response code="404">The bill or session was not found.</response>
     [HttpPost("request-bill/{billId}")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RequestBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
@@ -987,15 +996,9 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="billId">The unique identifier of the bill to cancel</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the cancelled <see cref="BillResponse"/> object.
-    /// Returns HTTP 200 (OK) with the cancelled bill details on success.
-    /// Returns HTTP 400 (Bad Request) if the bill is not in Open status, or has orders being made or served.
-    /// Returns HTTP 404 (Not Found) if the bill or session doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during cancellation.
-    /// </returns>
     /// <response code="200">Returns the cancelled bill details</response>
     /// <response code="400">If the bill cannot be cancelled (not in Open status, or has orders being made or served)</response>
+    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="404">If the bill or session is not found</response>
     /// <response code="500">If an internal error occurs while cancelling the bill</response>
     /// <remarks>
@@ -1010,6 +1013,11 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpPost("cancel-bill/{billId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CancelBill([FromQuery(Name = "session_id")] int sessionId, int billId)
     {
       try
@@ -1096,13 +1104,8 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves all bills associated with the current user's active dining session.
     /// </summary>
-    /// <returns>
-    /// An <see cref="ActionResult"/> containing a collection of <see cref="BillResponse"/> objects.
-    /// Returns HTTP 200 (OK) with the list of bills on success.
-    /// Returns HTTP 404 (Not Found) if no bills exist for the user's active session.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the list of bills for the user's active session</response>
+    /// <response code="401">The request has no valid user.</response>
     /// <response code="404">If no bills are found for the user's active session</response>
     /// <response code="500">If an internal error occurs while retrieving bills</response>
     /// <remarks>
@@ -1118,6 +1121,10 @@ namespace back_end.Controllers
     /// </remarks>
     [Authorize]
     [HttpGet("active/bills")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<List<BillResponse>>> GetActiveBills()
     {
       try
@@ -1181,15 +1188,28 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError($"Database error retrieving bills: {ex.Message}");
-        return StatusCode(500, new { detail = "Error retrieving bills" });
+        return StatusCode(500, new { message = "Error retrieving bills" });
       }
     }
 
     /// <summary>
     /// Retrieves a detailed bill summary with pricing breakdown for payment.
     /// </summary>
+    /// <remarks>
+    ///     GET /api/bill/summary/123?session_id=456
+    ///
+    /// Staff, or customers on this bill. Open bills use the location's prices for the day the bill
+    /// was created. Closed bills use the prices and gratuity rate frozen when they were closed.
+    /// Subtotal = base charges + add-ons + over-limit units + leftover fee. Gratuity applies when the
+    /// whole table's party size reaches gratuity_min_party_size.
+    /// </remarks>
+    /// <response code="200">The bill's pricing breakdown.</response>
+    /// <response code="403">The caller isn't staff and isn't on this bill.</response>
+    /// <response code="404">The bill or session was not found.</response>
+    /// <response code="500">The summary couldn't be calculated.</response>
     [HttpGet("summary/{billId}")]
     [ProducesResponseType(typeof(BillSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [Authorize]

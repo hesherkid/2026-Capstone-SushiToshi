@@ -52,6 +52,9 @@ namespace back_end.Controllers
         ///     GET /api/me/favourites
         ///     [12, 7, 31]
         /// </remarks>
+        /// <response code="200">The hearted item IDs (empty if none).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">A guest account, or the account doesn't have the Customer role.</response>
         [HttpGet("favourites")]
         [ProducesResponseType(typeof(List<int>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -73,11 +76,17 @@ namespace back_end.Controllers
         /// <summary>
         /// Hearts a menu item. Hearting one that's already a favourite does nothing.
         /// </summary>
+        /// <response code="204">The item is now a favourite (or already was).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">A guest account, or the account doesn't have the Customer role.</response>
+        /// <response code="404">The menu item doesn't exist.</response>
+        /// <response code="500">The favourite couldn't be saved.</response>
         [HttpPut("favourites/{itemId:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddFavourite(int itemId)
         {
             if (!TryGetCustomerId(out var userId, out var denied)) return denied!;
@@ -117,10 +126,15 @@ namespace back_end.Controllers
         /// <summary>
         /// Un-hearts a menu item. Removing one that isn't a favourite does nothing.
         /// </summary>
+        /// <response code="204">The item isn't a favourite any more (or never was).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">A guest account, or the account doesn't have the Customer role.</response>
+        /// <response code="500">The favourite couldn't be removed.</response>
         [HttpDelete("favourites/{itemId:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> RemoveFavourite(int itemId)
         {
             if (!TryGetCustomerId(out var userId, out var denied)) return denied!;
@@ -154,6 +168,9 @@ namespace back_end.Controllers
         ///     GET /api/me/ordered-before
         ///     [7, 12]
         /// </remarks>
+        /// <response code="200">The item IDs (empty if the customer hasn't ordered yet).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">A guest account, or the account doesn't have the Customer role.</response>
         [HttpGet("ordered-before")]
         [ProducesResponseType(typeof(List<int>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

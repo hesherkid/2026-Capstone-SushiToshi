@@ -39,18 +39,6 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
     /// <param name="requestData">The service request data containing notes and other details</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the created <see cref="ServiceRequestResponseDto"/> object.
-    /// Returns HTTP 200 (OK) with the created service request on success.
-    /// Returns HTTP 400 (Bad Request) if the user is not authorized or not a participant in the session.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist or has ended.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during creation.
-    /// </returns>
-    /// <response code="200">Returns the newly created service request</response>
-    /// <response code="400">If the user is not authorized or not a valid session participant</response>
-    /// <response code="404">If the session is not found or has already ended</response>
-    /// <response code="429">If the table sent a request within the last 30 seconds; the body's retry_after_seconds (and the Retry-After header) say how long to wait</response>
-    /// <response code="500">If an internal error occurs while creating the service request</response>
     /// <remarks>
     /// Sample request:
     ///
@@ -59,18 +47,31 @@ namespace back_end.Controllers
     ///         "notes": "Need water refill"
     ///     }
     ///
-    /// This endpoint requires authentication.
-    /// The authenticated user must be an active participant in the specified dining session.
-    /// Only active (not ended) sessions can receive new service requests.
-    /// The service request is automatically created with 'Pending' status.
+    /// - The caller must be seated at the table (joined and not left).
+    /// - One request per table every 30 seconds, whoever sends it. "Ready for bill" requests
+    ///   don't count toward this; they have their own check in BillController.
+    /// - The request starts as Pending.
     /// </remarks>
-
+    /// <response code="200">The new service request.</response>
+    /// <response code="400">The caller isn't seated at this table, the account wasn't found, or the
+    /// visit has no table assigned.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="404">The session doesn't exist or has ended.</response>
+    /// <response code="429">The table sent a request in the last 30 seconds; retry_after_seconds (and the
+    /// Retry-After header) say how long to wait.</response>
+    /// <response code="500">The request couldn't be saved.</response>
     [Authorize]
     [HttpPost("{sessionId}")]
+    [ProducesResponseType(typeof(ServiceRequestResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateServiceRequest(
-        int sessionId,
-        ServiceRequestCreateDto requestData
-    )
+            int sessionId,
+            ServiceRequestCreateDto requestData
+        )
     {
       try
       {
@@ -164,7 +165,7 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error creating service request");
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
@@ -172,15 +173,6 @@ namespace back_end.Controllers
     /// Marks a service request as completed and assigns it to the current user.
     /// </summary>
     /// <param name="requestId">The unique identifier of the service request to complete</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing the updated <see cref="ServiceRequestResponseDto"/> object.
-    /// Returns HTTP 200 (OK) with the completed service request on success.
-    /// Returns HTTP 404 (Not Found) if the service request doesn't exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during the operation.
-    /// </returns>
-    /// <response code="200">Returns the completed service request</response>
-    /// <response code="404">If the service request is not found</response>
-    /// <response code="500">If an internal error occurs while completing the service request</response>
     /// <remarks>
     /// Sample request:
     ///
@@ -190,8 +182,20 @@ namespace back_end.Controllers
     /// The service request status will be updated to 'Completed' and the completion timestamp will be set.
     /// The current authenticated user will be assigned as the user who completed the request.
     /// </remarks>
+    /// <response code="200">The completed service request.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
+    /// <response code="404">The service request doesn't exist.</response>
+    /// <response code="409">The service request is already completed.</response>
+    /// <response code="500">The service request couldn't be updated.</response>
     [Authorize(Roles = "Admin,Staff")]
     [HttpPost("{requestId}/complete")]
+    [ProducesResponseType(typeof(ServiceRequestResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CompleteServiceRequest(int requestId)
     {
       try
@@ -241,15 +245,6 @@ namespace back_end.Controllers
     /// Retrieves all pending service requests for a specific session.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the session</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of <see cref="ServiceRequestResponseDto"/> objects.
-    /// Returns HTTP 200 (OK) with the list of pending service requests on success.
-    /// Returns HTTP 404 (Not Found) if the session doesn't exist or no pending requests are found.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
-    /// <response code="200">Returns the list of pending service requests for the session</response>
-    /// <response code="404">If the session is not found or no pending requests exist</response>
-    /// <response code="500">If an internal error occurs while retrieving service requests</response>
     /// <remarks>
     /// Sample request:
     ///
@@ -259,9 +254,18 @@ namespace back_end.Controllers
     /// so the bill summary can tell them a "Ready for bill" request is already waiting.
     /// Only returns service requests with 'Pending' status.
     /// </remarks>
-    /// <response code="403">A customer asked about a session they aren't seated in</response>
+    /// <response code="200">The pending requests (empty if none).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not seated at this table, or staff at another location.</response>
+    /// <response code="404">The session doesn't exist.</response>
+    /// <response code="500">The requests couldn't be loaded.</response>
     [Authorize]
     [HttpGet("by-session/{sessionId}")]
+    [ProducesResponseType(typeof(List<ServiceRequestResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetSessionServiceRequest(int sessionId)
     {
       try
@@ -291,24 +295,23 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error getting session service requests");
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
 
     /// <summary>
     /// Retrieves all service requests from the database.
     /// </summary>
-    /// <returns>
-    /// An <see cref="ActionResult"/> containing a collection of <see cref="ServiceRequestResponseDto"/> objects.
-    /// Returns HTTP 200 (OK) with the list of service requests on success.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
-    /// <response code="200">Returns the list of all service requests</response>
-    /// <response code="500">If an internal error occurs while retrieving service requests</response>
-    //GET api/servicerequest
-    //Get all current service requests
+    /// <response code="200">The service requests (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or a staff member with no working location.</response>
+    /// <response code="500">The requests couldn't be loaded.</response>
     [Authorize(Policy = "staffOnly")]
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<ServiceRequestResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<ServiceRequestResponseDto>>> GetAllServiceRequest()
     {
       try
@@ -331,10 +334,24 @@ namespace back_end.Controllers
       }
     }
 
-    //GET api/servicerequest/pending
-    //Get all pending service requests
+    /// <summary>
+    /// Every pending service request, oldest first. Staff get their own location; admins get every location.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     GET /api/servicerequest/pending
+    /// </remarks>
+    /// <response code="200">The pending requests (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not staff, or a staff member with no working location.</response>
+    /// <response code="500">The requests couldn't be loaded.</response>
     [Authorize(Roles = "Admin,Staff")]
     [HttpGet("pending")]
+    [ProducesResponseType(typeof(IEnumerable<ServiceRequestResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<ServiceRequestResponseDto>>> GetAllPendingServiceRequests()
     {
       try
@@ -359,7 +376,7 @@ namespace back_end.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error getting pending service requests");
-        return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+        return StatusCode(500, new { message = "An error occurred while processing your request." });
       }
     }
   }

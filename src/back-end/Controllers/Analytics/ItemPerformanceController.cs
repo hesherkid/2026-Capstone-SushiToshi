@@ -30,6 +30,12 @@ namespace back_end.Controllers
         /// <param name="categoryId">Limit to one category. Ranks are calculated within the category.</param>
         /// <param name="tagId">Limit to items with this tag. Ranks are calculated within the tag.</param>
         /// <param name="top">How many items to return in the best and worst lists (1-25, default 5).</param>
+        /// <response code="200">The item performance report (lists can be empty).</response>
+        /// <response code="400">Invalid range, from/to or top.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The location_id doesn't exist.</response>
+        /// <response code="500">The report couldn't be loaded.</response>
         /// <remarks>
         /// Sample requests:
         ///
@@ -43,13 +49,16 @@ namespace back_end.Controllers
         /// - Items included: anything with delivered sales in the window (even if unavailable or off the menu now),
         ///   plus anything currently orderable (not Unavailable, on an active menu; at the location when given).
         ///   Items that are unavailable now and had no sales are excluded, because availability history isn't stored.
-        /// - Add-on sales use MenuItemAssignment.Is_Add_On for the (menu, item) the sale was ordered from.
-        ///   add_on_days = number of local days in the window with at least one add-on sale.
+        /// - Add-on sales use Is_Add_On from the all-locations assignment for the (menu, item); 
+        /// location overrides are ignored. add_on_days = number of local days in the window
+        /// with at least one add-on sale.
         /// - Best and worst never overlap; zero-sales items are returned separately.
         /// </remarks>
         [HttpGet("item-performance")]
         [ProducesResponseType(typeof(ItemPerformanceResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetItemPerformance(

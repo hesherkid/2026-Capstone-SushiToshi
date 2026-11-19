@@ -34,10 +34,38 @@ namespace back_end.Controllers
             _locationAccess = locationAccess;
         }
 
-        // POST: /api/staff?role=Admin
-        // Create a new staff or admin user by Admin only.
+        /// <summary>
+        /// Creates a staff or admin account.
+        /// </summary>
+        /// <param name="userData">The new account's details</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/staff
+        ///     {
+        ///       "email": "sam@example.com", "first_name": "Sam", "last_name": "Tanaka",
+        ///       "password": "StaffPass123!", "role": "Staff", "status": "Active",
+        ///       "location_id": 1, "location_ids": [1, 2]
+        ///     }
+        ///
+        /// - role must be Staff or Admin. status defaults to Active.
+        /// - password is 8–200 characters. The email is stored in lower case and counts as confirmed.
+        /// - Staff: location_ids are the locations they may work at; location_id, if given, is added to them
+        ///   and is where they start. Admins can work anywhere, so location_ids is ignored for them.
+        /// </remarks>
+        /// <response code="201">The new account; the Location header points to GET /api/staff/{userId}.</response>
+        /// <response code="400">role isn't Staff or Admin; a name, email or password is missing or invalid;
+        /// or a location doesn't exist.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="409">The email is already registered.</response>
         [HttpPost]
         [Authorize(Policy = "adminOnly")]
+        [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<ActionResult<UserResponseDto>> CreateStaff(
             [FromBody] CreateStaffDto userData
         )
@@ -105,10 +133,29 @@ namespace back_end.Controllers
             );
         }
 
-        // GET: /api/staff?role=Staff&skip=0&limit=100
-        // List all staff and/or admin users with pagination.
+        /// <summary>
+        /// Staff and admin accounts, newest first, a page at a time.
+        /// </summary>
+        /// <param name="role">Optional: Staff or Admin only</param>
+        /// <param name="skip">How many to skip (0 or more)</param>
+        /// <param name="limit">How many to return (1–100, default 100)</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/staff?role=Staff&amp;skip=0&amp;limit=100
+        ///
+        /// Each account includes its current location and the locations it's assigned to.
+        /// </remarks>
+        /// <response code="200">The accounts (can be empty).</response>
+        /// <response code="400">skip is negative, limit is outside 1–100, or role isn't Staff or Admin.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff.</response>
         [HttpGet]
         [Authorize(Policy = "staffOnly")]
+        [ProducesResponseType(typeof(List<StaffResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<IEnumerable<UserResponseDto>>> ListStaff(
             [FromQuery] UserRoles? role = null,
             [FromQuery] int skip = 0,
@@ -153,10 +200,20 @@ namespace back_end.Controllers
             return Ok(users);
         }
 
-        // GET: /api/staff/5
-        // Get details of a specific staff/admin user.
+        /// <summary>
+        /// One staff or admin account.
+        /// </summary>
+        /// <param name="userId">The account</param>
+        /// <response code="200">The account (without its locations; the list includes them).</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff.</response>
+        /// <response code="404">No staff or admin account has that ID.</response>
         [HttpGet("{userId:int}")]
         [Authorize(Policy = "staffOnly")]
+        [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserResponseDto>> GetStaff(int userId)
         {
             var u = await _context.Users.AsNoTracking()
@@ -168,10 +225,42 @@ namespace back_end.Controllers
             return Ok(ToResponse(u));
         }
 
-        // PUT: /api/staff/5
-        // Update a staff/admin user's details.
+        /// <summary>
+        /// Updates a staff or admin account.
+        /// </summary>
+        /// <param name="userId">The account</param>
+        /// <param name="userData">The new details</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PUT /api/staff/5
+        ///     {
+        ///       "first_name": "Sue", "last_name": "Park", "email": "sue@example.com",
+        ///       "role": "Staff", "status": "Active", "location_ids": [1, 2]
+        ///     }
+        ///
+        /// - role (Staff or Admin) and status are required.
+        /// - email, first_name and last_name are optional; blank leaves them as they are.
+        /// - location_ids (staff only) replaces their assigned locations; leave it out to keep them. If their
+        ///   current location is no longer assigned, they move to the first one left, or to none.
+        /// - Admins can't change their own role or status.
+        /// - Customer accounts aren't found here, so a customer can't be made staff.
+        /// </remarks>
+        /// <response code="200">The updated account.</response>
+        /// <response code="400">role or status is missing; role isn't Staff or Admin; an admin changed their own
+        /// role or status; or a location doesn't exist.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">No staff or admin account has that ID.</response>
+        /// <response code="409">The email is already registered.</response>
         [HttpPut("{userId:int}")]
         [Authorize(Policy = "adminOnly")]
+        [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<ActionResult<UserResponseDto>> UpdateStaff(int userId, [FromBody] StaffMemberUpdateDto userData)
         {
             // Staff and admin accounts only, so this can't turn a customer into staff
@@ -220,10 +309,31 @@ namespace back_end.Controllers
             return Ok(ToResponse(user));
         }
 
-        // PUT: /api/staff/5/status
-        // Deactivate or reactivate a staff/admin account by Admin only. Inactive accounts can't log in.
+        /// <summary>
+        /// Deactivates or reactivates a staff or admin account. Inactive accounts can't sign in.
+        /// </summary>
+        /// <param name="userId">The account</param>
+        /// <param name="request">Active or Inactive</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PUT /api/staff/5/status
+        ///     { "status": "Inactive" }
+        ///
+        /// Admins can't change their own status.
+        /// </remarks>
+        /// <response code="200">The updated account.</response>
+        /// <response code="400">status isn't Active or Inactive, or it's the caller's own account.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">No staff or admin account has that ID.</response>
         [HttpPut("{userId:int}/status")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserResponseDto>> UpdateStaffStatus(int userId, [FromBody] AccountStatusUpdateDto request)
         {
             if (request.Status != UserStatus.Active && request.Status != UserStatus.Inactive)
@@ -276,10 +386,31 @@ namespace back_end.Controllers
             return null;
         }
 
-        // POST: /api/staff/5/change-password
-        // Change a staff user's password by Admin only.
+        /// <summary>
+        /// Changes a staff or admin account's password, given its current password.
+        /// </summary>
+        /// <param name="userId">The account</param>
+        /// <param name="passwordData">The current password, and the new one</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/staff/5/change-password
+        ///     { "current_password": "OldPass123!", "password": "NewPass123!" }
+        ///
+        /// Both passwords are 8–200 characters. To set a password without the current one, use reset-password.
+        /// </remarks>
+        /// <response code="200">The account.</response>
+        /// <response code="400">The current password is wrong, or a password isn't 8–200 characters.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">No staff or admin account has that ID.</response>
         [HttpPost("{userId:int}/change-password")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserResponseDto>> ChangeStaffPassword(int userId, [FromBody] StaffMemberChangePasswordDto passwordData)
         {
             var user = await _context.Users
@@ -299,10 +430,29 @@ namespace back_end.Controllers
             return Ok(ToResponse(user));
         }
 
-        // POST: /api/staff/5/reset-password
-        // Reset a staff user's password by Admin only.
+        /// <summary>
+        /// Sets a new password for a staff or admin account, without its current one.
+        /// </summary>
+        /// <param name="userId">The account</param>
+        /// <param name="request">The new password (8–200 characters)</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/staff/5/reset-password
+        ///     { "new_password": "NewPass123!" }
+        /// </remarks>
+        /// <response code="200">The account.</response>
+        /// <response code="400">The new password isn't 8–200 characters.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">No staff or admin account has that ID.</response>
         [HttpPost("{userId:int}/reset-password")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserResponseDto>> ResetStaffPassword(int userId, [FromBody] ResetPasswordRequestDto request)
         {
             var user = await _context.Users
@@ -319,9 +469,31 @@ namespace back_end.Controllers
             return Ok(ToResponse(user));
         }
 
-
+        /// <summary>
+        /// Switches the signed-in staff member or admin to another location.
+        /// </summary>
+        /// <param name="locationId">The location to work at</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     PUT /api/staff/update-user-location/2
+        ///
+        /// Staff can switch only between the locations an admin assigned them; admins can pick any.
+        /// </remarks>
+        /// <response code="200">The location was changed.</response>
+        /// <response code="400">The caller's account wasn't found.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff, or not assigned to that location.</response>
+        /// <response code="404">The location doesn't exist.</response>
+        /// <response code="500">The change couldn't be saved.</response>
         [HttpPut("update-user-location/{locationId}")]
         [Authorize(Roles = "Admin,Staff")]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateStaffLocation(
             int locationId
         )
@@ -362,7 +534,14 @@ namespace back_end.Controllers
 
         }
 
-
+        /// <summary>
+        /// The signed-in staff member's or admin's current location. Prefer GET /api/staff/my-locations.
+        /// </summary>
+        /// <response code="200">The location, or null if they have none.</response>
+        /// <response code="400">The caller's account wasn't found.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff.</response>
+        /// <response code="500">The location couldn't be loaded.</response>
         [HttpGet("get-initial-staff-location")]
         [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetStaffStartingLocation(
@@ -393,10 +572,29 @@ namespace back_end.Controllers
 
         }
 
-        // GET: /api/staff/my-locations
-        // The signed-in user's current location, and the locations they can switch between
+        /// <summary>
+        /// The signed-in user's current location, and the locations they can switch between.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/staff/my-locations
+        ///
+        /// Staff get the locations an admin assigned them; admins get every location (all_locations is true).
+        /// current_location is null if they have none.
+        /// </remarks>
+        /// <response code="200">Their current location and the locations they can pick.</response>
+        /// <response code="400">The user ID in the sign-in is invalid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff.</response>
+        /// <response code="404">The caller's account wasn't found.</response>
         [HttpGet("my-locations")]
         [Authorize(Roles = "Admin,Staff")]
+        [ProducesResponseType(typeof(MyLocationsDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<MyLocationsDto>> GetMyLocations()
         {
             if (!int.TryParse(ClaimsHelpers.GetUserId(User), out var userId))

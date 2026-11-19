@@ -3,12 +3,13 @@
 Entity Relationship Diagram for the `sushi_toshi_db` database used by the back end.
 
 - **Built from:** the entity classes in `back_end.domain.Entities` and `Enums.cs`
-- **Verified against:** the live database schema, Nov 13, 2026. `locations.Allowed_Networks` was added Nov 17, 2026 from the `LocationWifiCheck` migration
+- **Verified against:** the live database schema, Nov 17, 2026.
 
 ## Viewing and editing
 
 - **GitHub / VS Code:** the diagram below renders automatically in the markdown preview.
 - **mermaid.live:** copy everything inside the `mermaid` code block (starting at `erDiagram`) and paste it into https://mermaid.live to edit or export it as PNG/SVG.
+  - **mermaid preview extension:** add **Mermaid Preview** extension from **Mermaid OSS** in VS Code to preview the diagram and export PNG/SVG
 
 ## Legend
 

@@ -44,6 +44,21 @@ src/components/
 
 Route pages are the exception: their test sits next to the page, e.g. `src/app/menu/full-menu/page.test.jsx`.
 
+## Already Set Up for You
+
+`jest.setup.js` and `jest.config.js` already handle the following for every test, so they are not required to be set up again:
+
+- `@testing-library/jest-dom` matchers are imported
+- `cleanup()` runs after each test
+- `window.matchMedia` and `IntersectionObserver` are mocked
+- `Blob.prototype.text()` is added (jsdom lacks it)
+- `next/image` renders a plain `<img>`; `next/link` renders a plain `<a>`
+- `console.warn` and `console.error` are replaced with `jest.fn()`, so expected errors don't clutter the output
+- `findBy*` and `waitFor` wait up to 5 s (`asyncUtilTimeout: 5000`), because MUI grids can be slow to render
+- Each test may run up to 30 s (`testTimeout: 30000`)
+- `@/` maps to `src/`
+- Coverage leaves out thin route wrappers around tested components (see [Coverage Thresholds](./testing.md#coverage-thresholds)).
+
 ## Test Template
 
 ### Basic Component Test Template
@@ -148,9 +163,19 @@ import FormComponent from "../FormComponent";
 import api from "@/config/api";
 
 jest.mock("@/config/api", () => {
-  const mockApi = { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() };
+  const mockApi = {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  };
   return { __esModule: true, default: mockApi, api: mockApi };
 });
+
+const fillForm = async (user) => {
+  await user.type(screen.getByLabelText(/field 1/i), "value 1");
+  await user.type(screen.getByLabelText(/field 2/i), "value 2");
+};
 
 describe("FormComponent", () => {
   const mockSubmit = jest.fn();
@@ -188,6 +213,7 @@ describe("FormComponent", () => {
       await waitFor(() => {
         expect(screen.getByText(/field is required/i)).toBeInTheDocument();
       });
+      expect(api.post).not.toHaveBeenCalled();
     });
 
     it("validates email format", async () => {
@@ -213,8 +239,7 @@ describe("FormComponent", () => {
 
       render(<FormComponent onSubmit={mockSubmit} />);
 
-      await user.type(screen.getByLabelText(/field 1/i), "value 1");
-      await user.type(screen.getByLabelText(/field 2/i), "value 2");
+      await fillForm(user);
       await user.click(screen.getByRole("button", { name: /submit/i }));
 
       await waitFor(() => {
@@ -227,12 +252,11 @@ describe("FormComponent", () => {
 
     it("shows loading state during submission", async () => {
       const user = userEvent.setup();
-      api.post.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 1000)),
-      );
+      api.post.mockImplementation(() => new Promise(() => {}));
 
       render(<FormComponent onSubmit={mockSubmit} />);
 
+      await fillForm(user);
       await user.click(screen.getByRole("button", { name: /submit/i }));
 
       expect(screen.getByRole("progressbar")).toBeInTheDocument();
@@ -240,15 +264,16 @@ describe("FormComponent", () => {
 
     it("handles submission error", async () => {
       const user = userEvent.setup();
-      api.post.mockRejectedValue(new Error("Submission failed"));
+      api.post.mockRejectedValue({
+        response: { status: 500, data: { message: "Submission failed" } },
+      });
 
       render(<FormComponent onSubmit={mockSubmit} />);
 
+      await fillForm(user);
       await user.click(screen.getByRole("button", { name: /submit/i }));
 
-      await waitFor(() => {
-        expect(screen.getByText(/submission failed/i)).toBeInTheDocument();
-      });
+      expect(await screen.findByText(/submission failed/i)).toBeInTheDocument();
     });
   });
 });
@@ -258,6 +283,7 @@ describe("FormComponent", () => {
 
 ```javascript
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ContextProvider, useContextName } from "../ContextProvider";
 
 // Test component that consumes the context
@@ -324,9 +350,7 @@ The staff dashboard pages wrap their content in `ErrorBoundary` from `react-erro
 import { ErrorBoundary } from "react-error-boundary";
 
 it("renders error fallback on error", () => {
-  // React logs caught errors to the console; keep the test output clean
-  jest.spyOn(console, "error").mockImplementation(() => {});
-
+  // jest.setup.js mocks console.error
   const ThrowError = () => {
     throw new Error("Test error");
   };
@@ -352,12 +376,13 @@ jest.mock("next/navigation", () => ({
 }));
 
 it("navigates on button click", async () => {
+  const user = userEvent.setup();
   const mockPush = jest.fn();
   useRouter.mockReturnValue({ push: mockPush });
 
   render(<Component />);
 
-  await userEvent.click(screen.getByRole("button"));
+  await user.click(screen.getByRole("button"));
 
   expect(mockPush).toHaveBeenCalledWith("/expected-route");
 });
@@ -367,24 +392,57 @@ it("navigates on button click", async () => {
 
 ```javascript
 it("opens dialog", async () => {
+  const user = userEvent.setup();
   render(<ComponentWithDialog />);
 
-  await userEvent.click(screen.getByRole("button", { name: /open/i }));
+  await user.click(screen.getByRole("button", { name: /open/i }));
 
   expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
 
 it("selects from dropdown", async () => {
+  const user = userEvent.setup();
   render(<ComponentWithSelect />);
 
   const select = screen.getByLabelText(/select label/i);
-  await userEvent.click(select);
+  await user.click(select);
 
   const option = await screen.findByRole("option", { name: /option 1/i });
-  await userEvent.click(option);
+  await user.click(option);
 
   expect(select).toHaveTextContent("Option 1");
 });
+```
+
+### Testing MUI DataGrid
+
+jsdom has no layout, so `DataGrid` virtualizes its rows away and needs a few extras. Put this at the top of the test file:
+
+```javascript
+jest.mock("@mui/x-data-grid", () => {
+  if (typeof global.TextEncoder === "undefined") {
+    const { TextEncoder, TextDecoder } = jest.requireActual("util");
+    Object.assign(global, { TextEncoder, TextDecoder });
+  }
+  const actual = jest.requireActual("@mui/x-data-grid");
+  const React = jest.requireActual("react");
+  return {
+    ...actual,
+    DataGrid: (props) =>
+      React.createElement(actual.DataGrid, {
+        ...props,
+        disableVirtualization: true,
+      }),
+  };
+});
+
+if (typeof window.ResizeObserver === "undefined") {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
 ```
 
 ## Best Practices

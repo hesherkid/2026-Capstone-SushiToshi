@@ -1,4 +1,3 @@
-using back_end.Controllers;
 using back_end.Dtos.Analytics;
 using back_end.Services.Analytics;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +30,12 @@ namespace back_end.Controllers
         /// <param name="categoryId">Limit the slowest / fastest items to one category. Ranks are calculated within the category.</param>
         /// <param name="tagId">Limit the slowest / fastest items to items with this tag. Ranks are calculated within the tag.</param>
         /// <param name="top">How many items to return in the slowest and fastest lists (1-25, default 5).</param>
+        /// <response code="200">The order timing report (lists can be empty).</response>
+        /// <response code="400">Invalid range, from/to or top.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The location_id doesn't exist.</response>
+        /// <response code="500">The report couldn't be loaded.</response>
         /// <remarks>
         /// Sample requests:
         ///
@@ -57,6 +62,8 @@ namespace back_end.Controllers
         [HttpGet("order-timing")]
         [ProducesResponseType(typeof(OrderTimingResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetOrderTiming(

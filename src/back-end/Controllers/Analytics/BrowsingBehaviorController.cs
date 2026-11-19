@@ -33,6 +33,12 @@ namespace back_end.Controllers
         /// <param name="tagId">Limit to items with this tag.</param>
         /// <param name="top">How many items in each top / bottom list (1-25, default 5).</param>
         /// <param name="minViews">Fewest views for an item to count as "high views" (1-1000, default 10).</param>
+        /// <response code="200">The browsing behavior report (lists can be empty).</response>
+        /// <response code="400">Invalid range, from/to, top or min_views.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not an admin.</response>
+        /// <response code="404">The location_id doesn't exist.</response>
+        /// <response code="500">The report couldn't be loaded.</response>
         /// <remarks>
         /// Sample requests:
         ///
@@ -55,6 +61,8 @@ namespace back_end.Controllers
         [HttpGet("browsing-behavior")]
         [ProducesResponseType(typeof(BrowsingBehaviorResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetBrowsingBehavior(

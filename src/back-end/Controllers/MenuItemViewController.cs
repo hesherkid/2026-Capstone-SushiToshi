@@ -39,7 +39,7 @@ namespace back_end.Controllers
         ///     }
         ///
         /// Rules:
-        /// - Any signed-in user, including the shared guest account. Customers must be a participant
+        /// - Any signed-in user, including guest accounts. Customers must be a participant
         ///   of the session; Staff and Admin may record views for any session.
         /// - The session must still be open.
         /// - The item must be on the session's menu. Menu and location come from the session.
@@ -48,6 +48,14 @@ namespace back_end.Controllers
         /// - Was_Available records whether the item could be ordered at the time of the view.
         /// - Rate limited per sign-in token (policy "views").
         /// </remarks>
+        /// <response code="204">The view was recorded.</response>
+        /// <response code="400">The body is invalid.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">A customer who isn't part of this dining session.</response>
+        /// <response code="404">The session doesn't exist, or the item isn't on its menu.</response>
+        /// <response code="409">The dining session has ended.</response>
+        /// <response code="429">Too many views from this sign-in in the last minute.</response>
+        /// <response code="500">The view couldn't be saved.</response>
         [HttpPost]
         [EnableRateLimiting(ViewTrackingRules.RateLimitPolicy)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

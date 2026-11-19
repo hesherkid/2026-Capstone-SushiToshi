@@ -13,7 +13,7 @@ namespace back_end.Controllers
 {
   [ApiController]
   [Route("api/[controller]")]
-  public class DashboardController : Controller
+  public class DashboardController : ControllerBase
   {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _config;
@@ -60,14 +60,10 @@ namespace back_end.Controllers
     /// Retrieves detailed information about all active dining sessions for dashboard display.
     /// </summary>
     /// <param name="locationId">Optional location ID to filter sessions by specific location</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing a collection of <see cref="DashboardSessionsDto"/> objects.
-    /// Returns HTTP 200 (OK) with the list of active sessions on success.
-    /// Returns HTTP 404 (Not Found) if no active sessions exist.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns the list of active dining sessions with detailed information</response>
     /// <response code="204">If no active dining sessions are found</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Caller isn't staff or a staff member with no location set</response>
     /// <response code="500">If an internal error occurs while retrieving sessions</response>
     /// <remarks>
     /// Sample requests:
@@ -84,6 +80,7 @@ namespace back_end.Controllers
     /// - Active participant count
     /// - Associated bills with details
     /// - Whether the session can be closed (no open bills)
+    /// - For Admins the location is optional, for staff always see their assigned location.
     /// 
     /// Sessions are ordered by start time (newest first).
     /// </remarks>
@@ -91,6 +88,8 @@ namespace back_end.Controllers
     [HttpGet("sessions")]
     [ProducesResponseType(typeof(List<DashboardSessionsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDashboardSessions([FromQuery(Name = "location_id")] int? locationId)
     {
@@ -192,12 +191,9 @@ namespace back_end.Controllers
     /// Retrieves dashboard summary statistics for active dining sessions.
     /// </summary>
     /// <param name="locationId">Optional location ID to filter statistics by specific location</param>
-    /// <returns>
-    /// An <see cref="IActionResult"/> containing a <see cref="DashboardSummaryDto"/> object with summary statistics.
-    /// Returns HTTP 200 (OK) with the dashboard summary on success.
-    /// Returns HTTP 500 (Internal Server Error) if an exception occurs during retrieval.
-    /// </returns>
     /// <response code="200">Returns dashboard summary statistics</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Caller isn't staff or a staff member with no location set</response>
     /// <response code="500">If an internal error occurs while retrieving the summary</response>
     /// <remarks>
     /// Sample requests:
@@ -214,10 +210,13 @@ namespace back_end.Controllers
     /// - Total number of open bills in active sessions
     /// - Total number of active participants (who haven't left)
     /// - Location information (if filtered by location)
+    /// - For Admins the location is optional, for staff always see their assigned location.
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpGet("summary")]
     [ProducesResponseType(typeof(DashboardSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDashboardSummary([FromQuery(Name = "location_id")] int? locationId)
     {
