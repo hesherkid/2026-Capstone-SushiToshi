@@ -67,6 +67,15 @@ docker compose up -d
 
 #### Backend
 
+The backend won't start until SendGrid is configured. If you don't need real emails, set placeholders once, from `src/back-end`:
+
+```bash
+dotnet user-secrets set "SendGrid:ApiKey" "local-placeholder"
+dotnet user-secrets set "SendGrid:FromEmail" "noreply@example.com"
+```
+
+Everything except sending emails then works. To send real verification and reset emails, see [docs/setup/email-sendgrid-setup.md](docs/setup/email-sendgrid-setup.md).
+
 From `src/back-end`, run the backend:
 
 ```bash
@@ -100,7 +109,7 @@ npm run dev
 The app runs without these, but some features stay off until they're configured:
 
 - **Google Sign-In**: see [docs/dev/google-signin-setup.md](docs/dev/google-signin-setup.md)
-- **Verification and password reset emails**: see [docs/setup/email-sendgrid-setup.md](docs/setup/email-sendgrid-setup.md)
+- **Sending real verification and password reset emails** (the backend needs at least placeholder values, see [Backend](#backend)): see [docs/setup/email-sendgrid-setup.md](docs/setup/email-sendgrid-setup.md)
 - **Testing QR codes on your phone**: see [docs/dev/phone-testing-setup.md](docs/dev/phone-testing-setup.md)
 
 ## 🧪 Running Tests

@@ -40,6 +40,17 @@ Example verified sender:
 
 ## 4. Configure SendGrid outside source control
 
+> **The backend won't start without `SendGrid:ApiKey` and `SendGrid:FromEmail`**, in Development too. Both are checked when it starts (`SendGridSettings` in `src/back-end/Configurations/`), and neither is in the committed settings, so a fresh clone stops with `OptionsValidationException: DataAnnotation validation failed for 'SendGridSettings'`.
+>
+> If you don't need real emails locally, set placeholders instead (from `src/back-end`):
+>
+> ```bash
+> dotnet user-secrets set "SendGrid:ApiKey" "local-placeholder"
+> dotnet user-secrets set "SendGrid:FromEmail" "noreply@example.com"
+> ```
+>
+> The backend then starts and everything except email works. Registering still saves the account, but the request returns a 500 because SendGrid rejects the key, and no verification email arrives. Use the [seeded accounts](../dev/database.md#seeded-accounts), which are already verified. CI uses placeholders the same way (`.github/workflows/automated-tests.yml`).
+
 Do not put `SendGrid:ApiKey` or `SendGrid:FromEmail` in tracked settings such as `appsettings.json`. The sender address is included in outgoing emails, and keeping it out of the repository prevents it from being exposed through the source. Recipients will still see the sender address, so use a verified role address such as `noreply@yourdomain.com` rather than a personal address.
 
 The project already has a `UserSecretsId`. From `src/back-end`, configure local development values with User Secrets:
@@ -132,9 +143,9 @@ Content-Type: application/json
 
 1. The user enters an email at `/auth/forgot-password`.
 2. The backend returns a generic response regardless of whether the account exists.
-3. For eligible accounts, it creates a random, short-lived, single-use token and sends the email.
+3. Only for accounts that have a password, it creates a random, short-lived, single-use token and sends the email. Accounts with no password (Google sign-in accounts whose password was removed, and guest accounts) get no email.
 4. The user opens `/auth/reset-password` and submits a new password.
-5. The backend validates and consumes the token, saves the new **BCrypt hash**, and invalidates existing sessions as supported by the authentication architecture.
+5. The backend validates and consumes the token and saves the new **BCrypt hash**. Devices that are already signed in stay signed in: logins are JWTs, which stay valid until they expire.
 
 Reset link:
 
@@ -151,7 +162,7 @@ Content-Type: application/json
 {"token":"RESET_TOKEN","new_password":"ExampleNewPassword123!"}
 ```
 
-The request bodies bind to `VerifyEmailDto` and `ResetPasswordDto` in `src/back-end/Dtos/Auth/`. Their JSON keys are snake_case (see [naming conventions](../dev/naming-conventions.md)). New passwords must be 8 to 200 characters and not only spaces. Token consumption and user updates should occur within one database transaction.
+The request bodies bind to `VerifyEmailDto` and `ResetPasswordDto` in `src/back-end/Dtos/Auth/`. Their JSON keys are snake_case (see [naming conventions](../dev/naming-conventions.md)). New passwords must be 8 to 200 characters and not only spaces. If the same link is submitted twice at once, only the request that consumes the token changes anything.
 
 ## 8. API endpoints and frontend pages
 
@@ -203,28 +214,32 @@ A response such as `202 Accepted` from SendGrid means the message was **accepted
 
 | Symptom | Check |
 |---|---|
+| Backend stops at startup with `OptionsValidationException ... 'SendGridSettings'` | `SendGrid:ApiKey` or `SendGrid:FromEmail` isn't set (see [step 4](#4-configure-sendgrid-outside-source-control)) |
+| Register returns 500, but the account was created | The email send failed. The backend log has `SendGrid rejected email. Status: ...`. Check the API key and sender, then use **Resend Verification Email** |
+| Forgot password shows success, but no email arrives for one account | That account has no password (Google sign-in or guest), so no reset email is sent |
 | SendGrid returns 401 | API key validity |
 | SendGrid returns 403 | Key permissions or account limitations |
 | Sender rejected | Sender identity / authenticated domain |
 | Email not received | Spam, suppression, bounce, Email Activity |
 | Link gives 404 | Use `/auth/verify-email` or `/auth/reset-password` |
 | Token rejected | Expiry, incorrect purpose, already consumed |
-| Verified user cannot log in | `Status` / admin approval as well as `Is_email_confirmed` |
+| Verified user cannot log in | `Status` as well as `Is_email_confirmed`: a deactivated account gets "Account is not active" |
 | API returns 400 / null DTO fields | Check the frontend's JSON keys against the DTOs in `src/back-end/Dtos/Auth/` (snake_case, e.g. `new_password`). In Development, an unknown key gets a 400 that names it |
 
 ## 11. Production security checklist
 
 - [ ] Authenticate the production domain and configure email authentication records.
-- [ ] Use HTTPS for all public links.
+- [ ] Use HTTPS for all public links (`AuthEmail__FrontendBaseUrl` starts with `https://`).
 - [ ] Use a dedicated, restricted SendGrid API key stored in secret management.
-- [ ] Never log passwords, raw tokens, API keys, or sensitive URLs.
-- [ ] Hash tokens at rest and require expiry and single-use.
-- [ ] Consume tokens and update users atomically.
-- [ ] Rate-limit registration, login, resend verification, and forgot password.
-- [ ] Avoid account enumeration through password-reset responses.
-- [ ] Set `Referrer-Policy: no-referrer` on token-bearing frontend pages.
-- [ ] Revoke existing sessions following a password change, where supported.
-- [ ] Test email/password, Google, and Guest authentication policies.
+- [ ] Never log passwords, raw tokens, API keys, or token-bearing URLs if you add logging.
+- [ ] Test email/password, Google, and Guest sign-in on the production site.
+
+Already handled by the code, so there's nothing to set up: tokens are hashed at rest, expire and work once; registration, login, resend verification and forgot password are rate-limited per IP address; and forgot password gives the same answer whether or not the account exists.
+
+Not built yet, worth considering before launch:
+
+- [ ] Send `Referrer-Policy: no-referrer` on `/auth/verify-email` and `/auth/reset-password`, so the token in the URL can't leak to other sites through the `Referer` header.
+- [ ] Sign out other devices after a password reset or change. Logins are JWTs, so this needs a token version or revocation list.
 
 ## References
 

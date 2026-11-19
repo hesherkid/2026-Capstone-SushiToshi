@@ -56,6 +56,18 @@ On a hosting platform, set the same names in its environment or secrets settings
    - Then download the new PDF or ZIP and reprint.
 4. **If the location uses the Wi-Fi check**, check it still lets guests join. A new router, modem or internet plan can change the restaurant's internet address, and then every guest is refused until the new address is added. See [Wi-Fi check](../admin/admin-manual.md#wi-fi-check) in the admin manual.
 
+## WiFi QR codes and the Wi-Fi check
+
+These are two separate settings that need to agree:
+
+| | WiFi QR code | Wi-Fi check |
+| --- | --- | --- |
+| What it does | Lets a phone join the guest network by scanning | Refuses to let a phone join a table unless it's on the restaurant's network |
+| Where it's set | Backend configuration (this guide) | Admin app: **Locations & Menus** → **Wi-Fi check** |
+| What it stores | Network name and password | The restaurant's internet address (for example `203.0.113.10`) |
+
+When a location uses the Wi-Fi check, the network in its WiFi QR code must be one whose internet address is on its Wi-Fi check list. Otherwise guests join the WiFi from the code but are still told **Please connect to the restaurant Wi-Fi to join this table**. If the restaurant has more than one network (for example, separate 2.4 GHz and 5 GHz networks on different internet connections), add the address of each network guests might use.
+
 ## Check that it works
 
 1. In **QR Codes**, pick the location, enter a table number and click **Preview** on the WiFi card.
@@ -69,6 +81,7 @@ On a hosting platform, set the same names in its environment or secrets settings
 | Every location shows the same network | That location has no `Locations:N:WiFi` entry, so it uses the default. Check the location ID, then restart the backend. |
 | QR code still has the old network | Restart the backend, then regenerate. Bulk generation always overwrites, and the admin page's single-table Preview and Download always build a fresh code. The ZIP and PDF use the saved images, so bulk generate before downloading them. |
 | "WiFi credentials not configured" error | Neither the location's entry nor the default has both an SSID and a password. |
+| Phone joins the WiFi from the code, but can't join the table ("Please connect to the restaurant Wi-Fi") | The location's Wi-Fi check doesn't list this network's internet address. On a device connected to that network, open **Wi-Fi check** for the location, select **Add this network**, then **Save**. See [WiFi QR codes and the Wi-Fi check](#wifi-qr-codes-and-the-wi-fi-check). |
 | Phone can't join from the code | Check the SSID and password match the router exactly. The codes always use WPA/WPA2 and mark the network as visible, so hidden networks and WPA3-only routers may not work. |
 
 ## Security
