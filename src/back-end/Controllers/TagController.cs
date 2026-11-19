@@ -12,7 +12,7 @@ namespace back_end.Controllers
   [ApiController]
   [Route("api/[controller]")]
   [Authorize]
-  public class TagController : Controller
+  public class TagController : ControllerBase
   {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<TagController> _logger;
@@ -24,30 +24,35 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// Creates a new tag.
+    /// Creates a tag (e.g. "Spicy", "Vegetarian") for labelling menu items.
     /// </summary>
-    /// <param name="tagData">The tag payload containing the name and optional color.</param>
+    /// <param name="tagData">The tag's name and colour</param>
     /// <remarks>
-    /// Requires <c>Admin</c> role.  
-    /// Returns <c>201 Created</c> with the created tag and a <c>Location</c> header that points to <see cref="GetTagById(int)"/>.
-    /// Duplicate tag names are rejected.
+    /// Sample request:
+    ///
+    ///     POST /api/tag
+    ///     { "tag_name": "Spicy", "tag_color": "#FF5733" }
+    ///
+    /// - tag_name is required, up to 100 characters, and must be unused.
+    /// - tag_color is required, as a #RRGGBB hex colour.
+    /// - tag_id in the body is ignored.
     /// </remarks>
-    /// <response code="201">Tag created successfully.</response>
-    /// <response code="400">The request body is invalid or missing required fields.</response>
-    /// <response code="403">The user does not have permission to create tags.</response>
-    /// <response code="409">A tag with the same name already exists.</response>
-    /// <response code="500">An unexpected error occurred while creating the tag.</response>
+    /// <response code="201">The new tag; the Location header points to GET /api/tag/{tagId}.</response>
+    /// <response code="400">tag_name or tag_color is missing or invalid.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
+    /// <response code="409">A tag with that name already exists.</response>
+    /// <response code="500">The tag couldn't be saved.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpPost]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerOperation(
-        OperationId = "CreateTag",
-        Summary = "Create a tag",
-        Description = "Creates a new tag with a name and optional color. Requires Admin role."
-    )]
     [ProducesResponseType(typeof(TagBaseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CreateTag([FromBody] TagBaseDto tagData)
     {
       try
@@ -87,23 +92,21 @@ namespace back_end.Controllers
 
 
     /// <summary>
-    /// Retrieves all tags.
+    /// Every tag, by ID.
     /// </summary>
     /// <remarks>
-    /// Returns every tag with its ID, name, and color, ordered by ID.
-    /// Requires authentication.
+    /// Sample request:
+    ///
+    ///     GET /api/tag
     /// </remarks>
-    /// <response code="200">The list of tags was returned successfully.</response>
-    /// <response code="403">The user is not authorized to access this resource.</response>
-    /// <response code="500">An internal server error occurred while retrieving tags.</response>
+    /// <response code="200">The tags with their IDs, names and colours (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="500">The tags couldn't be loaded.</response>
     [HttpGet]
     [Produces("application/json")]
-    [SwaggerOperation(
-        OperationId = "GetTags",
-        Summary = "Retrieve all tags",
-        Description = "Returns every tag with its ID, name, and color. Requires authentication."
-    )]
     [ProducesResponseType(typeof(IEnumerable<TagBaseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTags()
     {
       try
@@ -131,26 +134,17 @@ namespace back_end.Controllers
     /// <summary>
     /// Retrieves a tag by its unique identifier.
     /// </summary>
-    /// <param name="tagId">The unique identifier of the tag to retrieve.</param>
-    /// <remarks>
-    /// This endpoint returns a single tag with its ID, name, and color.
-    /// Authorization is required.  
-    /// If the tag does not exist, a <c>404 Not Found</c> response is returned.
-    /// </remarks>
-    /// <response code="200">The tag was found and returned successfully.</response>
-    /// <response code="403">The user is not authorized to access this resource.</response>
-    /// <response code="404">No tag exists with the specified <paramref name="tagId"/>.</response>
-    /// <response code="500">An internal server error occurred while retrieving the tag.</response>
-
+    /// <param name="tagId">The tag</param>
+    /// <response code="200">The tag's ID, name and colour.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="404">The tag doesn't exist.</response>
+    /// <response code="500">The tag couldn't be loaded.</response>
     [HttpGet("{tagId:int}")]
     [Produces("application/json")]
-    [SwaggerOperation(
-        OperationId = "GetTagById",
-        Summary = "Retrieve a tag by ID",
-        Description = "Fetches a single tag's details (ID, name, color) by its unique identifier. Requires authentication."
-    )]
     [ProducesResponseType(typeof(TagBaseDto), StatusCodes.Status200OK)]
-    [SwaggerResponse(StatusCodes.Status200OK, "Tag retrieved successfully", typeof(TagBaseDto))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTagById(int tagId)
     {
       try
@@ -184,28 +178,33 @@ namespace back_end.Controllers
     /// <param name="tagId">The unique identifier of the tag to update.</param>
     /// <param name="tagData">The fields to update for the tag.</param>
     /// <remarks>
-    /// Requires <c>Admin</c> role.  
-    /// Only non-null fields in <see cref="TagUpdateDto"/> are applied.  
-    /// Note: Although this is a <c>PUT</c>, this endpoint performs a partial update for convenience.
+    /// Sample request:
+    ///
+    ///     PUT /api/tag/3
+    ///     { "tag_color": "#2E7D32" }
+    ///
+    /// - Only the fields sent are changed; an empty body changes nothing.
+    /// - A new tag_name must be unused (keeping its own name is fine), up to 100 characters.
+    /// - tag_color must be a #RRGGBB hex colour.
     /// </remarks>
-    /// <response code="200">The tag was updated successfully and the updated tag is returned.</response>
-    /// <response code="400">The request body is invalid, or no updatable fields were provided.</response>
-    /// <response code="403">The user does not have permission to update tags.</response>
-    /// <response code="404">A tag with the specified <paramref name="tagId"/> does not exist.</response>
-    /// <response code="409">Another tag already uses the new name.</response>
-    /// <response code="500">An unexpected error occurred while updating the tag.</response>
+    /// <response code="200">The updated tag.</response>
+    /// <response code="400">tag_name is too long, or tag_color isn't a #RRGGBB colour.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
+    /// <response code="404">The tag doesn't exist.</response>
+    /// <response code="409">Another tag already uses that name.</response>
+    /// <response code="500">The tag couldn't be saved.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpPut("{tagId:int}")]
     [Consumes("application/json")]
     [Produces("application/json")]
-    [SwaggerOperation(
-        OperationId = "UpdateTag",
-        Summary = "Update a tag",
-        Description = "Updates the name and/or color of a tag by ID. Requires Admin role."
-    )]
     [ProducesResponseType(typeof(TagBaseDto), StatusCodes.Status200OK)]
-    [SwaggerResponse(StatusCodes.Status200OK, "Tag updated", typeof(TagBaseDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateTag(int tagId, [FromBody] TagUpdateDto tagData)
     {
       try
@@ -261,26 +260,25 @@ namespace back_end.Controllers
     /// </summary>
     /// <param name="tagId">The unique identifier of the tag.</param>
     /// <remarks>
-    /// This endpoint returns a list of all menu items linked to the specified tag.  
-    /// Only users with the <c>Admin</c> role are permitted to access this resource.
+    /// Sample request:
+    ///
+    ///     GET /api/tag/3/menu-items
+    ///
+    /// Each item includes all of its tags, not only this one.
     /// </remarks>
-    /// <response code="200">Returns the list of menu items associated with the tag.</response>
-    /// <response code="403">The user does not have permission to access this endpoint.</response>
-    /// <response code="404">The specified tag was not found.</response>
-    /// <response code="500">An unexpected server error occurred while retrieving data.</response>
+    /// <response code="200">The menu items (can be empty).</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
+    /// <response code="404">The tag doesn't exist.</response>
+    /// <response code="500">The menu items couldn't be loaded.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpGet("{tagId:int}/menu-items")]
     [Produces("application/json")]
-
-    [SwaggerOperation(
-        OperationId = "GetMenuItemsByTag",
-        Summary = "Get menu items linked to a tag",
-        Description = "Returns all menu items associated with the given tag. Requires Admin role."
-    )]
-    [SwaggerResponse(StatusCodes.Status200OK, "List of menu items returned successfully", typeof(IEnumerable<MenuItemResponseDto>))]
-    [SwaggerResponse(StatusCodes.Status403Forbidden, "Permission denied", typeof(ProblemDetails))]
-    [SwaggerResponse(StatusCodes.Status404NotFound, "Tag not found", typeof(ProblemDetails))]
-    [SwaggerResponse(StatusCodes.Status500InternalServerError, "Server error", typeof(ProblemDetails))]
+    [ProducesResponseType(typeof(IEnumerable<MenuItemResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetMenuItemsByTag(int tagId)
     {
       try
@@ -309,24 +307,27 @@ namespace back_end.Controllers
     }
     /// <summary>
     /// Deletes a tag by its identifier.
-    /// </summary>
-    /// <param name="tagId">The unique identifier of the tag to delete.</param>
+    /// <param name="tagId">The tag</param>
     /// <remarks>
-    /// Requires the user to be in the <c>Admin</c> role.  
-    /// This operation clears all related <c>MenuItemTags</c> associations before removing the tag.
+    /// Sample request:
+    ///
+    ///     DELETE /api/tag/3
+    ///
+    /// The tag comes off every menu item that had it; the menu items themselves stay.
     /// </remarks>
-    /// <response code="200">Tag was deleted successfully.</response>
-    /// <response code="403">The current user does not have permission to delete tags.</response>
-    /// <response code="404">No tag exists with the supplied <paramref name="tagId"/>.</response>
-    /// <response code="500">An unexpected error occurred while deleting the tag.</response>
+    /// <response code="200">The tag was deleted.</response>
+    /// <response code="401">Not signed in.</response>
+    /// <response code="403">Not an admin.</response>
+    /// <response code="404">The tag doesn't exist.</response>
+    /// <response code="500">The tag couldn't be deleted.</response>
     [Authorize(Policy = "adminOnly")]
     [HttpDelete("{tagId:int}")]
     [Produces("application/json")]
-    [SwaggerOperation(
-        Summary = "Delete a tag",              // Short summary (shows in list)
-        Description = "Deletes a tag by ID and removes all related MenuItemTags. Requires Admin role.", // Full description
-        OperationId = "DeleteTag"              // Internal name in Swagger/OpenAPI
-    )]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeleteTag(int tagId)
     {
       try
