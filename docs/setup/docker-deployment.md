@@ -119,7 +119,7 @@ ENTRYPOINT ["dotnet", "back-end.dll"]
 
 The .NET 9 runtime image listens on port 8080 by default.
 
-The build context is `src/`, so it also needs a `src/.dockerignore`. Without one, every build sends the frontend's `node_modules` (close to 1 GB) to Docker, and `COPY back-end/` copies your local `bin/` and `obj/` folders over the restore the image just did:
+The build context is `src/`, so also add a `src/.dockerignore`. It stops `COPY back-end/` from copying any local `bin/` and `obj/` folders over the restore the image just did. These folders only exist where someone has built the backend before, not in a fresh clone:
 
 ```text
 front-end
