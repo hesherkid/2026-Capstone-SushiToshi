@@ -151,6 +151,19 @@ namespace back_end.Dtos
     public string Status { get; set; } = string.Empty;
   }
 
+  // Staff sending a bill's free ice cream to the kitchen: how many of each flavour the table wants
+  public class SendIceCreamDto
+  {
+    public List<IceCreamFlavourDto> Flavours { get; set; } = new List<IceCreamFlavourDto>();
+  }
+
+  public class IceCreamFlavourDto
+  {
+    public string Flavour { get; set; } = string.Empty;
+
+    public int Quantity { get; set; }
+  }
+
   public class LeftoverFeeRequest
   {
     public decimal? Amount { get; set; }

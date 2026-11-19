@@ -11,6 +11,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
+using back_end.Helpers;
 using back_end.Services;
 using System.Security.Claims;
 
@@ -303,6 +304,111 @@ public class BillControllerTests : IDisposable
         result.Should().BeOfType<BadRequestObjectResult>();
         Bill(LeeBill).Status.Should().Be(BillStatus.Open);
         Bill(LeeBill).Closed_At.Should().BeNull();
+    }
+
+    // ---- Free ice cream: guests say yes with the bill, staff choose flavours and send it ----
+
+    private async Task GuestsWantIceCream() =>
+        await Bills(SeatedGuest, "Customer").RequestBill(TableSession, LeeBill, iceCream: true);
+
+    private static SendIceCreamDto Scoops(params (string Flavour, int Quantity)[] flavours) =>
+        new() { Flavours = flavours.Select(f => new IceCreamFlavourDto { Flavour = f.Flavour, Quantity = f.Quantity }).ToList() };
+
+    private Task<IActionResult> Send(SendIceCreamDto request, int sessionId = TableSession, int billId = LeeBill) =>
+        Bills().SendIceCream(sessionId, billId, request);
+
+    private SessionOrder IceCreamOrder() =>
+        _context.SessionOrders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).ThenInclude(mi => mi.Category)
+            .Single(o => o.Bill_Id == LeeBill);
+
+    [Fact]
+    public async Task SendIceCream_AddsAFreePendingOrderWithALinePerFlavour()
+    {
+        await GuestsWantIceCream();
+
+        // Vanilla listed first, but the kitchen gets them in the usual flavour order
+        (await Send(Scoops(("Vanilla", 1), ("mango", 1), ("Chocolate", 0)))).Should().BeOfType<OkObjectResult>();
+
+        var order = IceCreamOrder();
+        order.Status.Should().Be(OrderStatus.Pending);
+        order.User_Id.Should().Be(StaffHere);
+        order.OrderItems.Select(oi => (oi.MenuItem.Name, oi.Quantity)).Should().Equal(
+            ("Mango Ice Cream", 1), ("Vanilla Ice Cream", 1));
+        order.OrderItems.Should().OnlyContain(oi =>
+            oi.Price_At_Time == 0m // the bill only charges lines above $0
+            && oi.Order_Item_Status == OrderStatus.Pending
+            && oi.MenuItem.Category.Category_name == FreeIceCream.CategoryName);
+        Bill(LeeBill).Ice_Cream_Sent_At.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task SendIceCream_MakesEachFlavourItsOwnItem_OnNoMenu()
+    {
+        await GuestsWantIceCream();
+        await Send(Scoops(("Strawberry", 1)));
+
+        var items = _context.MenuItems.Where(i => i.Category.Category_name == FreeIceCream.CategoryName).ToList();
+        items.Select(i => i.Name).Should().BeEquivalentTo(
+            "Strawberry Ice Cream", "Chocolate Ice Cream", "Mango Ice Cream", "Vanilla Ice Cream");
+        // Guests can't order them themselves
+        _context.MenuItemAssignments.Any(a => items.Select(i => i.item_id).Contains(a.Item_Id)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SendIceCream_AfterTheBillIsClosed_StillGoesToPending()
+    {
+        await GuestsWantIceCream();
+        OkValue<BillResponse>(await Bills().CloseBill(TableSession, LeeBill));
+
+        (await Send(Scoops(("Chocolate", 2)))).Should().BeOfType<OkObjectResult>();
+
+        IceCreamOrder().Status.Should().Be(OrderStatus.Pending);
+        Bill(LeeBill).Status.Should().Be(BillStatus.Closed);
+    }
+
+    [Fact]
+    public async Task SendIceCream_OnlySendsOnce()
+    {
+        await GuestsWantIceCream();
+
+        await Send(Scoops(("Mango", 2)));
+        var again = await Send(Scoops(("Vanilla", 1)));
+
+        again.Should().BeOfType<OkObjectResult>();
+        IceCreamOrder().OrderItems.Should().ContainSingle().Which.MenuItem.Name.Should().Be("Mango Ice Cream");
+    }
+
+    [Theory]
+    [InlineData("Pistachio", 1)] // not a flavour we have
+    [InlineData("Mango", -1)]
+    [InlineData("Mango", 0)]     // nothing chosen
+    [InlineData("Mango", 3)]     // the Lee party is 2: one each at most
+    public async Task SendIceCream_RefusesBadChoices(string flavour, int quantity)
+    {
+        await GuestsWantIceCream();
+
+        (await Send(Scoops((flavour, quantity)))).Should().BeOfType<BadRequestObjectResult>();
+
+        _context.SessionOrders.Any().Should().BeFalse();
+        Bill(LeeBill).Ice_Cream_Sent_At.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SendIceCream_OnACancelledBill_Returns400()
+    {
+        await GuestsWantIceCream();
+        Bill(LeeBill).Status = BillStatus.Cancelled;
+        _context.SaveChanges();
+
+        (await Send(Scoops(("Mango", 1)))).Should().BeOfType<BadRequestObjectResult>();
+        _context.SessionOrders.Any().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SendIceCream_StaffAtAnotherLocation_Returns403()
+    {
+        ShouldBeOtherLocation(await Send(Scoops(("Mango", 1)), OtherLocationSession, OtherLocationBill));
+        _context.SessionOrders.Any().Should().BeFalse();
     }
 
     [Fact]
