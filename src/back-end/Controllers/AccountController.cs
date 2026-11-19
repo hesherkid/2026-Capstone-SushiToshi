@@ -52,6 +52,10 @@ namespace back_end.Controllers
         /// <response code="401">Unauthorized if the user is not signed in</response>
         /// <response code="403">Forbidden if the user is a guest</response>
         /// <response code="404">Not found if the user does not exist</response>
+        /// <response code="200">Returns the signed-in user's account</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is a guest</response>
+        /// <response code="404">Not found if the user does not exist</response>
         [HttpGet]
         [ProducesResponseType(typeof(AccountDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -77,6 +81,11 @@ namespace back_end.Controllers
         /// Both names are required, trimmed, and at most 100 characters. Returns the updated account.
         /// Staff get 403: an admin changes their name in Manage Staff.
         /// </remarks>
+        /// <response code="200">Returns the updated account</response>
+        /// <response code="400">Bad request if the input is invalid</response>
+        /// <response code="401">Unauthorized if the user is not signed in</response>
+        /// <response code="403">Forbidden if the user is a guest or staff</response>
+        /// <response code="404">Not found if the user does not exist</response>
         /// <response code="200">Returns the updated account</response>
         /// <response code="400">Bad request if the input is invalid</response>
         /// <response code="401">Unauthorized if the user is not signed in</response>
@@ -124,6 +133,7 @@ namespace back_end.Controllers
         ///     { "current_password": "OldPassword1!", "new_password": "NewPassword1!" }
         ///
         /// A wrong current password is a 400, not a 401, so the front end doesn't sign the user out.
+        /// Any password reset link or email verification link already emailed stops working. Rate limited like login, since
         /// Any password reset link or email verification link already emailed stops working. Rate limited like login, since
         /// the current password can be guessed here.
         /// </remarks>

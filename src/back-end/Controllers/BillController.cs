@@ -69,8 +69,11 @@ namespace back_end.Controllers
     /// - Session must be active (not ended)
     /// - Session must have at least one table assigned
     /// - At least one guest (adult, senior, child or toddler) must be specified, not negative
+    /// - At least one guest (adult, senior, child or toddler) must be specified, not negative
     /// - A guest's bill can't take the table's open bills past its seats; staff's can,
     ///   for a party that pulled up extra chairs
+    /// - Bill must have a name specified
+    /// - Guests can't start a new bill when the counts have been locked by staff.
     /// - Bill must have a name specified
     /// - Guests can't start a new bill when the counts have been locked by staff.
     /// 

@@ -371,6 +371,7 @@ namespace back_end.Controllers
     /// <response code="401">Not signed in.</response>
     /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="404">If the session is not found</response>
+    /// <response code="403">Table is at another location</response>
     /// <response code="500">If an internal error occurs while adding the table to the session</response>
     /// <remarks>
     /// Sample request:
