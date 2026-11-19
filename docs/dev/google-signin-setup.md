@@ -17,7 +17,7 @@ The button is rendered in `src/front-end/src/components/auth/LoginForm.jsx`. It 
 1. Open `src/back-end/appsettings.json` and copy the value of `Google` → `ClientId`. It ends in `.apps.googleusercontent.com`.
 2. In `src/front-end`, create `.env.local` if you don't have one. Add this line, with no quotes or spaces:
 
-   ```
+   ```text
    NEXT_PUBLIC_GOOGLE_CLIENT_ID=<the ClientId you copied>
    ```
 
@@ -46,14 +46,14 @@ To add an origin, someone with access to the project in Google Cloud Console ope
 
 Before the app is published for production, Google also asks for a privacy policy link on the OAuth consent screen. Use the app's privacy page, `https://<your-frontend-domain>/privacy` (see [Privacy policy](../setup/production-setup.md#6-privacy-policy) in the production setup guide).
 
-> **TODO:** Confirm who on the team has Console access to add origins. The Google sign-in code was added by Tim Torpy in commit `3e0446c`.
+Only people added to the Google Cloud project that owns the OAuth client can change it. If you can't open it, ask whoever manages that project. Before the project is handed over, add the restaurant's own Google account as an owner of the Google Cloud project, or have them create their own OAuth client and set its ID in both places from steps 1 and 2, so they can manage origins without the team.
 
 ## 4. Check that it works
 
 - The login page shows an "or" divider and a Google button under **Sign In**.
 - Clicking it opens Google's account picker without an origin error.
 - After you pick an account, you land signed in. A first-time Google sign-in creates a new customer account, with the first and last names Google has (either can be empty).
-- If an account with that email already exists, Google signs in to it, whatever its role. Only names it's missing are filled in from Google. If its email was never verified, Google sign-in verifies it and **removes its password**, and any verification or reset links already sent stop working, because whoever set that password never proved they own the email. That person signs in with Google, or uses **Forgot password** to set a new one.
+- If an account with that email already exists, Google signs in to it, whatever its role. Only names it's missing are filled in from Google. If its email was never verified, Google sign-in verifies it and **removes its password**, and any verification or reset links already sent stop working, because whoever set that password never proved they own the email. From then on that person signs in with Google. **Forgot password** doesn't send a link to an account with no password, and **My Account** can't change a password it doesn't have, so there's currently no way to add a password back.
 - Optional: the same steps work on your phone through your ngrok URL.
 
 ## Troubleshooting
@@ -68,3 +68,4 @@ Before the app is published for production, Google also asks for a privacy polic
 | "Google email is not verified" (403) | The Google account's email isn't verified | Use a verified Google account |
 | "Account is not active" (403) | The matching user in our database is deactivated | Reactivate the user, or sign in with a different account |
 | "Google login failed." with no request to the backend | Google's popup was closed or blocked | Allow popups for the site and try again |
+| 429 Too Many Requests | Google sign-in shares the sign-in limit of 20 requests per minute per IP address with login, verify email and reset password | Wait a minute and try again |
