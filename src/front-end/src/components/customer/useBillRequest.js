@@ -7,11 +7,16 @@ const SUCCESS_MESSAGE_MS = 8000;
  * "Ready for bill": asks staff to bring the bill. Asking locks it: the server refuses new
  * orders on it (staff can still add). Used by the Bill page and the bill dialog.
  * `reload` refreshes the bill afterwards so it shows as requested.
+ *
+ * The restaurant offers free ice cream at the bill stage, so the confirm asks first:
+ * `iceCream` is null until the guest answers, then true or false. A yes goes to staff with the
+ * request; the server asks the table which flavours and sends them to the kitchen.
  */
 export const useBillRequest = ({ sessionId, billId, reload, setError }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Shows the success message for a few seconds
   const [requestSent, setRequestSent] = useState(false);
+  const [iceCream, setIceCream] = useState(null);
 
   // Another bill, fresh message
   useEffect(() => {
@@ -28,22 +33,30 @@ export const useBillRequest = ({ sessionId, billId, reload, setError }) => {
     setError(null);
     try {
       // Marks the bill as requested and lets staff know
-      await api.post(`/Bill/request-bill/${billId}`, null, { params: { session_id: sessionId } });
+      await api.post(`/Bill/request-bill/${billId}`, null, {
+        params: { session_id: sessionId, ice_cream: iceCream === true },
+      });
       setRequestSent(true);
       await reload();
     } catch (err) {
       console.error("Error requesting bill:", err);
       setError(err.response?.data?.message || "Failed to request bill. Please try again.");
     }
-  }, [billId, sessionId, reload, setError]);
+  }, [billId, sessionId, iceCream, reload, setError]);
 
   return {
     confirmOpen,
-    openConfirm: () => setConfirmOpen(true),
+    // Ask about ice cream every time
+    openConfirm: () => {
+      setIceCream(null);
+      setConfirmOpen(true);
+    },
     closeConfirm: () => setConfirmOpen(false),
     requestSent,
     setRequestSent,
     requestBill,
+    iceCream,
+    setIceCream,
   };
 };
 
