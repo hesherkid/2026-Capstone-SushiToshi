@@ -15,6 +15,7 @@ Start with the section for your role.
 - [Production setup](setup/production-setup.md): every setting to change before deploying, plus a pre-launch checklist
 - [Email (SendGrid) setup](setup/email-sendgrid-setup.md): verification and password reset emails
 - [WiFi configuration](setup/wifi-configuration.md): per-location WiFi credentials for QR codes
+- [Deploying with Docker](setup/docker-deployment.md): a recommended container layout, and what in this codebase needs attention in Docker
 
 ## Developers — working on the code
 
@@ -28,6 +29,7 @@ Start with the section for your role.
 - [Frontend testing](dev/frontend-testing.md): React component test templates and patterns
 - [Team norms](dev/team-norms.md)
 - [Database ERD](dev/architecture/ERD.md): Mermaid diagram of every table, renders on GitHub and in VS Code
+
 ### Docs that live next to the code
 
 - [QR code service](../src/back-end/Services/QrCode/README.md): QR generation endpoints, folder layout and configuration

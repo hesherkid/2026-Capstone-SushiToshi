@@ -2,7 +2,7 @@
 
 Everything that must change before Sushi Toshi runs anywhere other than a developer's machine. The values in `src/back-end/appsettings.json` are development defaults, and several of them are not safe to deploy.
 
-Work through each section in order. The checklist at the end is for a final pass before going live.
+Work through each section in order. The checklist at the end is for a final pass before going live. To run the app in containers, also see [Deploying with Docker](docker-deployment.md).
 
 ## How settings are applied
 
