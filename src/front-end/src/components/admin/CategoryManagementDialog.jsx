@@ -277,16 +277,22 @@ const CategoryManagementDialog = ({
               slotProps={{ htmlInput: { min: 0, max: 99 } }}
               helperText={
                 formData.per_order_per_guest
-                  ? "For each guest at the table, all items in this category combined. 0 = no cap"
-                  : "Whole table, all items in this category combined. 0 = no cap"
+                  ? "For each guest on the bill, all items in this category combined. 0 = no cap"
+                  : "Whole bill, all items in this category combined. 0 = no cap"
               }
               fullWidth
             />
             {/* e.g. Sashimi: 30 per guest, a table of 4 can have 120 in one order */}
             <FormControlLabel
-              label="Select if order limit is per guest at the table"
+              label="Select if per guest"
+              sx={{
+                mt: 0.5,
+                ml: 0.75, // lines the box up with the helper text above
+                "& .MuiFormControlLabel-label": { fontSize: "0.875rem" },
+              }}
               control={
                 <Checkbox
+                  size="small"
                   checked={formData.per_order_per_guest}
                   onChange={(e) =>
                     setFormData((prev) => ({

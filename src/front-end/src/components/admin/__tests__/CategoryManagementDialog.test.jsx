@@ -211,7 +211,7 @@ describe("Category dialog", () => {
 
   const perGuestBox = () =>
     screen.getByRole("checkbox", {
-      name: "Select if order limit is per guest at the table",
+      name: "Select if per guest",
     });
 
   it("sends a per-guest per-order limit when the box is ticked", async () => {
@@ -224,7 +224,7 @@ describe("Category dialog", () => {
     setNumber("Per Order Limit", "30");
     expect(perGuestBox()).not.toBeChecked();
     fireEvent.click(perGuestBox());
-    expect(screen.getByText(/For each guest at the table/)).toBeInTheDocument();
+    expect(screen.getByText(/For each guest on the bill/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Create Category" }));
 
     await waitFor(() =>
