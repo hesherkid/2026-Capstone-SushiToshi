@@ -263,6 +263,7 @@ public class CategoryControllerTests : IDisposable
         dto.Description.Should().BeEmpty();
         dto.ToddlerLimit.Should().Be(0);
         dto.PerOrderLimit.Should().Be(0);
+        dto.PerOrderPerGuest.Should().BeFalse();
         dto.OverLimitBehavior.Should().Be(OverLimitBehavior.Block);
 
         var saved = await _context.Categories.AsNoTracking().SingleAsync(c => c.Category_id == dto.CategoryId);
@@ -474,6 +475,49 @@ public class CategoryControllerTests : IDisposable
         typeof(CategoryController).GetMethod(methodName)!
             .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
             .Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateCategory_PerOrderPerGuest_ReturnsOk()
+    {
+        var request = ValidCreate("Sashimi Per Guest");
+        request.AdultLimit = 0; request.ChildLimit = 0; request.SeniorLimit = 0;
+        request.PerOrderLimit = 30;
+        request.PerOrderPerGuest = true;
+
+        var result = await _controller.CreateCategory(request);
+
+        var dto = result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeOfType<CategoryResponse>().Subject;
+        dto.PerOrderLimit.Should().Be(30);
+        dto.PerOrderPerGuest.Should().BeTrue();
+        (await _context.Categories.AsNoTracking().SingleAsync(c => c.Category_id == dto.CategoryId))
+            .per_order_per_guest.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateCategory_PerOrderPerGuest_CanBeTurnedOnAndOff()
+    {
+        AddLimitedCategory();
+
+        await _controller.UpdateCategory(LimitedId, new UpdateCategory { PerOrderPerGuest = true });
+        (await ReloadLimitedCategory()).per_order_per_guest.Should().BeTrue();
+
+        await _controller.UpdateCategory(LimitedId, new UpdateCategory { PerOrderPerGuest = false });
+        (await ReloadLimitedCategory()).per_order_per_guest.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateCategory_LeavingPerOrderPerGuestOut_ReturnsOk()
+    {
+        AddLimitedCategory();
+        await _controller.UpdateCategory(LimitedId, new UpdateCategory { PerOrderPerGuest = true });
+
+        var result = await _controller.UpdateCategory(LimitedId, new UpdateCategory { Description = "Updated" });
+
+        result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeOfType<CategoryResponse>()
+            .Which.PerOrderPerGuest.Should().BeTrue();
     }
 
     public void Dispose()
