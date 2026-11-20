@@ -188,9 +188,9 @@ namespace back_end.domain.Seeders
                 new("Surf Clam Nigiri", "Surf clam over seasoned rice", T("Raw", "Contains Shellfish")),
                 new("Tamago Nigiri", "Sweet Japanese omelette over seasoned rice", T("Cooked", "Vegetarian")),
                 new("Saba Nigiri", "Mackerel over seasoned rice", T("Raw")),
-                new("Chop Chop Nigiri", "Chopped scallop gunkan. Limit 2 per person.", T("Raw", "Contains Shellfish", "Chef's Special"))
+                new("Chop Chop Nigiri", "Chopped scallop gunkan.", T("Raw", "Contains Shellfish", "Chef's Special"))
                 {
-                    AdultLimit = 2, ChildLimit = 2, SeniorLimit = 2, TotLimit = 0, PerOrderLimit = 1   // per person per session
+                    AdultLimit = 2, ChildLimit = 2, SeniorLimit = 2, TotLimit = 0  // per person per session
                 },
                 new("Masago Nigiri", "Capelin roe gunkan", T("Raw")),
                 new("Shredded Crab Nigiri", "Shredded crab gunkan", T("Cooked", "Contains Shellfish")),
@@ -203,15 +203,15 @@ namespace back_end.domain.Seeders
             },
             ["Add On"] = new()
             {
-                new("Toro Sashimi", "Premium fatty tuna, $1 per piece", T("Raw", "Chef's Special")) { Price = 1.00m },
-                new("Toro Nigiri", "Premium fatty tuna over seasoned rice, $1 per piece", T("Raw", "Chef's Special")) { Price = 1.00m },
-                new("Unagi Sashimi", "Grilled freshwater eel, $1 per piece", T("Cooked")) { Price = 1.00m },
-                new("Unagi Nigiri", "Grilled freshwater eel over seasoned rice, $1 per piece", T("Cooked")) { Price = 1.00m },
-                new("Seared Salmon Belly Sashimi", "Seared salmon belly, $1 per piece", T("Chef's Special")) { Price = 1.00m },
-                new("Seared Salmon Belly Nigiri", "Seared salmon belly over seasoned rice, $1 per piece", T("Chef's Special")) { Price = 1.00m },
+                new("Toro Sashimi", "Premium fatty tuna", T("Raw", "Chef's Special")) { Price = 1.00m },
+                new("Toro Nigiri", "Premium fatty tuna over seasoned rice", T("Raw", "Chef's Special")) { Price = 1.00m },
+                new("Unagi Sashimi", "Grilled freshwater eel", T("Cooked")) { Price = 1.00m },
+                new("Unagi Nigiri", "Grilled freshwater eel over seasoned rice", T("Cooked")) { Price = 1.00m },
+                new("Seared Salmon Belly Sashimi", "Seared salmon belly", T("Chef's Special")) { Price = 1.00m },
+                new("Seared Salmon Belly Nigiri", "Seared salmon belly over seasoned rice", T("Chef's Special")) { Price = 1.00m },
                 new("Nigitoro Roll", "Whole roll", T("Raw", "Chef's Special")) { Price = 9.95m },
-                new("Green Tea Ice Cream", "Premium ice cream, $1 per scoop", T("Vegetarian")) { Price = 1.00m },
-                new("Sesame Ice Cream", "Premium ice cream, $1 per scoop", T("Vegetarian")) { Price = 1.00m },
+                new("Green Tea Ice Cream", "Premium ice cream", T("Vegetarian")) { Price = 1.00m },
+                new("Sesame Ice Cream", "Premium ice cream", T("Vegetarian")) { Price = 1.00m },
             },
             ["Maki"] = new()
             {
