@@ -28,10 +28,12 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
   const { notifySuccess } = useNotification();
 
   // The session as of the last poll, so a closed bill shows up here
-  const session = open ? sessions.find((s) => s.session_id === sessionId) ?? null : null;
+  const session = open
+    ? (sessions.find((s) => s.session_id === sessionId) ?? null)
+    : null;
   const bill = session?.bills?.find((b) => b.bill_id === billId);
 
-  const order = useStaffOrder(session);
+  const order = useStaffOrder(session, billId);
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -64,7 +66,10 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
       onClose();
     } catch (err) {
       console.error("Error placing staff order:", err);
-      setError(err.response?.data?.message || "Couldn't place the order. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          "Couldn't place the order. Please try again.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -76,12 +81,14 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
       category,
       items: (order.menuItems[category.category_id] || []).filter(
         (item) =>
-          order.quantities[category.category_id]?.[item.item_id] > 0 || matchesSearch(item, search),
+          order.quantities[category.category_id]?.[item.item_id] > 0 ||
+          matchesSearch(item, search),
       ),
     }))
     .filter(({ items }) => items.length > 0);
 
-  const lineFor = (itemId) => order.cartLines.find((line) => line.item.item_id === itemId);
+  const lineFor = (itemId) =>
+    order.cartLines.find((line) => line.item.item_id === itemId);
 
   const renderMenu = () => {
     if (order.isLoading) {
@@ -101,14 +108,20 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
     if (groups.length === 0) {
       return (
         <Typography color="text.secondary" sx={{ px: 3, pb: 2 }}>
-          {search.trim() ? "No items match your search." : "This menu has no items."}
+          {search.trim()
+            ? "No items match your search."
+            : "This menu has no items."}
         </Typography>
       );
     }
     return groups.map(({ category, items }) => {
       const headingId = `staff-order-category-${category.category_id}`;
       return (
-        <Box component="section" key={category.category_id} aria-labelledby={headingId}>
+        <Box
+          component="section"
+          key={category.category_id}
+          aria-labelledby={headingId}
+        >
           <Typography
             id={headingId}
             variant="subtitle2"
@@ -125,7 +138,9 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
                 <CartLine
                   item={item}
                   categoryId={category.category_id}
-                  quantity={order.quantities[category.category_id]?.[item.item_id] || 0}
+                  quantity={
+                    order.quantities[category.category_id]?.[item.item_id] || 0
+                  }
                   onQuantityChange={handleQuantityChange}
                   atLimit={order.atLimit(category.category_id, item.item_id)}
                   extra={line?.extra ?? 0}
@@ -144,7 +159,10 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
     <AppDialog open={open} onClose={handleClose} maxWidth="md">
       <DialogHeader
         title={bill ? `New Order · ${bill.bill_name}` : "New Order"}
-        subtitle={session && `Dining Session #${session.session_id} · ${tableLabel(session.table_numbers)}`}
+        subtitle={
+          session &&
+          `Dining Session #${session.session_id} · ${tableLabel(session.table_numbers)}`
+        }
         onClose={handleClose}
         closeDisabled={isSaving}
       />
@@ -189,7 +207,12 @@ const StaffOrderDialog = ({ open, sessionId, billId, onClose }) => {
       </DialogContent>
 
       <DialogActions sx={{ flexWrap: "wrap" }}>
-        <Typography variant="body2" color="text.secondary" role="status" sx={{ mr: "auto" }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          role="status"
+          sx={{ mr: "auto" }}
+        >
           {order.unitCount === 0
             ? "No items picked"
             : `${order.unitCount} ${order.unitCount === 1 ? "item" : "items"}` +

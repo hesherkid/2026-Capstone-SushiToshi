@@ -10,6 +10,9 @@ import {
   Select,
   MenuItem,
   FormHelperText,
+  FormControlLabel,
+  Checkbox,
+  Box,
 } from "@mui/material";
 import FormDialog from "@/components/common/FormDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -22,6 +25,7 @@ const emptyForm = {
   senior_limit: 0,
   toddler_limit: 0,
   per_order_limit: 0,
+  per_order_per_guest: false,
   over_limit_behavior: "Block",
 };
 
@@ -83,6 +87,7 @@ const CategoryManagementDialog = ({
         senior_limit: selectedCategory.senior_limit ?? 0,
         toddler_limit: selectedCategory.toddler_limit ?? 0,
         per_order_limit: selectedCategory.per_order_limit ?? 0,
+        per_order_per_guest: selectedCategory.per_order_per_guest ?? false,
         over_limit_behavior: selectedCategory.over_limit_behavior ?? "Block",
       });
     } else {
@@ -263,19 +268,38 @@ const CategoryManagementDialog = ({
         </Stack>
 
         <Stack direction="row" spacing={2} alignItems="flex-start">
-          <TextField
-            label="Per Order Limit"
-            type="number"
-            value={formData.per_order_limit}
-            onChange={setNumber("per_order_limit")}
-            slotProps={{ htmlInput: { min: 0, max: 99 } }}
-            helperText="Whole table, all items in this category combined. 0 = no cap"
-            fullWidth
-          />
+          <Box sx={{ width: "100%" }}>
+            <TextField
+              label="Per Order Limit"
+              type="number"
+              value={formData.per_order_limit}
+              onChange={setNumber("per_order_limit")}
+              slotProps={{ htmlInput: { min: 0, max: 99 } }}
+              helperText={
+                formData.per_order_per_guest
+                  ? "For each guest at the table, all items in this category combined. 0 = no cap"
+                  : "Whole table, all items in this category combined. 0 = no cap"
+              }
+              fullWidth
+            />
+            {/* e.g. Sashimi: 30 per guest, a table of 4 can have 120 in one order */}
+            <FormControlLabel
+              label="Select if order limit is per guest at the table"
+              control={
+                <Checkbox
+                  checked={formData.per_order_per_guest}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      per_order_per_guest: e.target.checked,
+                    }))
+                  }
+                />
+              }
+            />
+          </Box>
           <FormControl fullWidth>
-            <InputLabel id="over-limit-label">
-              Past per-person limit
-            </InputLabel>
+            <InputLabel id="over-limit-label">Past per-person limit</InputLabel>
             <Select
               labelId="over-limit-label"
               label="Past per-person limit"
@@ -292,8 +316,7 @@ const CategoryManagementDialog = ({
             </Select>
             <FormHelperText>
               Charge bills each item&apos;s price for every extra over the
-              limits above. Items need a price set in their menu
-              assignment.
+              limits above. Items need a price set in their menu assignment.
             </FormHelperText>
           </FormControl>
         </Stack>

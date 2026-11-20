@@ -12,10 +12,15 @@ export const limitText = (item) => {
 
   // Per order (whole table, each order): always blocks
   if (own.per_order) parts.push(`${own.per_order} per order`);
-  if (cat.per_order)
+  if (cat.per_order) {
+    const section = item.category ?? "items in this section";
+
     parts.push(
-      `${cat.per_order} per order across all ${item.category ?? "items in this section"}`,
+      cat.per_order_per_guest
+        ? `${cat.per_order} per guest in each order, across all ${section}`
+        : `${cat.per_order} per order across all ${section}`,
     );
+  }
 
   // Per person (whole dining session): the tighter one is what the guest hits first
   const perPerson = [own.adult, cat.adult].filter((n) => n > 0);
@@ -131,7 +136,11 @@ const MenuItemCard = ({
                 aria-label={`Favourite ${item.name}`}
                 aria-pressed={favourite}
                 onClick={() => onToggleFavourite(item.item_id)}
-                sx={{ mt: -0.75, mr: -0.75, color: favourite ? "primary.main" : "text.secondary" }}
+                sx={{
+                  mt: -0.75,
+                  mr: -0.75,
+                  color: favourite ? "primary.main" : "text.secondary",
+                }}
               >
                 <MaterialSymbol name="favorite" filled={favourite} size={22} />
               </IconButton>

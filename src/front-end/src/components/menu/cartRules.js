@@ -23,6 +23,7 @@ export const normalizeItem = (it) => ({
 export const normalizeCategory = (c) => ({
   category_id: c.category_id,
   name: c.category_name,
+  description: c.description ?? "",
 });
 
 // Menu items from /Menu/{id}/item, one list per category
@@ -87,7 +88,12 @@ export const changeCartQuantity = (limits, cart, categoryId, itemId, delta) => {
 // Every item in the cart with its menu details, in menu order (the order it's sent in).
 // extra: units past a Charge limit (e.g. Hot Stone past 1 per person), billed at extraPrice each.
 // Worked out like the server does: each item uses up its category's free units in turn
-export const buildCartLines = ({ categories, quantities, menuItems, limits }) => {
+export const buildCartLines = ({
+  categories,
+  quantities,
+  menuItems,
+  limits,
+}) => {
   const categoryFree = {};
   return categories.flatMap((category) =>
     Object.entries(quantities[category.category_id] || {})

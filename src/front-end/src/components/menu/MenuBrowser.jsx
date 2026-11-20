@@ -201,8 +201,7 @@ const MenuBrowser = ({
     const top =
       section.getBoundingClientRect().top + window.scrollY - pinnedHeight() - 8;
     // Where the page will stop, as it can't scroll past the bottom
-    const maxTop =
-      document.documentElement.scrollHeight - window.innerHeight;
+    const maxTop = document.documentElement.scrollHeight - window.innerHeight;
     const target = Math.max(0, Math.min(top, maxTop));
 
     // The jump is over once the page gets there, or the customer scrolls for
@@ -401,6 +400,17 @@ const MenuBrowser = ({
                     {`${items.length} ${items.length === 1 ? "item" : "items"}`}
                   </Typography>
                 </Typography>
+
+                {/* Serving size and any limits for the whole section, e.g. "Each order is 2 pieces." */}
+                {category.description && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: -1, mb: 1.5, textAlign: "left" }}
+                  >
+                    {category.description}
+                  </Typography>
+                )}
 
                 <Box
                   sx={{
