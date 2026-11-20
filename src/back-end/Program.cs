@@ -395,7 +395,9 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("Seeding:Enabled is off: skipping database seed");
         }
-        else if (!context.MenuItems.Any())
+        // The FreeIceCreamDefaults migration adds the free flavours to an empty database,
+        // so those don't count as "already seeded"
+        else if (!context.MenuItems.Any(i => !i.Category.Free_With_Bill))
         {
             await seeder.SeedDatabase();
             logger.LogInformation("Database seed completed.");
