@@ -407,6 +407,19 @@ describe("Session dashboard", () => {
     );
   });
 
+  it("won't send for a bill with no guests until the count is fixed", async () => {
+    withBills([{ ...LEE, wants_ice_cream: true }, { ...PARK, total_guests: 0 }]);
+    await renderDashboard();
+
+    const dialog = await openIceCream("Lee");
+    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /Park/ }));
+
+    expect(within(dialog).getByText(/Park has no guests yet/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /to kitchen/ })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "More Vanilla" })).toBeDisabled();
+  });
+
   it("gives a bill that says yes later its own turn", async () => {
     withBills([
       { ...LEE, wants_ice_cream: true, ice_cream_sent_at: "2026-10-18T04:30:00Z" },

@@ -625,6 +625,10 @@ namespace back_end.Controllers
             into.Tot_Count + from.Tot_Count);
         into.Leftover_Charge += from.Leftover_Charge;
         from.Leftover_Charge = 0m;
+        // Free ice cream: a yes on either bill carries over. If either already had theirs, the merged
+        // bill counts as served, so its guests can't get a second round; staff can still ask in person
+        into.Wants_Ice_Cream |= from.Wants_Ice_Cream;
+        into.Ice_Cream_Sent_At ??= from.Ice_Cream_Sent_At;
 
         // Cancelled bills don't count towards guests or turnover, so its counts can stay as a record
         from.Status = BillStatus.Cancelled;
@@ -1021,7 +1025,8 @@ namespace back_end.Controllers
     /// Ice Cream) at $0. Each flavour is its own menu item, so analytics count them. An order needs
     /// a bill, so it goes on the first chosen bill that said yes. It's free, so no total changes.
     /// It works on closed bills too: the ice cream comes after the bill, so staff can close it
-    /// and take payment first. Up to one each for the guests on the chosen bills.
+    /// and take payment first. Up to one each for the guests on the chosen bills, so each chosen
+    /// bill needs a guest count.
     /// Sending again for the same bills returns the first time.
     ///
     /// Sample request:
@@ -1032,7 +1037,7 @@ namespace back_end.Controllers
     /// <param name="sessionId">The dining session (the table) the ice cream is for</param>
     /// <param name="request">The bills it's for, and how many of each flavour</param>
     /// <response code="200">The ice cream order is pending; returns when it was sent, and whether it already had been.</response>
-    /// <response code="400">No bills chosen, a bill isn't at this table, was cancelled or already had ice cream, a flavour isn't one we have, the count is 0 or more than the guests, or the table has left.</response>
+    /// <response code="400">No bills chosen, a bill isn't at this table, was cancelled, already had ice cream or has no guests, a flavour isn't one we have, the count is 0 or more than the guests, or the table has left.</response>
     /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="404">The session was not found.</response>
     [Authorize(Policy = "staffOnly")]
@@ -1111,9 +1116,14 @@ namespace back_end.Controllers
         {
           return BadRequest(new { message = "Choose at least one ice cream." });
         }
-        // One each for the chosen bills' guests; bills without guest counts aren't capped
+        // One each for the chosen bills' guests, so each needs a guest count first
+        var uncounted = chosen.FirstOrDefault(b => b.Total_Count <= 0);
+        if (uncounted != null)
+        {
+          return BadRequest(new { message = $"{uncounted.Bill_Name} has no guests yet. Fix the count with Edit Guests first." });
+        }
         var guests = chosen.Sum(b => b.Total_Count);
-        if (guests > 0 && total > guests)
+        if (total > guests)
         {
           return BadRequest(new { message = $"That's {total} ice creams for {guests} guests: one each at most." });
         }

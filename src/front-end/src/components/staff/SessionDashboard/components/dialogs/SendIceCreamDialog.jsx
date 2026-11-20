@@ -19,7 +19,8 @@ const errorText = (err, fallback) =>
  * Guests said yes on their bill when they asked for it; the server goes over, ticks who it's for
  * (the bills that said yes start ticked, and any other party there can be added), asks which
  * flavours, and sends them as one pending $0 order. Each bill gets it once; a bill that says yes
- * later gets its own turn. One each for the ticked bills' guests at most.
+ * later gets its own turn. One each for the ticked bills' guests at most, so each ticked bill
+ * needs a guest count.
  * `bills`: the table's bills that haven't had ice cream yet.
  */
 const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], onSent }) => {
@@ -39,7 +40,9 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
 
   const chosenBills = bills.filter((b) => chosen.includes(b.bill_id));
   const guestCount = chosenBills.reduce((sum, b) => sum + (b.total_guests ?? 0), 0);
-  const max = guestCount > 0 ? guestCount : Infinity;
+  // One each needs a count: a ticked bill with no guests has to be fixed with Edit Guests first
+  const uncounted = chosenBills.filter((b) => !(b.total_guests > 0)).map((b) => b.bill_name);
+  const max = uncounted.length > 0 ? 0 : guestCount;
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
   const toggle = (billId) =>
@@ -75,7 +78,7 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
       submitLabel={total === 1 ? "Send 1 to kitchen" : `Send ${total} to kitchen`}
       busyLabel="Sending..."
       busy={saving}
-      submitDisabled={chosen.length === 0 || total === 0 || total > max}
+      submitDisabled={chosen.length === 0 || uncounted.length > 0 || total === 0 || total > max}
     >
       <Box component="fieldset" sx={{ border: 0, m: 0, p: 0 }}>
         <Typography component="legend" variant="subtitle2" sx={{ mb: 0.5 }}>
@@ -106,7 +109,13 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
           Ask which flavours they&apos;d like.
           {guestCount > 0 && ` One each, up to ${guestCount}.`}
         </Typography>
-        {total > max && (
+        {uncounted.length > 0 && (
+          <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+            {uncounted.join(", ")} {uncounted.length === 1 ? "has" : "have"} no guests yet. Fix the count with
+            Edit Guests first.
+          </Typography>
+        )}
+        {uncounted.length === 0 && total > max && (
           <Typography variant="body2" color="error" sx={{ mb: 1 }}>
             That&apos;s more than one each. Take some off, or tick another bill.
           </Typography>
