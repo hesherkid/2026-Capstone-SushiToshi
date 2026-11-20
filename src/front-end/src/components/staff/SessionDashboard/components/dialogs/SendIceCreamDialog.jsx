@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Box, Checkbox, CircularProgress, FormControlLabel, IconButton, Stack, Typography } from "@mui/material";
-import { Minus, Plus } from "lucide-react";
+import { Box, Checkbox, CircularProgress, FormControlLabel, Stack, Typography } from "@mui/material";
 import FormDialog from "@/components/common/FormDialog";
+import QuantityStepper from "@/components/menu/QuantityStepper";
 import api from "@/config/api";
 
 // "Mango Ice Cream" -> "Mango": every row is ice cream already
@@ -149,37 +149,15 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
                   key={itemId}
                   sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}
                 >
-                  <Typography id={`ice-cream-${itemId}`} fontWeight={600}>
-                    {label}
-                  </Typography>
-                  <Box
-                    role="group"
-                    aria-labelledby={`ice-cream-${itemId}`}
-                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                  >
-                    <IconButton
-                      aria-label={`Fewer ${label}`}
-                      onClick={() => change(itemId, -1)}
-                      disabled={countOf(itemId) === 0}
-                      sx={{ border: 1, borderColor: "divider" }}
-                    >
-                      <Minus size={18} />
-                    </IconButton>
-                    <Typography
-                      aria-label={`${label} count`}
-                      sx={{ minWidth: 24, textAlign: "center", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
-                    >
-                      {countOf(itemId)}
-                    </Typography>
-                    <IconButton
-                      aria-label={`More ${label}`}
-                      onClick={() => change(itemId, 1)}
-                      disabled={chosen.length === 0 || total >= max}
-                      sx={{ border: 1, borderColor: "divider" }}
-                    >
-                      <Plus size={18} />
-                    </IconButton>
-                  </Box>
+                  <Typography fontWeight={600}>{label}</Typography>
+                  {/* The same − qty + as the menu and Add Order; + greys out at one each */}
+                  <QuantityStepper
+                    itemName={label}
+                    quantity={countOf(itemId)}
+                    onDecrease={() => change(itemId, -1)}
+                    onIncrease={() => change(itemId, 1)}
+                    canIncrease={chosen.length > 0 && total < max}
+                  />
                 </Box>
               );
             })}

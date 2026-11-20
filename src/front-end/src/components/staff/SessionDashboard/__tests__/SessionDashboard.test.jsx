@@ -368,7 +368,7 @@ describe("Session dashboard", () => {
       within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }),
     );
     const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
-    await within(dialog).findByRole("button", { name: "More Mango" }); // flavours loaded
+    await within(dialog).findByRole("button", { name: /^Add one Mango/ }); // flavours loaded
     return dialog;
   };
 
@@ -382,9 +382,9 @@ describe("Session dashboard", () => {
     expect(within(dialog).getByRole("checkbox", { name: /Park/ })).not.toBeChecked();
     const send = within(dialog).getByRole("button", { name: /to kitchen/ });
     expect(send).toBeDisabled(); // nothing chosen yet
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Vanilla" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Mango/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Mango/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Vanilla/ }));
     expect(send).toHaveTextContent("Send 3 to kitchen");
     fireEvent.click(send);
 
@@ -401,14 +401,18 @@ describe("Session dashboard", () => {
     await renderDashboard();
 
     const dialog = await openIceCream("Lee");
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Strawberry" }));
-    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeDisabled(); // Lee is 1 guest
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Strawberry/ }));
+    expect(within(dialog).getByRole("button", { name: /^Add one Mango/ })).toHaveAttribute("aria-disabled", "true"); // Lee is 1 guest
+    // Taking the strawberry off makes room again; at 1 the minus removes it
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove Strawberry" }));
+    expect(within(dialog).getByRole("button", { name: "Add one Mango" })).toHaveAttribute("aria-disabled", "false");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add one Strawberry" }));
 
     // Park's 2 guests want some too
     fireEvent.click(within(dialog).getByRole("checkbox", { name: /Park/ }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
-    expect(within(dialog).getByRole("button", { name: "More Vanilla" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Mango/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Mango/ }));
+    expect(within(dialog).getByRole("button", { name: /^Add one Vanilla/ })).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(within(dialog).getByRole("button", { name: /to kitchen/ }));
 
     await waitFor(() =>
@@ -424,12 +428,12 @@ describe("Session dashboard", () => {
     await renderDashboard();
 
     const dialog = await openIceCream("Lee");
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Mango/ }));
     fireEvent.click(within(dialog).getByRole("checkbox", { name: /Park/ }));
 
     expect(within(dialog).getByText(/Park has no guests yet/)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /to kitchen/ })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "More Vanilla" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: /^Add one Vanilla/ })).toHaveAttribute("aria-disabled", "true");
   });
 
   it("offers the flavours admins keep in Dessert, and says so when there are none", async () => {
@@ -445,7 +449,7 @@ describe("Session dashboard", () => {
     const sessionDialog = await openSession();
     fireEvent.click(within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }));
     const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
-    fireEvent.click(await within(dialog).findByRole("button", { name: "More Pistachio" }));
+    fireEvent.click(await within(dialog).findByRole("button", { name: /^Add one Pistachio/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: /to kitchen/ }));
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
@@ -513,10 +517,10 @@ describe("Session dashboard", () => {
     const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
     expect(within(dialog).getByRole("checkbox", { name: /Lee/ })).not.toBeChecked();
     expect(within(dialog).getByRole("checkbox", { name: /Park/ })).not.toBeChecked();
-    expect(await within(dialog).findByRole("button", { name: "More Mango" })).toBeDisabled(); // tick someone first
+    expect(await within(dialog).findByRole("button", { name: /^Add one Mango/ })).toHaveAttribute("aria-disabled", "true"); // tick someone first
 
     fireEvent.click(within(dialog).getByRole("checkbox", { name: /Park/ }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Add one Mango/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: /to kitchen/ }));
 
     await waitFor(() =>
