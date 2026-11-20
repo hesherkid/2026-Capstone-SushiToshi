@@ -53,6 +53,14 @@ if (typeof window.ResizeObserver === "undefined") {
   };
 }
 
+// The free ice cream flavours admins keep in the Dessert category
+const FLAVOURS = [
+  { item_id: 501, name: "Strawberry Ice Cream" },
+  { item_id: 502, name: "Chocolate Ice Cream" },
+  { item_id: 503, name: "Mango Ice Cream" },
+  { item_id: 504, name: "Vanilla Ice Cream" },
+];
+
 const sessions = [
   {
     session_id: 7,
@@ -130,6 +138,8 @@ describe("Session dashboard", () => {
         return Promise.resolve({ status: 200, data: sessions });
       if (url === "/ServiceRequest/pending")
         return Promise.resolve({ status: 200, data: requests });
+      if (url === "/Bill/ice-cream-flavours")
+        return Promise.resolve({ status: 200, data: FLAVOURS });
       if (url === "/Bill/summary/80") {
         return Promise.resolve({
           status: 200,
@@ -357,7 +367,9 @@ describe("Session dashboard", () => {
     fireEvent.click(
       within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }),
     );
-    return screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
+    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
+    await within(dialog).findByRole("button", { name: "More Mango" }); // flavours loaded
+    return dialog;
   };
 
   it("lets staff pick flavours and send ice cream for the bill that said yes, even after closing it", async () => {
@@ -379,7 +391,7 @@ describe("Session dashboard", () => {
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
         bill_ids: [80],
-        flavours: [{ flavour: "Mango", quantity: 2 }, { flavour: "Vanilla", quantity: 1 }],
+        flavours: [{ item_id: 503, quantity: 2 }, { item_id: 504, quantity: 1 }],
       }),
     );
   });
@@ -402,7 +414,7 @@ describe("Session dashboard", () => {
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
         bill_ids: [80, 81],
-        flavours: [{ flavour: "Strawberry", quantity: 1 }, { flavour: "Mango", quantity: 2 }],
+        flavours: [{ item_id: 501, quantity: 1 }, { item_id: 503, quantity: 2 }],
       }),
     );
   });
@@ -418,6 +430,44 @@ describe("Session dashboard", () => {
     expect(within(dialog).getByText(/Park has no guests yet/)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /to kitchen/ })).toBeDisabled();
     expect(within(dialog).getByRole("button", { name: "More Vanilla" })).toBeDisabled();
+  });
+
+  it("offers the flavours admins keep in Dessert, and says so when there are none", async () => {
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url === "/Bill/ice-cream-flavours"
+        ? Promise.resolve({ status: 200, data: [{ item_id: 600, name: "Pistachio Ice Cream" }] })
+        : defaultGet(url),
+    );
+    withBills([{ ...LEE, wants_ice_cream: true }]);
+    await renderDashboard();
+
+    const sessionDialog = await openSession();
+    fireEvent.click(within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }));
+    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
+    fireEvent.click(await within(dialog).findByRole("button", { name: "More Pistachio" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /to kitchen/ }));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
+        bill_ids: [80],
+        flavours: [{ item_id: 600, quantity: 1 }],
+      }),
+    );
+  });
+
+  it("explains when no flavours are available", async () => {
+    const defaultGet = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url === "/Bill/ice-cream-flavours" ? Promise.resolve({ status: 200, data: [] }) : defaultGet(url),
+    );
+    withBills([{ ...LEE, wants_ice_cream: true }]);
+    await renderDashboard();
+
+    const sessionDialog = await openSession();
+    fireEvent.click(within(sessionDialog).getByRole("button", { name: "Free ice cream for the table" }));
+    const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
+    expect(await within(dialog).findByText(/No ice cream flavours are available/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /to kitchen/ })).toBeDisabled();
   });
 
   it("gives a bill that says yes later its own turn", async () => {
@@ -463,7 +513,7 @@ describe("Session dashboard", () => {
     const dialog = await screen.findByRole("dialog", { name: /Free ice cream for Tables 1, 2/ });
     expect(within(dialog).getByRole("checkbox", { name: /Lee/ })).not.toBeChecked();
     expect(within(dialog).getByRole("checkbox", { name: /Park/ })).not.toBeChecked();
-    expect(within(dialog).getByRole("button", { name: "More Mango" })).toBeDisabled(); // tick someone first
+    expect(await within(dialog).findByRole("button", { name: "More Mango" })).toBeDisabled(); // tick someone first
 
     fireEvent.click(within(dialog).getByRole("checkbox", { name: /Park/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: "More Mango" }));
@@ -472,7 +522,7 @@ describe("Session dashboard", () => {
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith("/Bill/send-ice-cream/8", {
         bill_ids: [81],
-        flavours: [{ flavour: "Mango", quantity: 1 }],
+        flavours: [{ item_id: 503, quantity: 1 }],
       }),
     );
   });

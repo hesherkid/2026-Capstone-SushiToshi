@@ -160,11 +160,20 @@ namespace back_end.Dtos
     public List<IceCreamFlavourDto> Flavours { get; set; } = new List<IceCreamFlavourDto>();
   }
 
+  // How many of one flavour (a menu item in the Dessert category)
   public class IceCreamFlavourDto
   {
-    public string Flavour { get; set; } = string.Empty;
+    public int ItemId { get; set; }
 
     public int Quantity { get; set; }
+  }
+
+  // A free ice cream flavour staff can send
+  public class IceCreamFlavourOptionDto
+  {
+    public int ItemId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
   }
 
   public class LeftoverFeeRequest

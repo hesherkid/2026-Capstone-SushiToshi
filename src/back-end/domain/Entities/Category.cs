@@ -33,6 +33,10 @@ namespace back_end.domain.Entities
 
         public OverLimitBehavior over_limit_behavior { get; set; } = OverLimitBehavior.Block;
 
+        // The free ice cream (or dessert) staff send when guests ask for the bill: its Available items
+        // are the flavours staff choose from. They can't go on a menu, so guests can't order them
+        public bool Free_With_Bill { get; set; }
+
         public ICollection<Menu_Item> MenuItems { get; set; } = new List<Menu_Item>();
     }
 }

@@ -179,6 +179,9 @@ namespace back_end.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("Free_With_Bill")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("adult_limit")
                         .HasColumnType("int");
 

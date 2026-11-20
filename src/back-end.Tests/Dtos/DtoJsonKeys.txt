@@ -32,11 +32,11 @@ back_end.Dtos.BillAddOnItem: item_id, item_name, line_total, order_item_id, pric
 back_end.Dtos.BillResponse: adult_count, bill_id, bill_name, child_count, closed_at, created_at, requested_at, senior_count, session_id, status, table_numbers, tot_count, total_count
 back_end.Dtos.BillSummaryResponse: addon_items, addon_subtotal, adult_base_price, adult_count, base_charges_subtotal, bill_id, bill_name, child_base_price, child_count, closed_at, created_at, gratuity_amount, gratuity_min_party_size, gratuity_rate, holiday_name, leftover_charge, leftover_items, overlimit_items, overlimit_subtotal, party_size, prices_locked, pricing_type, requested_at, senior_base_price, senior_count, session_id, status, subtotal, table_numbers, tax_amount, tax_rate, toddler_base_price, tot_count, total_amount, total_count
 back_end.Dtos.CategoryOrderLimitDto: category_id, free_left, per_order, session_left
-back_end.Dtos.CategoryResponse: adult_limit, category_id, category_name, child_limit, description, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
+back_end.Dtos.CategoryResponse: adult_limit, category_id, category_name, child_limit, description, free_with_bill, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
 back_end.Dtos.ChangePasswordDto: current_password, new_password
 back_end.Dtos.ChooseBillDto: bill_id
 back_end.Dtos.CreateBill: adult_count, bill_name, child_count, senior_count, tot_count, total_count
-back_end.Dtos.CreateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
+back_end.Dtos.CreateCategory: adult_limit, child_limit, description, free_with_bill, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
 back_end.Dtos.CreateSessionRequestDto: assignment_type, location_id, menu_id, table_group_id, table_id
 back_end.Dtos.CreateStaffDto: email, first_name, last_name, location_id, location_ids, password, role, status
 back_end.Dtos.DashboardBillDto: adult_count, bill_id, bill_name, child_count, counts_changed_by_guest, counts_locked, created_at, ice_cream_sent_at, people_on_bill, requested_at, senior_count, started_by_guest, status, tot_count, total_guests, wants_ice_cream
@@ -54,7 +54,8 @@ back_end.Dtos.HolidayResponse: date, holiday_id, imported_at, name, observed_dat
 back_end.Dtos.HolidayReviewRequest: ids
 back_end.Dtos.HolidayReviewResponse: updated
 back_end.Dtos.HolidayUpdateRequest: date, name
-back_end.Dtos.IceCreamFlavourDto: flavour, quantity
+back_end.Dtos.IceCreamFlavourDto: item_id, quantity
+back_end.Dtos.IceCreamFlavourOptionDto: item_id, name
 back_end.Dtos.ItemOrderLimitDto: category_id, extra_price, free_left, item_id, per_order, session_left
 back_end.Dtos.JoinTableSessionDto: location_id, table_number
 back_end.Dtos.JoinTableSessionResponseDto: already_joined, menu_id, participant_id, session_id, table_numbers
@@ -130,7 +131,7 @@ back_end.Dtos.TagBaseDto: tag_color, tag_id, tag_name
 back_end.Dtos.TagResponseDto: name, tag_id
 back_end.Dtos.TagUpdateDto: tag_color, tag_name
 back_end.Dtos.UpdateAccountDto: first_name, last_name
-back_end.Dtos.UpdateCategory: adult_limit, child_limit, description, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
+back_end.Dtos.UpdateCategory: adult_limit, child_limit, description, free_with_bill, name, over_limit_behavior, per_order_limit, senior_limit, toddler_limit
 back_end.Dtos.UpdateGuestCountsDto: adult_count, child_count, senior_count, tot_count
 back_end.Dtos.UserResponseDto: created_at, email, first_name, is_email_confirmed, last_interaction_at, last_name, role, status, user_id
 back_end.Dtos.WifiCheckResponseDto: allowed_networks, can_see_client_addresses, your_address, your_network

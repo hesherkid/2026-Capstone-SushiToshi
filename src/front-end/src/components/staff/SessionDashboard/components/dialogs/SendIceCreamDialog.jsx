@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { Box, Checkbox, FormControlLabel, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Checkbox, CircularProgress, FormControlLabel, IconButton, Stack, Typography } from "@mui/material";
 import { Minus, Plus } from "lucide-react";
 import FormDialog from "@/components/common/FormDialog";
 import api from "@/config/api";
 
-// The free flavours, in the order the kitchen sees them (the server's FreeIceCream.Flavours)
-export const ICE_CREAM_FLAVOURS = ["Strawberry", "Chocolate", "Mango", "Vanilla"];
-
-const none = () => Object.fromEntries(ICE_CREAM_FLAVOURS.map((f) => [f, 0]));
+// "Mango Ice Cream" -> "Mango": every row is ice cream already
+const flavourLabel = (name) => name.replace(/\s+ice\s*cream$/i, "") || name;
 
 const guests = (n) => (n === 1 ? "1 guest" : `${n} guests`);
 
@@ -21,11 +19,15 @@ const errorText = (err, fallback) =>
  * flavours, and sends them as one pending $0 order. Each bill gets it once; a bill that says yes
  * later gets its own turn. One each for the ticked bills' guests at most, so each ticked bill
  * needs a guest count.
+ * The flavours come from the server: the Available items in categories marked "Free with the bill".
  * `bills`: the table's bills that haven't had ice cream yet.
  */
 const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], onSent }) => {
   const [chosen, setChosen] = useState([]);
-  const [counts, setCounts] = useState(none);
+  const [flavours, setFlavours] = useState([]);
+  const [loading, setLoading] = useState(false);
+  // How many of each flavour, by item id
+  const [counts, setCounts] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -34,8 +36,14 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
   useEffect(() => {
     if (!open) return;
     setChosen(bills.filter((b) => b.wants_ice_cream).map((b) => b.bill_id));
-    setCounts(none());
+    setCounts({});
     setError(null);
+    setLoading(true);
+    api
+      .get("/Bill/ice-cream-flavours")
+      .then(({ data }) => setFlavours(Array.isArray(data) ? data : []))
+      .catch((err) => setError(errorText(err, "Couldn't load the ice cream flavours")))
+      .finally(() => setLoading(false));
   }, [open]);
 
   const chosenBills = bills.filter((b) => chosen.includes(b.bill_id));
@@ -47,7 +55,8 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
 
   const toggle = (billId) =>
     setChosen((c) => (c.includes(billId) ? c.filter((id) => id !== billId) : [...c, billId]));
-  const change = (flavour, by) => setCounts((c) => ({ ...c, [flavour]: Math.max(0, c[flavour] + by) }));
+  const countOf = (itemId) => counts[itemId] ?? 0;
+  const change = (itemId, by) => setCounts((c) => ({ ...c, [itemId]: Math.max(0, (c[itemId] ?? 0) + by) }));
 
   const send = async () => {
     setSaving(true);
@@ -55,7 +64,9 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
     try {
       await api.post(`/Bill/send-ice-cream/${sessionId}`, {
         bill_ids: chosen,
-        flavours: ICE_CREAM_FLAVOURS.filter((f) => counts[f] > 0).map((f) => ({ flavour: f, quantity: counts[f] })),
+        flavours: flavours
+          .filter((f) => countOf(f.item_id) > 0)
+          .map((f) => ({ item_id: f.item_id, quantity: countOf(f.item_id) })),
       });
       await onSent?.();
       onClose();
@@ -120,46 +131,60 @@ const SendIceCreamDialog = ({ open, onClose, sessionId, tableName, bills = [], o
             That&apos;s more than one each. Take some off, or tick another bill.
           </Typography>
         )}
-        <Stack spacing={1}>
-          {ICE_CREAM_FLAVOURS.map((flavour) => (
-            <Box
-              key={flavour}
-              sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}
-            >
-              <Typography id={`ice-cream-${flavour}`} fontWeight={600}>
-                {flavour}
-              </Typography>
-              <Box
-                role="group"
-                aria-labelledby={`ice-cream-${flavour}`}
-                sx={{ display: "flex", alignItems: "center", gap: 1 }}
-              >
-                <IconButton
-                  aria-label={`Fewer ${flavour}`}
-                  onClick={() => change(flavour, -1)}
-                  disabled={counts[flavour] === 0}
-                  sx={{ border: 1, borderColor: "divider" }}
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+            <CircularProgress size={28} aria-label="Loading flavours" />
+          </Box>
+        ) : flavours.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No ice cream flavours are available. An admin can add them as menu items in a category
+            marked &quot;Free with the bill&quot;.
+          </Typography>
+        ) : (
+          <Stack spacing={1}>
+            {flavours.map(({ item_id: itemId, name }) => {
+              const label = flavourLabel(name);
+              return (
+                <Box
+                  key={itemId}
+                  sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}
                 >
-                  <Minus size={18} />
-                </IconButton>
-                <Typography
-                  aria-label={`${flavour} count`}
-                  sx={{ minWidth: 24, textAlign: "center", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
-                >
-                  {counts[flavour]}
-                </Typography>
-                <IconButton
-                  aria-label={`More ${flavour}`}
-                  onClick={() => change(flavour, 1)}
-                  disabled={chosen.length === 0 || total >= max}
-                  sx={{ border: 1, borderColor: "divider" }}
-                >
-                  <Plus size={18} />
-                </IconButton>
-              </Box>
-            </Box>
-          ))}
-        </Stack>
+                  <Typography id={`ice-cream-${itemId}`} fontWeight={600}>
+                    {label}
+                  </Typography>
+                  <Box
+                    role="group"
+                    aria-labelledby={`ice-cream-${itemId}`}
+                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                  >
+                    <IconButton
+                      aria-label={`Fewer ${label}`}
+                      onClick={() => change(itemId, -1)}
+                      disabled={countOf(itemId) === 0}
+                      sx={{ border: 1, borderColor: "divider" }}
+                    >
+                      <Minus size={18} />
+                    </IconButton>
+                    <Typography
+                      aria-label={`${label} count`}
+                      sx={{ minWidth: 24, textAlign: "center", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {countOf(itemId)}
+                    </Typography>
+                    <IconButton
+                      aria-label={`More ${label}`}
+                      onClick={() => change(itemId, 1)}
+                      disabled={chosen.length === 0 || total >= max}
+                      sx={{ border: 1, borderColor: "divider" }}
+                    >
+                      <Plus size={18} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              );
+            })}
+          </Stack>
+        )}
       </Box>
     </FormDialog>
   );

@@ -1013,6 +1013,40 @@ namespace back_end.Controllers
     }
 
     /// <summary>
+    /// The free ice cream flavours staff can send with the bill.
+    /// </summary>
+    /// <remarks>
+    /// The Available items in the Dessert category, in the order they were added. Admins manage them
+    /// with the menu item tools: add an item to Dessert for a new flavour, or set one Unavailable to
+    /// stop offering it. Dessert items can't go on a menu, so guests can't order them.
+    ///
+    /// Sample request:
+    ///
+    ///     GET /api/bill/ice-cream-flavours
+    /// </remarks>
+    /// <response code="200">The flavours (possibly none).</response>
+    /// <response code="403">The caller isn't staff.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpGet("ice-cream-flavours")]
+    [ProducesResponseType(typeof(List<IceCreamFlavourOptionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetIceCreamFlavours()
+    {
+      try
+      {
+        var flavours = await FreeIceCream.Flavours(_context)
+            .Select(i => new IceCreamFlavourOptionDto { ItemId = i.item_id, Name = i.Name })
+            .ToListAsync();
+        return Ok(flavours);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error loading ice cream flavours");
+        return StatusCode(500, new { message = "Error loading ice cream flavours" });
+      }
+    }
+
+    /// <summary>
     /// Staff send free ice cream to the kitchen for the bills at a table that are ready for it.
     /// </summary>
     /// <remarks>
@@ -1021,8 +1055,8 @@ namespace back_end.Controllers
     /// any other party at the table that wants some too. Each bill gets its ice cream once
     /// (Ice_Cream_Sent_At); a bill that says yes later gets its own turn.
     ///
-    /// Adds a pending order with a line for each flavour (Strawberry, Chocolate, Mango or Vanilla
-    /// Ice Cream) at $0. Each flavour is its own menu item, so analytics count them. An order needs
+    /// Adds a pending order with a line for each flavour at $0. The flavours are the Available items
+    /// in the Dessert category (see ice-cream-flavours), so analytics count each one. An order needs
     /// a bill, so it goes on the first chosen bill that said yes. It's free, so no total changes.
     /// It works on closed bills too: the ice cream comes after the bill, so staff can close it
     /// and take payment first. Up to one each for the guests on the chosen bills, so each chosen
@@ -1032,12 +1066,12 @@ namespace back_end.Controllers
     /// Sample request:
     ///
     ///     POST /api/bill/send-ice-cream/269
-    ///     { "bill_ids": [332, 333], "flavours": [ { "flavour": "Mango", "quantity": 2 }, { "flavour": "Vanilla", "quantity": 1 } ] }
+    ///     { "bill_ids": [332, 333], "flavours": [ { "item_id": 120, "quantity": 2 }, { "item_id": 121, "quantity": 1 } ] }
     /// </remarks>
     /// <param name="sessionId">The dining session (the table) the ice cream is for</param>
     /// <param name="request">The bills it's for, and how many of each flavour</param>
     /// <response code="200">The ice cream order is pending; returns when it was sent, and whether it already had been.</response>
-    /// <response code="400">No bills chosen, a bill isn't at this table, was cancelled, already had ice cream or has no guests, a flavour isn't one we have, the count is 0 or more than the guests, or the table has left.</response>
+    /// <response code="400">No bills chosen, a bill isn't at this table, was cancelled, already had ice cream or has no guests, a flavour isn't available, the count is 0 or more than the guests, or the table has left.</response>
     /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="404">The session was not found.</response>
     [Authorize(Policy = "staffOnly")]
@@ -1097,19 +1131,19 @@ namespace back_end.Controllers
         }
 
         // Same flavour twice adds up; flavours with none are left out
-        var counts = new Dictionary<string, int>();
+        var flavourIds = await FreeIceCream.Flavours(_context).Select(i => i.item_id).ToListAsync();
+        var counts = new Dictionary<int, int>();
         foreach (var line in request?.Flavours ?? new List<IceCreamFlavourDto>())
         {
-          var flavour = FreeIceCream.Match(line.Flavour);
-          if (flavour == null)
+          if (!flavourIds.Contains(line.ItemId))
           {
-            return BadRequest(new { message = $"We don't have {line.Flavour} ice cream. Choose from {string.Join(", ", FreeIceCream.Flavours)}." });
+            return BadRequest(new { message = "That ice cream flavour isn't available. Refresh and choose again." });
           }
           if (line.Quantity < 0)
           {
             return BadRequest(new { message = "Ice cream counts can't be negative." });
           }
-          counts[flavour] = counts.GetValueOrDefault(flavour) + line.Quantity;
+          counts[line.ItemId] = counts.GetValueOrDefault(line.ItemId) + line.Quantity;
         }
         var total = counts.Values.Sum();
         if (total == 0)
@@ -1137,7 +1171,6 @@ namespace back_end.Controllers
 
         int.TryParse(ClaimsHelpers.GetUserId(User), out var staffId);
         var now = DateTime.UtcNow;
-        var itemIds = await FreeIceCream.EnsureItemsAsync(_context);
         var order = new SessionOrder
         {
           session_id = session.Session_Id,
@@ -1148,13 +1181,13 @@ namespace back_end.Controllers
           Created_At = now,
         };
         // In the usual flavour order, so the kitchen sees them the same way every time
-        foreach (var flavour in FreeIceCream.Flavours.Where(f => counts.GetValueOrDefault(f) > 0))
+        foreach (var itemId in flavourIds.Where(id => counts.GetValueOrDefault(id) > 0))
         {
           order.OrderItems.Add(new OrderItems
           {
             Menu_Id = session.Menu_Id,
-            Item_Id = itemIds[flavour],
-            Quantity = counts[flavour],
+            Item_Id = itemId,
+            Quantity = counts[itemId],
             Price_At_Time = 0m, // free, so the bill leaves it out
             Order_Item_Status = OrderStatus.Pending,
           });
