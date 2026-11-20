@@ -167,6 +167,26 @@ The rules live in `Helpers/BillLinks.cs`:
 
 **Cancelling a bill** (`POST /api/bill/cancel-bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
 
+### Free ice cream at the bill
+
+The restaurant gives free ice cream when guests ask for the bill. Guests answer yes or no per bill; staff choose flavours and counts at the table and send them as one order for every bill that's ready. The rules live in `Helpers/FreeIceCream.cs`.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /api/bill/request-bill/{bill_id}?session_id=&ice_cream=true` | Ready for bill. `ice_cream=true` sets `Wants_Ice_Cream` on the bill and adds "(wants free ice cream)" to the service request |
+| `GET /api/bill/ice-cream-flavours` | Staff only. The flavours: Available items in categories with `Free_With_Bill`, oldest first |
+| `POST /api/bill/send-ice-cream/{session_id}` | Staff only. Body `{ "bill_ids": [...], "flavours": [{ "item_id", "quantity" }] }`. Adds one Pending order with a $0 line per flavour and sets `Ice_Cream_Sent_At` on every chosen bill |
+
+- **Per bill, sent per visit.** `Wants_Ice_Cream` and `Ice_Cream_Sent_At` are on `Billing`. A bill gets its ice cream once; a bill that says yes later gets its own turn. Sending again for bills that were all sent returns `already_sent` (a double tap). Mixing in one that was already sent is refused.
+- **The order needs a bill**, so it goes on the first chosen bill that said yes (earliest `Requested_At`). Its lines are `Price_At_Time = 0`, so the bill leaves them out.
+- **Cap:** one each for the chosen bills' guests (`Total_Count`). Every chosen bill needs a guest count. Cancelled bills and tables that have left are refused.
+- **Closed bills are fine.** The ice cream comes after the bill, so staff can close it first. Sending takes `BillLock` on the chosen bills. A pending ice cream order still blocks closing a bill and ending the session, like any pending order.
+- **Merging bills** carries `Wants_Ice_Cream` over, and keeps `Ice_Cream_Sent_At` if either bill had it, so a merged party can't get a second round.
+- **Flavours are menu items**, so Item Performance counts them once delivered. Admins manage them with the menu item tools. `Free_With_Bill` on `Category` marks the list; the name doesn't matter. The `FreeIceCreamDefaults` migration adds a "Free Ice Cream" category with four flavours once, skipped if a category already has the flag, so it works out of the box. After that they're the admins' to manage; nothing adds them back.
+- **Kept off menus:** `CreateMenuItemAssignment` refuses free-with-the-bill items, `copy-menu` leaves them out, moving an on-menu item into such a category is refused, and so is turning the flag on for a category whose items are on a menu.
+
+`GET /api/dashboard/sessions` sends each bill's `wants_ice_cream` and `ice_cream_sent_at`. The staff UI is the strip and button in `SessionDetailDialog.jsx` and the picker in `dialogs/SendIceCreamDialog.jsx`. The guest's yes/no is `components/customer/IceCreamChoice.jsx`, shown in the Ready for bill confirm.
+
 ## Ordering rules at the table
 
 These are the limits and extras a seated customer sees on the menu, the orders page and Call server. There's no customer guide yet, so they're listed here.
@@ -177,6 +197,7 @@ These are the limits and extras a seated customer sees on the menu, the orders p
 | **Favourites and Order again** | Signed-in customers can heart items, and get **Favourites** and **Order again** pills in the tag filter. Order again lists up to 50 items they've ordered on any visit, most recent first, leaving out cancelled orders and items. Guests don't get either (the API answers 403) | `MyItemsController` (`/api/me/favourites`, `/api/me/ordered-before`), `components/menu/useMyItems.js`, `favourite_item` table |
 | **99 per item** | The cart never holds more than 99 of one item in an order, even for items with no limit, because the API only takes 1 to 99. Items with a limit are capped lower | `MAX_PER_ITEM` in `components/menu/cartRules.js`, `OrderController.AddOrderItems` |
 | **Cancelling an order** | On `/dashboard/orders`, a customer (guests too) can cancel a **Pending** order they placed, while they're still seated at that table. Once it's no longer pending, nobody can cancel it from the app, staff included (the API answers `409`) | `PATCH /api/order/{orderId}/cancel` |
+| **Free ice cream at the bill** | The **Ready for bill** confirm asks **Would you like free ice cream?** and won't send until the guest answers. A yes is passed as `ice_cream=true`; staff pick the flavours (see [Free ice cream at the bill](#free-ice-cream-at-the-bill)) | `components/customer/IceCreamChoice.jsx`, `useBillRequest.js` |
 | **Wait between service requests** | A table can send one Call server request every 30 seconds. Sooner, the API answers `429` with `retry_after_seconds` (and a `Retry-After` header), and the form tells the guest how long to wait. The wait is per table, not per person | `ServiceRequestController.RequestCooldown`, `ServiceRequestForm.jsx` |
 
 Staff use the same cart rules when they order for a table (see the [Admin Manual](../../admin/admin-manual.md#what-you-can-do)), and their orders are recorded under the staff member.
@@ -190,7 +211,7 @@ Staff use the same cart rules when they order for a table (see the [Admin Manual
 | `Program.cs`           | Startup: services, JWT, policies, rate limits, CORS, Swagger, and database migration and seeding on start |
 | `Controllers/`         | API endpoints, one controller per area. `Analytics/` has the four analytics report controllers             |
 | `Services/`            | Logic shared between controllers: pricing, holidays, location access, auth emails, QR codes (`QrCode/`), analytics queries (`Analytics/`) |
-| `Helpers/`             | Small pure rules, mostly static: bill calculation, order limits, leftover fees, guest accounts, claims, session access, bill links and bill locks |
+| `Helpers/`             | Small pure rules, mostly static: bill calculation, order limits, leftover fees, free ice cream, guest accounts, claims, session access, bill links and bill locks |
 | `Dtos/`                | Request and response shapes                                                                                |
 | `domain/Entities/`     | EF Core entity classes (the database tables)                                                               |
 | `domain/Dbcontexts/`   | `ApplicationDbContext`                                                                                     |
