@@ -11,7 +11,10 @@ jest.mock("@/config/api", () => {
 
 const mockNotifySuccess = jest.fn();
 jest.mock("@/contexts/NotificationContext", () => ({
-  useNotification: () => ({ notifySuccess: mockNotifySuccess, notifyError: jest.fn() }),
+  useNotification: () => ({
+    notifySuccess: mockNotifySuccess,
+    notifyError: jest.fn(),
+  }),
 }));
 
 let mockSessions = [];
@@ -20,7 +23,12 @@ jest.mock("../../../context/SessionContext", () => ({
   useSession: () => ({ sessions: mockSessions, refreshData: mockRefreshData }),
 }));
 
-const openBill = { bill_id: 5, bill_name: "Window Booth", status: "Open", requested_at: null };
+const openBill = {
+  bill_id: 5,
+  bill_name: "Window Booth",
+  status: "Open",
+  requested_at: null,
+};
 
 const session = (overrides = {}) => ({
   session_id: 8,
@@ -32,25 +40,52 @@ const session = (overrides = {}) => ({
 });
 
 const ITEMS = [
-  { item_id: 10, name: "Salmon Roll", price: 0, category_id: 1, is_add_on: false },
-  { item_id: 11, name: "Tuna Roll", price: 0, category_id: 1, is_add_on: false },
-  { item_id: 66, name: "Hot Stone", price: 5, category_id: 2, is_add_on: false },
+  {
+    item_id: 10,
+    name: "Salmon Roll",
+    price: 0,
+    category_id: 1,
+    is_add_on: false,
+  },
+  {
+    item_id: 11,
+    name: "Tuna Roll",
+    price: 0,
+    category_id: 1,
+    is_add_on: false,
+  },
+  {
+    item_id: 66,
+    name: "Hot Stone",
+    price: 5,
+    category_id: 2,
+    is_add_on: false,
+  },
 ];
 
 const mockMenu = (limits = { items: [], categories: [] }) => {
   api.get.mockImplementation((url) => {
     if (url === "/Category")
-      return Promise.resolve({ data: [{ category_id: 1, category_name: "Rolls" }, { category_id: 2, category_name: "Grill" }] });
+      return Promise.resolve({
+        data: [
+          { category_id: 1, category_name: "Rolls" },
+          { category_id: 2, category_name: "Grill" },
+        ],
+      });
     if (url === "/Menu/1/item") return Promise.resolve({ data: ITEMS });
-    if (url === "/Order/session/8/limits") return Promise.resolve({ data: limits });
+    if (url === "/Order/session/8/limits")
+      return Promise.resolve({ data: limits });
     return Promise.reject(new Error(`Unexpected GET ${url}`));
   });
 };
 
 const renderDialog = () =>
-  render(<StaffOrderDialog open sessionId={8} billId={5} onClose={jest.fn()} />);
+  render(
+    <StaffOrderDialog open sessionId={8} billId={5} onClose={jest.fn()} />,
+  );
 
-const placeOrderButton = () => screen.getByRole("button", { name: "Place Order" });
+const placeOrderButton = () =>
+  screen.getByRole("button", { name: "Place Order" });
 
 describe("Staff order dialog", () => {
   beforeEach(() => {
@@ -65,7 +100,9 @@ describe("Staff order dialog", () => {
 
     expect(await screen.findByText("Salmon Roll")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Rolls" })).toBeInTheDocument();
-    expect(api.get).toHaveBeenCalledWith("/Menu/1/item", { params: { location_id: 2 } });
+    expect(api.get).toHaveBeenCalledWith("/Menu/1/item", {
+      params: { location_id: 2 },
+    });
   });
 
   it("can't place an order until an item is picked", async () => {
@@ -73,7 +110,9 @@ describe("Staff order dialog", () => {
     await screen.findByText("Salmon Roll");
 
     expect(placeOrderButton()).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Add one Salmon Roll" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add one Salmon Roll" }),
+    );
     expect(placeOrderButton()).toBeEnabled();
     expect(screen.getByRole("status")).toHaveTextContent("1 item");
   });
@@ -82,7 +121,9 @@ describe("Staff order dialog", () => {
     renderDialog();
     await screen.findByText("Salmon Roll");
 
-    fireEvent.click(screen.getByRole("button", { name: "Add one Salmon Roll" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add one Salmon Roll" }),
+    );
     fireEvent.click(placeOrderButton());
 
     await waitFor(() => expect(api.post).toHaveBeenCalled());
@@ -93,30 +134,47 @@ describe("Staff order dialog", () => {
       items: [{ menu_id: 1, item_id: 10, quantity: 1, price_at_time: 0 }],
     });
     await waitFor(() =>
-      expect(mockNotifySuccess).toHaveBeenCalledWith("Order placed on Window Booth"),
+      expect(mockNotifySuccess).toHaveBeenCalledWith(
+        "Order placed on Window Booth",
+      ),
     );
     expect(mockRefreshData).toHaveBeenCalled();
   });
 
   it("stops adding at the same limits the guests have", async () => {
-    mockMenu({ items: [{ item_id: 10, category_id: 1, per_order: 1, session_left: null }], categories: [] });
+    mockMenu({
+      items: [
+        { item_id: 10, category_id: 1, per_order: 1, session_left: null },
+      ],
+      categories: [],
+    });
     renderDialog();
     await screen.findByText("Salmon Roll");
 
-    fireEvent.click(screen.getByRole("button", { name: "Add one Salmon Roll" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add one Salmon Roll" }),
+    );
 
-    expect(screen.queryByRole("button", { name: "Add one Salmon Roll" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Add one Salmon Roll" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the server's reason when the order is refused", async () => {
-    api.post.mockRejectedValue({ response: { data: { message: "That guest isn't seated at this table." } } });
+    api.post.mockRejectedValue({
+      response: { data: { message: "That guest isn't seated at this table." } },
+    });
     renderDialog();
     await screen.findByText("Salmon Roll");
 
-    fireEvent.click(screen.getByRole("button", { name: "Add one Salmon Roll" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add one Salmon Roll" }),
+    );
     fireEvent.click(placeOrderButton());
 
-    expect(await screen.findByText("That guest isn't seated at this table.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("That guest isn't seated at this table."),
+    ).toBeInTheDocument();
     expect(mockNotifySuccess).not.toHaveBeenCalled();
   });
 
@@ -125,7 +183,10 @@ describe("Staff order dialog", () => {
     await screen.findByText("Salmon Roll");
 
     fireEvent.click(screen.getByRole("button", { name: "Add one Hot Stone" }));
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search the menu" }), { target: { value: "tuna" } });
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Search the menu" }),
+      { target: { value: "tuna" } },
+    );
 
     expect(screen.getByText("Tuna Roll")).toBeInTheDocument();
     expect(screen.getByText("Hot Stone")).toBeInTheDocument();
@@ -137,9 +198,22 @@ describe("Staff order dialog", () => {
     renderDialog();
     await screen.findByText("Salmon Roll");
 
-    fireEvent.click(screen.getByRole("button", { name: "Add one Salmon Roll" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add one Salmon Roll" }),
+    );
 
     expect(screen.getByText(/This bill is closed/)).toBeInTheDocument();
     expect(placeOrderButton()).toBeDisabled();
+  });
+
+  it("asks for the limits of the bill it's ordering on", async () => {
+    renderDialog();
+    await screen.findByText("Salmon Roll");
+
+    // Limits are per bill: another party's orders don't count against this one
+    expect(api.get).toHaveBeenCalledWith("/Order/session/8/limits", {
+      params: { bill_id: 5 },
+    });
+    expect(api.get).toHaveBeenCalledTimes(3);
   });
 });

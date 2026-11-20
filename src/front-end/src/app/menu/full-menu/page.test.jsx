@@ -1,8 +1,20 @@
 import React from "react";
-import { render as rtlRender, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import FullMenu from "./page";
 import { TableOrderProvider } from "@/contexts/TableOrderContext";
-import { tableApi, myBillResponse, MISO_SOUP, SALMON_ROLL, LEE_BILL } from "../_testing/tableApiMock";
+import {
+  tableApi,
+  myBillResponse,
+  MISO_SOUP,
+  SALMON_ROLL,
+  LEE_BILL,
+} from "../_testing/tableApiMock";
 
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({
@@ -14,7 +26,8 @@ let mockSearchTerm = "";
 jest.mock("@/components/menu/searchUtils", () => ({
   __esModule: true,
   // The real matching, so the search tests check what guests get
-  matchesSearch: jest.requireActual("@/components/menu/searchUtils").matchesSearch,
+  matchesSearch: jest.requireActual("@/components/menu/searchUtils")
+    .matchesSearch,
   default: () => ({
     searchTerm: mockSearchTerm,
     setSearchTerm: jest.fn(),
@@ -72,20 +85,62 @@ describe("FullMenu guest flow", () => {
     ).toBeInTheDocument();
 
     // Every section stays on the page; a chip scrolls to its section and lights up
-    expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "All" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Appetizers" }));
     expect(window.scrollTo).toHaveBeenLastCalledWith(
       expect.objectContaining({ behavior: "smooth" }),
     );
-    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("heading", { name: "Appetizers 1 item" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sushi Rolls 1 item" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Appetizers 1 item" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Sushi Rolls 1 item" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
 
     // The cart is its own page now
-    fireEvent.click(screen.getByRole("button", { name: "Review order, 1 item" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Review order, 1 item" }),
+    );
     expect(mockPush).toHaveBeenCalledWith("/menu/review");
+  });
+
+  it("shows each category's description, like its serving size, under the section heading", async () => {
+    const base = tableApi();
+    api.get.mockImplementation((url, config) =>
+      url.includes("/Category")
+        ? Promise.resolve({
+            status: 200,
+            data: [
+              { category_id: 1, category_name: "Appetizers", description: "" },
+              {
+                category_id: 2,
+                category_name: "Sushi Rolls",
+                description: "Each order is 2 pieces.",
+              },
+            ],
+          })
+        : base(url, config),
+    );
+    render(<FullMenu />);
+
+    expect(
+      await screen.findByText("Each order is 2 pieces."),
+    ).toBeInTheDocument();
+    // Outside the heading, so the heading still reads as the name and count
+    expect(
+      screen.getByRole("heading", { name: "Sushi Rolls 1 item" }),
+    ).toBeInTheDocument();
   });
 
   it("lights up the category whose section is on screen as the guest scrolls", async () => {
@@ -93,17 +148,30 @@ describe("FullMenu guest flow", () => {
     await screen.findByText("Salmon Roll");
 
     const placeSections = (appetizersTop, rollsTop) => {
-      document.getElementById("category-1").getBoundingClientRect = () => ({ top: appetizersTop });
-      document.getElementById("category-2").getBoundingClientRect = () => ({ top: rollsTop });
+      document.getElementById("category-1").getBoundingClientRect = () => ({
+        top: appetizersTop,
+      });
+      document.getElementById("category-2").getBoundingClientRect = () => ({
+        top: rollsTop,
+      });
       fireEvent.scroll(window);
     };
 
     placeSections(-300, 600);
-    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     placeSections(-900, 40);
-    expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Sushi Rolls" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Appetizers" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   describe("order limits", () => {
@@ -111,22 +179,37 @@ describe("FullMenu guest flow", () => {
       api.get.mockImplementation(
         tableApi({
           items: [{ ...MISO_SOUP, item_limits: { per_order: 2 } }, SALMON_ROLL],
-          limits: { items: [{ item_id: 11, category_id: 1, per_order: 2, session_left: null }], categories: [] },
+          limits: {
+            items: [
+              { item_id: 11, category_id: 1, per_order: 2, session_left: null },
+            ],
+            categories: [],
+          },
         }),
       );
       render(<FullMenu />);
 
-      const add = await screen.findByRole("button", { name: "Add one Miso Soup" });
+      const add = await screen.findByRole("button", {
+        name: "Add one Miso Soup",
+      });
       fireEvent.click(add);
       expect(screen.getByText("2 per order")).toHaveStyle({ fontWeight: 400 });
 
-      fireEvent.click(screen.getByRole("button", { name: "Add one Miso Soup" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Add one Miso Soup" }),
+      );
 
-      expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Add one Miso Soup" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByText("2 per order")).toHaveStyle({ fontWeight: 600 });
       // Taking one out brings the plus back
-      fireEvent.click(screen.getByRole("button", { name: "Remove one Miso Soup" }));
-      expect(screen.getByRole("button", { name: "Add one Miso Soup" })).toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Remove one Miso Soup" }),
+      );
+      expect(
+        screen.getByRole("button", { name: "Add one Miso Soup" }),
+      ).toBeInTheDocument();
     });
 
     it("shares a category's limit between its items", async () => {
@@ -134,43 +217,72 @@ describe("FullMenu guest flow", () => {
       api.get.mockImplementation(
         tableApi({
           items: [MISO_SOUP, greenTea, SALMON_ROLL],
-          limits: { items: [], categories: [{ category_id: 1, per_order: 2, session_left: null }] },
+          limits: {
+            items: [],
+            categories: [{ category_id: 1, per_order: 2, session_left: null }],
+          },
         }),
       );
       render(<FullMenu />);
 
-      fireEvent.click(await screen.findByRole("button", { name: "Add one Miso Soup" }));
-      fireEvent.click(screen.getByRole("button", { name: "Add one Green Tea" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Add one Miso Soup" }),
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Add one Green Tea" }),
+      );
 
       // Two in Appetizers: neither can take more, other categories can
-      expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Add one Green Tea" })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Add one Salmon Roll" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Add one Miso Soup" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Add one Green Tea" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Add one Salmon Roll" }),
+      ).toBeInTheDocument();
     });
 
     it("stops an item with no limit at 99, the most one order takes", async () => {
-      localStorage.setItem("menuCart", JSON.stringify({ sessionId: 42, quantities: { 1: { 11: 98 } } }));
+      localStorage.setItem(
+        "menuCart",
+        JSON.stringify({ sessionId: 42, quantities: { 1: { 11: 98 } } }),
+      );
       render(<FullMenu />);
 
-      fireEvent.click(await screen.findByRole("button", { name: "Add one Miso Soup" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Add one Miso Soup" }),
+      );
 
       await waitFor(() =>
-        expect(screen.queryByRole("button", { name: "Add one Miso Soup" })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("button", { name: "Add one Miso Soup" }),
+        ).not.toBeInTheDocument(),
       );
-      expect(screen.getByRole("button", { name: "Add one Salmon Roll" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Add one Salmon Roll" }),
+      ).toBeInTheDocument();
     });
 
     it("can't add an item the table has already used up", async () => {
       api.get.mockImplementation(
         tableApi({
-          limits: { items: [{ item_id: 12, category_id: 2, per_order: null, session_left: 0 }], categories: [] },
+          limits: {
+            items: [
+              { item_id: 12, category_id: 2, per_order: null, session_left: 0 },
+            ],
+            categories: [],
+          },
         }),
       );
       render(<FullMenu />);
 
       await screen.findByRole("button", { name: "Add one Miso Soup" });
       await waitFor(() =>
-        expect(screen.queryByRole("button", { name: "Add one Salmon Roll" })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole("button", { name: "Add one Salmon Roll" }),
+        ).not.toBeInTheDocument(),
       );
     });
   });
@@ -247,12 +359,17 @@ describe("FullMenu guest flow", () => {
     expect(screen.getByRole("alert")).toHaveClass("MuiAlert-standardInfo");
     expect(screen.queryByText("All You Can Eat Menu")).not.toBeInTheDocument();
     // Browsing before being seated is for customers with an account
-    expect(screen.queryByRole("button", { name: "Browse the menu" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Browse the menu" }),
+    ).not.toBeInTheDocument();
   });
 
   it("lets customers with an account who aren't seated browse the menu", async () => {
     localStorage.clear();
-    const claims = { role: "Customer", exp: Math.floor(Date.now() / 1000) + 3600 };
+    const claims = {
+      role: "Customer",
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    };
     localStorage.setItem("authToken", `x.${btoa(JSON.stringify(claims))}.x`);
     const seatedMock = api.get.getMockImplementation();
     api.get.mockImplementation((url, config) =>
@@ -262,7 +379,9 @@ describe("FullMenu guest flow", () => {
     );
     render(<FullMenu />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Browse the menu" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Browse the menu" }),
+    );
     expect(mockPush).toHaveBeenCalledWith("/menu/browse");
   });
 
@@ -280,7 +399,9 @@ describe("FullMenu guest flow", () => {
 
   it("stops ordering once the guests have asked for their bill", async () => {
     api.get.mockImplementation(
-      tableApi({ bills: [{ ...LEE_BILL, requested_at: "2026-10-18T04:30:00Z" }] }),
+      tableApi({
+        bills: [{ ...LEE_BILL, requested_at: "2026-10-18T04:30:00Z" }],
+      }),
     );
     render(<FullMenu />);
 
@@ -290,17 +411,27 @@ describe("FullMenu guest flow", () => {
       ),
     ).not.toHaveLength(0);
     // Items still show, but there's no -/+ to put them in the bag, and no way to Review order
-    expect(screen.getAllByRole("heading", { level: 3 }).length).toBeGreaterThan(0);
-    expect(screen.queryAllByRole("button", { name: /^Add one / })).toHaveLength(0);
-    expect(screen.queryAllByRole("button", { name: /^Remove one / })).toHaveLength(0);
+    expect(screen.getAllByRole("heading", { level: 3 }).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryAllByRole("button", { name: /^Add one / })).toHaveLength(
+      0,
+    );
+    expect(
+      screen.queryAllByRole("button", { name: /^Remove one / }),
+    ).toHaveLength(0);
     expect(screen.queryByText(/^Qty /)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Review order/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Review order/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("has the -/+ on every item while the bill is still open", async () => {
     render(<FullMenu />);
 
-    expect((await screen.findAllByRole("button", { name: /^Add one / })).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByRole("button", { name: /^Add one / })).length,
+    ).toBeGreaterThan(0);
   });
 
   describe("choosing a bill", () => {
@@ -315,30 +446,56 @@ describe("FullMenu guest flow", () => {
     };
 
     it("asks a guest who isn't on a bill which one is theirs, and puts them on it", async () => {
-      api.get.mockImplementation(tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }));
+      api.get.mockImplementation(
+        tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }),
+      );
       api.put.mockResolvedValue({
         data: myBillResponse({ bills: [LEE_BILL, PARK_BILL], myBillId: 9 }),
       });
       render(<FullMenu />);
 
-      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Which bill are you on\?/,
+      });
       // How a party shares a bill
-      expect(within(dialog).getByText("One person starts the bill for your party.")).toBeInTheDocument();
-      expect(within(dialog).getByText("Paying separately? Start your own bill.")).toBeInTheDocument();
-      expect(within(dialog).getByRole("button", { name: /Lee\s*2 guests/ })).toBeInTheDocument();
-      fireEvent.click(within(dialog).getByRole("button", { name: /Park\s*3 guests/ }));
+      expect(
+        within(dialog).getByText("One person starts the bill for your party."),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("Paying separately? Start your own bill."),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("button", { name: /Lee\s*2 guests/ }),
+      ).toBeInTheDocument();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: /Park\s*3 guests/ }),
+      );
 
       await waitFor(() =>
-        expect(api.put).toHaveBeenCalledWith("/SessionParticipant/42/bill", { bill_id: 9 }),
+        expect(api.put).toHaveBeenCalledWith("/SessionParticipant/42/bill", {
+          bill_id: 9,
+        }),
       );
       // Then they check the bill's guest count
-      expect(await within(dialog).findByRole("heading", { name: "How many in your party?" })).toBeInTheDocument();
-      expect(within(dialog).getByRole("status")).toHaveTextContent("3 guests on this bill");
-      fireEvent.click(within(dialog).getByRole("button", { name: "Looks right" }));
+      expect(
+        await within(dialog).findByRole("heading", {
+          name: "How many in your party?",
+        }),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByRole("status")).toHaveTextContent(
+        "3 guests on this bill",
+      );
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Looks right" }),
+      );
 
-      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
       expect(api.put).toHaveBeenCalledTimes(1); // nothing changed, so nothing saved
-      expect(screen.queryByText("Choose your bill before placing an order.")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Choose your bill before placing an order."),
+      ).not.toBeInTheDocument();
     });
 
     it("after joining a bill with more people than guests, asks them to update the count", async () => {
@@ -346,49 +503,90 @@ describe("FullMenu guest flow", () => {
       api.get.mockImplementation(tableApi({ bills: [SOLO], myBillId: null }));
       api.put
         .mockResolvedValueOnce({
-          data: myBillResponse({ bills: [{ ...SOLO, people_count: 2 }], myBillId: 9 }),
+          data: myBillResponse({
+            bills: [{ ...SOLO, people_count: 2 }],
+            myBillId: 9,
+          }),
         })
         .mockResolvedValueOnce({
           data: myBillResponse({
-            bills: [{ ...SOLO, total_count: 2, adult_count: 2, people_count: 2 }],
+            bills: [
+              { ...SOLO, total_count: 2, adult_count: 2, people_count: 2 },
+            ],
             myBillId: 9,
           }),
         });
       render(<FullMenu />);
 
-      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Which bill are you on\?/,
+      });
       fireEvent.click(within(dialog).getByRole("button", { name: /Park/ }));
 
-      expect(await within(dialog).findByText("2 people have joined this bill. Make sure everyone is counted."))
-        .toBeInTheDocument();
-      fireEvent.click(within(dialog).getByRole("button", { name: "More adults" }));
-      expect(within(dialog).queryByText(/people have joined/)).not.toBeInTheDocument();
-      fireEvent.click(within(dialog).getByRole("button", { name: "Save guest count" }));
+      expect(
+        await within(dialog).findByText(
+          "2 people have joined this bill. Make sure everyone is counted.",
+        ),
+      ).toBeInTheDocument();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "More adults" }),
+      );
+      expect(
+        within(dialog).queryByText(/people have joined/),
+      ).not.toBeInTheDocument();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Save guest count" }),
+      );
 
       await waitFor(() =>
-        expect(api.put).toHaveBeenLastCalledWith("/SessionParticipant/42/bill/guests", {
-          adult_count: 2,
-          senior_count: 0,
-          child_count: 0,
-          tot_count: 0,
-        }),
+        expect(api.put).toHaveBeenLastCalledWith(
+          "/SessionParticipant/42/bill/guests",
+          {
+            adult_count: 2,
+            senior_count: 0,
+            child_count: 0,
+            tot_count: 0,
+          },
+        ),
       );
-      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
     });
 
     it("shows the server's reason when the guest count can't be saved", async () => {
-      api.get.mockImplementation(tableApi({ bills: [PARK_BILL], myBillId: null }));
+      api.get.mockImplementation(
+        tableApi({ bills: [PARK_BILL], myBillId: null }),
+      );
       api.put
-        .mockResolvedValueOnce({ data: myBillResponse({ bills: [PARK_BILL], myBillId: 9 }) })
-        .mockRejectedValueOnce({ response: { data: { message: "Your table seats 4, and the other bills have 0." } } });
+        .mockResolvedValueOnce({
+          data: myBillResponse({ bills: [PARK_BILL], myBillId: 9 }),
+        })
+        .mockRejectedValueOnce({
+          response: {
+            data: {
+              message: "Your table seats 4, and the other bills have 0.",
+            },
+          },
+        });
       render(<FullMenu />);
 
-      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Which bill are you on\?/,
+      });
       fireEvent.click(within(dialog).getByRole("button", { name: /Park/ }));
-      fireEvent.click(await within(dialog).findByRole("button", { name: "More adults" }));
-      fireEvent.click(within(dialog).getByRole("button", { name: "Save guest count" }));
+      fireEvent.click(
+        await within(dialog).findByRole("button", { name: "More adults" }),
+      );
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Save guest count" }),
+      );
 
-      expect(await within(dialog).findByText("Your table seats 4, and the other bills have 0.")).toBeInTheDocument();
+      expect(
+        await within(dialog).findByText(
+          "Your table seats 4, and the other bills have 0.",
+        ),
+      ).toBeInTheDocument();
     });
 
     it("lets a guest at a table with no bills start one", async () => {
@@ -396,20 +594,30 @@ describe("FullMenu guest flow", () => {
       api.post.mockResolvedValue({ data: { bill_id: 20 } });
       render(<FullMenu />);
 
-      const dialog = await screen.findByRole("dialog", { name: /^Start your bill/ });
-      expect(within(dialog).getByRole("textbox", { name: /Name for the bill/ })).toHaveAttribute(
-        "placeholder",
-        "e.g. your first name",
-      );
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Start your bill/,
+      });
+      expect(
+        within(dialog).getByRole("textbox", { name: /Name for the bill/ }),
+      ).toHaveAttribute("placeholder", "e.g. your first name");
       const start = within(dialog).getByRole("button", { name: "Start Bill" });
       expect(start).toBeDisabled(); // needs a name
 
-      fireEvent.change(within(dialog).getByRole("textbox", { name: /Name for the bill/ }), {
-        target: { value: "  Kim " },
-      });
-      fireEvent.click(within(dialog).getByRole("button", { name: "More adults" }));
-      fireEvent.click(within(dialog).getByRole("button", { name: "More children" }));
-      expect(within(dialog).getByRole("status")).toHaveTextContent("3 guests on this bill");
+      fireEvent.change(
+        within(dialog).getByRole("textbox", { name: /Name for the bill/ }),
+        {
+          target: { value: "  Kim " },
+        },
+      );
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "More adults" }),
+      );
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "More children" }),
+      );
+      expect(within(dialog).getByRole("status")).toHaveTextContent(
+        "3 guests on this bill",
+      );
       fireEvent.click(start);
 
       await waitFor(() =>
@@ -424,38 +632,93 @@ describe("FullMenu guest flow", () => {
     });
 
     it("shows the server's reason when a bill can't be joined", async () => {
-      api.get.mockImplementation(tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }));
-      api.put.mockRejectedValue({ response: { data: { message: "Park has already asked for the bill." } } });
+      api.get.mockImplementation(
+        tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }),
+      );
+      api.put.mockRejectedValue({
+        response: { data: { message: "Park has already asked for the bill." } },
+      });
       render(<FullMenu />);
 
-      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Which bill are you on\?/,
+      });
       fireEvent.click(within(dialog).getByRole("button", { name: /Park/ }));
 
-      expect(await within(dialog).findByText("Park has already asked for the bill.")).toBeInTheDocument();
+      expect(
+        await within(dialog).findByText("Park has already asked for the bill."),
+      ).toBeInTheDocument();
     });
 
     it("can't join a bill that has asked for the bill", async () => {
       api.get.mockImplementation(
-        tableApi({ bills: [LEE_BILL, { ...PARK_BILL, requested_at: "2026-10-18T04:30:00Z" }], myBillId: null }),
+        tableApi({
+          bills: [
+            LEE_BILL,
+            { ...PARK_BILL, requested_at: "2026-10-18T04:30:00Z" },
+          ],
+          myBillId: null,
+        }),
       );
       render(<FullMenu />);
 
-      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
-      expect(within(dialog).getByRole("button", { name: /Park\s*Has asked for the bill/ })).toBeDisabled();
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Which bill are you on\?/,
+      });
+      expect(
+        within(dialog).getByRole("button", {
+          name: /Park\s*Has asked for the bill/,
+        }),
+      ).toBeDisabled();
       expect(within(dialog).getByRole("button", { name: /Lee/ })).toBeEnabled();
     });
 
     it("lets a guest browse first, then reminds them to choose", async () => {
-      api.get.mockImplementation(tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }));
+      api.get.mockImplementation(
+        tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }),
+      );
       render(<FullMenu />);
 
-      const dialog = await screen.findByRole("dialog", { name: /^Which bill are you on\?/ });
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Which bill are you on\?/,
+      });
       fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
-      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
 
-      expect(screen.getByText("Choose your bill before placing an order.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Choose your bill before placing an order."),
+      ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Choose bill" }));
-      expect(await screen.findByRole("dialog", { name: /^Which bill are you on\?/ })).toBeInTheDocument();
+      expect(
+        await screen.findByRole("dialog", { name: /^Which bill are you on\?/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("loads that bill's limits after the guest joins it", async () => {
+      api.get.mockImplementation(
+        tableApi({ bills: [LEE_BILL, PARK_BILL], myBillId: null }),
+      );
+      api.put.mockResolvedValue({
+        data: myBillResponse({ bills: [LEE_BILL, PARK_BILL], myBillId: 9 }),
+      });
+      render(<FullMenu />);
+
+      const dialog = await screen.findByRole("dialog", {
+        name: /^Which bill are you on\?/,
+      });
+      const limitCalls = () =>
+        api.get.mock.calls.filter(([url]) => url === "/Order/session/42/limits")
+          .length;
+      const before = limitCalls();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: /Park\s*3 guests/ }),
+      );
+
+      // Limits are per bill, so joining Park's bill asks again
+      await waitFor(() => expect(limitCalls()).toBe(before + 1));
     });
   });
 
@@ -554,11 +817,15 @@ describe("FullMenu guest flow", () => {
     };
 
     beforeEach(() => {
-      api.get.mockImplementation(tableApi({ items: [MISO_SOUP, SALMON_ROLL, SPICY_TUNA] }));
+      api.get.mockImplementation(
+        tableApi({ items: [MISO_SOUP, SALMON_ROLL, SPICY_TUNA] }),
+      );
     });
 
-    const filterRow = () => screen.getByRole("group", { name: "Filter the menu" });
-    const tagButton = (name) => within(filterRow()).getByRole("button", { name });
+    const filterRow = () =>
+      screen.getByRole("group", { name: "Filter the menu" });
+    const tagButton = (name) =>
+      within(filterRow()).getByRole("button", { name });
 
     it("offers each tag on the menu once, A to Z", async () => {
       render(<FullMenu />);
@@ -587,14 +854,18 @@ describe("FullMenu guest flow", () => {
       fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
       expect(screen.getByText("Miso Soup")).toBeInTheDocument();
       expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Clear filters" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Clear filters" }),
+      ).not.toBeInTheDocument();
     });
 
     it("keeps items already in the cart on screen", async () => {
       render(<FullMenu />);
       await screen.findByText("Salmon Roll");
 
-      fireEvent.click(screen.getByRole("button", { name: "Add one Salmon Roll" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Add one Salmon Roll" }),
+      );
       fireEvent.click(tagButton("Spicy"));
 
       expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
@@ -624,14 +895,19 @@ describe("FullMenu guest flow", () => {
       localStorage.setItem("authToken", tokenFor({ [ROLE]: "Customer" }));
       const menu = tableApi();
       api.get.mockImplementation((url, config) => {
-        if (url === "/me/favourites") return Promise.resolve({ data: favourites });
-        if (url === "/me/ordered-before") return Promise.resolve({ data: orderedBefore });
+        if (url === "/me/favourites")
+          return Promise.resolve({ data: favourites });
+        if (url === "/me/ordered-before")
+          return Promise.resolve({ data: orderedBefore });
         return menu(url, config);
       });
     };
 
     const pill = (name) =>
-      within(screen.getByRole("group", { name: "Filter the menu" })).getByRole("button", { name });
+      within(screen.getByRole("group", { name: "Filter the menu" })).getByRole(
+        "button",
+        { name },
+      );
 
     it("hearts an item and saves it to the account", async () => {
       signInCustomer();
@@ -655,11 +931,18 @@ describe("FullMenu guest flow", () => {
       api.delete.mockRejectedValue(new Error("offline"));
       render(<FullMenu />);
 
-      const heart = await screen.findByRole("button", { name: "Favourite Miso Soup", pressed: true });
+      const heart = await screen.findByRole("button", {
+        name: "Favourite Miso Soup",
+        pressed: true,
+      });
       fireEvent.click(heart);
 
       expect(api.delete).toHaveBeenCalledWith("/me/favourites/11");
-      expect(await screen.findByText("Couldn't update your favourites. Please try again.")).toBeInTheDocument();
+      expect(
+        await screen.findByText(
+          "Couldn't update your favourites. Please try again.",
+        ),
+      ).toBeInTheDocument();
       expect(heart).toHaveAttribute("aria-pressed", "true");
     });
 
@@ -668,7 +951,9 @@ describe("FullMenu guest flow", () => {
       render(<FullMenu />);
       await screen.findByText("Miso Soup");
 
-      fireEvent.click(await screen.findByRole("button", { name: "Favourites" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Favourites" }),
+      );
 
       expect(screen.getByText("Salmon Roll")).toBeInTheDocument();
       expect(screen.queryByText("Miso Soup")).not.toBeInTheDocument();
@@ -680,7 +965,9 @@ describe("FullMenu guest flow", () => {
       render(<FullMenu />);
       await screen.findByText("Salmon Roll");
 
-      fireEvent.click(await screen.findByRole("button", { name: "Order again" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Order again" }),
+      );
 
       expect(screen.getByText("Miso Soup")).toBeInTheDocument();
       expect(screen.queryByText("Salmon Roll")).not.toBeInTheDocument();
@@ -691,17 +978,28 @@ describe("FullMenu guest flow", () => {
       render(<FullMenu />);
       await screen.findByText("Miso Soup");
 
-      expect(screen.queryByRole("button", { name: "Favourites" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Order again" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Favourites" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Order again" }),
+      ).not.toBeInTheDocument();
     });
 
     it("gives guests no hearts", async () => {
-      localStorage.setItem("authToken", tokenFor({ [ROLE]: "Customer", guest: "true" }));
+      localStorage.setItem(
+        "authToken",
+        tokenFor({ [ROLE]: "Customer", guest: "true" }),
+      );
       render(<FullMenu />);
       await screen.findByText("Miso Soup");
 
-      expect(screen.queryByRole("button", { name: /^Favourite/ })).not.toBeInTheDocument();
-      expect(screen.queryByText(/Make an account to save favourites/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^Favourite/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Make an account to save favourites/),
+      ).not.toBeInTheDocument();
       expect(api.get).not.toHaveBeenCalledWith("/me/favourites");
     });
   });
