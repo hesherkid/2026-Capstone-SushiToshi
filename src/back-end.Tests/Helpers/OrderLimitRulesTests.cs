@@ -18,6 +18,9 @@ public class OrderLimitRulesTests
     private static OrderLimitRules.Limits PerOrder(int max) =>
         new(0, 0, 0, 0, max, OverLimitBehavior.Block);
 
+    private static OrderLimitRules.Limits PerGuestPerOrder(int each) =>
+        new(0, 0, 0, 0, PerOrder: each, OverLimitBehavior.Block, PerOrderPerGuest: true);
+
     // SessionCap
 
     [Fact]
@@ -245,5 +248,33 @@ public class OrderLimitRulesTests
                            price: 5.00m);
 
         result.IsValid.Should().BeFalse();   // the 6th is over the category's Block limit
+    }
+
+    [Fact]
+    public void PerOrderCap_perGuest_MultipliesByEveryoneOnTheBill()
+    {
+        var fourTop = new OrderLimitRules.Headcount(Adults: 2, Children: 1, Seniors: 0, Toddlers: 1);
+
+        OrderLimitRules.PerOrderCap(PerGuestPerOrder(30), fourTop).Should().Be(120);   // toddlers count too
+        OrderLimitRules.PerOrderCap(PerGuestPerOrder(30), TwoAdults).Should().Be(60);
+    }
+
+    [Fact]
+    public void PerOrderCap_NotPerGuest_IgnoresHeadcount()
+    {
+        OrderLimitRules.PerOrderCap(PerOrder(30), TwoAdults).Should().Be(30);
+    }
+
+    [Fact]
+    public void CategoryPerOrderPerGuest_BlocksPastTheCapTimesHeadcount_AndSaysWhy()
+    {
+        // 2 adults = 60 in one order; 55 already in it
+        var used = new OrderLimitRules.Usage(OrderCategory: 55, 0, 0, 0);
+
+        Apply(requested: 5, category: PerGuestPerOrder(30), used: used).IsValid.Should().BeTrue();
+
+        var over = Apply(requested: 6, category: PerGuestPerOrder(30), used: used);
+        over.IsValid.Should().BeFalse();
+        over.Error.Should().Contain("maximum 60 combined per order (30 per guest x 2 guests)");
     }
 }

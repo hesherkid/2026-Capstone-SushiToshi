@@ -176,4 +176,14 @@ describe("Category list", () => {
     const again = await openDelete();
     expect(within(again).queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("shows a per-guest per-order limit as 'per guest'", async () => {
+    api.get.mockResolvedValue({
+      data: [{ ...SASHIMI, per_order_per_guest: true }, HOT_STONE],
+    });
+    render(<CategoryList />);
+
+    const sashimi = within(await rowFor("Sashimi"));
+    expect(sashimi.getByText("30 per guest")).toBeInTheDocument();
+  });
 });

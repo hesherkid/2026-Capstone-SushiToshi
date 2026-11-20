@@ -8,11 +8,13 @@ namespace back_end.domain.Seeders
     /// <summary>
     /// Seeds the categories table from the Sushi Toshi dine-in menu
     /// Limit rules: 0 = unlimited; toddler 0 = same as child.
+    /// Most of the menu has no limits, "2 per order" on the menu is the serving size
+    /// so one order will have 2 pieces. Not a cap, only for the serving size description.
     /// Category-level limits only where the menu applies them to the whole section:
-    ///   - Sashimi: max 30 per order (whole table, all sashimi combined), Block
+    ///   - Sashimi: 30 per guest in each order (all sashimi combined, table of 4 can have 120), Block.
+    ///   Everyone on the table's bills counts, children and toddlers included. 
     ///   - Hot Stone: max 1 per person per dining session, extras charged (each items price), Charge
-    /// Per-item per-order limits (Nigiri, Maki, Rolls, Temaki, Kitchen, Deep Fried) are set on the
-    /// menu assignments in MenuItemSeeder, because they apply to each item type separately.
+    /// The only item with a limit is chop chop nigiri as per the dine in menu, Limit 2 per person. 
     /// </summary>
     public class CategorySeeder : ISeeder
     {
@@ -30,11 +32,12 @@ namespace back_end.domain.Seeders
             var categories = new List<Category>
             {
                 //  All you can eat 
-                Unlimited("Sashimi", "Fresh sliced raw fish, ordered by the piece. Maximum 30 pieces per order.", perOrderLimit: 30),
-                Unlimited("Nigiri", "Hand-pressed sushi. 1 piece of each type per order."),
-                Unlimited("Maki", "Small rolls. 2 of each type per order."),
-                Unlimited("Rolls", "Inside-out and specialty rolls. 2 of each type per order."),
-                Unlimited("Temaki", "Hand rolled cones. 1 of each type per order."),
+                Unlimited("Sashimi", "Fresh sliced raw fish, ordered by the piece. Up to 30 pieces per guest in each order.",
+                    perOrderLimit: 30, perOrderPerGuest: true),
+                Unlimited("Nigiri", "Hand-pressed sushi. Each order is 1 piece."),
+                Unlimited("Maki", "Small rolls. Each order is 2 pieces."),
+                Unlimited("Rolls", "Inside-out and specialty rolls. Each order is 2 pieces."),
+                Unlimited("Temaki", "Hand rolled cones. Each order is 1 cone."),
                 new Category
                 {
                     Category_name = "Hot Stone",
@@ -47,8 +50,8 @@ namespace back_end.domain.Seeders
                     over_limit_behavior = OverLimitBehavior.Charge
                 },
                 Unlimited("Cooked/Hot", "Appetizers, soups, and salads."),
-                Unlimited("Kitchen", "Grilled, pan fried, and udon dishes. 1 of each type per order."),
-                Unlimited("Deep Fried", "Tempura, and fried appetizers. 2 of each type per order."),
+                Unlimited("Kitchen", "Grilled, pan fried, and udon dishes."),
+                Unlimited("Deep Fried", "Tempura, and fried appetizers. Each order is 2 pieces."),
 
                 //  Charged (add-ons and drinks) 
                 Unlimited("Add On", "Premium sashimi, nigiri, rolls, and ice cream charged per piece."),
@@ -64,8 +67,9 @@ namespace back_end.domain.Seeders
             _logger.LogInformation("Added {Count} categories", categories.Count);
         }
 
-        // Category with no per-person limits (0 = unlimited) and an optional per-order cap for the whole table
-        private static Category Unlimited(string name, string description, int perOrderLimit = 0) => new Category
+        // Category with no per-person limits (0 = unlimited) and an optional per-order cap for the whole 
+        // table, which can be per guest (cap * everyone at the table). 
+        private static Category Unlimited(string name, string description, int perOrderLimit = 0, bool perOrderPerGuest = false) => new Category
         {
             Category_name = name,
             Description = description,
@@ -74,6 +78,7 @@ namespace back_end.domain.Seeders
             senior_limit = 0,
             toddler_limit = 0,
             per_order_limit = perOrderLimit,
+            per_order_per_guest = perOrderPerGuest,
             over_limit_behavior = OverLimitBehavior.Block
         };
     }

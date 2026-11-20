@@ -197,6 +197,9 @@ namespace back_end.Migrations
                     b.Property<int>("per_order_limit")
                         .HasColumnType("int");
 
+                    b.Property<bool>("per_order_per_guest")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("senior_limit")
                         .HasColumnType("int");
 

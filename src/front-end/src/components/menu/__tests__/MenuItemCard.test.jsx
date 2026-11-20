@@ -73,6 +73,17 @@ describe("Menu item limits line", () => {
 
     expect(limitText(chopChop)).toBe("1 per order · Limit 2 per person");
   });
+
+  it("says a per-guest section limit is for each guest", () => {
+    expect(
+      limitText(
+        item({
+          category: "Sashimi",
+          category_limits: { per_order: 30, per_order_per_guest: true },
+        }),
+      ),
+    ).toBe("30 per guest in each order, across all Sashimi");
+  });
 });
 
 describe("Menu item card", () => {

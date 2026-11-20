@@ -142,7 +142,8 @@ erDiagram
         int child_limit
         int senior_limit
         int toddler_limit
-        int per_order_limit
+        int per_order_limit "0 = no cap"
+        bool per_order_per_guest "true = per_order_limit x the bill's guests"
         OverLimitBehavior over_limit_behavior "Block=0, Charge=1"
         bool Free_With_Bill "items are the free ice cream flavours"
     }

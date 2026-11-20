@@ -67,7 +67,7 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
   - **Mark done** (tick icon) clears a service request once it's handled.
   - **View Bill Summary** shows a bill's breakdown: guests by age, add-ons, over-limit charges, leftover fee, tax and total.
 - **New bill** (receipt icon): adds a bill to the session. Enter a bill name and the number of adults, seniors, children and toddlers (6 and under) on it. Use more than one bill when guests pay separately. Only available once the session has a table. If the table's bills would have more guests than the table has seats, a warning shows and the button changes to **Create Anyway**, for a party that pulled up extra chairs.
-- **Add Order** (on each open bill, in the session details): order for the table yourself, for example when a guest has no phone. Search the menu, add items, then select **Place Order**. The same menu, prices and limits apply as on the guests' phones, and the order is recorded under your name. It works even after the guests have asked for the bill.
+- **Add Order** (on each open bill, in the session details): order for the table yourself, for example when a guest has no phone. Search the menu, add items, then select **Place Order**. The same menu, prices and limits apply as on the guests' phones, using that bill's guest count (see [How limits are counted](#how-limits-are-counted)), and the order is recorded under your name.
 - **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can. A bill with a pending order can't be closed, so close the bill before sending its [free ice cream](#free-ice-cream-at-the-bill).
 - **Free Ice Cream** (in the session details): send the table's free ice cream to the kitchen. See [Free ice cream at the bill](#free-ice-cream-at-the-bill).
 - **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
@@ -85,6 +85,7 @@ Each person who scans the table's QR code is put on one bill. They only see and 
 - From **Review order**, guests can switch to another bill or change their party size. They can switch bills only until they've ordered on their current one, and can't join a bill that has asked for the bill. After that, a staff member has to [move them](#moving-people-between-bills).
 - Guests can change their bill's guest count until they ask for the bill or staff [lock it](#checking-guest-counts). They can't take the table past its seats, but they can always lower their count.
 - A guest who scans again after their bill was closed or cancelled is asked to choose a bill again.
+- Order limits are counted per bill. Each bill's allowance comes from its own guest count, so orders on other bills at the table don't use it up (see [How limits are counted](#how-limits-are-counted))
 
 ### Checking guest counts
 
@@ -98,7 +99,7 @@ Every bill charges per guest, so check the count whenever guests set it themselv
 
 On each open bill:
 
-- **Edit Guests**: change the number of adults, seniors, children and toddlers. Works even after the guests have asked for the bill. Going past the table's seats shows a warning and **Save Anyway**. Saving clears the **Started by guest** and **Count changed by guest** chips.
+- **Edit Guests**: change the number of adults, seniors, children and toddlers. Works even after the guests have asked for the bill. Going past the table's seats shows a warning and **Saves Anyway**. The new count also sets the bill's order limits from its next order. Saving clears the **Started by guest** and **Count changed by guest** chips.
 - **Lock Guests**: once you've checked the count, lock it so guests can't change it, or switch bills, from their phones. The bill shows **Guests locked**, and locking also clears the two chips above. You can still use **Edit Guests**. Select **Unlock Guests** to let guests change it again.
 
 ![Edit Guests dialog with the Adults, Seniors, Children and Toddlers counts outlined, and a warning that the table is over its seats](images/edit-guests-dialog.png)
@@ -405,8 +406,8 @@ The Menu Items page lists every dish with its image, name, category, description
   - **Price**: for an add-on, the price charged every time. For an included item, the price charged only when a guest goes past a per-person limit set to **Charge**. Enter 0 to never charge.
   - **Status**: Available, Unavailable or Seasonal.
   - **Is Add-on Item**: turn on for items that cost extra on top of the buffet price.
-  - **Limits per person** (Adult, Senior, Child, Toddler): the most each guest can order of this item during the visit. 0 = unlimited. Senior and child limits can't be more than the adult limit; a toddler limit of 0 uses the child limit.
-  - **Per order limit**: the most the whole table can order in one order. 0 = no cap. Orders over this limit are always blocked.
+  - **Limits per person** (Adult, Senior, Child, Toddler): the most each guest on a bill can order of this item during the visit. A bill's allowance is these limits added up for its guests: a limit of 2 on a bill of 2 adults allows 4. 0 = unlimited. Senior and child limits can't be more than the adult limit; a toddler limit of 0 uses the child limit.
+  - **Per order limit**: the most one bill can order of this item in one order. 0 = no cap. Orders over this limit are always blocked. This is a cap, not the serving size: put the serving size in the item's or category's description.
   - **Past per-person limit**: **Block** stops guests ordering more, **Charge the item's price** lets them and bills the item's price for each extra.
 
 - **Delete**: remove the item. It will no longer be available to order.
@@ -422,9 +423,10 @@ Items in a category marked **Free with the bill** (see [Menu Categories](#menu-c
 Categories group menu items (for example, Nigiri or Rolls) and can limit how much guests order across the whole category.
 
 - **Add New Category** / **Edit**:
-  - **Name** and **Description**.
-  - **Limits per person** (Adult, Senior, Child, Toddler): the most each guest can order from this category during the visit. 0 = unlimited. Senior and child limits can't be more than the adult limit; a toddler limit of 0 uses the child limit.
-  - **Per Order Limit**: the most the whole table can order from this category in one order, all items combined. 0 = no cap.
+  - **Name** and **Description**. Guests see the description under the section's heading on the menu, so use it for the serving size (for example, "Each order is 2 pieces.").
+  - **Limits per person** (Adult, Senior, Child, Toddler): the most each guest on a bill can order from this category during the visit, added up for the bill's guests. 0 = unlimited. Senior and child limits can't be more than the adult limit; a toddler limit of 0 uses the child limit.
+  - **Per Order Limit**: the most one bill can order from this category in one order, all items combined. 0 = no cap.
+  - **Per guest**: tick it to multiply the Per Order Limit by the bill's guests, toddlers included. For example, Sashimi has a Per Order Limit of 30 with **Per guest** ticked, so a bill of 4 guests can order up to 120 pieces in each order. The list shows it as "30 per guest".
   - **Past per-person limit**: **Block** stops guests ordering more, **Charge the item's price** bills each item's price for every extra. Items need a price set in their menu assignment for Charge to work.
   - **Free with the bill**: makes the category's items the free ice cream flavours staff choose from when guests ask for the bill. See below.
 - **Delete**: delete the category. This can't be undone.
@@ -442,6 +444,25 @@ The flavours staff can send with the bill (see [Free ice cream at the bill](#fre
 ![Create Menu Item for Pistachio Ice Cream, with Free Ice Cream chosen as the Category and outlined](images/free-ice-cream-flavour-item.png)
 
 Items in a **Free with the bill** category can't go on a menu, so guests can't order free ice cream anytime. You can't turn the switch on while any of the category's items are on a menu: take them off their menus first.
+
+![Edit Category dialog with the Per Order Limit and the Per guest checkbox outlined](images/category-dialog.png)
+
+### How limits are counted
+
+- **Limits are per bill, not per table.** Each bill's allowance comes from its own guest count, whoever at the table placed the order. Staff orders with **Add Order** count towards the bill they're placed on.
+- **Every guest counts**, toddlers included.
+- **Both sets of limits apply.** An order has to fit the item's limits (see [Menu Items](#menu-items)) and its category's.
+- **Changing a bill's guests** with **Edit Guests**, **Move** or **Merge** changes its allowance from the next order. Orders already placed aren't changed.
+- **Guests see the limits** on each item's card, for example "30 per guest in each order, across all Sashimi", and the cart stops at what's left.
+
+The seeded menu uses these limits. Change them on this page or in an item's menu assignment.
+
+| Item or category | Limit                      | Serving size                        |
+| ---------------- | -------------------------- | ----------------------------------- |
+| Sashimi          | 30 per guest in each order | By the piece                        |
+| Chop Chop Nigiri | 2 per person for the visit | 1 piece                             |
+| Hot Stone        | 1 per person, then charged |                                     |
+| Everything else  | No limit                   | Shown in each section's description |
 
 ---
 

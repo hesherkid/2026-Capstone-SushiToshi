@@ -109,7 +109,9 @@ export const TableOrderProvider = ({ children }) => {
   const loadBills = useCallback(
     async (forSession) => {
       try {
-        const { data } = await api.get(`/SessionParticipant/${forSession}/bill`);
+        const { data } = await api.get(
+          `/SessionParticipant/${forSession}/bill`,
+        );
         applyMyBill(data);
       } catch (err) {
         console.error("Error fetching your bill:", err);
@@ -118,37 +120,56 @@ export const TableOrderProvider = ({ children }) => {
     [applyMyBill],
   );
 
+  const loadLimits = useCallback(async (forSession) => {
+    try {
+      const { data } = await api.get(`/Order/session/${forSession}/limits`);
+      setLimits(limitsById(data));
+    } catch (err) {
+      console.error("Error fetching order limits:", err);
+      setLimits(null);
+    }
+  }, []);
+
   // Join one of the table's open bills and return it. Throws with the server's reason if it can't
   const chooseBill = useCallback(
     async (billId) => {
       try {
-        const { data } = await api.put(`/SessionParticipant/${sessionId}/bill`, {
-          bill_id: billId,
-        });
-        return applyMyBill(data);
+        const { data } = await api.put(
+          `/SessionParticipant/${sessionId}/bill`,
+          {
+            bill_id: billId,
+          },
+        );
+        const mine = applyMyBill(data);
+        loadLimits(sessionId); // limits are per bill
+        return mine;
       } catch (err) {
         throw new Error(apiMessage(err, "Couldn't put you on that bill."));
       }
     },
-    [sessionId, applyMyBill],
+    [sessionId, applyMyBill, loadLimits],
   );
 
   // Change the guest counts on this guest's own bill
   const updateGuestCounts = useCallback(
     async ({ adults, seniors, children, toddlers }) => {
       try {
-        const { data } = await api.put(`/SessionParticipant/${sessionId}/bill/guests`, {
-          adult_count: adults,
-          senior_count: seniors,
-          child_count: children,
-          tot_count: toddlers,
-        });
+        const { data } = await api.put(
+          `/SessionParticipant/${sessionId}/bill/guests`,
+          {
+            adult_count: adults,
+            senior_count: seniors,
+            child_count: children,
+            tot_count: toddlers,
+          },
+        );
         applyMyBill(data);
+        loadLimits(sessionId); // limits are per bill
       } catch (err) {
         throw new Error(apiMessage(err, "Couldn't update your guest count."));
       }
     },
-    [sessionId, applyMyBill],
+    [sessionId, applyMyBill, loadLimits],
   );
 
   // Start a new bill for this guest's party; they're put on it
@@ -166,8 +187,9 @@ export const TableOrderProvider = ({ children }) => {
         throw new Error(apiMessage(err, "Couldn't start your bill."));
       }
       await loadBills(sessionId);
+      loadLimits(sessionId); // limits are per bill
     },
-    [sessionId, loadBills],
+    [sessionId, loadBills, loadLimits],
   );
 
   const loadMenu = useCallback(async (forSession) => {
@@ -199,16 +221,6 @@ export const TableOrderProvider = ({ children }) => {
     } catch (err) {
       console.error("Error fetching menu:", err);
       setError(apiMessage(err, "Error fetching menu"));
-    }
-  }, []);
-
-  const loadLimits = useCallback(async (forSession) => {
-    try {
-      const { data } = await api.get(`/Order/session/${forSession}/limits`);
-      setLimits(limitsById(data));
-    } catch (err) {
-      console.error("Error fetching order limits:", err);
-      setLimits(null);
     }
   }, []);
 
@@ -297,9 +309,7 @@ export const TableOrderProvider = ({ children }) => {
     if (!sessionId || cartRestoredFor.current === sessionId) return;
     cartRestoredFor.current = sessionId;
     try {
-      const saved = JSON.parse(
-        storage.get(CART_STORAGE_KEY) || "null",
-      );
+      const saved = JSON.parse(storage.get(CART_STORAGE_KEY) || "null");
       setQuantities(
         saved?.sessionId === sessionId && saved.quantities
           ? saved.quantities
@@ -314,10 +324,7 @@ export const TableOrderProvider = ({ children }) => {
   useEffect(() => {
     // Wait until the saved cart has been read, or the empty starting cart would replace it
     if (!sessionId || cartRestoredFor.current !== sessionId) return;
-    storage.set(
-      CART_STORAGE_KEY,
-      JSON.stringify({ sessionId, quantities }),
-    );
+    storage.set(CART_STORAGE_KEY, JSON.stringify({ sessionId, quantities }));
   }, [sessionId, quantities]);
 
   // How the cart stands against the limit for one item
@@ -366,7 +373,9 @@ export const TableOrderProvider = ({ children }) => {
 
   // Orders go on the guest's own bill, while it's open
   const selectedBillId =
-    myBill && String(myBill.status).toUpperCase() === "OPEN" ? myBill.bill_id : "";
+    myBill && String(myBill.status).toUpperCase() === "OPEN"
+      ? myBill.bill_id
+      : "";
 
   // The guests pressed "Ready for Bill" on this bill, so the server won't take more orders on it
   const billRequested = Boolean(selectedBillId && myBill?.requested_at);

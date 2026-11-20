@@ -22,6 +22,9 @@ namespace back_end.Dtos
 
         public int PerOrderLimit { get; set; }
 
+        // True = PerOrderLimit is for each guest at the table
+        public bool PerOrderPerGuest { get; set; }
+
         public OverLimitBehavior OverLimitBehavior { get; set; } = OverLimitBehavior.Block;
 
         // Its items are the free ice cream staff send with the bill, not menu items
@@ -43,6 +46,8 @@ namespace back_end.Dtos
         public int? ToddlerLimit { get; set; }
 
         public int? PerOrderLimit { get; set; }
+
+        public bool? PerOrderPerGuest { get; set; }
 
         public OverLimitBehavior? OverLimitBehavior { get; set; }
 
@@ -66,6 +71,8 @@ namespace back_end.Dtos
         public int ToddlerLimit { get; set; }
 
         public int PerOrderLimit { get; set; }
+
+        public bool PerOrderPerGuest { get; set; }
 
         public OverLimitBehavior OverLimitBehavior { get; set; }
 

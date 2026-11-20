@@ -15,7 +15,7 @@ import {
 // The session's menu, its limits and a cart, for staff ordering on a table's bill.
 // Same limits as the guests' menu (the server checks them either way).
 // Loads when `session` is set, starting with an empty cart each time
-export const useStaffOrder = (session) => {
+export const useStaffOrder = (session, billId) => {
   const sessionId = session?.session_id;
   const menuId = session?.menu_id;
   const locationId = session?.location_id;
@@ -38,19 +38,33 @@ export const useStaffOrder = (session) => {
 
     Promise.all([
       api.get("/Category"),
-      api.get(`/Menu/${menuId}/item`, { params: locationId ? { location_id: locationId } : {} }),
-      // Without limits the cart doesn't stop early, but the server still checks
-      api.get(`/Order/session/${sessionId}/limits`).catch(() => null),
+      api.get(`/Menu/${menuId}/item`, {
+        params: locationId ? { location_id: locationId } : {},
+      }),
+      api
+        .get(`/Order/session/${sessionId}/limits`, {
+          params: billId ? { bill_id: billId } : {},
+        })
+        .catch(() => null),
     ])
       .then(([categoriesRes, itemsRes, limitsRes]) => {
         if (cancelled) return;
-        setCategories((Array.isArray(categoriesRes.data) ? categoriesRes.data : []).map(normalizeCategory));
-        setMenuItems(groupItemsByCategory(Array.isArray(itemsRes.data) ? itemsRes.data : []));
+        setCategories(
+          (Array.isArray(categoriesRes.data) ? categoriesRes.data : []).map(
+            normalizeCategory,
+          ),
+        );
+        setMenuItems(
+          groupItemsByCategory(
+            Array.isArray(itemsRes.data) ? itemsRes.data : [],
+          ),
+        );
         setLimits(limitsRes ? limitsById(limitsRes.data) : null);
       })
       .catch((err) => {
         console.error("Error loading the menu for staff ordering:", err);
-        if (!cancelled) setLoadError("Couldn't load the menu. Please try again.");
+        if (!cancelled)
+          setLoadError("Couldn't load the menu. Please try again.");
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -59,17 +73,20 @@ export const useStaffOrder = (session) => {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, menuId, locationId]);
+  }, [sessionId, menuId, locationId, billId]);
 
   const changeQuantity = useCallback(
     (categoryId, itemId, delta) =>
-      setQuantities((prev) => changeCartQuantity(limits, prev, categoryId, itemId, delta)),
+      setQuantities((prev) =>
+        changeCartQuantity(limits, prev, categoryId, itemId, delta),
+      ),
     [limits],
   );
 
   const atLimit = useCallback(
     (categoryId, itemId) =>
-      (quantities[categoryId]?.[itemId] || 0) >= maxFor(limits, quantities, categoryId, itemId),
+      (quantities[categoryId]?.[itemId] || 0) >=
+      maxFor(limits, quantities, categoryId, itemId),
     [limits, quantities],
   );
 

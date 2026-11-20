@@ -24,19 +24,19 @@ MariaDB (Docker)            :3307   sushi_toshi_db
 
 ## Main concepts
 
-| Concept                      | What it is                                                                                                   | Entity                                         |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| Location                     | A restaurant branch. Almost everything belongs to one                                                        | `Location`                                     |
-| Table / table group          | A physical table, or tables pushed together for one party                                                    | `TableEntity`, `TableGroup`                    |
-| Dining session               | One party's visit at a table or table group, from when staff seat them until they close the bill             | `DiningSession`                                |
-| Session participant          | A person at that table. Each customer and each guest is their own participant, linked to the one bill they order on (`Bill_Id`) | `SessionParticipant`                           |
-| Session order / order item   | One round of ordering and the items in it                                                                    | `SessionOrder`, `OrderItem`                    |
-| Bill                         | What one party at the table pays, priced per guest from the location's pricing profile. A session can have several | `Billing` (`bills` table)                      |
-| Service request              | "Call server" requests from the table                                                                        | `ServiceRequest`                               |
-| Menu / menu item / assignment | Items are grouped into menus. An assignment puts an item on a menu, optionally with a location-specific override | `Menu`, `MenuItem`, `MenuItemAssignment`      |
-| Pricing profile / rate       | All-you-can-eat prices per day type (weekday, weekend, holiday), GST, gratuity and leftover fee. A default profile, with optional per-location overrides | `PricingProfile`, `PricingRate` |
-| Holiday                      | A public holiday that changes pricing once an admin approves it                                              | `Holiday`                                      |
-| Staff location               | A location an admin has assigned a staff member to                                                           | `StaffLocation`                                |
+| Concept                       | What it is                                                                                                                                               | Entity                                   |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Location                      | A restaurant branch. Almost everything belongs to one                                                                                                    | `Location`                               |
+| Table / table group           | A physical table, or tables pushed together for one party                                                                                                | `TableEntity`, `TableGroup`              |
+| Dining session                | One party's visit at a table or table group, from when staff seat them until they close the bill                                                         | `DiningSession`                          |
+| Session participant           | A person at that table. Each customer and each guest is their own participant, linked to the one bill they order on (`Bill_Id`)                          | `SessionParticipant`                     |
+| Session order / order item    | One round of ordering and the items in it                                                                                                                | `SessionOrder`, `OrderItem`              |
+| Bill                          | What one party at the table pays, priced per guest from the location's pricing profile. A session can have several                                       | `Billing` (`bills` table)                |
+| Service request               | "Call server" requests from the table                                                                                                                    | `ServiceRequest`                         |
+| Menu / menu item / assignment | Items are grouped into menus. An assignment puts an item on a menu, optionally with a location-specific override                                         | `Menu`, `MenuItem`, `MenuItemAssignment` |
+| Pricing profile / rate        | All-you-can-eat prices per day type (weekday, weekend, holiday), GST, gratuity and leftover fee. A default profile, with optional per-location overrides | `PricingProfile`, `PricingRate`          |
+| Holiday                       | A public holiday that changes pricing once an admin approves it                                                                                          | `Holiday`                                |
+| Staff location                | A location an admin has assigned a staff member to                                                                                                       | `StaffLocation`                          |
 
 ## Sign-in and roles
 
@@ -44,12 +44,12 @@ MariaDB (Docker)            :3307   sushi_toshi_db
 
 All sign-in endpoints are in `AuthController` under `/api/auth`. Each one returns our own JWT.
 
-| Method              | Endpoint                         | Notes                                                                                                   |
-| ------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Email and password  | `POST /api/auth/login`           | Password hashed with BCrypt. Email must be verified                                                     |
-| Register            | `POST /api/auth/register`        | Sends a verification email through SendGrid (see [email setup](../../setup/email-sendgrid-setup.md))   |
-| Google              | `POST /api/auth/google`          | The frontend sends Google's ID token; the backend checks it and creates a customer the first time (see [google-signin-setup.md](../google-signin-setup.md)) |
-| Continue as Guest   | `POST /api/auth/guest`           | Creates a throwaway customer account with no password                                                   |
+| Method             | Endpoint                  | Notes                                                                                                                                                       |
+| ------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email and password | `POST /api/auth/login`    | Password hashed with BCrypt. Email must be verified                                                                                                         |
+| Register           | `POST /api/auth/register` | Sends a verification email through SendGrid (see [email setup](../../setup/email-sendgrid-setup.md))                                                        |
+| Google             | `POST /api/auth/google`   | The frontend sends Google's ID token; the backend checks it and creates a customer the first time (see [google-signin-setup.md](../google-signin-setup.md)) |
+| Continue as Guest  | `POST /api/auth/guest`    | Creates a throwaway customer account with no password                                                                                                       |
 
 There are also endpoints for verifying email, resending verification, and forgot/reset password. All of these are rate limited per IP address (see **Rate limits** below).
 
@@ -70,17 +70,15 @@ There are also endpoints for verifying email, resending verification, and forgot
 Their `session_participant` rows are kept with `User_Id` set to null, so table history and
 head counts don't change. Set `GuestCleanup:Enabled` to `false` to turn it off.
 
-
 ### Roles
 
-| Role       | Can                                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------------------- |
+| Role       | Can                                                                                                                        |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `Customer` | Browse the menu, order, call a server and see the bill, but only for the table they're seated at. Guests are customers too |
-| `Staff`    | Run the floor: sessions, tables, orders and service requests, limited to their current location        |
-| `Admin`    | Everything staff can do at any location, plus menus, pricing, holidays, staff, customers, QR codes and analytics |
+| `Staff`    | Run the floor: sessions, tables, orders and service requests, limited to their current location                            |
+| `Admin`    | Everything staff can do at any location, plus menus, pricing, holidays, staff, customers, QR codes and analytics           |
 
 The `UserRoles` enum also has `Employee`. **Nothing is defined for it at this time.** It has no authorization policy, no endpoints and no pages, and no account can be given it: `StaffController` only accepts `Staff` or `Admin`, and sign-up and guest accounts are always `Customer`. It's kept only because `users.Role` is stored as a number (`Admin = 0`, `Employee = 1`, `Customer = 2`, `Staff = 3`). Removing it would shift those numbers and give existing accounts the wrong role. The numbers are fixed in `domain/Enums.cs` and checked by `UserRolesTests`.
-
 
 **In the backend**, controllers use `[Authorize]` for any signed-in user, or one of two policies defined in `Program.cs`:
 
@@ -99,11 +97,11 @@ Staff work at one location at a time. Admins can work at any location.
 
 `ILocationAccessService` (`Services/LocationAccessService.cs`) is how controllers apply this. Inject it into any controller that returns or changes location data:
 
-| Method                     | Use it when                                                                                                       |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Method                     | Use it when                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ResolveLocationAsync`     | The endpoint lists things for a location. Staff always get their current location, whatever they asked for. Admins get what they asked for, or all locations |
-| `CanAccessLocationAsync`   | The endpoint acts on one thing by ID (a table, session, order). Check the thing's location before returning or changing it |
-| `CanSwitchToLocationAsync` | A user is changing their current location                                                                         |
+| `CanAccessLocationAsync`   | The endpoint acts on one thing by ID (a table, session, order). Check the thing's location before returning or changing it                                   |
+| `CanSwitchToLocationAsync` | A user is changing their current location                                                                                                                    |
 
 Return the standard 403 responses from `Helpers/LocationResults.cs` so the frontend shows consistent messages. `StaffLocationLockTests.cs` shows the expected behaviour for each controller.
 
@@ -111,11 +109,11 @@ Return the standard 403 responses from `Helpers/LocationResults.cs` so the front
 
 Customers aren't limited by location. Instead, they can only see the session they're seated in, and within it only the bill they're on. `Helpers/SessionAccess.cs` has the checks, so changing an ID in the URL can't show another table's bill or another party's:
 
-| Method                | Use it when                                                                                              |
-| --------------------- | -------------------------------------------------------------------------------------------------------- |
-| `CanViewSessionAsync` | The endpoint is about the whole table, e.g. service requests. Staff pass if they can see the location   |
+| Method                | Use it when                                                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `CanViewSessionAsync` | The endpoint is about the whole table, e.g. service requests. Staff pass if they can see the location                                    |
 | `CanUseBillAsync`     | The endpoint reads, orders onto or requests one bill. Staff pass for any bill at a table they can see; customers only for their own bill |
-| `MyBillIdAsync`       | You need the bill a seated customer is on (null until they pick one), e.g. to filter a list to it        |
+| `MyBillIdAsync`       | You need the bill a seated customer is on (null until they pick one), e.g. to filter a list to it                                        |
 
 Other parties' bills only ever show a customer their name and party size (`GET /api/sessionparticipant/{session_id}/bill`), so they can pick which one to join.
 
@@ -136,20 +134,20 @@ A table can have several bills, one per party paying separately. Each `SessionPa
 
 **Guests** manage their own link through `SessionParticipantController`. `TableOrderContext` loads it on the menu pages and the orders page.
 
-| Endpoint                                              | What it does                                                                                         |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `GET /api/sessionparticipant/{session_id}/bill`       | Their bill (with counts by guest type) and the table's open bills (name and party size only)         |
-| `PUT /api/sessionparticipant/{session_id}/bill`       | Join an open bill                                                                                    |
-| `PUT /api/sessionparticipant/{session_id}/bill/guests` | Change their own bill's guest counts                                                                 |
-| `POST /api/bill/create-bill/{session_id}`             | Start a bill. A guest is put on it, and it's marked `Started_By_Guest`                               |
+| Endpoint                                               | What it does                                                                                 |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `GET /api/sessionparticipant/{session_id}/bill`        | Their bill (with counts by guest type) and the table's open bills (name and party size only) |
+| `PUT /api/sessionparticipant/{session_id}/bill`        | Join an open bill                                                                            |
+| `PUT /api/sessionparticipant/{session_id}/bill/guests` | Change their own bill's guest counts                                                         |
+| `POST /api/bill/create-bill/{session_id}`              | Start a bill. A guest is put on it, and it's marked `Started_By_Guest`                       |
 
 **Staff** manage everyone's from the Dining Session dialog (`components/staff/SessionDashboard`):
 
-| Endpoint                                                                   | What it does                                                                      |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `PUT /api/bill/guest-counts/{bill_id}`                                     | Edit Guests. Clears both "by guest" flags                                         |
-| `PUT /api/bill/lock-guest-counts/{bill_id}`                                | Lock or unlock the counts (`Counts_Locked`). Locking clears both "by guest" flags |
-| `PUT /api/bill/merge/{bill_id}`                                            | Move people, non-cancelled orders, leftover fee and counts to another open bill, then cancel this one |
+| Endpoint                                                                      | What it does                                                                                                                  |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `PUT /api/bill/guest-counts/{bill_id}`                                        | Edit Guests. Clears both "by guest" flags                                                                                     |
+| `PUT /api/bill/lock-guest-counts/{bill_id}`                                   | Lock or unlock the counts (`Counts_Locked`). Locking clears both "by guest" flags                                             |
+| `PUT /api/bill/merge/{bill_id}`                                               | Move people, non-cancelled orders, leftover fee and counts to another open bill, then cancel this one                         |
 | `PUT /api/sessionparticipant/{session_id}/participants/{participant_id}/bill` | Move someone, optionally with their orders (`move_orders`) and guests from the old bill's count (`guest_type`, `guest_count`) |
 
 `GET /api/dashboard/sessions` sends each bill's counts, flags and `People_On_Bill`, the table's `Seat_Count`, and the `People` at the table, so the dashboard can show who's on which bill and which counts need checking.
@@ -171,11 +169,11 @@ The rules live in `Helpers/BillLinks.cs`:
 
 The restaurant gives free ice cream when guests ask for the bill. Guests answer yes or no per bill; staff choose flavours and counts at the table and send them as one order for every bill that's ready. The rules live in `Helpers/FreeIceCream.cs`.
 
-| Endpoint | What it does |
-| --- | --- |
-| `POST /api/bill/request-bill/{bill_id}?session_id=&ice_cream=true` | Ready for bill. `ice_cream=true` sets `Wants_Ice_Cream` on the bill and adds "(wants free ice cream)" to the service request |
-| `GET /api/bill/ice-cream-flavours` | Staff only. The flavours: Available items in categories with `Free_With_Bill`, oldest first |
-| `POST /api/bill/send-ice-cream/{session_id}` | Staff only. Body `{ "bill_ids": [...], "flavours": [{ "item_id", "quantity" }] }`. Adds one Pending order with a $0 line per flavour and sets `Ice_Cream_Sent_At` on every chosen bill |
+| Endpoint                                                           | What it does                                                                                                                                                                           |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/bill/request-bill/{bill_id}?session_id=&ice_cream=true` | Ready for bill. `ice_cream=true` sets `Wants_Ice_Cream` on the bill and adds "(wants free ice cream)" to the service request                                                           |
+| `GET /api/bill/ice-cream-flavours`                                 | Staff only. The flavours: Available items in categories with `Free_With_Bill`, oldest first                                                                                            |
+| `POST /api/bill/send-ice-cream/{session_id}`                       | Staff only. Body `{ "bill_ids": [...], "flavours": [{ "item_id", "quantity" }] }`. Adds one Pending order with a $0 line per flavour and sets `Ice_Cream_Sent_At` on every chosen bill |
 
 - **Per bill, sent per visit.** `Wants_Ice_Cream` and `Ice_Cream_Sent_At` are on `Billing`. A bill gets its ice cream once; a bill that says yes later gets its own turn. Sending again for bills that were all sent returns `already_sent` (a double tap). Mixing in one that was already sent is refused.
 - **The order needs a bill**, so it goes on the first chosen bill that said yes (earliest `Requested_At`). Its lines are `Price_At_Time = 0`, so the bill leaves them out.
@@ -191,14 +189,16 @@ The restaurant gives free ice cream when guests ask for the bill. Guests answer 
 
 These are the limits and extras a seated customer sees on the menu, the orders page and Call server. There's no customer guide yet, so they're listed here.
 
-| Feature | How it works | Where |
-| --- | --- | --- |
-| **Tag filter** | A row of tag pills under the menu's search box. Picking several shows only items with **every** picked tag. **Clear filters** resets it | `components/menu/TagFilter.jsx` |
-| **Favourites and Order again** | Signed-in customers can heart items, and get **Favourites** and **Order again** pills in the tag filter. Order again lists up to 50 items they've ordered on any visit, most recent first, leaving out cancelled orders and items. Guests don't get either (the API answers 403) | `MyItemsController` (`/api/me/favourites`, `/api/me/ordered-before`), `components/menu/useMyItems.js`, `favourite_item` table |
-| **99 per item** | The cart never holds more than 99 of one item in an order, even for items with no limit, because the API only takes 1 to 99. Items with a limit are capped lower | `MAX_PER_ITEM` in `components/menu/cartRules.js`, `OrderController.AddOrderItems` |
-| **Cancelling an order** | On `/dashboard/orders`, a customer (guests too) can cancel a **Pending** order they placed, while they're still seated at that table. Once it's no longer pending, nobody can cancel it from the app, staff included (the API answers `409`) | `PATCH /api/order/{orderId}/cancel` |
-| **Free ice cream at the bill** | The **Ready for bill** confirm asks **Would you like free ice cream?** and won't send until the guest answers. A yes is passed as `ice_cream=true`; staff pick the flavours (see [Free ice cream at the bill](#free-ice-cream-at-the-bill)) | `components/customer/IceCreamChoice.jsx`, `useBillRequest.js` |
-| **Wait between service requests** | A table can send one Call server request every 30 seconds. Sooner, the API answers `429` with `retry_after_seconds` (and a `Retry-After` header), and the form tells the guest how long to wait. The wait is per table, not per person | `ServiceRequestController.RequestCooldown`, `ServiceRequestForm.jsx` |
+| Feature                           | How it works                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Where                                                                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Tag filter**                    | A row of tag pills under the menu's search box. Picking several shows only items with **every** picked tag. **Clear filters** resets it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `components/menu/TagFilter.jsx`                                                                                               |
+| **Favourites and Order again**    | Signed-in customers can heart items, and get **Favourites** and **Order again** pills in the tag filter. Order again lists up to 50 items they've ordered on any visit, most recent first, leaving out cancelled orders and items. Guests don't get either (the API answers 403)                                                                                                                                                                                                                                                                                                                                                                       | `MyItemsController` (`/api/me/favourites`, `/api/me/ordered-before`), `components/menu/useMyItems.js`, `favourite_item` table |
+| **Order limits**                  | Limits are per bill: each bill's allowance comes from its own guest count (toddlers included), whoever at the table orders. Item limits are on `menu_item_assignment`, category limits on `Categories`, and an order must fit both. `per_order_per_guest` multiplies a category's per-order limit by the bill's guests (Sashimi: 30 per guest). Going past a per-person limit is blocked or charged (`Over_Limit_Behavior`); going past a per-order limit is always blocked. The cart gets what's left from `GET /api/order/session/{id}/limits`: customers always get their own bill, and staff pass `bill_id` (one from another table answers `400`) | `Helpers/OrderLimitRules.cs`, `OrderController.PlanOrderLinesAsync`, `components/menu/cartRules.js`                           |
+| **Serving sizes**                 | Each category's description shows under its section heading on the menu, e.g. "Each order is 2 pieces." A per-order limit is a cap, not a serving size                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `components/menu/MenuBrowser.jsx`, `domain/Seeders/CategorySeeder.cs`                                                         |
+| **99 per item**                   | The cart never holds more than 99 of one item in an order, even for items with no limit, because the API only takes 1 to 99. Items with a limit are capped lower                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `MAX_PER_ITEM` in `components/menu/cartRules.js`, `OrderController.AddOrderItems`                                             |
+| **Cancelling an order**           | On `/dashboard/orders`, a customer (guests too) can cancel a **Pending** order they placed, while they're still seated at that table. Once it's no longer pending, nobody can cancel it from the app, staff included (the API answers `409`)                                                                                                                                                                                                                                                                                                                                                                                                           | `PATCH /api/order/{orderId}/cancel`                                                                                           |
+| **Free ice cream at the bill**    | The **Ready for bill** confirm asks **Would you like free ice cream?** and won't send until the guest answers. A yes is passed as `ice_cream=true`; staff pick the flavours (see [Free ice cream at the bill](#free-ice-cream-at-the-bill))                                                                                                                                                                                                                                                                                                                                                                                                            | `components/customer/IceCreamChoice.jsx`, `useBillRequest.js`                                                                 |
+| **Wait between service requests** | A table can send one Call server request every 30 seconds. Sooner, the API answers `429` with `retry_after_seconds` (and a `Retry-After` header), and the form tells the guest how long to wait. The wait is per table, not per person                                                                                                                                                                                                                                                                                                                                                                                                                 | `ServiceRequestController.RequestCooldown`, `ServiceRequestForm.jsx`                                                          |
 
 Staff use the same cart rules when they order for a table (see the [Admin Manual](../../admin/admin-manual.md#what-you-can-do)), and their orders are recorded under the staff member.
 
@@ -206,30 +206,30 @@ Staff use the same cart rules when they order for a table (see the [Admin Manual
 
 ### Backend (`src/back-end`)
 
-| Folder / file          | Contents                                                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `Program.cs`           | Startup: services, JWT, policies, rate limits, CORS, Swagger, and database migration and seeding on start |
-| `Controllers/`         | API endpoints, one controller per area. `Analytics/` has the four analytics report controllers             |
-| `Services/`            | Logic shared between controllers: pricing, holidays, location access, auth emails, QR codes (`QrCode/`), analytics queries (`Analytics/`) |
-| `Helpers/`             | Small pure rules, mostly static: bill calculation, order limits, leftover fees, free ice cream, guest accounts, claims, session access, bill links and bill locks |
-| `Dtos/`                | Request and response shapes                                                                                |
-| `domain/Entities/`     | EF Core entity classes (the database tables)                                                               |
-| `domain/Dbcontexts/`   | `ApplicationDbContext`                                                                                     |
-| `domain/Seeders/`      | Development seed data                                                                                      |
-| `Migrations/`          | EF Core migrations                                                                                         |
-| `Configurations/`      | Typed settings classes, validated on startup (SendGrid, auth emails, holiday API)                          |
-| `storage/qrcodes/`     | Generated QR images (gitignored)                                                                           |
+| Folder / file        | Contents                                                                                                                                                          |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Program.cs`         | Startup: services, JWT, policies, rate limits, CORS, Swagger, and database migration and seeding on start                                                         |
+| `Controllers/`       | API endpoints, one controller per area. `Analytics/` has the four analytics report controllers                                                                    |
+| `Services/`          | Logic shared between controllers: pricing, holidays, location access, auth emails, QR codes (`QrCode/`), analytics queries (`Analytics/`)                         |
+| `Helpers/`           | Small pure rules, mostly static: bill calculation, order limits, leftover fees, free ice cream, guest accounts, claims, session access, bill links and bill locks |
+| `Dtos/`              | Request and response shapes                                                                                                                                       |
+| `domain/Entities/`   | EF Core entity classes (the database tables)                                                                                                                      |
+| `domain/Dbcontexts/` | `ApplicationDbContext`                                                                                                                                            |
+| `domain/Seeders/`    | Development seed data                                                                                                                                             |
+| `Migrations/`        | EF Core migrations                                                                                                                                                |
+| `Configurations/`    | Typed settings classes, validated on startup (SendGrid, auth emails, holiday API)                                                                                 |
+| `storage/qrcodes/`   | Generated QR images (gitignored)                                                                                                                                  |
 
 Most controllers use `ApplicationDbContext` directly. There's no repository layer. When logic is needed by more than one controller, or is complex enough to test on its own, it moves to `Services/` (with an interface, registered in `Program.cs`) or, for pure calculations, to `Helpers/`.
 
 **Rate limits** (`Program.cs`): endpoints opt in with `[EnableRateLimiting(...)]`. There's no site-wide limit. Over a limit, the backend answers `429 Too Many Requests` straight away.
 
-| Policy | Endpoints | Limit | Counted per |
-| --- | --- | --- | --- |
-| Guest sign-in (`GuestAccounts`) | `guest` | 30 a minute | IP address |
-| Sign-in (`AuthRateLimits.SignInPolicy`) | `login`, `google`, `verify-email`, `reset-password` | 20 a minute, shared by these endpoints | IP address |
-| Email (`AuthRateLimits.EmailPolicy`) | `register`, `forgot-password`, `resend-verification` | 5 a minute, shared by these endpoints | IP address |
-| Menu item views (`ViewTrackingRules`) | `POST /api/menu-item-views` | `ViewTrackingRules.RateLimitPerMinute` | Sign-in token (IP address without one) |
+| Policy                                  | Endpoints                                            | Limit                                  | Counted per                            |
+| --------------------------------------- | ---------------------------------------------------- | -------------------------------------- | -------------------------------------- |
+| Guest sign-in (`GuestAccounts`)         | `guest`                                              | 30 a minute                            | IP address                             |
+| Sign-in (`AuthRateLimits.SignInPolicy`) | `login`, `google`, `verify-email`, `reset-password`  | 20 a minute, shared by these endpoints | IP address                             |
+| Email (`AuthRateLimits.EmailPolicy`)    | `register`, `forgot-password`, `resend-verification` | 5 a minute, shared by these endpoints  | IP address                             |
+| Menu item views (`ViewTrackingRules`)   | `POST /api/menu-item-views`                          | `ViewTrackingRules.RateLimitPerMinute` | Sign-in token (IP address without one) |
 
 Diners on the restaurant Wi-Fi share one IP address, so the per-IP limits are set to allow a busy room. Behind a proxy, they only work per client with forwarded headers turned on (see [Behind a reverse proxy](../../setup/production-setup.md#behind-a-reverse-proxy)).
 
@@ -245,27 +245,27 @@ Diners on the restaurant Wi-Fi share one IP address, so the per-IP limits are se
 
 The frontend is Next.js with the App Router, React 19 and MUI. The root layout (`app/layout.jsx`), the auth pages and some thin wrapper pages and layouts are server components. They render client components (`"use client"`), which do the data loading and call the API from the browser.
 
-| Folder        | Contents                                                                                                   |
-| ------------- | ---------------------------------------------------------------------------------------------------------- |
-| `app/`        | Routes. Each folder with a `page.jsx` is a URL, e.g. `app/staff/dashboard/sessions/page.jsx` → `/staff/dashboard/sessions` |
+| Folder        | Contents                                                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`        | Routes. Each folder with a `page.jsx` is a URL, e.g. `app/staff/dashboard/sessions/page.jsx` → `/staff/dashboard/sessions`             |
 | `components/` | UI, grouped by area (`admin/`, `staff/`, `customer/`, `menu/`, `analytics/`, `auth/`, `common/` ...). Pages stay thin and render these |
-| `config/`     | `api.js` (the shared axios instance, which adds the token), `auth.js` (JWT decoding)                       |
-| `hooks/`      | Shared hooks, e.g. `useAuth`, `useAutoRefresh`, `useOrderActions`                                          |
-| `contexts/`   | React contexts shared across pages (menu, cart/orders, notifications)                                      |
-| `services/`   | API helpers used by several components (orders, pricing, holidays, table session)                         |
-| `utils/`      | Small helpers (auth token storage, table visit, server error messages)                                     |
-| `stories/`    | Storybook stories                                                                                          |
+| `config/`     | `api.js` (the shared axios instance, which adds the token), `auth.js` (JWT decoding)                                                   |
+| `hooks/`      | Shared hooks, e.g. `useAuth`, `useAutoRefresh`, `useOrderActions`                                                                      |
+| `contexts/`   | React contexts shared across pages (menu, cart/orders, notifications)                                                                  |
+| `services/`   | API helpers used by several components (orders, pricing, holidays, table session)                                                      |
+| `utils/`      | Small helpers (auth token storage, table visit, server error messages)                                                                 |
+| `stories/`    | Storybook stories                                                                                                                      |
 
 Global CSS is `app/globals.css`. Components are styled with MUI's `sx` prop and theme.
 
 **Main routes:**
 
-| Area      | Routes                                                                                                    |
-| --------- | --------------------------------------------------------------------------------------------------------- |
-| Everyone  | `/` (home, different for each role), `/auth/*` (login, register, verify email, resend verification, forgot/reset password), `/unauthorized` |
+| Area      | Routes                                                                                                                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Everyone  | `/` (home, different for each role), `/auth/*` (login, register, verify email, resend verification, forgot/reset password), `/unauthorized`                                                                     |
 | Customers | `/menu/full-menu`, `/menu/review`, `/dashboard/orders`, `/dashboard/bills`, `/dashboard/call-server`, `/thank-you`; with an account only: `/menu/browse` (the menu before being seated, no ordering), `/visits` |
-| Staff     | `/staff/dashboard/sessions`, `/staff/dashboard/tables`, `/staff/dashboard/orders`                         |
-| Admins    | `/admin/*` (staff, customers, menu items, categories, pricing, holidays, QR codes), `/location/menu-location`, `/tags/tag-management`, `/analytics/*` |
+| Staff     | `/staff/dashboard/sessions`, `/staff/dashboard/tables`, `/staff/dashboard/orders`                                                                                                                               |
+| Admins    | `/admin/*` (staff, customers, menu items, categories, pricing, holidays, QR codes), `/location/menu-location`, `/tags/tag-management`, `/analytics/*`                                                           |
 
 The staff dashboards (`components/staff/Order`, `SessionDashboard`, `TableDashboard`) share one structure. Each has an `index.jsx` entry, a `context/` provider holding its state, `hooks/` for data loading and actions, and `components/` for columns and dialogs. Follow the same pattern for a new dashboard.
 

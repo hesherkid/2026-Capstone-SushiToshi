@@ -217,6 +217,7 @@ namespace back_end.Controllers
                             child = m.MenuItem.Category.child_limit,
                             toddler = LimitRules.EffectToddler(m.MenuItem.Category.toddler_limit, m.MenuItem.Category.child_limit),
                             per_order = m.MenuItem.Category.per_order_limit,
+                            per_order_per_guest = m.MenuItem.Category.per_order_per_guest,
                             over_limit_behavior = m.MenuItem.Category.over_limit_behavior,
                         },
                         item_limits = new

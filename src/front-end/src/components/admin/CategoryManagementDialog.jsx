@@ -11,6 +11,8 @@ import {
   MenuItem,
   FormHelperText,
   FormControlLabel,
+  Checkbox,
+  Box,
   Switch,
 } from "@mui/material";
 import FormDialog from "@/components/common/FormDialog";
@@ -24,6 +26,7 @@ const emptyForm = {
   senior_limit: 0,
   toddler_limit: 0,
   per_order_limit: 0,
+  per_order_per_guest: false,
   over_limit_behavior: "Block",
   free_with_bill: false,
 };
@@ -86,6 +89,7 @@ const CategoryManagementDialog = ({
         senior_limit: selectedCategory.senior_limit ?? 0,
         toddler_limit: selectedCategory.toddler_limit ?? 0,
         per_order_limit: selectedCategory.per_order_limit ?? 0,
+        per_order_per_guest: selectedCategory.per_order_per_guest ?? false,
         over_limit_behavior: selectedCategory.over_limit_behavior ?? "Block",
         free_with_bill: selectedCategory.free_with_bill ?? false,
       });
@@ -267,19 +271,44 @@ const CategoryManagementDialog = ({
         </Stack>
 
         <Stack direction="row" spacing={2} alignItems="flex-start">
-          <TextField
-            label="Per Order Limit"
-            type="number"
-            value={formData.per_order_limit}
-            onChange={setNumber("per_order_limit")}
-            slotProps={{ htmlInput: { min: 0, max: 99 } }}
-            helperText="Whole table, all items in this category combined. 0 = no cap"
-            fullWidth
-          />
+          <Box sx={{ width: "100%" }}>
+            <TextField
+              label="Per Order Limit"
+              type="number"
+              value={formData.per_order_limit}
+              onChange={setNumber("per_order_limit")}
+              slotProps={{ htmlInput: { min: 0, max: 99 } }}
+              helperText={
+                formData.per_order_per_guest
+                  ? "For each guest on the bill, all items in this category combined. 0 = no cap"
+                  : "Whole bill, all items in this category combined. 0 = no cap"
+              }
+              fullWidth
+            />
+            {/* e.g. Sashimi: 30 per guest, a table of 4 can have 120 in one order */}
+            <FormControlLabel
+              label="Select if per guest"
+              sx={{
+                mt: 0.5,
+                ml: 0.75, // lines the box up with the helper text above
+                "& .MuiFormControlLabel-label": { fontSize: "0.875rem" },
+              }}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={formData.per_order_per_guest}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      per_order_per_guest: e.target.checked,
+                    }))
+                  }
+                />
+              }
+            />
+          </Box>
           <FormControl fullWidth>
-            <InputLabel id="over-limit-label">
-              Past per-person limit
-            </InputLabel>
+            <InputLabel id="over-limit-label">Past per-person limit</InputLabel>
             <Select
               labelId="over-limit-label"
               label="Past per-person limit"
@@ -296,8 +325,7 @@ const CategoryManagementDialog = ({
             </Select>
             <FormHelperText>
               Charge bills each item&apos;s price for every extra over the
-              limits above. Items need a price set in their menu
-              assignment.
+              limits above. Items need a price set in their menu assignment.
             </FormHelperText>
           </FormControl>
         </Stack>
@@ -309,15 +337,19 @@ const CategoryManagementDialog = ({
               <Switch
                 checked={formData.free_with_bill}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, free_with_bill: e.target.checked }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    free_with_bill: e.target.checked,
+                  }))
                 }
               />
             }
             label="Free with the bill"
           />
           <FormHelperText sx={{ mx: 0 }}>
-            Its items are the free ice cream flavours staff choose from when guests ask for the
-            bill. They can&apos;t go on a menu, so guests can&apos;t order them.
+            Its items are the free ice cream flavours staff choose from when
+            guests ask for the bill. They can&apos;t go on a menu, so guests
+            can&apos;t order them.
           </FormHelperText>
         </FormControl>
       </FormDialog>

@@ -79,6 +79,7 @@ describe("Category dialog", () => {
         senior_limit: 2,
         toddler_limit: 1,
         per_order_limit: 30,
+        per_order_per_guest: false,
         over_limit_behavior: "Charge",
         free_with_bill: false,
       }),
@@ -231,5 +232,61 @@ describe("Category dialog", () => {
       ),
     ).toBeInTheDocument();
     expect(api.delete).not.toHaveBeenCalled();
+  });
+
+  const perGuestBox = () =>
+    screen.getByRole("checkbox", {
+      name: "Select if per guest",
+    });
+
+  it("sends a per-guest per-order limit when the box is ticked", async () => {
+    api.post.mockResolvedValue({ data: {} });
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText(/^Name/), {
+      target: { value: "Sashimi" },
+    });
+    setNumber("Per Order Limit", "30");
+    expect(perGuestBox()).not.toBeChecked();
+    fireEvent.click(perGuestBox());
+    expect(screen.getByText(/For each guest on the bill/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Create Category" }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/Category",
+        expect.objectContaining({
+          per_order_limit: 30,
+          per_order_per_guest: true,
+        }),
+      ),
+    );
+  });
+
+  it("loads a per-guest category ticked, and saves it unticked", async () => {
+    api.put.mockResolvedValue({ data: {} });
+    renderDialog({
+      ...HOT_STONE,
+      category_id: 1,
+      category_name: "Sashimi",
+      name: "Sashimi",
+      adult_limit: 0,
+      child_limit: 0,
+      senior_limit: 0,
+      per_order_limit: 30,
+      per_order_per_guest: true,
+      over_limit_behavior: "Block",
+    });
+
+    expect(perGuestBox()).toBeChecked();
+    fireEvent.click(perGuestBox());
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith(
+        "/Category/update-category/1",
+        expect.objectContaining({ per_order_per_guest: false }),
+      ),
+    );
   });
 });

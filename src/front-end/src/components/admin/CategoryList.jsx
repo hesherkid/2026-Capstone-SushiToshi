@@ -23,6 +23,12 @@ const limitCell = ({ value }) =>
 const toddlerCell = ({ value, row }) =>
   value ? value : row.child_limit ? `${row.child_limit} (child)` : "—";
 
+// A per guest cap is multiplied by the table's headcount
+const perOrderCell = (params) =>
+  params.value && params.row.per_order_per_guest
+    ? `${params.value} per guest`
+    : limitCell(params);
+
 const CategoryList = ({ onEditCategory, onCreateCategory }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +118,7 @@ const CategoryList = ({ onEditCategory, onCreateCategory }) => {
       headerName: "Per Order",
       width: 100,
       type: "number",
-      renderCell: limitCell,
+      renderCell: perOrderCell,
     },
     {
       field: "over_limit_behavior",
