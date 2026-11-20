@@ -145,6 +145,7 @@ erDiagram
         int per_order_limit "0 = no cap"
         bool per_order_per_guest "true = per_order_limit x the bill's guests"
         OverLimitBehavior over_limit_behavior "Block=0, Charge=1"
+        bool Free_With_Bill "items are the free ice cream flavours"
     }
 
     menu_item {
@@ -258,6 +259,8 @@ erDiagram
         bool Started_By_Guest
         bool Counts_Changed_By_Guest
         bool Counts_Locked
+        bool Wants_Ice_Cream
+        datetime Ice_Cream_Sent_At "nullable"
         PricingDayType Pricing_Type "nullable, snapshot, Weekday=0, Weekend=1, Holiday=2"
         string Holiday_Name "nullable, snapshot"
         decimal Adult_Price "nullable, snapshot"

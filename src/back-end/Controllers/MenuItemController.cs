@@ -5,6 +5,7 @@ using back_end.domain.Entities;
 using back_end.domain.enums;
 using System.Linq.Expressions;
 using back_end.Dtos;
+using back_end.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using back_end.domain.Seeders;
@@ -271,6 +272,15 @@ namespace back_end.Controllers
                 }
                 if (menuItemUpdate.CategoryId != null)
                 {
+                    // Moving an item that's on a menu into a free-with-the-bill category would make it a
+                    // free flavour guests could still order: take it off its menus first
+                    var intoFree = await _context.Categories.AnyAsync(c =>
+                        c.Category_id == menuItemUpdate.CategoryId && c.Free_With_Bill);
+                    if (intoFree && itemUpdate.Category_id != menuItemUpdate.CategoryId
+                        && await _context.MenuItemAssignments.AnyAsync(a => a.Item_Id == itemId))
+                    {
+                        return BadRequest($"{itemUpdate.Name} is on a menu. {FreeIceCream.NotOnAMenuMessage} Take it off its menus first.");
+                    }
                     itemUpdate.Category_id = (int)menuItemUpdate.CategoryId;
                 }
                 if (menuItemUpdate.ItemImageUrl != null)

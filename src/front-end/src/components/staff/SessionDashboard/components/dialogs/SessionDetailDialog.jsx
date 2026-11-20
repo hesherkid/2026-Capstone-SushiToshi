@@ -30,6 +30,7 @@ import {
   Merge,
   Lock,
   LockOpen,
+  IceCreamCone,
 } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useSessionDashboardActions } from "../../hooks/useSessionDashboardActions";
@@ -43,6 +44,7 @@ import {
 } from "../../utils/sessionHelpers";
 import { tableLabel, isOpenBill, SeatedFor } from "../SessionColumns";
 import BillSummaryDialog from "./BillSummaryDialog";
+import SendIceCreamDialog from "./SendIceCreamDialog";
 
 const SectionHeading = ({ icon: Icon, children }) => (
   <Typography
@@ -122,10 +124,11 @@ const guestCheckChips = (bill) => {
 };
 
 const SessionDetailDialog = () => {
-  const { selectedSession: session, closeSession, requestsBySession, lockGuestCounts, isSaving } =
+  const { selectedSession: session, closeSession, requestsBySession, lockGuestCounts, refreshData, isSaving } =
     useSession();
   const actions = useSessionDashboardActions();
   const [summaryBillId, setSummaryBillId] = useState(null);
+  const [iceCreamOpen, setIceCreamOpen] = useState(false);
 
   const requests = session ? requestsBySession[session.session_id] || [] : [];
   const bills = sortBillsByStatus(session?.bills || []);
@@ -135,6 +138,11 @@ const SessionDetailDialog = () => {
   // Everyone still seated, and which bill they're on
   const people = session?.people || [];
   const billNameOf = (billId) => bills.find((b) => b.bill_id === billId)?.bill_name;
+  // Free ice cream: guests say yes on their bill; staff send it for the bills that are ready, once each
+  const iceCreamReady = bills.filter(
+    (b) => String(b.status).toUpperCase() !== "CANCELLED" && !b.ice_cream_sent_at,
+  );
+  const iceCreamBills = iceCreamReady.filter((b) => b.wants_ice_cream).map((b) => b.bill_name);
 
   return (
     <>
@@ -161,6 +169,45 @@ const SessionDetailDialog = () => {
                     {requests.length}
                   </Stat>
                 </Box>
+
+                {/* A bill said yes to free ice cream: ask the table which flavours, then send it for whoever's ready */}
+                {iceCreamBills.length > 0 && (
+                  <Box
+                    sx={(theme) => ({
+                      px: 2,
+                      py: 1.25,
+                      borderRadius: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      flexWrap: "wrap",
+                      bgcolor: alpha(theme.palette.info.main, 0.08),
+                    })}
+                  >
+                    <Box sx={{ flex: "1 1 200px", minWidth: 0 }}>
+                      <Typography
+                        fontWeight={600}
+                        color="info.main"
+                        sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
+                      >
+                        <IceCreamCone size={18} aria-hidden />
+                        Table wants ice cream
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {iceCreamBills.join(", ")} said yes. Ask the table which flavours.
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="outlined"
+                      color="info"
+                      aria-label="Free ice cream for the table"
+                      onClick={() => setIceCreamOpen(true)}
+                      startIcon={<IceCreamCone size={18} />}
+                    >
+                      Free Ice Cream
+                    </Button>
+                  </Box>
+                )}
 
                 {requests.length > 0 && (
                   <Box component="section">
@@ -203,7 +250,22 @@ const SessionDetailDialog = () => {
                 )}
 
                 <Box component="section">
-                  <SectionHeading icon={Receipt}>Bills ({bills.length})</SectionHeading>
+                  <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1 }}>
+                    <SectionHeading icon={Receipt}>Bills ({bills.length})</SectionHeading>
+                    {/* For when the table asks a server in person, or has no phones: the strip above covers app yeses */}
+                    {iceCreamReady.length > 0 && iceCreamBills.length === 0 && (
+                      <Button
+                        size="small"
+                        color="info"
+                        aria-label="Free ice cream for the table"
+                        onClick={() => setIceCreamOpen(true)}
+                        startIcon={<IceCreamCone size={16} />}
+                        sx={{ mt: -0.5 }}
+                      >
+                        Free Ice Cream
+                      </Button>
+                    )}
+                  </Box>
                   {bills.length === 0 ? (
                     <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, borderStyle: "dashed", textAlign: "center" }}>
                       <Typography color="text.secondary">
@@ -241,6 +303,15 @@ const SessionDetailDialog = () => {
                                   {/* Guests pressed "Ready for Bill"; they can't order more on it */}
                                   {open && bill.requested_at && (
                                     <Chip icon={<Bell size={14} />} label="Asked for bill" color="warning" size="small" />
+                                  )}
+                                  {bill.ice_cream_sent_at && (
+                                    <Chip
+                                      icon={<IceCreamCone size={14} />}
+                                      label={`Ice cream sent ${formatTime(bill.ice_cream_sent_at)}`}
+                                      color="info"
+                                      size="small"
+                                      variant="outlined"
+                                    />
                                   )}
                                   {open && bill.counts_locked && (
                                     <Tooltip title="Staff checked the number of guests. Guests can't change it on their phones.">
@@ -431,6 +502,15 @@ const SessionDetailDialog = () => {
         sessionId={session?.session_id}
         billId={summaryBillId}
         onClose={() => setSummaryBillId(null)}
+      />
+
+      <SendIceCreamDialog
+        open={iceCreamOpen}
+        sessionId={session?.session_id}
+        tableName={session ? tableLabel(session.table_numbers) : ""}
+        bills={iceCreamReady}
+        onClose={() => setIceCreamOpen(false)}
+        onSent={refreshData}
       />
     </>
   );

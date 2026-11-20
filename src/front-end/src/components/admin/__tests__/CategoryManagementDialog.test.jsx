@@ -81,6 +81,7 @@ describe("Category dialog", () => {
         per_order_limit: 30,
         per_order_per_guest: false,
         over_limit_behavior: "Charge",
+        free_with_bill: false,
       }),
     );
     expect(onSuccess).toHaveBeenCalled();
@@ -118,6 +119,30 @@ describe("Category dialog", () => {
         }),
       ),
     );
+  });
+
+  // Its items become the free ice cream flavours staff send with the bill
+  it("lets an admin make a category free with the bill", async () => {
+    api.put.mockResolvedValue({ data: {} });
+    renderDialog({ ...HOT_STONE, category_name: "Free Ice Cream", name: "Free Ice Cream" });
+
+    const freeSwitch = screen.getByRole("switch", { name: "Free with the bill" });
+    expect(freeSwitch).not.toBeChecked();
+    fireEvent.click(freeSwitch);
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith(
+        "/Category/update-category/5",
+        expect.objectContaining({ name: "Free Ice Cream", free_with_bill: true }),
+      ),
+    );
+  });
+
+  it("shows when a category is already free with the bill", () => {
+    renderDialog({ ...HOT_STONE, name: HOT_STONE.category_name, free_with_bill: true });
+
+    expect(screen.getByRole("switch", { name: "Free with the bill" })).toBeChecked();
   });
 
   it.each([

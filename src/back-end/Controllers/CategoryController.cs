@@ -34,6 +34,7 @@ namespace back_end.Controllers
             PerOrderLimit = c.per_order_limit,
             PerOrderPerGuest = c.per_order_per_guest,
             OverLimitBehavior = c.over_limit_behavior,
+            FreeWithBill = c.Free_With_Bill,
         };
 
 
@@ -138,7 +139,8 @@ namespace back_end.Controllers
                     toddler_limit = category.ToddlerLimit,
                     per_order_limit = category.PerOrderLimit,
                     per_order_per_guest = category.PerOrderPerGuest,
-                    over_limit_behavior = category.OverLimitBehavior
+                    over_limit_behavior = category.OverLimitBehavior,
+                    Free_With_Bill = category.FreeWithBill,
                 };
 
                 _context.Categories.Add(categoryEntity);
@@ -262,6 +264,14 @@ namespace back_end.Controllers
                 var error = LimitRules.Validate(adult, child, senior, toddler, perOrder);
                 if (error != null) return BadRequest(error);
 
+                // Turning it into the free-with-the-bill list: its items can't be on a menu, or
+                // guests could order the free ice cream anytime
+                if (updatedCategory.FreeWithBill == true && !existingCategory.Free_With_Bill
+                    && await _context.MenuItemAssignments.AnyAsync(a => a.MenuItem.Category_id == categoryId))
+                {
+                    return BadRequest($"Some {existingCategory.Category_name} items are on a menu. Take them off their menus before making it free with the bill.");
+                }
+
                 existingCategory.adult_limit = adult;
                 existingCategory.child_limit = child;
                 existingCategory.senior_limit = senior;
@@ -271,6 +281,7 @@ namespace back_end.Controllers
                 existingCategory.Category_name = updatedCategory.Name ?? existingCategory.Category_name;
                 existingCategory.Description = updatedCategory.Description ?? existingCategory.Description;
                 existingCategory.over_limit_behavior = updatedCategory.OverLimitBehavior ?? existingCategory.over_limit_behavior;
+                existingCategory.Free_With_Bill = updatedCategory.FreeWithBill ?? existingCategory.Free_With_Bill;
                 _context.Categories.Update(existingCategory);
                 await _context.SaveChangesAsync();
                 return Ok(ToResponse(existingCategory));

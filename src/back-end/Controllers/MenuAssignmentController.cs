@@ -112,6 +112,10 @@ namespace back_end.Controllers
                 if (assignmentData.OnlyAtLocation && assignmentData.LocationId == null)
                     return BadRequest("only_at_location needs a location_id");
 
+                // The free ice cream flavours: on a menu, guests could order them anytime
+                if (!await FreeIceCream.CanGoOnAMenuAsync(_context, assignmentData.ItemId))
+                    return BadRequest(FreeIceCream.NotOnAMenuMessage);
+
                 MenuItemAssignment NewRow(int? locationId, MenuItemStatus status) => new()
                 {
                     Menu_Id = assignmentData.MenuId,
@@ -365,7 +369,11 @@ namespace back_end.Controllers
                 };
                 _context.Add(newMenu);
                 await _context.SaveChangesAsync();
-                var sourceAssignments = await _context.MenuItemAssignments.Where(mia => mia.Menu_Id == sourceMenuId).ToListAsync();
+                // Never the free ice cream flavours, in case one reached a menu before they were kept off
+                var sourceAssignments = await _context.MenuItemAssignments
+                    .Where(mia => mia.Menu_Id == sourceMenuId && !_context.MenuItems.Any(i =>
+                        i.item_id == mia.Item_Id && i.Category.Free_With_Bill))
+                    .ToListAsync();
 
                 var newAssignment = new List<MenuItemAssignment>();
                 foreach (var element in sourceAssignments)

@@ -26,6 +26,9 @@ namespace back_end.Dtos
         public bool PerOrderPerGuest { get; set; }
 
         public OverLimitBehavior OverLimitBehavior { get; set; } = OverLimitBehavior.Block;
+
+        // Its items are the free ice cream staff send with the bill, not menu items
+        public bool FreeWithBill { get; set; }
     }
 
     public class UpdateCategory
@@ -47,6 +50,8 @@ namespace back_end.Dtos
         public bool? PerOrderPerGuest { get; set; }
 
         public OverLimitBehavior? OverLimitBehavior { get; set; }
+
+        public bool? FreeWithBill { get; set; }
     }
 
     public class CategoryResponse
@@ -70,5 +75,7 @@ namespace back_end.Dtos
         public bool PerOrderPerGuest { get; set; }
 
         public OverLimitBehavior OverLimitBehavior { get; set; }
+
+        public bool FreeWithBill { get; set; }
     }
 }

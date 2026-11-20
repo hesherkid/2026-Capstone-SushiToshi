@@ -10,6 +10,7 @@ const PILL_BUTTON_SX = { minHeight: 52, borderRadius: 999, fontSize: "1rem" };
 // Confirmation for destructive actions. onConfirm may be async; the dialog closes when it settles,
 // unless onConfirm returns false: then it stays open to show `error` and let the user retry.
 // message can be a node (e.g. text with a chip); children go under it.
+// confirmDisabled holds the confirm button back, e.g. until a question in children is answered.
 // customer: the customer side's look, a floating card (even on phones) with stacked pill buttons,
 // `icon` (a Material Symbol) above the title and the confirm button in the brand red
 export const ConfirmDialog = ({
@@ -23,6 +24,7 @@ export const ConfirmDialog = ({
   error = null,
   customer = false,
   icon = "warning",
+  confirmDisabled = false,
   children,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -82,7 +84,7 @@ export const ConfirmDialog = ({
 
         {/* Main action on top, both full width */}
         <DialogActions sx={{ flexDirection: "column", alignItems: "stretch", pt: 1, pb: 3 }}>
-          <Button variant="contained" size="large" onClick={handleConfirm} disabled={isProcessing} sx={PILL_BUTTON_SX}>
+          <Button variant="contained" size="large" onClick={handleConfirm} disabled={isProcessing || confirmDisabled} sx={PILL_BUTTON_SX}>
             {isProcessing ? "Working..." : confirmLabel}
           </Button>
           <Button variant="outlined" size="large" onClick={onClose} disabled={isProcessing} sx={PILL_BUTTON_SX}>
@@ -137,7 +139,7 @@ export const ConfirmDialog = ({
           variant="contained"
           color="error"
           onClick={handleConfirm}
-          disabled={isProcessing}
+          disabled={isProcessing || confirmDisabled}
         >
           {isProcessing ? "Working..." : confirmLabel}
         </Button>

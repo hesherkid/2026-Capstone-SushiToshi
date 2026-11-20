@@ -48,6 +48,13 @@ namespace back_end.domain.Entities
         // Staff can still change them, or unlock them
         public bool Counts_Locked { get; set; }
 
+        // The guests said yes to free ice cream when they asked for the bill. Staff ask the table
+        // which flavours and send it for every bill that's ready at once; Ice_Cream_Sent_At marks
+        // the bills that have had theirs, so each gets it once and later yeses still get a turn
+        public bool Wants_Ice_Cream { get; set; }
+
+        public DateTime? Ice_Cream_Sent_At { get; set; }
+
         // Prices frozen when the bill closes, so later price changes don't alter old bills.
         // NULL = not closed yet (or closed before snapshots existed): prices are worked out live.
         public PricingDayType? Pricing_Type { get; set; }

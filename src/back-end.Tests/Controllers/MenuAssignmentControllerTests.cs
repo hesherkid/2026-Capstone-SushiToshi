@@ -14,6 +14,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
+using back_end.Helpers;
 using back_end.Services;
 
 namespace back_end.Tests.Controllers;
@@ -129,6 +130,60 @@ public class MenuAssignmentControllerTests : IDisposable
 
     private static void ShouldBeStatus(IActionResult result, int status) =>
         result.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(status);
+
+    // The free ice cream flavours are sent by staff with the bill; on a menu guests could order them anytime
+    private const int MangoIceCream = 60;
+
+    private void AddIceCreamFlavour()
+    {
+        _context.Categories.Add(new Category { Category_id = 9, Category_name = "Free Ice Cream", Description = "Free ice cream", Free_With_Bill = true });
+        _context.MenuItems.Add(new Menu_Item { item_id = MangoIceCream, Name = "Mango Ice Cream", Description = "Free", Category_id = 9 });
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+    }
+
+    [Fact]
+    public async Task Create_RefusesTheFreeIceCreamFlavours()
+    {
+        AddIceCreamFlavour();
+        var data = ValidCreate();
+        data.ItemId = MangoIceCream;
+
+        var result = await Admin().CreateMenuItemAssignment(data);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        (await Reload(DinnerMenu, MangoIceCream, null)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Create_AllowsANormalDessertCategory()
+    {
+        _context.Categories.Add(new Category { Category_id = 8, Category_name = "Dessert", Description = "Paid desserts" });
+        _context.MenuItems.Add(new Menu_Item { item_id = 61, Name = "Mochi", Description = "Paid", Category_id = 8 });
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+        var data = ValidCreate();
+        data.ItemId = 61;
+
+        (await Admin().CreateMenuItemAssignment(data)).Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task CopyMenu_LeavesOutTheFreeIceCreamFlavours()
+    {
+        AddIceCreamFlavour();
+        // On the menu from before flavours were kept off
+        _context.MenuItemAssignments.Add(Assignment(DinnerMenu, MangoIceCream, null, 0m));
+        _context.SaveChanges();
+        _context.ChangeTracker.Clear();
+
+        var result = await Admin().CopyMenuAssignments(DinnerMenu, "Winter");
+
+        result.Should().BeOfType<OkObjectResult>();
+        var winter = _context.Menus.Single(m => m.Name == "Winter").Menu_id;
+        _context.MenuItemAssignments.Any(a => a.Menu_Id == winter && a.Item_Id == MangoIceCream).Should().BeFalse();
+        _context.MenuItemAssignments.Any(a => a.Menu_Id == winter && a.Item_Id == SalmonNigiri).Should().BeTrue();
+    }
 
     [Fact]
     public async Task Create_SavesAndFillsInDefaults()

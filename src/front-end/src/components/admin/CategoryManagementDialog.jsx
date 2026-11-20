@@ -13,6 +13,7 @@ import {
   FormControlLabel,
   Checkbox,
   Box,
+  Switch,
 } from "@mui/material";
 import FormDialog from "@/components/common/FormDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -27,6 +28,7 @@ const emptyForm = {
   per_order_limit: 0,
   per_order_per_guest: false,
   over_limit_behavior: "Block",
+  free_with_bill: false,
 };
 
 const errorText = (data, fallback) => {
@@ -89,6 +91,7 @@ const CategoryManagementDialog = ({
         per_order_limit: selectedCategory.per_order_limit ?? 0,
         per_order_per_guest: selectedCategory.per_order_per_guest ?? false,
         over_limit_behavior: selectedCategory.over_limit_behavior ?? "Block",
+        free_with_bill: selectedCategory.free_with_bill ?? false,
       });
     } else {
       setFormData(emptyForm);
@@ -326,6 +329,29 @@ const CategoryManagementDialog = ({
             </FormHelperText>
           </FormControl>
         </Stack>
+
+        {/* Its items are the free ice cream staff send when guests ask for the bill */}
+        <FormControl>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.free_with_bill}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    free_with_bill: e.target.checked,
+                  }))
+                }
+              />
+            }
+            label="Free with the bill"
+          />
+          <FormHelperText sx={{ mx: 0 }}>
+            Its items are the free ice cream flavours staff choose from when
+            guests ask for the bill. They can&apos;t go on a menu, so guests
+            can&apos;t order them.
+          </FormHelperText>
+        </FormControl>
       </FormDialog>
 
       <ConfirmDialog

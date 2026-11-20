@@ -99,10 +99,15 @@ describe("Bill page", () => {
     expect(api.post).not.toHaveBeenCalled();
 
     const confirm = await screen.findByRole("dialog");
+    // Free ice cream comes first
+    expect(within(confirm).getByRole("button", { name: "Ask for bill" })).toBeDisabled();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Yes, please" }));
     fireEvent.click(within(confirm).getByRole("button", { name: "Ask for bill" }));
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/8", null, { params: { session_id: 42 } }),
+      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/8", null, {
+        params: { session_id: 42, ice_cream: true },
+      }),
     );
     expect(await screen.findByText(/Your server will bring your bill shortly/)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Bill requested" })).toBeDisabled();

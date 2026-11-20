@@ -110,6 +110,9 @@ namespace back_end.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<DateTime?>("Ice_Cream_Sent_At")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<decimal>("Leftover_Charge")
                         .HasColumnType("decimal(65,30)");
 
@@ -149,6 +152,9 @@ namespace back_end.Migrations
                     b.Property<int>("Total_Count")
                         .HasColumnType("int");
 
+                    b.Property<bool>("Wants_Ice_Cream")
+                        .HasColumnType("tinyint(1)");
+
                     b.HasKey("Bill_Id");
 
                     b.HasIndex("Session_Id");
@@ -172,6 +178,9 @@ namespace back_end.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<bool>("Free_With_Bill")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<int>("adult_limit")
                         .HasColumnType("int");
