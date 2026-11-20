@@ -277,6 +277,47 @@ public class CategoryControllerTests : IDisposable
         result.Should().BeOfType<NotFoundObjectResult>();
     }
 
+    // ---- Free with the bill: the category's items are the free ice cream staff send ----
+
+    [Fact]
+    public async Task UpdateCategory_TurnsOnFreeWithBill_WhenNoneOfItsItemsAreOnAMenu()
+    {
+        AddLimitedCategory();
+
+        var result = await _controller.UpdateCategory(LimitedId, new UpdateCategory { FreeWithBill = true });
+
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<CategoryResponse>()
+            .Which.FreeWithBill.Should().BeTrue();
+        _context.Categories.Single(c => c.Category_id == LimitedId).Free_With_Bill.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateCategory_WontMakeACategoryFreeWithBill_WhileItsItemsAreOnAMenu()
+    {
+        AddLimitedCategory();
+        _context.MenuItems.Add(new Menu_Item { item_id = 70, Name = "Salmon Nigiri", Description = "Salmon", Category_id = LimitedId });
+        _context.MenuItemAssignments.Add(new MenuItemAssignment { Menu_Id = 1, Item_Id = 70, Status = MenuItemStatus.Available });
+        _context.SaveChanges();
+
+        var result = await _controller.UpdateCategory(LimitedId, new UpdateCategory { FreeWithBill = true });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        _context.ChangeTracker.Clear();
+        _context.Categories.Single(c => c.Category_id == LimitedId).Free_With_Bill.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateCategory_LeavesFreeWithBillAlone_WhenNotSent()
+    {
+        AddLimitedCategory();
+        _context.Categories.Single(c => c.Category_id == LimitedId).Free_With_Bill = true;
+        _context.SaveChanges();
+
+        await _controller.UpdateCategory(LimitedId, new UpdateCategory { Description = "Updated" });
+
+        _context.Categories.Single(c => c.Category_id == LimitedId).Free_With_Bill.Should().BeTrue();
+    }
+
     [Fact]
     public async Task UpdateCategory_OnlyDescription_KeepsOtherValues()
     {

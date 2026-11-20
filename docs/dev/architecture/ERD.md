@@ -3,7 +3,7 @@
 Entity Relationship Diagram for the `sushi_toshi_db` database used by the back end.
 
 - **Built from:** the entity classes in `back_end.domain.Entities` and `Enums.cs`
-- **Verified against:** the live database schema, Nov 17, 2026.
+- **Verified against:** the live database schema, Nov 19, 2026.
 
 ## Viewing and editing
 
@@ -144,6 +144,7 @@ erDiagram
         int toddler_limit
         int per_order_limit
         OverLimitBehavior over_limit_behavior "Block=0, Charge=1"
+        bool Free_With_Bill "items are the free ice cream flavours"
     }
 
     menu_item {
@@ -257,6 +258,8 @@ erDiagram
         bool Started_By_Guest
         bool Counts_Changed_By_Guest
         bool Counts_Locked
+        bool Wants_Ice_Cream
+        datetime Ice_Cream_Sent_At "nullable"
         PricingDayType Pricing_Type "nullable, snapshot, Weekday=0, Weekend=1, Holiday=2"
         string Holiday_Name "nullable, snapshot"
         decimal Adult_Price "nullable, snapshot"

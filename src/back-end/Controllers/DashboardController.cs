@@ -159,6 +159,8 @@ namespace back_end.Controllers
               StartedByGuest = b.Started_By_Guest,
               CountsChangedByGuest = b.Counts_Changed_By_Guest,
               CountsLocked = b.Counts_Locked,
+              WantsIceCream = b.Wants_Ice_Cream,
+              IceCreamSentAt = b.Ice_Cream_Sent_At,
               PeopleOnBill = session.Participants.Count(p => p.Left_At == null && p.Bill_Id == b.Bill_Id)
             }).ToList(),
             People = session.Participants

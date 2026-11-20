@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import BillDialogFrame from "@/components/bills/BillDialogFrame";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useBillSummary } from "@/components/bills/useBillSummary";
+import IceCreamChoice from "@/components/customer/IceCreamChoice";
 import { useBillRequest } from "@/components/customer/useBillRequest";
 import { formatTime } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 
@@ -12,7 +13,7 @@ import { formatTime } from "@/components/staff/SessionDashboard/utils/sessionHel
 // Staff use the session dashboard's BillSummaryDialog, which closes bills instead.
 const CustomerBillDialog = ({ open, sessionId, billId, onClose }) => {
   const { summary, loading, error, setError, reload, isOpen } = useBillSummary({ open, sessionId, billId });
-  const { confirmOpen, openConfirm, closeConfirm, requestSent, setRequestSent, requestBill } =
+  const { confirmOpen, openConfirm, closeConfirm, requestSent, setRequestSent, requestBill, iceCream, setIceCream } =
     useBillRequest({ sessionId, billId, reload, setError });
 
   const requestedAt = summary?.requested_at;
@@ -71,7 +72,10 @@ const CustomerBillDialog = ({ open, sessionId, billId, onClose }) => {
         confirmLabel="Ask for Bill"
         onConfirm={requestBill}
         onClose={closeConfirm}
-      />
+        confirmDisabled={iceCream === null}
+      >
+        <IceCreamChoice value={iceCream} onChange={setIceCream} />
+      </ConfirmDialog>
     </>
   );
 };

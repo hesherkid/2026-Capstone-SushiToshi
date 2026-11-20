@@ -12,6 +12,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
+using back_end.Helpers;
 using Microsoft.AspNetCore.Http;
 
 
@@ -85,6 +86,34 @@ public class MenuItemControllerTests : IDisposable
     private Menu_Item ReadItem(int id) =>
         _context.MenuItems.AsNoTracking().Include(mi => mi.MenuItemTags).Single(mi => mi.item_id == id);
 
+
+    // Moving an item that's on a menu into Dessert would make it a free flavour guests could still order
+    [Fact]
+    public async Task UpdateMenuItem_WontMoveAnItemOnAMenuIntoDessert()
+    {
+        _context.Categories.Add(new Category { Category_id = 9, Category_name = "Free Ice Cream", Description = "Free ice cream", Free_With_Bill = true });
+        _context.SaveChanges();
+
+        var result = await _controller.UpdateMenuItem(Salmon, new MenuItemUpdateDto { CategoryId = 9 });
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        _context.ChangeTracker.Clear();
+        _context.MenuItems.Single(i => i.item_id == Salmon).Category_id.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UpdateMenuItem_MovesAnItemOnNoMenuIntoDessert()
+    {
+        SeedTuna();
+        _context.Categories.Add(new Category { Category_id = 9, Category_name = "Free Ice Cream", Description = "Free ice cream", Free_With_Bill = true });
+        _context.SaveChanges();
+
+        var result = await _controller.UpdateMenuItem(Tuna, new MenuItemUpdateDto { CategoryId = 9 });
+
+        result.Should().BeOfType<OkObjectResult>();
+        _context.ChangeTracker.Clear();
+        _context.MenuItems.Single(i => i.item_id == Tuna).Category_id.Should().Be(9);
+    }
 
     [Fact]
     public async Task CreateMenuItem_DuplicateName_ReturnsConflict()

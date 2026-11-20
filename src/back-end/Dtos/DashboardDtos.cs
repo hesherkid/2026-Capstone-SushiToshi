@@ -21,6 +21,10 @@ namespace back_end.Dtos
         public bool CountsChangedByGuest { get; set; }
         // Staff locked its guest counts, so guests can't change them
         public bool CountsLocked { get; set; }
+        // The guests on this bill said yes to free ice cream when they asked for it, and when
+        // staff sent it (with the rest of the table's) to the kitchen
+        public bool WantsIceCream { get; set; }
+        public DateTime? IceCreamSentAt { get; set; }
         // People at the table on this bill; more than Total_Guests means the count looks short
         public int PeopleOnBill { get; set; }
     }

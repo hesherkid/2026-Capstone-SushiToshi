@@ -13,6 +13,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
+using back_end.Helpers;
 using back_end.Services;
 
 namespace back_end.Tests.Controllers;
@@ -97,6 +98,38 @@ public class BillRequestTests : IDisposable
         request.Notes.Should().Be("Ready for bill: Lee");
         request.Table_Id.Should().Be(6);
         request.Request_By.Should().Be(Guest);
+    }
+
+    [Fact]
+    public async Task RequestBill_WithIceCream_TellsStaffAndFlagsTheBill()
+    {
+        await Bills(Guest).RequestBill(269, 332, iceCream: true);
+
+        (await _context.ServiceRequests.SingleAsync()).Notes.Should().Be("Ready for bill: Lee (wants free ice cream)");
+        var bill = (await _context.Bills.FindAsync(332))!;
+        bill.Wants_Ice_Cream.Should().BeTrue();
+        bill.Ice_Cream_Sent_At.Should().BeNull();
+        // Staff ask which flavours and send it themselves, so no order yet
+        (await _context.SessionOrders.CountAsync()).Should().Be(1); // just the one it already had
+    }
+
+    [Fact]
+    public async Task RequestBill_WithoutIceCream_DoesntFlagTheBill()
+    {
+        await Bills(Guest).RequestBill(269, 332);
+
+        (await _context.Bills.FindAsync(332))!.Wants_Ice_Cream.Should().BeFalse();
+        (await _context.ServiceRequests.SingleAsync()).Notes.Should().Be("Ready for bill: Lee");
+    }
+
+    [Fact]
+    public async Task RequestBill_AskingAgainWithIceCream_DoesntChangeTheFirstRequest()
+    {
+        await Bills(Guest).RequestBill(269, 332);
+        await Bills(Guest).RequestBill(269, 332, iceCream: true);
+
+        (await _context.ServiceRequests.SingleAsync()).Notes.Should().Be("Ready for bill: Lee");
+        (await _context.Bills.FindAsync(332))!.Wants_Ice_Cream.Should().BeFalse();
     }
 
     [Fact]

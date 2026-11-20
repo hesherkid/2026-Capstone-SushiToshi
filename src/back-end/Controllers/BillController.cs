@@ -625,6 +625,10 @@ namespace back_end.Controllers
             into.Tot_Count + from.Tot_Count);
         into.Leftover_Charge += from.Leftover_Charge;
         from.Leftover_Charge = 0m;
+        // Free ice cream: a yes on either bill carries over. If either already had theirs, the merged
+        // bill counts as served, so its guests can't get a second round; staff can still ask in person
+        into.Wants_Ice_Cream |= from.Wants_Ice_Cream;
+        into.Ice_Cream_Sent_At ??= from.Ice_Cream_Sent_At;
 
         // Cancelled bills don't count towards guests or turnover, so its counts can stay as a record
         from.Status = BillStatus.Cancelled;
@@ -913,6 +917,9 @@ namespace back_end.Controllers
       }).ToList(),
     };
 
+    // Added to the "Ready for bill" request when the guests said yes to free ice cream
+    public const string IceCreamNote = "(wants free ice cream)";
+
     /// <summary>
     /// Guests ask for their bill ("Ready for Bill").
     /// </summary>
@@ -920,7 +927,18 @@ namespace back_end.Controllers
     /// Marks the bill as requested, which stops any more orders being placed on it, and sends staff a
     /// "Ready for bill" service request. Asking again is safe: it returns the original request time.
     /// Only guests on this bill (or staff) can ask.
+    ///
+    /// The restaurant offers free ice cream at the bill stage: pass ice_cream=true when the guests
+    /// say yes. It's saved on the bill and shown in the service request; staff ask the table which
+    /// flavours, then send the table's ice cream to the kitchen with send-ice-cream.
+    ///
+    /// Sample request:
+    ///
+    ///     POST /api/bill/request-bill/332?session_id=269&amp;ice_cream=true
     /// </remarks>
+    /// <param name="sessionId">The dining session the bill belongs to</param>
+    /// <param name="billId">The bill being asked for</param>
+    /// <param name="iceCream">Whether the guests want free ice cream</param>
     /// <response code="200">The bill is requested; returns when it was first requested.</response>
     /// <response code="400">The bill isn't open, or the session has no table to send the request to.</response>
     /// <response code="401">The caller is not authenticated.</response>
@@ -933,7 +951,8 @@ namespace back_end.Controllers
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RequestBill([FromQuery(Name = "session_id")] int sessionId, int billId)
+    public async Task<IActionResult> RequestBill([FromQuery(Name = "session_id")] int sessionId, int billId,
+        [FromQuery(Name = "ice_cream")] bool iceCream = false)
     {
       try
       {
@@ -972,12 +991,14 @@ namespace back_end.Controllers
         }
 
         bill.Requested_At = DateTime.UtcNow;
+        bill.Wants_Ice_Cream = iceCream;
         _context.ServiceRequests.Add(new ServiceRequest
         {
           Session_Id = session.Session_Id,
           Table_Id = tableId.Value,
           Request_By = userId,
-          Notes = $"{back_end.Controllers.ServiceRequestController.BillRequestNotePrefix} {bill.Bill_Name}",
+          Notes = $"{back_end.Controllers.ServiceRequestController.BillRequestNotePrefix} {bill.Bill_Name}"
+              + (iceCream ? $" {IceCreamNote}" : ""),
           Status = ServiceRequestStatus.Pending,
         });
         await _context.SaveChangesAsync();
@@ -988,6 +1009,203 @@ namespace back_end.Controllers
       {
         _logger.LogError(ex, "Error requesting bill {BillId} for session {SessionId}", billId, sessionId);
         return StatusCode(500, new { message = "Error requesting bill" });
+      }
+    }
+
+    /// <summary>
+    /// The free ice cream flavours staff can send with the bill.
+    /// </summary>
+    /// <remarks>
+    /// The Available items in the Dessert category, in the order they were added. Admins manage them
+    /// with the menu item tools: add an item to Dessert for a new flavour, or set one Unavailable to
+    /// stop offering it. Dessert items can't go on a menu, so guests can't order them.
+    ///
+    /// Sample request:
+    ///
+    ///     GET /api/bill/ice-cream-flavours
+    /// </remarks>
+    /// <response code="200">The flavours (possibly none).</response>
+    /// <response code="403">The caller isn't staff.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpGet("ice-cream-flavours")]
+    [ProducesResponseType(typeof(List<IceCreamFlavourOptionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetIceCreamFlavours()
+    {
+      try
+      {
+        var flavours = await FreeIceCream.Flavours(_context)
+            .Select(i => new IceCreamFlavourOptionDto { ItemId = i.item_id, Name = i.Name })
+            .ToListAsync();
+        return Ok(flavours);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error loading ice cream flavours");
+        return StatusCode(500, new { message = "Error loading ice cream flavours" });
+      }
+    }
+
+    /// <summary>
+    /// Staff send free ice cream to the kitchen for the bills at a table that are ready for it.
+    /// </summary>
+    /// <remarks>
+    /// Guests say yes on their own bill when they ask for it. Staff go to the table, ask which
+    /// flavours, and send them for every bill that's ready in one go: the ones that said yes, and
+    /// any other party at the table that wants some too. Each bill gets its ice cream once
+    /// (Ice_Cream_Sent_At); a bill that says yes later gets its own turn.
+    ///
+    /// Adds a pending order with a line for each flavour at $0. The flavours are the Available items
+    /// in the Dessert category (see ice-cream-flavours), so analytics count each one. An order needs
+    /// a bill, so it goes on the first chosen bill that said yes. It's free, so no total changes.
+    /// It works on closed bills too: the ice cream comes after the bill, so staff can close it
+    /// and take payment first. Up to one each for the guests on the chosen bills, so each chosen
+    /// bill needs a guest count.
+    /// Sending again for the same bills returns the first time.
+    ///
+    /// Sample request:
+    ///
+    ///     POST /api/bill/send-ice-cream/269
+    ///     { "bill_ids": [332, 333], "flavours": [ { "item_id": 120, "quantity": 2 }, { "item_id": 121, "quantity": 1 } ] }
+    /// </remarks>
+    /// <param name="sessionId">The dining session (the table) the ice cream is for</param>
+    /// <param name="request">The bills it's for, and how many of each flavour</param>
+    /// <response code="200">The ice cream order is pending; returns when it was sent, and whether it already had been.</response>
+    /// <response code="400">No bills chosen, a bill isn't at this table, was cancelled, already had ice cream or has no guests, a flavour isn't available, the count is 0 or more than the guests, or the table has left.</response>
+    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
+    /// <response code="404">The session was not found.</response>
+    [Authorize(Policy = "staffOnly")]
+    [HttpPost("send-ice-cream/{sessionId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendIceCream(int sessionId, SendIceCreamDto request)
+    {
+      try
+      {
+        var chosenIds = (request?.BillIds ?? new List<int>()).Distinct().ToArray();
+        if (chosenIds.Length == 0)
+        {
+          return BadRequest(new { message = "Choose who the ice cream is for." });
+        }
+
+        // So two taps (or two staff) can't send it twice
+        await using var billLock = await BillLock.LockAsync(_context, chosenIds);
+
+        var session = await _context.DiningSessions
+            .Include(ds => ds.Bills)
+            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
+        if (session == null)
+        {
+          return NotFound(new { message = "Session was not found" });
+        }
+        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
+        {
+          return LocationResults.OtherLocation();
+        }
+
+        var chosen = session.Bills.Where(b => chosenIds.Contains(b.Bill_Id)).ToList();
+        if (chosen.Count != chosenIds.Length)
+        {
+          return BadRequest(new { message = "A chosen bill isn't at this table." });
+        }
+        // A repeat of a send that already went through (a double tap)
+        if (chosen.All(b => b.Ice_Cream_Sent_At != null))
+        {
+          return Ok(new { ice_cream_sent_at = chosen.Max(b => b.Ice_Cream_Sent_At), already_sent = true });
+        }
+        if (session.Ended_At != null)
+        {
+          return BadRequest(new { message = "This table has already left." });
+        }
+        var cancelled = chosen.FirstOrDefault(b => b.Status == BillStatus.Cancelled);
+        if (cancelled != null)
+        {
+          return BadRequest(new { message = $"{cancelled.Bill_Name} was cancelled." });
+        }
+        var served = chosen.FirstOrDefault(b => b.Ice_Cream_Sent_At != null);
+        if (served != null)
+        {
+          return BadRequest(new { message = $"{served.Bill_Name} already had their ice cream." });
+        }
+
+        // Same flavour twice adds up; flavours with none are left out
+        var flavourIds = await FreeIceCream.Flavours(_context).Select(i => i.item_id).ToListAsync();
+        var counts = new Dictionary<int, int>();
+        foreach (var line in request?.Flavours ?? new List<IceCreamFlavourDto>())
+        {
+          if (!flavourIds.Contains(line.ItemId))
+          {
+            return BadRequest(new { message = "That ice cream flavour isn't available. Refresh and choose again." });
+          }
+          if (line.Quantity < 0)
+          {
+            return BadRequest(new { message = "Ice cream counts can't be negative." });
+          }
+          counts[line.ItemId] = counts.GetValueOrDefault(line.ItemId) + line.Quantity;
+        }
+        var total = counts.Values.Sum();
+        if (total == 0)
+        {
+          return BadRequest(new { message = "Choose at least one ice cream." });
+        }
+        // One each for the chosen bills' guests, so each needs a guest count first
+        var uncounted = chosen.FirstOrDefault(b => b.Total_Count <= 0);
+        if (uncounted != null)
+        {
+          return BadRequest(new { message = $"{uncounted.Bill_Name} has no guests yet. Fix the count with Edit Guests first." });
+        }
+        var guests = chosen.Sum(b => b.Total_Count);
+        if (total > guests)
+        {
+          return BadRequest(new { message = $"That's {total} ice creams for {guests} guests: one each at most." });
+        }
+
+        // The first chosen bill that said yes, or the first chosen bill
+        var bill = chosen
+            .OrderByDescending(b => b.Wants_Ice_Cream)
+            .ThenBy(b => b.Requested_At ?? DateTime.MaxValue)
+            .ThenBy(b => b.Bill_Id)
+            .First();
+
+        int.TryParse(ClaimsHelpers.GetUserId(User), out var staffId);
+        var now = DateTime.UtcNow;
+        var order = new SessionOrder
+        {
+          session_id = session.Session_Id,
+          Bill_Id = bill.Bill_Id,
+          User_Id = staffId > 0 ? staffId : null,
+          User_Name = ClaimsHelpers.GetUserDisplayName(User),
+          Status = OrderStatus.Pending,
+          Created_At = now,
+        };
+        // In the usual flavour order, so the kitchen sees them the same way every time
+        foreach (var itemId in flavourIds.Where(id => counts.GetValueOrDefault(id) > 0))
+        {
+          order.OrderItems.Add(new OrderItems
+          {
+            Menu_Id = session.Menu_Id,
+            Item_Id = itemId,
+            Quantity = counts[itemId],
+            Price_At_Time = 0m, // free, so the bill leaves it out
+            Order_Item_Status = OrderStatus.Pending,
+          });
+        }
+        _context.SessionOrders.Add(order);
+        foreach (var b in chosen)
+        {
+          b.Ice_Cream_Sent_At = now;
+        }
+        await _context.SaveChangesAsync();
+        if (billLock != null) await billLock.CommitAsync();
+
+        return Ok(new { ice_cream_sent_at = now, already_sent = false });
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error sending ice cream for session {SessionId}", sessionId);
+        return StatusCode(500, new { message = "Error sending ice cream" });
       }
     }
 

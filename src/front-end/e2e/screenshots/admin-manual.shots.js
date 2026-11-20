@@ -1,6 +1,7 @@
 // @ts-check
 const path = require("path");
 const { test, expect } = require("@playwright/test");
+const { SIGNED_OUT, signIn } = require("../accounts");
 
 // Screenshots for docs/admin/admin-manual.md, taken from the seeded Development data.
 // Run with the backend running: npm run docs:screenshots
@@ -406,4 +407,238 @@ test("bulk QR codes", async ({ page }) => {
     has: page.getByRole("heading", { name: "Bulk QR Code Generation" }),
   });
   await bulk.screenshot({ path: file("qr-bulk") });
+});
+
+// ---- Free ice cream at the bill ----
+// The seed never has a bill that said yes to ice cream, so these shots fill it in on the dashboard
+// response, in the browser only, like showPeopleOnBills. Nothing is sent or saved.
+// In the first session with two or more open bills, the first open bill asked for the bill 5 minutes
+// ago and said yes (with 4 guests, so a few flavours fit), and its "Ready for bill" service request is
+// added to the pending requests, worded as RequestBill writes it. sent: it's already had its ice cream
+// instead. nobody: no bill said yes (the table asked a server in person), so only the smaller button
+// by the Bills heading shows.
+// The keys are from DashboardBillDto and ServiceRequestResponseDto
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {{ sent?: boolean, nobody?: boolean }} [options]
+ */
+const showIceCreamYes = async (page, { sent = false, nobody = false } = {}) => {
+  // The two load together: the request waits for the session it belongs to
+  /** @type {(request: object | null) => void} */
+  let resolveRequest = () => {};
+  const askedRequest = new Promise((resolve) => (resolveRequest = resolve));
+
+  await page.route(/\/api\/dashboard\/sessions/i, async (route) => {
+    const response = await route.fetch();
+    const sessions = await response.json();
+    let request = null;
+    for (const session of Array.isArray(sessions) ? sessions : []) {
+      const open = (session.bills ?? []).filter((b) => /open/i.test(String(b.status)));
+      for (const bill of session.bills ?? []) {
+        bill.wants_ice_cream = false;
+        bill.ice_cream_sent_at = null;
+      }
+      if (open.length < 2 || nobody || request) continue;
+      const askedAt = new Date(Date.now() - 5 * 60_000).toISOString();
+      const bill = open[0];
+      bill.requested_at = askedAt;
+      bill.wants_ice_cream = true;
+      bill.ice_cream_sent_at = sent ? new Date(Date.now() - 2 * 60_000).toISOString() : null;
+      if ((bill.total_guests ?? 0) < 4) {
+        bill.adult_count = (bill.adult_count ?? 0) + (4 - (bill.total_guests ?? 0));
+        bill.total_guests = 4;
+      }
+      if (!sent) {
+        request = {
+          request_id: -100,
+          session_id: session.session_id,
+          table_id: 0,
+          requested_by: 0,
+          claimed_by: null,
+          notes: `Ready for bill: ${bill.bill_name} (wants free ice cream)`,
+          status: "Pending",
+          created_at: askedAt,
+          claimed_at: null,
+          completed_at: null,
+          table_number: session.table_numbers?.[0] ?? 0,
+        };
+      }
+    }
+    resolveRequest(request);
+    await route.fulfill({ response, json: sessions });
+  });
+
+  await page.route(/\/api\/servicerequest\/pending/i, async (route) => {
+    const response = await route.fetch();
+    const pending = await response.json();
+    const request = await askedRequest;
+    await route.fulfill({
+      response,
+      json: request ? [request, ...(Array.isArray(pending) ? pending : [])] : pending,
+    });
+  });
+};
+
+// The flavours a new restaurant starts with (the FreeIceCreamDefaults migration), so the shots don't
+// depend on what's in the local database. Keys from IceCreamFlavourOptionDto
+/** @param {import('@playwright/test').Page} page */
+const showDefaultFlavours = (page) =>
+  page.route(/\/api\/bill\/ice-cream-flavours/i, (route) =>
+    route.fulfill({
+      json: ["Strawberry", "Chocolate", "Mango", "Vanilla"].map((flavour, i) => ({
+        item_id: 9001 + i,
+        name: `${flavour} Ice Cream`,
+      })),
+    }),
+  );
+
+/** @param {import('@playwright/test').Page} page */
+const openIceCreamSession = async (page) => {
+  await openSessions(page);
+  return openSessionWhere(
+    page,
+    async (d) => (await d.getByText("Table wants ice cream").count()) > 0,
+  );
+};
+
+test("free ice cream strip", async ({ page }) => {
+  await showIceCreamYes(page);
+  const dialog = await openIceCreamSession(page);
+  // The guest's request, the bill they asked on, and the button to send it
+  // The request's card: the nearest ancestor that also holds its Mark done button
+  await highlight(
+    dialog
+      .getByText(/\(wants free ice cream\)$/)
+      .locator('xpath=ancestor::*[.//button[@aria-label="Mark request done"]][1]'),
+  );
+  await highlight(dialog.getByText("Asked for bill").first());
+  await highlight(dialog.getByRole("button", { name: "Free ice cream for the table" }));
+  await dialog.screenshot({ path: file("free-ice-cream-strip") });
+});
+
+test("free ice cream dialog", async ({ page }) => {
+  await showIceCreamYes(page);
+  await showDefaultFlavours(page);
+  const dialog = await openIceCreamSession(page);
+  await dialog.getByRole("button", { name: "Free ice cream for the table" }).click();
+
+  const picker = page.getByRole("dialog", { name: /^Free ice cream for/ });
+  await expect(picker.getByRole("button", { name: /^Add one Mango/ })).toHaveAttribute("aria-disabled", "false");
+  await picker.getByRole("button", { name: /^Add one Mango/ }).click();
+  await picker.getByRole("button", { name: /^Add one Mango/ }).click();
+  await picker.getByRole("button", { name: /^Add one Vanilla/ }).click();
+  await picker.getByRole("button", { name: /^Add one Strawberry/ }).click();
+  await settle(page);
+
+  await highlight(picker.locator("fieldset"));
+  await highlight(picker.getByRole("button", { name: /to kitchen$/ }));
+  await picker.screenshot({ path: file("free-ice-cream-dialog") });
+});
+
+test("free ice cream sent", async ({ page }) => {
+  await showIceCreamYes(page, { sent: true });
+  await openSessions(page);
+  const dialog = await openSessionWhere(
+    page,
+    async (d) => (await d.getByText(/^Ice cream sent/).count()) > 0,
+  );
+  const chip = dialog.getByText(/^Ice cream sent/).first();
+  // The bill card, like the guest-check shot
+  const bill = chip.locator(
+    'xpath=ancestor::*[.//button[starts-with(@aria-label, "View ")]][1]',
+  );
+  await highlight(chip);
+  await bill.screenshot({ path: file("free-ice-cream-sent") });
+});
+
+test("free with the bill category", async ({ page }) => {
+  // Tall enough for the whole dialog, so the switch at the bottom shows
+  await page.setViewportSize({ width: 1280, height: 1100 });
+  await page.goto("/admin/menu-categories");
+  await expect(page.getByRole("row").nth(1)).toBeVisible();
+  // It's on a later page of the table
+  await page.getByRole("searchbox").fill("Free Ice Cream");
+  const row = page.getByRole("row").filter({ hasText: "Free Ice Cream" }).first();
+  await expect(row).toBeVisible();
+  await settle(page);
+  await row.getByRole("button", { name: "Edit Free Ice Cream" }).click();
+
+  const dialog = page.getByRole("dialog");
+  const freeSwitch = dialog.getByRole("switch", { name: "Free with the bill" });
+  await expect(freeSwitch).toBeChecked();
+  await settle(page);
+  await highlight(freeSwitch.locator('xpath=ancestor::div[contains(@class,"MuiFormControl-root")][1]'));
+  await dialog.screenshot({ path: file("free-with-bill-category") });
+});
+
+// Filled in but never saved
+test("adding a free ice cream flavour", async ({ page }) => {
+  await page.goto("/admin/menu-items");
+  const add = page.getByRole("button", { name: "Add New Menu Item" });
+  await expect(add).toBeVisible();
+  await settle(page);
+  await add.click();
+
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^Name/).fill("Pistachio Ice Cream");
+  await dialog.getByLabel("Description").fill("Free with the bill");
+  await dialog.getByLabel(/^Category/).click();
+  await page.getByRole("option", { name: "Free Ice Cream" }).click();
+  // Nothing focused, so the field's focus colour doesn't look like an error
+  await page.evaluate(() => /** @type {HTMLElement | null} */ (document.activeElement)?.blur());
+  await settle(page);
+  await highlight(fieldOf(dialog.getByLabel(/^Category/)));
+  await dialog.screenshot({ path: file("free-ice-cream-flavour-item") });
+});
+
+// What the guest sees when they ask for the bill, on a phone. Signs in as the seeded customer who's
+// seated with a bill (docs/dev/database.md). If they already asked for it, the summary is changed in
+// the browser so the button shows. Stops at the question: nothing is sent
+const SEATED_CUSTOMER = { email: "emma.wilson@email.com", password: "Customer123!" };
+
+test.describe("guest", () => {
+  test.use({ storageState: SIGNED_OUT, viewport: { width: 390, height: 844 } });
+
+  test("free ice cream question", async ({ page }) => {
+    await page.route(/\/api\/bill\/summary\/\d+/i, async (route) => {
+      const response = await route.fetch();
+      const summary = await response.json();
+      await route.fulfill({ response, json: { ...summary, requested_at: null, status: "Open" } });
+    });
+    await signIn(page, SEATED_CUSTOMER);
+    await page.waitForURL((url) => !url.pathname.startsWith("/auth"));
+    await page.goto("/dashboard/bills");
+    const ready = page.getByRole("button", { name: "Ready for bill" });
+    await expect(ready).toBeEnabled({ timeout: 15_000 });
+    await settle(page);
+    await ready.click();
+
+    const confirm = page.getByRole("dialog");
+    await confirm.getByRole("button", { name: "Yes, please" }).click();
+    await expect(confirm.getByText(/Your server will ask for your flavour/)).toBeVisible();
+    await settle(page);
+    await highlight(confirm.getByRole("group", { name: "Would you like free ice cream?" }));
+    await confirm.screenshot({ path: file("free-ice-cream-guest-question") });
+  });
+});
+
+// No bill said yes on a phone: staff can still send ice cream for a table that asked in person
+test("free ice cream without an app request", async ({ page }) => {
+  await showIceCreamYes(page, { nobody: true });
+  await openSessions(page);
+  const dialog = await openBusiestSession(page);
+  const button = dialog.getByRole("button", { name: "Free ice cream for the table" });
+  await expect(button).toBeVisible();
+  await expect(dialog.getByText("Table wants ice cream")).toHaveCount(0);
+  await highlight(button);
+  await dialog.screenshot({ path: file("free-ice-cream-staff-button") });
+
+  // The picker starts with nobody ticked
+  await showDefaultFlavours(page);
+  await button.click();
+  const picker = page.getByRole("dialog", { name: /^Free ice cream for/ });
+  await expect(picker.getByRole("button", { name: /^Add one Mango/ })).toBeVisible();
+  await settle(page);
+  await highlight(picker.locator("fieldset"));
+  await picker.screenshot({ path: file("free-ice-cream-staff-dialog") });
 });

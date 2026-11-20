@@ -3,6 +3,7 @@ import BillBreakdown from "@/components/bills/BillBreakdown";
 import { useBillSummary } from "@/components/bills/useBillSummary";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import MaterialSymbol from "@/components/common/MaterialSymbol";
+import IceCreamChoice from "@/components/customer/IceCreamChoice";
 import { useBillRequest } from "@/components/customer/useBillRequest";
 import useAutoRefresh from "@/hooks/useAutoRefresh";
 import { formatCurrency, formatTime } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
@@ -53,7 +54,7 @@ const BillDetails = ({ sessionId, billId }) => {
     sessionId,
     billId,
   });
-  const { confirmOpen, openConfirm, closeConfirm, requestSent, setRequestSent, requestBill } =
+  const { confirmOpen, openConfirm, closeConfirm, requestSent, setRequestSent, requestBill, iceCream, setIceCream } =
     useBillRequest({ sessionId, billId, reload, setError });
 
   // Add-ons, over-limit charges and leftovers change the total as the meal goes on
@@ -171,9 +172,12 @@ const BillDetails = ({ sessionId, billId }) => {
         confirmLabel="Ask for bill"
         onConfirm={requestBill}
         onClose={closeConfirm}
+        confirmDisabled={iceCream === null}
         customer
         icon="receipt_long"
-      />
+      >
+        <IceCreamChoice value={iceCream} onChange={setIceCream} />
+      </ConfirmDialog>
     </>
   );
 };

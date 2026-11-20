@@ -60,13 +60,66 @@ describe("Customer bill dialog", () => {
     expect(await screen.findByText(/no more orders can be added to it/)).toBeInTheDocument();
     expect(api.post).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Ask for Bill" }));
+    // Free ice cream comes first: no asking until the guest answers
+    const askForBill = screen.getByRole("button", { name: "Ask for Bill" });
+    expect(askForBill).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "No, thanks" }));
+    fireEvent.click(askForBill);
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/80", null, { params: { session_id: 8 } })
+      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/80", null, {
+        params: { session_id: 8, ice_cream: false },
+      })
     );
     expect(await screen.findByText(/Staff will bring your bill shortly/)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Bill Requested" })).toBeDisabled();
+  });
+
+  it("tells staff when the guest wants the free ice cream", async () => {
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ready for Bill" }));
+    expect(await screen.findByText("Would you like free ice cream?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, please" }));
+    expect(screen.getByRole("button", { name: "Yes, please" })).toHaveAttribute("aria-pressed", "true");
+    // Flavours are for the server to ask at the table
+    expect(screen.getByText(/Your server will ask for your flavour/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ask for Bill" }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/80", null, {
+        params: { session_id: 8, ice_cream: true },
+      })
+    );
+  });
+
+  it("switching to No sends no ice cream", async () => {
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ready for Bill" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, please" }));
+    fireEvent.click(screen.getByRole("button", { name: "No, thanks" }));
+    expect(screen.queryByText(/Your server will ask for your flavour/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ask for Bill" }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/Bill/request-bill/80", null, {
+        params: { session_id: 8, ice_cream: false },
+      })
+    );
+  });
+
+  it("asks about ice cream again each time the confirm opens", async () => {
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ready for Bill" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, please" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByText("Would you like free ice cream?")).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Ready for Bill" }));
+    expect(await screen.findByRole("button", { name: "Yes, please" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Ask for Bill" })).toBeDisabled();
   });
 
   it("shows when the bill was already requested and can't be asked for again", async () => {
