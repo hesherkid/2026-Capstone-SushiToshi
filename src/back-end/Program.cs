@@ -408,9 +408,6 @@ using (var scope = app.Services.CreateScope())
             await context.SaveChangesAsync();
         }
 
-        // After seeding: seeding only runs when there are no menu items yet
-        await FreeIceCream.EnsureDefaultsAsync(context);
-
         // Production seeds no accounts, so the first admin comes from configuration
         await AdminBootstrap.EnsureAdminAsync(context, app.Configuration, logger);
     }

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -18,16 +17,10 @@ namespace back_end.Helpers
     // for a new flavour, or set one Unavailable to stop offering it. The name doesn't matter, so a
     // normal (paid) Dessert category can still go on menus. Free-with-the-bill items can't go on a
     // menu (CanGoOnAMenuAsync), so guests can't order them, and their empty section stays off the
-    // customer menu.
+    // customer menu. The FreeIceCreamDefaults migration adds a "Free Ice Cream" category with four
+    // flavours once, so it works out of the box.
     public static class FreeIceCream
     {
-        // The category created the first time, while no category is free with the bill
-        public const string DefaultCategoryName = "Free Ice Cream";
-
-        public static readonly IReadOnlyList<string> DefaultFlavours = new[] { "Strawberry", "Chocolate", "Mango", "Vanilla" };
-
-        public static string ItemName(string flavour) => $"{flavour} Ice Cream";
-
         public const string NotOnAMenuMessage =
             "This item is free with the bill (staff send it when guests ask for the bill), so it can't go on a menu.";
 
@@ -40,39 +33,5 @@ namespace back_end.Helpers
         // False for the free-with-the-bill items: on a menu, guests could order them anytime
         public static async Task<bool> CanGoOnAMenuAsync(ApplicationDbContext context, int itemId) =>
             !await context.MenuItems.AnyAsync(i => i.item_id == itemId && i.Category.Free_With_Bill);
-
-        // Adds a free-with-the-bill category with the default flavours the first time. Once any
-        // category is free with the bill it's the admins' to manage, so flavours they removed don't
-        // come back. Run at startup
-        public static async Task EnsureDefaultsAsync(ApplicationDbContext context)
-        {
-            if (await context.Categories.AnyAsync(c => c.Free_With_Bill))
-            {
-                return;
-            }
-
-            var category = new Category
-            {
-                Category_name = await context.Categories.AnyAsync(c => c.Category_name == DefaultCategoryName)
-                    ? $"{DefaultCategoryName} (free with the bill)"
-                    : DefaultCategoryName,
-                Description = "Free ice cream flavours, sent by staff when guests ask for the bill. Add an item here for a new flavour.",
-                Free_With_Bill = true,
-            };
-            foreach (var flavour in DefaultFlavours)
-            {
-                var name = ItemName(flavour);
-                // Item names are unique: a paid item with the same name keeps its own
-                if (await context.MenuItems.AnyAsync(i => i.Name == name)) continue;
-                context.MenuItems.Add(new Menu_Item
-                {
-                    Name = name,
-                    Description = "Free with the bill; staff send it to the kitchen. Set it Unavailable to stop offering it.",
-                    Category = category,
-                });
-            }
-            context.Categories.Add(category);
-            await context.SaveChangesAsync();
-        }
     }
 }

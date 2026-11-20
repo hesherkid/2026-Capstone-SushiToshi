@@ -319,11 +319,27 @@ public class BillControllerTests : IDisposable
     private async Task GuestsWantIceCream() =>
         await Bills(SeatedGuest, "Customer").RequestBill(TableSession, LeeBill, iceCream: true);
 
-    // The flavour's item id, adding the default flavours the first time; -1 for one we don't have
+    // What the FreeIceCreamDefaults migration adds (the in-memory database doesn't run migrations):
+    // a "Free Ice Cream" category, free with the bill, with four flavours on no menu
+    private const int FreeIceCreamCategory = 50;
+    private static readonly string[] DefaultFlavours = { "Strawberry", "Chocolate", "Mango", "Vanilla" };
+
+    private void SeedFlavours()
+    {
+        if (_context.Categories.Any(c => c.Category_id == FreeIceCreamCategory)) return;
+        _context.Categories.Add(new Category { Category_id = FreeIceCreamCategory, Category_name = "Free Ice Cream", Description = "Free", Free_With_Bill = true });
+        for (var i = 0; i < DefaultFlavours.Length; i++)
+        {
+            _context.MenuItems.Add(new Menu_Item { item_id = 401 + i, Name = $"{DefaultFlavours[i]} Ice Cream", Description = "Free", Category_id = FreeIceCreamCategory });
+        }
+        _context.SaveChanges();
+    }
+
+    // The flavour's item id, seeding the flavours the first time; -1 for one we don't have
     private int FlavourId(string flavour)
     {
-        FreeIceCream.EnsureDefaultsAsync(_context).GetAwaiter().GetResult();
-        return _context.MenuItems.Where(i => i.Name == FreeIceCream.ItemName(flavour)).Select(i => i.item_id).FirstOrDefault() is var id and > 0 ? id : -1;
+        SeedFlavours();
+        return _context.MenuItems.Where(i => i.Name == $"{flavour} Ice Cream").Select(i => i.item_id).FirstOrDefault() is var id and > 0 ? id : -1;
     }
 
     private SendIceCreamDto Scoops(int[] billIds, params (string Flavour, int Quantity)[] flavours) => new()
@@ -481,9 +497,9 @@ public class BillControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeAssignableTo<List<IceCreamFlavourOptionDto>>().Subject;
 
     [Fact]
-    public async Task IceCreamFlavours_StartWithTheDefaults_InOrder_OnNoMenu()
+    public async Task IceCreamFlavours_AreTheFreeCategorysItems_InOrder_OnNoMenu()
     {
-        await FreeIceCream.EnsureDefaultsAsync(_context);
+        SeedFlavours();
 
         FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).Should().Equal(
             "Strawberry Ice Cream", "Chocolate Ice Cream", "Mango Ice Cream", "Vanilla Ice Cream");
@@ -498,19 +514,17 @@ public class BillControllerTests : IDisposable
         _context.Categories.Add(new Category { Category_id = 40, Category_name = "Dessert", Description = "Paid desserts" });
         _context.MenuItems.Add(new Menu_Item { item_id = 600, Name = "Mochi", Description = "Paid", Category_id = 40 });
         _context.SaveChanges();
-
-        await FreeIceCream.EnsureDefaultsAsync(_context);
+        SeedFlavours();
 
         var flavours = FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).ToList();
         flavours.Should().NotContain("Mochi");
         flavours.Should().Contain("Mango Ice Cream");
-        _context.Categories.Single(c => c.Free_With_Bill).Category_name.Should().Be(FreeIceCream.DefaultCategoryName);
     }
 
     [Fact]
     public async Task IceCreamFlavours_AnAdminsNewFlavourCanBeSent()
     {
-        await FreeIceCream.EnsureDefaultsAsync(_context);
+        SeedFlavours();
         var dessert = _context.Categories.Single(c => c.Free_With_Bill);
         _context.MenuItems.Add(new Menu_Item { item_id = 500, Name = "Pistachio Ice Cream", Description = "Free", Category_id = dessert.Category_id });
         _context.SaveChanges();
@@ -532,18 +546,6 @@ public class BillControllerTests : IDisposable
         FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).Should().NotContain("Mango Ice Cream");
         (await Send(ForLee(("Mango", 1)))).Should().BeOfType<BadRequestObjectResult>();
         _context.SessionOrders.Any().Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task IceCreamFlavours_RemovedDefaultsDontComeBack()
-    {
-        await FreeIceCream.EnsureDefaultsAsync(_context);
-        _context.MenuItems.RemoveRange(_context.MenuItems.Where(i => i.Name != "Vanilla Ice Cream" && i.Category.Free_With_Bill));
-        _context.SaveChanges();
-
-        await FreeIceCream.EnsureDefaultsAsync(_context); // the next startup
-
-        FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).Should().Equal("Vanilla Ice Cream");
     }
 
     [Fact]
