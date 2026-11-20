@@ -177,7 +177,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - Bills: BillBreakdown
 - Customer: bill dialog, side and bottom nav, service request form
 - Home: CustomerHome and the staff/admin home dashboards
-- Menu: item card, cart line, quantity stepper, review order button, item view tracking
+- Menu: item card, cart line, cart rules, quantity stepper, review order button, item view tracking
 - Common: AppDialog, ConfirmDialog, FormDialog, ManagementGrid, ManagementPage, AppBarWithTitle
 - Hooks: useAuth, useAutoRefresh, useOrderActions, useTagMenuItem, and useItemViewTracker through `TrackedItem.test.jsx`
 - Route pages: tests next to the page in `app/` (home, menu, review, orders, bills, browse, visits, thank-you)
@@ -1007,8 +1007,8 @@ Solution: The sign-in setup didn't run or failed.
 
 ---
 
-**Version**: 1.4
-**Last Updated**: 2026-11-17
+**Version**: 1.5
+**Last Updated**: 2026-11-19
 **Status**: Active Development
 
 For questions or issues with testing, please contact the development team or submit an issue on GitHub.

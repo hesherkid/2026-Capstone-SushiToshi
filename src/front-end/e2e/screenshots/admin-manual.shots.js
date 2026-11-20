@@ -339,6 +339,26 @@ test("menu assignment dialog", async ({ page }) => {
   await dialog.screenshot({ path: file("menu-assignment-dialog") });
 });
 
+test("category dialog", async ({ page }) => {
+  // Tall enough that the whole dialog shows without scrolling
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto("/admin/menu-categories");
+  const edit = page.getByRole("button", { name: "Edit Sashimi" });
+  await expect(edit).toBeVisible();
+  await settle(page);
+  await edit.click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Edit Category")).toBeVisible();
+  const perGuest = dialog.getByRole("checkbox", { name: /per guest/i });
+  await expect(perGuest).toBeChecked();
+  await settle(page);
+
+  await highlight(fieldOf(dialog.getByLabel("Per Order Limit")));
+  await highlight(checkboxRowOf(perGuest));
+  await dialog.screenshot({ path: file("category-dialog") });
+});
+
 test("pricing form", async ({ page }) => {
   // Tall enough for the whole form, so the sticky save bar sits at the bottom
   await page.setViewportSize({ width: 1280, height: 1150 });
