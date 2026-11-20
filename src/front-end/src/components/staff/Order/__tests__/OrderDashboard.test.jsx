@@ -235,10 +235,12 @@ const pastOrders = [
   pastOrder(604, 43, 12, "Kim", "Delivered", "2026-10-14T20:00:00Z", 3),
 ];
 
-const mockHistory = (history) =>
-  api.get.mockImplementation((url) =>
-    url === "/Order/history" ? history() : Promise.resolve({ data: orders }),
-  );
+const mockHistory = (history, days = () => Promise.resolve({ data: [] })) =>
+  api.get.mockImplementation((url) => {
+    if (url === "/Order/history") return history();
+    if (url === "/Order/history/days") return days();
+    return Promise.resolve({ data: orders });
+  });
 
 const openPastOrders = async () => {
   render(<OrderDashboard />);
@@ -347,10 +349,10 @@ describe("Past orders", () => {
   it("shows the range error without calling the API", async () => {
     const form = await openPastOrders();
     fireEvent.change(within(form).getByLabelText("From"), {
-      target: { value: "2026-01-01" },
+      target: { value: "01/01/2026" },
     });
     fireEvent.change(within(form).getByLabelText("To"), {
-      target: { value: "2026-03-01" },
+      target: { value: "03/01/2026" },
     });
     searchPastOrders(form);
 
@@ -378,5 +380,56 @@ describe("Past orders", () => {
     expect(
       await within(form).findByText("The end date can't be in the future."),
     ).toBeInTheDocument();
+  });
+
+  it("marks the days that have orders when the calendar opens", async () => {
+    const now = new Date();
+    const month = toDateInput(now).slice(0, 7);
+    const marked = `${month}-01`;
+    mockHistory(
+      () => Promise.resolve({ data: pastOrders }),
+      () => Promise.resolve({ data: [marked] }),
+    );
+    const form = await openPastOrders();
+
+    fireEvent.click(
+      within(form).getAllByRole("button", { name: /Choose date/ })[0],
+    );
+
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith("/Order/history/days", {
+        params: { month, location_id: "1" },
+      }),
+    );
+    const calendar = await screen.findByRole("grid");
+    const day = await within(calendar).findByRole("gridcell", {
+      name: `${now.toLocaleString("en-US", { month: "long" })} 1, has orders`,
+    });
+    expect(day).toHaveAttribute("data-has-orders", "true");
+    expect(calendar.querySelectorAll('[data-has-orders="true"]')).toHaveLength(
+      1,
+    );
+  });
+
+  it("still opens the calendar when the days with orders can't be loaded", async () => {
+    mockHistory(
+      () => Promise.resolve({ data: pastOrders }),
+      () => Promise.reject(new Error("offline")),
+    );
+    const form = await openPastOrders();
+
+    fireEvent.click(
+      within(form).getAllByRole("button", { name: /Choose date/ })[0],
+    );
+
+    const calendar = await screen.findByRole("grid");
+    await waitFor(() =>
+      expect(within(calendar).getAllByRole("gridcell").length).toBeGreaterThan(
+        27,
+      ),
+    );
+    expect(calendar.querySelectorAll('[data-has-orders="true"]')).toHaveLength(
+      0,
+    );
   });
 });
