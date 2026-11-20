@@ -68,9 +68,10 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
   - **View Bill Summary** shows a bill's breakdown: guests by age, add-ons, over-limit charges, leftover fee, tax and total.
 - **New bill** (receipt icon): adds a bill to the session. Enter a bill name and the number of adults, seniors, children and toddlers (6 and under) on it. Use more than one bill when guests pay separately. Only available once the session has a table. If the table's bills would have more guests than the table has seats, a warning shows and the button changes to **Create Anyway**, for a party that pulled up extra chairs.
 - **Add Order** (on each open bill, in the session details): order for the table yourself, for example when a guest has no phone. Search the menu, add items, then select **Place Order**. The same menu, prices and limits apply as on the guests' phones, and the order is recorded under your name. It works even after the guests have asked for the bill.
-- **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can.
+- **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can. A bill with a pending order can't be closed, so close the bill before sending its [free ice cream](#free-ice-cream-at-the-bill).
+- **Free Ice Cream** (in the session details): send the table's free ice cream to the kitchen. See [Free ice cream at the bill](#free-ice-cream-at-the-bill).
 - **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
-- **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed.
+- **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed and every order item has been delivered or cancelled, including free ice cream.
 
 ![Dining Session details with a service request and two open bills, each with Add Order, Edit Guests, Lock Guests, Merge and View Bill Summary](images/session-details.png)
 
@@ -126,11 +127,49 @@ To split someone off onto their own bill, select **Move** next to them, then cho
 
 ### Merging bills
 
-When a table wants one bill instead of several, select **Merge** on a bill (shown when the table has more than one open bill) and choose the bill to merge it into. Everything moves: its people, its orders, its leftover fee and its guest count, including guests who never joined on a phone. The merged bill is then cancelled. If either bill has asked for the bill, a warning reminds you to show them the new bill summary, because the total changes.
+When a table wants one bill instead of several, select **Merge** on a bill (shown when the table has more than one open bill) and choose the bill to merge it into. Everything moves: its people, its orders, its leftover fee and its guest count, including guests who never joined on a phone. A yes to [free ice cream](#free-ice-cream-at-the-bill) moves too, and if either bill has already had its ice cream, the merged bill counts as served. The merged bill is then cancelled. If either bill has asked for the bill, a warning reminds you to show them the new bill summary, because the total changes.
 
 ![Merge dialog with the Merge into choice outlined, and a note of how the guest count and people change](images/merge-bill-dialog.png)
 
 A bill can't be cancelled once any of its orders are being made or have been served, since those still have to be paid for. Merge it or close it instead.
+
+### Free ice cream at the bill
+
+The restaurant gives free ice cream when guests ask for the bill. Guests say yes or no on their phone, and the server asks the table which flavours they'd like.
+
+1. **The guest asks for the bill.** When they select **Ready for bill**, they're asked **Would you like free ice cream?** and must answer **Yes, please** or **No, thanks** before the request is sent. A yes adds "(wants free ice cream)" to the bill request staff see.
+
+   ![The guest's Ready for your bill? dialog on a phone, with Would you like free ice cream? and the Yes, please and No, thanks buttons outlined](images/free-ice-cream-guest-question.png)
+
+2. **The session details show it.** Under **Service requests**, their request reads, for example, **Ready for bill: Tanaka (wants free ice cream)**, and their bill shows **Asked for bill**. When a bill at the table said yes, a blue **Table wants ice cream** strip also appears near the top, naming the bills that said yes, with a **Free Ice Cream** button. Sending the ice cream doesn't clear the request: select **Mark done** when you've handled it.
+
+   ![Dining Session details with three things outlined: the Free Ice Cream button in the blue Table wants ice cream strip, the service request "Ready for bill: Tanaka (wants free ice cream)", and the Asked for bill chip on Tanaka's bill](images/free-ice-cream-strip.png)
+
+3. **Ask the table, then select Free Ice Cream.** In the dialog:
+   - **Who's it for?** ticks the bills that said yes. Tick any other party at the table that wants some too.
+   - Use **+** and **−** to set how many of each flavour. The table gets one each at most, for the guests on the ticked bills.
+   - Select **Send to kitchen**.
+
+   ![Free ice cream dialog with Who's it for? (Tanaka ticked, said yes; Kim not ticked) and Send 4 to kitchen outlined, and counts for Strawberry, Chocolate, Mango and Vanilla](images/free-ice-cream-dialog.png)
+
+4. **It goes to the kitchen as a pending order** on the first ticked bill that said yes, with one line per flavour, at $0. Approve and deliver it on the [Orders](#orders) page like any other order. It doesn't change any bill's total.
+
+Each bill gets its ice cream once. Ticked bills show **Ice cream sent** with the time. If another party at the table says yes later, the strip comes back for them.
+
+![A bill with the Ice cream sent chip and its time outlined](images/free-ice-cream-sent.png)
+
+When nobody said yes on a phone, for example the table asked you in person or has no phones, select the smaller **Free Ice Cream** button beside the **Bills** heading. Nothing is ticked to start, so tick the parties who want ice cream.
+
+![Dining Session details with no ice cream strip, and the smaller Free Ice Cream button beside the Bills heading outlined](images/free-ice-cream-staff-button.png)
+
+![Free ice cream dialog with Who's it for? outlined and no bills ticked, so Send to kitchen is disabled](images/free-ice-cream-staff-dialog.png)
+
+Things to know:
+
+- **Close the bill first, then send the ice cream.** Sending works on closed bills, but a bill with a pending order can't be closed.
+- A bill needs a guest count before ice cream can be sent for it. If it has none, fix it with **Edit Guests**.
+- The session can't end until the ice cream order has been delivered or cancelled.
+- The flavours are set up by an admin. See [Menu Categories](#menu-categories).
 
 ---
 
@@ -178,6 +217,8 @@ An order moves through these statuses:
 
 Items can also be **Cancelled**.
 
+[Free ice cream](#free-ice-cream-at-the-bill) arrives as a pending order like any other, with each flavour as a $0 item. Approve and deliver it as usual.
+
 ![Orders page with pending, processing and delivered counts, status tabs and the Past Orders tab](images/orders-dashboard.png)
 
 ### What you can do
@@ -196,7 +237,7 @@ Use **Past Orders** to look up what a table ordered on an earlier visit at your 
 2. Optionally, enter a **Table #** or a **Guest or bill name** to narrow the search.
 3. Select **Search**.
 
-Each result is one visit, showing the table, session number, bills, when the first order was placed, and the number of orders, items and total. Select **View table orders** (eye icon) to see every order in the visit. Each order shows its status, when it was placed, its bill and the guest who placed it (or the staff member, for orders placed with **Add Order**), with each item's quantity, price and status. Each bill's subtotal is shown at the bottom.
+Each result is one visit, showing the table, session number, bills, when the first order was placed, and the number of orders, items and total. Select **View table orders** (eye icon) to see every order in the visit. Each order shows its status, when it was placed, its bill and the guest who placed it (or the staff member, for orders placed with **Add Order** or **Free Ice Cream**), with each item's quantity, price and status. Each bill's subtotal is shown at the bottom.
 
 ---
 
@@ -370,6 +411,8 @@ The Menu Items page lists every dish with its image, name, category, description
 
 - **Delete**: remove the item. It will no longer be available to order.
 
+Items in a category marked **Free with the bill** (see [Menu Categories](#menu-categories)) are the free ice cream flavours, so they can't be assigned to a menu. An item that's on a menu can't be moved into one of those categories until it's taken off its menus.
+
 ![Menu Assignments dialog with the item's current assignments and the form for adding a new one](images/menu-assignment-dialog.png)
 
 ---
@@ -383,7 +426,22 @@ Categories group menu items (for example, Nigiri or Rolls) and can limit how muc
   - **Limits per person** (Adult, Senior, Child, Toddler): the most each guest can order from this category during the visit. 0 = unlimited. Senior and child limits can't be more than the adult limit; a toddler limit of 0 uses the child limit.
   - **Per Order Limit**: the most the whole table can order from this category in one order, all items combined. 0 = no cap.
   - **Past per-person limit**: **Block** stops guests ordering more, **Charge the item's price** bills each item's price for every extra. Items need a price set in their menu assignment for Charge to work.
+  - **Free with the bill**: makes the category's items the free ice cream flavours staff choose from when guests ask for the bill. See below.
 - **Delete**: delete the category. This can't be undone.
+
+### Free ice cream flavours
+
+The flavours staff can send with the bill (see [Free ice cream at the bill](#free-ice-cream-at-the-bill)) are the **Available** items in any category with **Free with the bill** turned on. A new restaurant starts with a **Free Ice Cream** category with Strawberry, Chocolate, Mango and Vanilla. After that the flavours are yours to manage: removing them all doesn't bring the defaults back.
+
+- **Add a flavour**: on [Menu Items](#menu-items), add an item to that category, for example "Pistachio Ice Cream". Staff see it straight away, without the words "Ice Cream".
+- **Stop offering a flavour**: set the item to **Unavailable**. Its past sales stay in Analytics.
+- **Rename the category**: this changes nothing. The **Free with the bill** switch is what counts, so a normal, paid Dessert category can still go on menus.
+
+![Edit Category for Free Ice Cream, with the Free with the bill switch turned on and outlined](images/free-with-bill-category.png)
+
+![Create Menu Item for Pistachio Ice Cream, with Free Ice Cream chosen as the Category and outlined](images/free-ice-cream-flavour-item.png)
+
+Items in a **Free with the bill** category can't go on a menu, so guests can't order free ice cream anytime. You can't turn the switch on while any of the category's items are on a menu: take them off their menus first.
 
 ---
 
@@ -457,6 +515,8 @@ Which items sell, and which don't:
 - Units sold per item, with each item's status and category
 - Top 5 and bottom 5 sellers
 - **Add-on items**: how many units were ordered as add-ons and their share of the item's sales
+
+Free ice cream flavours count like any other item, once their order is delivered.
 
 ### Browsing behavior
 
