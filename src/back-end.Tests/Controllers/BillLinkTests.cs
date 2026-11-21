@@ -13,6 +13,7 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
+using back_end.Helpers;
 
 namespace back_end.Tests.Controllers;
 
@@ -828,15 +829,22 @@ public class BillLinkTests : IDisposable
     [Fact]
     public async Task SplittingAGuestOff_SharesTheLeftoverFeeWithTheNewBill()
     {
-        (await _context.Bills.FindAsync(Lee))!.Leftover_Charge = 5.00m;
-        (await _context.Bills.FindAsync(Park))!.Leftover_Charge = 5.00m;
+        // Lee and Park have 2 adults each and $5.00 each of a $10.00 fee
+        var lee = (await _context.Bills.FindAsync(Lee))!;
+        var park = (await _context.Bills.FindAsync(Park))!;
+        BillLinks.SetCounts(lee, 2, 0, 0, 0);
+        BillLinks.SetCounts(park, 2, 0, 0, 0);
+        lee.Leftover_Charge = 5.00m;
+        park.Leftover_Charge = 5.00m;
         _context.SaveChanges();
 
+        // Ana splits off with 1 adult, so Lee 1, Park 2, new bill 1
         await StaffSeats().MoveGuest(Table, SeatOf(Ana), SplitOff());
 
-        SavedBill(Lee).Leftover_Charge.Should().Be(3.34m);
-        SavedBill(Park).Leftover_Charge.Should().Be(3.33m);
-        SavedBill(SeatBill(Ana)!.Value).Leftover_Charge.Should().Be(3.33m);
+        // $10.00 over 1, 2 and 1 guests
+        SavedBill(Lee).Leftover_Charge.Should().Be(2.50m);
+        SavedBill(Park).Leftover_Charge.Should().Be(5.00m);
+        SavedBill(SeatBill(Ana)!.Value).Leftover_Charge.Should().Be(2.50m);
     }
 
     // Staff locked the counts but staff can still split the guests onto a new bill

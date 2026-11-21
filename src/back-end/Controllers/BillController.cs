@@ -414,6 +414,7 @@ namespace back_end.Controllers
     /// Works after the guests have asked for the bill.
     /// Staff have now checked the counts, so the bill's Started_By_Guest and
     /// Counts_Changed_By_Guest flags are cleared.
+    /// If the table has a leftover fee, it's reshared across the open bills by their new guest counts.
     /// </remarks>
     /// <response code="200">The bill with its new counts.</response>
     /// <response code="400">The bill isn't open, or the counts aren't valid.</response>
@@ -455,7 +456,11 @@ namespace back_end.Controllers
           return BadRequest(new { message = problem });
         }
 
-        BillLinks.SetCounts(bill, counts.AdultCount, counts.SeniorCount, counts.ChildCount, counts.TotCount);
+        // The table's leftover fee follows the guest counts
+        if (BillLinks.SetCounts(bill, counts.AdultCount, counts.SeniorCount, counts.ChildCount, counts.TotCount))
+        {
+          await LeftoverFee.ReshareAsync(_context, bill.Session_Id);
+        }
         bill.Started_By_Guest = false;
         bill.Counts_Changed_By_Guest = false;
         await _context.SaveChangesAsync();
@@ -771,20 +776,30 @@ namespace back_end.Controllers
     /// The table's leftover fee: the default amount, and each open bill's current share.
     /// </summary>
     /// <param name="sessionId">The dining session (table)</param>
+    /// <param name="amount">Optional. Previews this fee: each open bill's share of it, without saving anything</param>
     /// <response code="200">The default fee, the current total and each open bill's share</response>
+    /// <response code="400">If the previewed amount is negative</response>
     /// <response code="404">If the session doesn't exist</response>
     /// <response code="403">The table is at another location, or the caller isn't staff.</response>
     /// <response code="500">If there was an error retrieving the leftover fee</response>
     /// <remarks>
-    /// Used to fill in the "Add leftover fee" dialog before staff apply it.
+    /// Sample requests:
+    ///
+    ///     GET /api/bill/leftover-fee/456
+    ///     GET /api/bill/leftover-fee/456?amount=15.00
+    ///
+    /// Without amount: the fee already applied and each open bill's share of it.
+    /// With amount: what each open bill's share would be (shared by guest count, as PUT applies it),
+    /// so the "Add leftover fee" dialog can show it before staff apply it. Nothing is saved.
     /// </remarks>
     [HttpGet("leftover-fee/{sessionId}")]
     [Authorize(Policy = "staffOnly")]
     [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLeftoverFee(int sessionId)
+    public async Task<IActionResult> GetLeftoverFee(int sessionId, [FromQuery(Name = "amount")] decimal? amount = null)
     {
       try
       {
@@ -799,9 +814,16 @@ namespace back_end.Controllers
           return LocationResults.OtherLocation();
         }
 
+        if (amount < 0)
+        {
+          return BadRequest(new { message = "The leftover fee can't be negative." });
+        }
+
         var openBills = await OpenBillsAsync(sessionId);
         var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
-        return Ok(LeftoverFeeResult(sessionId, openBills, pricing.LeftoverFee));
+        return Ok(amount == null
+          ? LeftoverFeeResult(sessionId, openBills, pricing.LeftoverFee)
+          : LeftoverFeePreview(sessionId, openBills, pricing.LeftoverFee, amount.Value));
       }
       catch (Exception ex)
       {
@@ -826,9 +848,11 @@ namespace back_end.Controllers
     ///     { "amount": 15.00 }
     ///
     /// Staff decide when a table has left too much food. The fee is for the whole table and is
-    /// split evenly across its open bills ($15.00 over 2 bills = $7.50 each), replacing any fee
-    /// applied before. Closed and paid bills keep what they had, so apply it before closing bills.
-    /// The fee is taxed with the rest of the bill.
+    /// shared across its open bills by how many guests are on each, toddlers included. 
+    /// Example $20.00 over a bill of 4 guests and a bill of 1 guest, bill of 4 = $16.00. 
+    /// bill of 1 = $4.00, replacing any fee applied before. The shares add up exactly. 
+    /// It's shared again whenever an open bill's guest count changes. Closed and
+    /// paid bills keep what they had, so apply it before closing bills.
     /// </remarks>
     [HttpPut("leftover-fee/{sessionId}")]
     [Authorize(Policy = "staffOnly")]
@@ -868,7 +892,7 @@ namespace back_end.Controllers
           return BadRequest(new { message = "This table has no open bills to add a leftover fee to." });
         }
 
-        var shares = LeftoverFee.SplitEvenly(amount, openBills.Count);
+        var shares = LeftoverFee.SplitByGuests(amount, openBills.Select(b => b.Total_Count).ToList());
         for (var i = 0; i < openBills.Count; i++)
         {
           openBills[i].Leftover_Charge = shares[i];
@@ -913,9 +937,29 @@ namespace back_end.Controllers
       {
         BillId = b.Bill_Id,
         BillName = b.Bill_Name ?? string.Empty,
+        GuestCount = b.Total_Count,
         LeftoverCharge = b.Leftover_Charge,
       }).ToList(),
     };
+
+    // What each open bill's share of this fee would be, worked out the same way ApplyLeftoverFee does it
+    private static LeftoverFeeResponse LeftoverFeePreview(int sessionId, List<Billing> openBills, decimal defaultFee, decimal amount)
+    {
+      var shares = LeftoverFee.SplitByGuests(amount, openBills.Select(b => b.Total_Count).ToList());
+      return new()
+      {
+        SessionId = sessionId,
+        DefaultFee = defaultFee,
+        Amount = shares.Sum(),
+        Bills = openBills.Select((b, i) => new LeftoverFeeBillShare
+        {
+          BillId = b.Bill_Id,
+          BillName = b.Bill_Name ?? string.Empty,
+          GuestCount = b.Total_Count,
+          LeftoverCharge = shares[i],
+        }).ToList(),
+      };
+    }
 
     // Added to the "Ready for bill" request when the guests said yes to free ice cream
     public const string IceCreamNote = "(wants free ice cream)";
