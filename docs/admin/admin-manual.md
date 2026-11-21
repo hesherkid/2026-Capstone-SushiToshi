@@ -234,7 +234,7 @@ Items can also be **Cancelled**.
 
 Use **Past Orders** to look up what a table ordered on an earlier visit at your working location, for example to answer a question about a bill.
 
-1. Choose a **From** and **To** date. The range can be up to 31 days.
+1. Choose a **From** and **To** date. The range can be up to 31 days. In the calendar, days with orders are shown in bold with a dot under the date, so you can skip days with nothing to find.
 2. Optionally, enter a **Table #** or a **Guest or bill name** to narrow the search.
 3. Select **Search**.
 
