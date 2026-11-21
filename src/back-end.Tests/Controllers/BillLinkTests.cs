@@ -91,7 +91,7 @@ public class BillLinkTests : IDisposable
         { ControllerContext = As(userId, role) };
 
     private OrderController Orders(int userId) =>
-        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context)) { ControllerContext = As(userId) };
+        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context), new OrderPlanningService(_context)) { ControllerContext = As(userId) };
 
     private DiningSessionController Sessions(int userId) =>
         new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DiningSessionController>>().Object, new LocationAccessService(_context))

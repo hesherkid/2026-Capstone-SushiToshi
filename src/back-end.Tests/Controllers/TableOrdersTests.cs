@@ -52,7 +52,7 @@ public class TableOrdersTests : IDisposable
     public void Dispose() => _context.Dispose();
 
     private OrderController ControllerFor(int userId, string role = "Customer") =>
-        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context))
+        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context), new OrderPlanningService(_context))
         {
             ControllerContext = new ControllerContext
             {

@@ -64,7 +64,7 @@ public class CustomerCancelOrderTests : IDisposable
         new() { Order_Id = orderId, session_id = Session, User_Id = userId, User_Name = "Guest", Status = status, Created_At = DateTime.UtcNow };
 
     private OrderController OrdersAs(int userId) =>
-        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context))
+        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context), new OrderPlanningService(_context))
         {
             ControllerContext = new ControllerContext
             {

@@ -31,7 +31,7 @@ public class OrderControllerTests : IDisposable
 
         _context = new ApplicationDbContext(options);
         _mockLogger = new Mock<ILogger<OrderController>>();
-        _controller = new OrderController(_context, _mockLogger.Object, new LocationAccessService(_context));
+        _controller = new OrderController(_context, _mockLogger.Object, new LocationAccessService(_context), new OrderPlanningService(_context));
 
         SeedTestData();
     }
