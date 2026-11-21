@@ -165,6 +165,8 @@ The rules live in `Helpers/BillLinks.cs`:
 
 **Cancelling a bill** (`POST /api/bill/cancel-bill/{bill_id}`) is refused once any of its orders are being made or served, since those still have to be paid for. Cancelled bills aren't counted in guest totals.
 
+**Leftover fee** (`Helpers/LeftoverFee.cs`): one amount for the table, shared across its open bills by guest count (`Total_Count`, toddlers included). Leftover cents go to the largest remainders, oldest bill first on a tie. `LeftoverFee.ReshareAsync` shares it again whenever an open bill's counts change (Edit Guests, a guest's own change, Move with counts, a split). Merge adds the two shares. Closed bills keep theirs. The staff dialog (`LeftoverFeeDialog.jsx`) doesn't work out shares itself: it previews them with `GET /api/bill/leftover-fee/{sessionId}?amount=`, which uses the same split without saving, so the preview always matches the bill.
+
 ### Free ice cream at the bill
 
 The restaurant gives free ice cream when guests ask for the bill. Guests answer yes or no per bill; staff choose flavours and counts at the table and send them as one order for every bill that's ready. The rules live in `Helpers/FreeIceCream.cs`.
