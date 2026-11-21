@@ -426,10 +426,30 @@ Categories group menu items (for example, Nigiri or Rolls) and can limit how muc
   - **Name** and **Description**. Guests see the description under the section's heading on the menu, so use it for the serving size (for example, "Each order is 2 pieces.").
   - **Limits per person** (Adult, Senior, Child, Toddler): the most each guest on a bill can order from this category during the visit, added up for the bill's guests. 0 = unlimited. Senior and child limits can't be more than the adult limit; a toddler limit of 0 uses the child limit.
   - **Per Order Limit**: the most one bill can order from this category in one order, all items combined. 0 = no cap.
-  - **Per guest**: tick it to multiply the Per Order Limit by the bill's guests, toddlers included. For example, Sashimi has a Per Order Limit of 30 with **Per guest** ticked, so a bill of 4 guests can order up to 120 pieces in each order. The list shows it as "30 per guest".
+  - **Select if per guest**: tick it to multiply the Per Order Limit by the bill's guests, toddlers included. For example, Sashimi has a Per Order Limit of 30 with **Select if per guest** ticked, so a bill of 4 guests can order up to 120 pieces in each order. The list shows it as "30 per guest".
   - **Past per-person limit**: **Block** stops guests ordering more, **Charge the item's price** bills each item's price for every extra. Items need a price set in their menu assignment for Charge to work.
   - **Free with the bill**: makes the category's items the free ice cream flavours staff choose from when guests ask for the bill. See below.
 - **Delete**: delete the category. This can't be undone.
+
+### How limits are counted
+
+- **Limits are per bill, not per table.** Each bill's allowance comes from its own guest count, whoever at the table placed the order. Staff orders with **Add Order** count towards the bill they're placed on.
+- **Every guest counts**, toddlers included.
+- **Both sets of limits apply.** An order has to fit the item's limits (see [Menu Items](#menu-items)) and its category's.
+- **Changing a bill's guests** with **Edit Guests**, **Move** or **Merge** changes its allowance from the next order. Orders already placed aren't changed.
+- **Guests see the limits** on each item's card, for example "30 per guest in each order, across all Sashimi", and the cart stops at what's left.
+- **Moving guests without their orders doesn't give them a new allowance.** A bill can never order more than what the whole table has left, so guests moved onto a new bill still count what they already ate. Extras a bill was charged for don't count against anyone.
+
+![Edit Category for Sashimi, with the Per Order Limit of 30 and Select if per guest ticked, both outlined](images/category-dialog.png)
+
+The seeded menu uses these limits. Change them on this page or in an item's menu assignment.
+
+| Item or category | Limit                      | Serving size                        |
+| ---------------- | -------------------------- | ----------------------------------- |
+| Sashimi          | 30 per guest in each order | By the piece                        |
+| Chop Chop Nigiri | 2 per person for the visit | 1 piece                             |
+| Hot Stone        | 1 per person, then charged |                                     |
+| Everything else  | No limit                   | Shown in each section's description |
 
 ### Free ice cream flavours
 
@@ -444,25 +464,6 @@ The flavours staff can send with the bill (see [Free ice cream at the bill](#fre
 ![Create Menu Item for Pistachio Ice Cream, with Free Ice Cream chosen as the Category and outlined](images/free-ice-cream-flavour-item.png)
 
 Items in a **Free with the bill** category can't go on a menu, so guests can't order free ice cream anytime. You can't turn the switch on while any of the category's items are on a menu: take them off their menus first.
-
-![Edit Category dialog with the Per Order Limit and the Per guest checkbox outlined](images/category-dialog.png)
-
-### How limits are counted
-
-- **Limits are per bill, not per table.** Each bill's allowance comes from its own guest count, whoever at the table placed the order. Staff orders with **Add Order** count towards the bill they're placed on.
-- **Every guest counts**, toddlers included.
-- **Both sets of limits apply.** An order has to fit the item's limits (see [Menu Items](#menu-items)) and its category's.
-- **Changing a bill's guests** with **Edit Guests**, **Move** or **Merge** changes its allowance from the next order. Orders already placed aren't changed.
-- **Guests see the limits** on each item's card, for example "30 per guest in each order, across all Sashimi", and the cart stops at what's left.
-
-The seeded menu uses these limits. Change them on this page or in an item's menu assignment.
-
-| Item or category | Limit                      | Serving size                        |
-| ---------------- | -------------------------- | ----------------------------------- |
-| Sashimi          | 30 per guest in each order | By the piece                        |
-| Chop Chop Nigiri | 2 per person for the visit | 1 piece                             |
-| Hot Stone        | 1 per person, then charged |                                     |
-| Everything else  | No limit                   | Shown in each section's description |
 
 ---
 
