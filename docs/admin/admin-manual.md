@@ -68,7 +68,7 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
   - **View Bill Summary** shows a bill's breakdown: guests by age, add-ons, over-limit charges, leftover fee, tax and total.
 - **New bill** (receipt icon): adds a bill to the session. Enter a bill name and the number of adults, seniors, children and toddlers (6 and under) on it. Use more than one bill when guests pay separately. Only available once the session has a table. If the table's bills would have more guests than the table has seats, a warning shows and the button changes to **Create Anyway**, for a party that pulled up extra chairs.
 - **Add Order** (on each open bill, in the session details): order for the table yourself, for example when a guest has no phone. Search the menu, add items, then select **Place Order**. The same menu, prices and limits apply as on the guests' phones, using that bill's guest count (see [How limits are counted](#how-limits-are-counted)), and the order is recorded under your name.
-- **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can. A bill with a pending order can't be closed, so close the bill before sending its [free ice cream](#free-ice-cream-at-the-bill).
+- **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can. A bill with a pending order can't be closed, except for [free ice cream](#free-ice-cream-at-the-bill) still on its way.
 - **Free Ice Cream** (in the session details): send the table's free ice cream to the kitchen. See [Free ice cream at the bill](#free-ice-cream-at-the-bill).
 - **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
 - **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed and every order item has been delivered or cancelled, including free ice cream.
@@ -128,7 +128,7 @@ To split someone off onto their own bill, select **Move** next to them, then cho
 
 ### Merging bills
 
-When a table wants one bill instead of several, select **Merge** on a bill (shown when the table has more than one open bill) and choose the bill to merge it into. Everything moves: its people, its orders, its leftover fee and its guest count, including guests who never joined on a phone. A yes to [free ice cream](#free-ice-cream-at-the-bill) moves too, and if either bill has already had its ice cream, the merged bill counts as served. The merged bill is then cancelled. If either bill has asked for the bill, a warning reminds you to show them the new bill summary, because the total changes.
+When a table wants one bill instead of several, select **Merge** on a bill (shown when the table has more than one open bill) and choose the bill to merge it into. Everything moves: its people, its orders, its leftover fee and its guest count, including guests who never joined on a phone. [Free ice cream](#free-ice-cream-at-the-bill) carries over too: the merged bill counts as served only if both bills have had their ice cream. If only one has, you can still send it for the merged bill; send only for the guests who haven't had theirs. The merged bill is then cancelled. If either bill has asked for the bill, a warning reminds you to show them the new bill summary, because the total changes.
 
 ![Merge dialog with the Merge into choice outlined, and a note of how the guest count and people change](images/merge-bill-dialog.png)
 
@@ -167,7 +167,7 @@ When nobody said yes on a phone, for example the table asked you in person or ha
 
 Things to know:
 
-- **Close the bill first, then send the ice cream.** Sending works on closed bills, but a bill with a pending order can't be closed.
+- **Send it before or after taking payment.** A pending ice cream order doesn't stop the bill closing, because it's free.
 - A bill needs a guest count before ice cream can be sent for it. If it has none, fix it with **Edit Guests**.
 - The session can't end until the ice cream order has been delivered or cancelled.
 - The flavours are set up by an admin. See [Menu Categories](#menu-categories).
