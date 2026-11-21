@@ -6,10 +6,11 @@ namespace back_end.Helpers
     /// Order-time limit rules.
     ///
     /// Two scopes, category and item limits both apply:
-    ///   - Per-order: the whole table, reset for every order. Always blocks.
-    ///     Generally a flat number, with PerOrderPerGuest it's that number for each guest at the table.
-    ///     Sashimi: 30 per guest * 4 guests at the table = 120 in an order.
-    ///   - Per-person: per dining session; cap = limit x headcount per age group.
+    ///   - Per-order: one bill, reset for every order. Always blocks.
+    ///     Generally a flat number, with PerOrderPerGuest it's that number for each guest on the bill.
+    ///     Sashimi: 30 per guest * 4 guests on the bill = 120 in an order.
+    ///   - Per-person: per bill, and never more than what the whole table has left. 
+    ///     cap = limit x headcount per age group.
     ///     Block limits are hard stops, whichever is tighter. Units over a Charge limit
     ///     (but within every Block limit) go on a separate line at Price (Charge_Reason = OverLimit).
     /// 0 = unlimited; toddler 0 = same as child (see LimitRules).
@@ -32,7 +33,7 @@ namespace back_end.Helpers
 
         /// <summary>
         /// paramater = "PerOrderPerGuest"
-        /// True when PerOrder is for each guest, so the order's cap is PerOrder * everyone at the table.
+        /// True when PerOrder is for each guest, so the order's cap is PerOrder * everyone on the bill.
         /// </summary>
         public sealed record Limits(int Adult, int Child, int Senior, int Toddler, int PerOrder, OverLimitBehavior Behavior, bool PerOrderPerGuest = false);
 
@@ -72,8 +73,25 @@ namespace back_end.Helpers
         }
 
         /// <summary>
+        /// The bill's usage, raised so what the bill has left is never more than what the whole 
+        /// table has left. Stops a bill getting a fresh allowance when guests are moved 
+        /// onto it without their orders. tableUsedFree leaves out lines already charged as 
+        /// over the limit, so extras one bill paid for don't use up another bill's allowance.
+        /// </summary>
+        public static int EffectSessionUsed(Limits limits, Headcount billHeads, int billUsed,
+            Headcount tableHeads, int tableUsedFree)
+        {
+            var billCap = SessionCap(limits, billHeads);
+            var tableCap = SessionCap(limits, tableHeads);
+            if (billCap == int.MaxValue || tableCap == int.MaxValue) return billUsed;
+
+            var tableLeft = Math.Max(0, tableCap - tableUsedFree);
+            return Math.Max(billUsed, billCap - tableLeft);
+        }
+
+        /// <summary>
         /// Per-order cap that always blocks, or null when there is none.
-        /// A per guest cap is multiplied by everyone at the table (at least 1)
+        /// A per guest cap is multiplied by everyone on the bill (at least 1)
         /// </summary>
         public static int? PerOrderCap(Limits limits, Headcount? heads = null)
         {
@@ -140,9 +158,9 @@ namespace back_end.Helpers
 
             // Block limits are hard stops, whichever is tighter
             if (category.Behavior == OverLimitBehavior.Block && requested > categoryLeft)
-                return Fail($"{categoryName}: limit for this table is {categoryCap} per dining session ({categoryLeft} left).");
+                return Fail($"{categoryName}: limit for the bill is {categoryCap} per dining session ({categoryLeft} left).");
             if (item.Behavior == OverLimitBehavior.Block && requested > itemLeft)
-                return Fail($"{itemName}: limit for this table is {itemCap} per dining session ({itemLeft} left).");
+                return Fail($"{itemName}: limit for the bill is {itemCap} per dining session ({itemLeft} left).");
 
             // Anything over the remaining Charge limit is billed at full price
             var freeQty = Math.Min(requested, Math.Min(categoryLeft, itemLeft));
