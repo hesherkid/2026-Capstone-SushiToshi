@@ -28,20 +28,6 @@ namespace back_end.Controllers
       _pricingService = pricingService;
     }
 
-    // Helper method to get table numbers from session
-    private List<int> GetTableNumbers(DiningSession session)
-    {
-      if (session.Table != null)
-      {
-        return new List<int> { session.Table.table_number };
-      }
-      else if (session.TableGroup != null && session.TableGroup.Tables != null)
-      {
-        return session.TableGroup.Tables.Select(t => t.table_number).ToList();
-      }
-      return new List<int>();
-    }
-
     /// <summary>
     /// Creates a new bill for a dining session.
     /// </summary>
@@ -201,21 +187,7 @@ namespace back_end.Controllers
         await _context.SaveChangesAsync();
         await _context.Entry(newBill).ReloadAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = newBill.Bill_Id,
-          SessionId = newBill.Session_Id,
-          BillName = newBill.Bill_Name,
-          SeniorCount = newBill.Senior_Count,
-          AdultCount = newBill.Adult_Count,
-          ChildCount = newBill.Child_Count,
-          TotCount = newBill.Tot_Count,
-          TotalCount = newBill.Total_Count,
-          Status = newBill.Status.ToString(),
-          CreatedAt = newBill.Created_At,
-          ClosedAt = newBill.Closed_At,
-          TableNumbers = GetTableNumbers(session)
-        });
+        return Ok(newBill.ToBillResponse(session));
       }
       catch (Exception ex)
       {
@@ -307,22 +279,7 @@ namespace back_end.Controllers
         // A session with no bills yet is normal (e.g. just seated), so return an empty list
         var bills = billQuery.OrderByDescending(b => b.Created_At).ToList();
 
-        var billResponses = bills.Select(bill => new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(session)
-        }).ToList();
+        var billResponses = bills.Select(bill => bill.ToBillResponse(session)).ToList();
 
         return Ok(billResponses);
       }
@@ -377,22 +334,7 @@ namespace back_end.Controllers
           return NotFound(new { message = "Bill or session was not found" });
         }
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -466,21 +408,7 @@ namespace back_end.Controllers
         await _context.SaveChangesAsync();
         if (billLock != null) await billLock.CommitAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -653,22 +581,7 @@ namespace back_end.Controllers
         await _context.SaveChangesAsync();
         if (billLock != null) await billLock.CommitAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = into.Bill_Id,
-          SessionId = into.Session_Id,
-          BillName = into.Bill_Name,
-          SeniorCount = into.Senior_Count,
-          AdultCount = into.Adult_Count,
-          ChildCount = into.Child_Count,
-          TotCount = into.Tot_Count,
-          TotalCount = into.Total_Count,
-          Status = into.Status.ToString(),
-          CreatedAt = into.Created_At,
-          ClosedAt = into.Closed_At,
-          RequestedAt = into.Requested_At,
-          TableNumbers = GetTableNumbers(into.DiningSession)
-        });
+        return Ok(into.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -764,22 +677,7 @@ namespace back_end.Controllers
         if (billLock != null) await billLock.CommitAsync();
         await _context.Entry(bill).ReloadAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -1355,22 +1253,7 @@ namespace back_end.Controllers
         if (billLock != null) await billLock.CommitAsync();
         await _context.Entry(bill).ReloadAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -1444,22 +1327,7 @@ namespace back_end.Controllers
         // Convert bills to response model
         _logger.LogInformation($"Found {bills.Count} bills for user {userId}'s active session");
 
-        var billResponses = bills.Select(bill => new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        }).ToList();
+        var billResponses = bills.Select(bill => bill.ToBillResponse()).ToList();
 
         return Ok(billResponses);
       }
@@ -1596,7 +1464,7 @@ namespace back_end.Controllers
           CreatedAt = bill.Created_At,
           ClosedAt = bill.Closed_At,
           RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
+          TableNumbers = bill.DiningSession.TableNumbers()
         };
 
         _logger.LogInformation(
