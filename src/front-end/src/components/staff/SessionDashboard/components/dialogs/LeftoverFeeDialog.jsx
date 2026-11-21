@@ -12,16 +12,8 @@ import FormDialog from "@/components/common/FormDialog";
 import api from "@/config/api";
 import { formatCurrency } from "@/components/staff/SessionDashboard/utils/sessionHelpers";
 
-const splitEvenly = (amount, count) => {
-  if (count <= 0) return [];
-  const cents = Math.round((Number(amount) || 0) * 100);
-  const base = Math.floor(cents / count);
-  const extra = cents % count;
-  return Array.from(
-    { length: count },
-    (_, i) => (base + (i < extra ? 1 : 0)) / 100,
-  );
-};
+// Wait for staff to stop typing before asking the server for the share of the split
+export const PREVIEW_DELAY_MS = 300;
 
 const errorText = (err, fallback) =>
   err?.response?.data?.message ??
@@ -32,11 +24,14 @@ const errorText = (err, fallback) =>
 /**
  * Staff add (or change, or remove) the table's leftover fee before closing its bills.
  * Starts on the default fee (or the fee already applied); staff can change it.
- * The fee is for the whole table and is split evenly across its open bills.
+ * The fee is for the whole table and is shared across its open bills by how many guests
+ * are on each. The server works out the shares, both for the preview and when it's applied,
+ * so what staff see is exactly what each bill is charged.
  */
 const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
   const [info, setInfo] = useState(null);
   const [amount, setAmount] = useState("");
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -62,7 +57,38 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
   const current = Number(info?.amount) || 0;
   const parsed = Number(amount);
   const valid = amount !== "" && !Number.isNaN(parsed) && parsed >= 0;
-  const shares = valid ? splitEvenly(parsed, bills.length) : [];
+
+  // Ask the server how the amount typed would be shared, once staff stop typing.
+  // An older answer that arrives late is ignored, so the preview always matches the amount shown
+  useEffect(() => {
+    setPreview(null);
+    if (!open || !sessionId || !info || !valid || bills.length === 0) return;
+
+    let stale = false;
+    const timer = setTimeout(() => {
+      api
+        .get(`/Bill/leftover-fee/${sessionId}`, { params: { amount: parsed } })
+        .then(({ data }) => {
+          if (stale) return;
+          setPreview(
+            Object.fromEntries(
+              (data.bills ?? []).map((b) => [
+                b.bill_id,
+                Number(b.leftover_charge) || 0,
+              ]),
+            ),
+          );
+        })
+        .catch((err) => {
+          if (!stale) setError(errorText(err, "Couldn't preview the split"));
+        });
+    }, PREVIEW_DELAY_MS);
+
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [open, sessionId, info, valid, parsed, bills.length]);
 
   const save = async (value) => {
     setSaving(true);
@@ -95,7 +121,12 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
       submitDisabled={loading || !valid || bills.length === 0}
       extraActions={
         current > 0 && (
-          <Button color="error" onClick={() => save(0)} disabled={saving} sx={{ mr: "auto" }}>
+          <Button
+            color="error"
+            onClick={() => save(0)}
+            disabled={saving}
+            sx={{ mr: "auto" }}
+          >
             Remove fee
           </Button>
         )
@@ -109,8 +140,9 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
         <>
           <Typography variant="body2" color="text.secondary">
             For tables that leave too much food. One fee for the whole table,
-            split evenly across its open bills and taxed with the bill. Apply
-            it before closing the bills; closed bills aren&apos;t changed.
+            shared across its open bills by how many guests are on each, and
+            taxed with the bill. Apply it before closing the bills; closed bills
+            aren&apos;t changed.
           </Typography>
 
           <TextField
@@ -124,7 +156,9 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
             error={amount !== "" && !valid}
             slotProps={{
               input: {
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                startAdornment: (
+                  <InputAdornment position="start">$</InputAdornment>
+                ),
               },
               htmlInput: { min: 0, step: "0.01" },
             }}
@@ -133,24 +167,42 @@ const LeftoverFeeDialog = ({ open, onClose, sessionId, onApplied }) => {
           {bills.length === 0 ? (
             <Alert severity="info">This table has no open bills.</Alert>
           ) : (
-            <Box>
+            <Box aria-live="polite">
               <Typography variant="subtitle2" gutterBottom>
-                Split evenly across {bills.length} open{" "}
+                Shared by guests across {bills.length} open{" "}
                 {bills.length === 1 ? "bill" : "bills"}
               </Typography>
-              {bills.map((bill, i) => (
-                <Box
-                  key={bill.bill_id}
-                  sx={{ display: "flex", justifyContent: "space-between", py: 0.25 }}
-                >
-                  <Typography variant="body2">
-                    {bill.bill_name || `Bill #${bill.bill_id}`}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums" }}>
-                    {formatCurrency(shares[i] ?? 0)}
-                  </Typography>
-                </Box>
-              ))}
+              {bills.map((bill) => {
+                const share = preview?.[bill.bill_id];
+                return (
+                  <Box
+                    key={bill.bill_id}
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      py: 0.25,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {bill.bill_name || `Bill #${bill.bill_id}`}{" "}
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        ({bill.guest_count}{" "}
+                        {bill.guest_count === 1 ? "guest" : "guests"})
+                      </Typography>
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {share == null ? "…" : formatCurrency(share)}
+                    </Typography>
+                  </Box>
+                );
+              })}
             </Box>
           )}
         </>

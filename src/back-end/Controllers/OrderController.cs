@@ -1344,6 +1344,82 @@ namespace back_end.Controllers
             }
         }
 
+        /// <summary>
+        /// Lists the days in a month that have at least one order, so the Order History
+        /// calendar can mark them.
+        /// </summary>
+        /// <param name="month">The restaurant-local month to check (yyyy-MM)</param>
+        /// <param name="locationId">Optional location filter. Staff always get their current location</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/order/history/days?month=2026-11&amp;location_id=1
+        ///
+        /// Sample response:
+        ///
+        ///     ["2026-11-03", "2026-11-07"]
+        ///
+        /// </remarks>
+        /// <response code="200">The days with orders, oldest first (can be empty).</response>
+        /// <response code="400">month is missing or not in yyyy-MM format.</response>
+        /// <response code="401">Not signed in.</response>
+        /// <response code="403">Not staff, or a staff member with no working location.</response>
+        /// <response code="500">The days couldn't be loaded.</response>
+        [HttpGet("history/days")]
+        [Authorize(Policy = "staffOnly")]
+        [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<string>>> GetOrderHistoryDays(
+            [FromQuery] string? month,
+            [FromQuery(Name = "location_id")] int? locationId = null)
+        {
+            try
+            {
+                var scope = await _locationAccess.ResolveLocationAsync(User, locationId);
+                if (scope.IsForbidden) return LocationResults.NoLocation();
+                locationId = scope.LocationId;
+
+                if (!DateOnly.TryParseExact(month + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var firstDay))
+                {
+                    return HistoryBadRequest("month", "Enter a month in yyyy-MM format.");
+                }
+
+                var zone = AnalyticsDateRange.RestaurantTimeZone;
+                var startUtc = TimeZoneInfo.ConvertTimeToUtc(firstDay.ToDateTime(TimeOnly.MinValue), zone);
+                var endUtc = TimeZoneInfo.ConvertTimeToUtc(firstDay.AddMonths(1).ToDateTime(TimeOnly.MinValue), zone);
+
+                var query = _context.SessionOrders
+                    .Where(o => o.Created_At >= startUtc && o.Created_At < endUtc);
+
+                if (locationId.HasValue)
+                {
+                    query = query.Where(o => o.DiningSession.Location_Id == locationId.Value);
+                }
+
+                // Only the timestamps come back; the local-day grouping needs the time zone, so it happens here
+                var createdAt = await query.Select(o => o.Created_At).ToListAsync();
+
+                var days = createdAt
+                    .Select(c => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(
+                        DateTime.SpecifyKind(c, DateTimeKind.Utc), zone)))
+                    .Distinct()
+                    .Order()
+                    .Select(d => d.ToString("yyyy-MM-dd"))
+                    .ToList();
+
+                return Ok(days);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving order history days");
+                return StatusCode(500, "Internal Server Error");
+            }
+        }
+
         private BadRequestObjectResult HistoryBadRequest(string key, string message)
         {
             ModelState.AddModelError(key, message);

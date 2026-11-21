@@ -200,6 +200,9 @@ namespace back_end.Dtos
 
     public string BillName { get; set; } = string.Empty;
 
+    // Guests on the bill including toddlers
+    public int GuestCount { get; set; }
+
     public decimal LeftoverCharge { get; set; }
   }
 }

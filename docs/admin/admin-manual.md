@@ -70,7 +70,7 @@ Rows with waiting service requests are highlighted and sorted to the top. Press 
 - **Add Order** (on each open bill, in the session details): order for the table yourself, for example when a guest has no phone. Search the menu, add items, then select **Place Order**. The same menu, prices and limits apply as on the guests' phones, using that bill's guest count (see [How limits are counted](#how-limits-are-counted)), and the order is recorded under your name.
 - **Close Bill** (in the bill summary): closes a bill so no more orders can go on it. If the guests have asked for their bill, a notice shows the time they asked. Once they ask, guests can't add more orders to that bill, but staff still can. A bill with a pending order can't be closed, except for [free ice cream](#free-ice-cream-at-the-bill) still on its way.
 - **Free Ice Cream** (in the session details): send the table's free ice cream to the kitchen. See [Free ice cream at the bill](#free-ice-cream-at-the-bill).
-- **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, split evenly across its open bills and taxed with them. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
+- **Add leftover fee** (in the bill summary): charges the table for leaving too much food. The fee is for the whole table, shared across its open bills by how many guests are on each inlcuding toddlers. For example, $20 over a bill of 4 guests and a bill of 1 guest is $16 and $4, so every person pays $4. As you edit the default fee, the preview shows each open bill's share and its guests. It defaults to the location's leftover fee (see [Pricing](#pricing)) and can be changed or removed. **Add it before closing the bills**: a closed bill can't be changed.
 - **End session** (exit icon): ends the visit and frees the table. Only available once every bill in the session is closed and every order item has been delivered or cancelled, including free ice cream.
 
 ![Dining Session details with a service request and two open bills, each with Add Order, Edit Guests, Lock Guests, Merge and View Bill Summary](images/session-details.png)
@@ -83,7 +83,7 @@ Each person who scans the table's QR code is put on one bill. They only see and 
 
 - When they open the menu, guests are asked **Which bill are you on?** They either add themselves to one of the table's open bills or start a new bill for their party with its guest count. After joining, they're asked to check the bill's guest count.
 - From **Review order**, guests can switch to another bill or change their party size. They can switch bills only until they've ordered on their current one, and can't join a bill that has asked for the bill. After that, a staff member has to [move them](#moving-people-between-bills).
-- Guests can change their bill's guest count until they ask for the bill or staff [lock it](#checking-guest-counts). They can't take the table past its seats, but they can always lower their count.
+- Guests can change their bill's guest count until they ask for the bill or staff [lock it](#checking-guest-counts). They can't take the table past its seats, but they can always lower their count. If the table has a leftover fee, it is shared again by the new counts.
 - A guest who scans again after their bill was closed or cancelled is asked to choose a bill again.
 - Order limits are counted per bill. Each bill's allowance comes from its own guest count, so orders on other bills at the table don't use it up (see [How limits are counted](#how-limits-are-counted))
 
@@ -99,7 +99,7 @@ Every bill charges per guest, so check the count whenever guests set it themselv
 
 On each open bill:
 
-- **Edit Guests**: change the number of adults, seniors, children and toddlers. Works even after the guests have asked for the bill. Going past the table's seats shows a warning and **Saves Anyway**. The new count also sets the bill's order limits from its next order. Saving clears the **Started by guest** and **Count changed by guest** chips.
+- **Edit Guests**: change the number of adults, seniors, children and toddlers. Works even after the guests have asked for the bill. Going past the table's seats shows a warning and **Saves Anyway**. The new count also sets the bill's order limits from its next order, and shares the table's leftover fee, if there is one. Saving clears the **Started by guest** and **Count changed by guest** chips.
 - **Lock Guests**: once you've checked the count, lock it so guests can't change it, or switch bills, from their phones. The bill shows **Guests locked**, and locking also clears the two chips above. You can still use **Edit Guests**. Select **Unlock Guests** to let guests change it again.
 
 ![Edit Guests dialog with the Adults, Seniors, Children and Toddlers counts outlined, and a warning that the table is over its seats](images/edit-guests-dialog.png)
@@ -109,7 +109,7 @@ On each open bill:
 **People at the table** in the session details lists everyone who joined on a phone and which bill they're on (or **Not on a bill yet**). Select **Move** next to a person to put them on another open bill, even if they've already ordered or that bill has asked for the bill:
 
 - **Take their orders with them**: their orders move to the new bill, so any extras are charged there. Only possible while their current bill is open.
-- **Change both bills' guest counts**: also move guests from the old bill's count to the new one. Choose the **Kind of guest** and **How many**, for example when a couple moves together. The old bill always keeps at least one guest.
+- **Change both bills' guest counts**: also move guests from the old bill's count to the new one. Choose the **Kind of guest** and **How many**, for example when a couple moves together. The old bill always keeps at least one guest. If the table has a leftover fee, it's shared again by the new counts.
 
 ![Move dialog with Move to, Take their orders with them, Change both bills' guest counts, Kind of guest and How many outlined](images/move-person-dialog.png)
 
@@ -120,7 +120,7 @@ To split someone off onto their own bill, select **Move** next to them, then cho
 - Starts a new bill named after them. Guest accounts (for example "Guest K7P2") and people with no name get the old bill's name with a number instead, such as "Birthday dinner 1".
 - Moves the guests you choose under **Kind of guest** and **How many** off the old bill's count and onto the new bill, so the table's guest total doesn't change. This is always on for a new bill.
 - Moves their orders too, if **Take their orders with them** is ticked, so their extras are charged on the new bill.
-- Shares the table's leftover fee, if one was applied, evenly across all open bills again, including the new one.
+- Shares the table's leftover fee, if one was applied, across all open bills again by guest count, including the new one.
 
 **+ New bill** only appears when the person's bill is open and has at least two guests, since the old bill must keep at least one. It works even if their guest counts are locked. Repeat for each person to split a bill further.
 
@@ -234,7 +234,7 @@ Items can also be **Cancelled**.
 
 Use **Past Orders** to look up what a table ordered on an earlier visit at your working location, for example to answer a question about a bill.
 
-1. Choose a **From** and **To** date. The range can be up to 31 days.
+1. Choose a **From** and **To** date. The range can be up to 31 days. In the calendar, days with orders are shown in bold with a dot under the date, so you can skip days with nothing to find.
 2. Optionally, enter a **Table #** or a **Guest or bill name** to narrow the search.
 3. Select **Search**.
 
@@ -340,7 +340,7 @@ A pricing profile has:
   - **GST**: the tax rate, as a percentage.
   - **Gratuity**: an automatic tip, as a percentage.
   - **Gratuity from party of**: the party size at which gratuity starts. Enter 0 for no automatic gratuity.
-  - **Leftover fee**: the default fee staff can add for leaving too much food (see [Dining Sessions](#dining-sessions)).
+  - **Leftover fee**: the default fee staff can add for leaving too much food. Staff can change it for each table, and it's shared across the table's bills by guest count (see [Dining Sessions](#dining-sessions)).
 
 ![Default Pricing with prices per guest, the weekend days, the holiday prices switch, and tax and fees](images/pricing-form.png)
 

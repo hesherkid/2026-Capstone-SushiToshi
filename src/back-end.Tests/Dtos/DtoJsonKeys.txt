@@ -59,7 +59,7 @@ back_end.Dtos.IceCreamFlavourOptionDto: item_id, name
 back_end.Dtos.ItemOrderLimitDto: category_id, extra_price, free_left, item_id, per_order, session_left
 back_end.Dtos.JoinTableSessionDto: location_id, table_number
 back_end.Dtos.JoinTableSessionResponseDto: already_joined, menu_id, participant_id, session_id, table_numbers
-back_end.Dtos.LeftoverFeeBillShare: bill_id, bill_name, leftover_charge
+back_end.Dtos.LeftoverFeeBillShare: bill_id, bill_name, guest_count, leftover_charge
 back_end.Dtos.LeftoverFeeRequest: amount
 back_end.Dtos.LeftoverFeeResponse: amount, bills, default_fee, session_id
 back_end.Dtos.ListDiningSessionsRequestDto: active_only

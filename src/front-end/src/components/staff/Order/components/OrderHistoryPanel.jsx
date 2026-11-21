@@ -2,11 +2,15 @@ import { useState } from "react";
 import { Box, Alert, Button, TextField } from "@mui/material";
 import { Search } from "lucide-react";
 import ManagementGrid from "@/components/common/ManagementGrid";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useOrderHistory, toDateInput } from "../hooks/useOrderHistory";
+import { useOrderDays } from "../hooks/useOrderDays";
+import HistoryDatePicker from "./HistoryDatePicker";
 import { getSessionHistoryColumns } from "./SessionHistoryColumns";
 import SessionHistoryDialog from "./dialogs/SessionHistoryDialog";
 
-// Look up past orders by date range.
+// Look up past orders by date range. The date pickers mark the days that have orders.
 // One row per dining session; the dialog splits that table's orders by bill.
 const OrderHistoryPanel = () => {
   const {
@@ -28,10 +32,8 @@ const OrderHistoryPanel = () => {
     search();
   };
 
-  const dateSlotProps = (extra) => ({
-    inputLabel: { shrink: true },
-    htmlInput: { max: today, ...extra },
-  });
+  const { orderDays, loadMonth, isLoading: isLoadingDays } = useOrderDays();
+  const dayMarks = { orderDays, loadMonth, isLoadingDays };
 
   return (
     <>
@@ -48,28 +50,29 @@ const OrderHistoryPanel = () => {
           alignItems: "flex-start",
         }}
       >
-        <TextField
-          id="history-from"
-          label="From"
-          type="date"
-          size="small"
-          value={filters.from}
-          onChange={(e) => setFilter("from", e.target.value)}
-          error={!!fieldErrors.from}
-          helperText={fieldErrors.from}
-          slotProps={dateSlotProps({ max: filters.to || today })}
-        />
-        <TextField
-          id="history-to"
-          label="To"
-          type="date"
-          size="small"
-          value={filters.to}
-          onChange={(e) => setFilter("to", e.target.value)}
-          error={!!fieldErrors.to}
-          helperText={fieldErrors.to}
-          slotProps={dateSlotProps({ min: filters.from || undefined })}
-        />
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <HistoryDatePicker
+            id="history-from"
+            label="From"
+            value={filters.from}
+            onChange={(value) => setFilter("from", value)}
+            maxDate={filters.to || today}
+            error={!!fieldErrors.from}
+            helperText={fieldErrors.from}
+            {...dayMarks}
+          />
+          <HistoryDatePicker
+            id="history-to"
+            label="To"
+            value={filters.to}
+            onChange={(value) => setFilter("to", value)}
+            minDate={filters.from || undefined}
+            maxDate={today}
+            error={!!fieldErrors.to}
+            helperText={fieldErrors.to}
+            {...dayMarks}
+          />
+        </LocalizationProvider>
         <TextField
           id="history-table"
           label="Table #"
