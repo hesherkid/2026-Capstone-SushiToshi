@@ -280,6 +280,7 @@ namespace back_end.Controllers
             if (BillLinks.SetCounts(bill, request.AdultCount, request.SeniorCount, request.ChildCount, request.TotCount))
             {
                 bill.Counts_Changed_By_Guest = true;
+                await LeftoverFee.ReshareAsync(_context, sessionId);
                 await _context.SaveChangesAsync();
             }
             if (billLock != null) await billLock.CommitAsync();
@@ -311,7 +312,7 @@ namespace back_end.Controllers
         /// new_bill starts the bill for them, split off their current one in one step:
         /// - It's named after them, or "{old bill} 1", "{old bill} 2"... if they have no name or a guest account.
         /// - Its guests are the guest_count taken off the old bill, so the table's total doesn't change.
-        /// - The table's leftover fee is shared evenly across its open bills again, the new one included.
+        /// - The table's leftover fee is shared across its open bills again by guest count, including a new bill.
         /// - Needs guest_type, and the person must already be on an open bill.
         /// </remarks>
         /// <response code="200">They're on the bill: bill_id, new_bill, orders_moved and counts_moved.</response>
@@ -449,10 +450,14 @@ namespace back_end.Controllers
                 countsMoved = true;
             }
 
+            // The table's leftover fee follows the guest counts, and a new bill takes its share
+            if (countsMoved)
+            {
+                await LeftoverFee.ReshareAsync(_context, sessionId, request.NewBill ? to : null);
+            }
             // Every check has passed, so the new bill only exists if everything else moves too
             if (request.NewBill)
             {
-                await ReshareLeftoverFeeAsync(sessionId, to);
                 _context.Bills.Add(to);
             }
             // Through the navigation, so a new bill's id is filled in when it's saved
@@ -486,25 +491,6 @@ namespace back_end.Controllers
             var number = 1;
             while (taken.Contains($"{stem} {number}")) number++;
             return $"{stem} {number}";
-        }
-
-        // The same as BillController.ApplyLeftoverFee. The table's fee is shared evenly across its
-        // open bills, oldest first, so a new bill takes its share.
-        private async Task ReshareLeftoverFeeAsync(int sessionId, Billing newBill)
-        {
-            var openBills = await _context.Bills
-                .Where(b => b.Session_Id == sessionId && b.Status == BillStatus.Open)
-                .OrderBy(b => b.Bill_Id)
-                .ToListAsync();
-            var fee = openBills.Sum(b => b.Leftover_Charge);
-            if (fee == 0m) return;
-
-            openBills.Add(newBill);
-            var shares = LeftoverFee.SplitEvenly(fee, openBills.Count);
-            for (var i = 0; i < openBills.Count; i++)
-            {
-                openBills[i].Leftover_Charge = shares[i];
-            }
         }
 
         private static string GuestTypePlural(string guestType, int count) => count == 1 ? guestType : guestType switch

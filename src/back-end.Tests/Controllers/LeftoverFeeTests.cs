@@ -20,6 +20,9 @@ namespace back_end.Tests.Controllers
     public class LeftoverFeeTests : IDisposable
     {
         private const int SessionId = 700;
+        private const int Lee = 1;   // 2 guests
+        private const int Park = 2;  // 1 guest
+        private const int Kim = 3;   // 1 guest
         private readonly ApplicationDbContext _context;
 
         public LeftoverFeeTests()
@@ -29,12 +32,12 @@ namespace back_end.Tests.Controllers
                 .Options;
             _context = new ApplicationDbContext(options);
 
-            _context.Tables.Add(new TableEntity { Table_Id = 6, table_number = 6, Location_Id = 1, is_active = true });
+            _context.Tables.Add(new TableEntity { Table_Id = 6, table_number = 6, seat_count = 8, Location_Id = 1, is_active = true });
             _context.DiningSessions.Add(new DiningSession { Session_Id = SessionId, Menu_Id = 1, Location_Id = 1, Table_Id = 6, Started_At = DateTime.UtcNow });
             _context.Bills.AddRange(
-                new Billing { Bill_Id = 1, Session_Id = SessionId, Bill_Name = "Lee", Adult_Count = 2, Total_Count = 2 },
-                new Billing { Bill_Id = 2, Session_Id = SessionId, Bill_Name = "Park", Adult_Count = 1, Total_Count = 1 },
-                new Billing { Bill_Id = 3, Session_Id = SessionId, Bill_Name = "Kim", Adult_Count = 1, Total_Count = 1 });
+                new Billing { Bill_Id = Lee, Session_Id = SessionId, Bill_Name = "Lee", Adult_Count = 2, Total_Count = 2 },
+                new Billing { Bill_Id = Park, Session_Id = SessionId, Bill_Name = "Park", Adult_Count = 1, Total_Count = 1 },
+                new Billing { Bill_Id = Kim, Session_Id = SessionId, Bill_Name = "Kim", Adult_Count = 1, Total_Count = 1 });
             // Staff only see sessions at the location they're working at
             _context.Users.Add(new User { User_id = 30, Email = "staff@example.com", Role = UserRoles.Staff, Location_id = 1 });
             _context.SaveChanges();
@@ -49,7 +52,6 @@ namespace back_end.Tests.Controllers
             pricing.Setup(p => p.GetPricingAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(info);
             pricing.Setup(p => p.GetCurrentPricingAsync(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(info);
 
-
             return new BillController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<BillController>>().Object, pricing.Object)
             {
                 ControllerContext = new ControllerContext
@@ -58,9 +60,9 @@ namespace back_end.Tests.Controllers
                     {
                         User = new ClaimsPrincipal(new ClaimsIdentity(new[]
                         {
-                        new Claim(ClaimTypes.NameIdentifier, "30"),
-                        new Claim(ClaimTypes.Role, "Staff"),
-                    }, "TestAuth")),
+                            new Claim(ClaimTypes.NameIdentifier, "30"),
+                            new Claim(ClaimTypes.Role, "Staff"),
+                        }, "TestAuth")),
                     },
                 },
             };
@@ -75,67 +77,130 @@ namespace back_end.Tests.Controllers
 
         private decimal ChargeOn(int billId) => _context.Bills.Single(b => b.Bill_Id == billId).Leftover_Charge;
 
-        // Splitting
-
-        [Fact]
-        public void SplitEvenly_SharesAddUpExactly()
+        private void Close(int billId, decimal charge)
         {
-            LeftoverFee.SplitEvenly(10.00m, 3).Should().Equal(3.34m, 3.33m, 3.33m);
-            LeftoverFee.SplitEvenly(15.00m, 2).Should().Equal(7.50m, 7.50m);
-            LeftoverFee.SplitEvenly(0m, 2).Should().Equal(0m, 0m);
+            var bill = _context.Bills.Single(b => b.Bill_Id == billId);
+            bill.Status = BillStatus.Closed;
+            bill.Leftover_Charge = charge;
+            _context.SaveChanges();
+            _context.ChangeTracker.Clear();
         }
 
-        // Applying
+        [Fact]
+        public void SplitByGuests_SharesFollowGuestCounts()
+        {
+            // A party of 4 and a party of 1
+            var guests = new[] { 4, 1 };
+
+            var shares = LeftoverFee.SplitByGuests(20.00m, guests);
+
+            // $4.00 a guest on both bills
+            shares.Should().Equal(16.00m, 4.00m);
+        }
 
         [Fact]
-        public async Task NoAmount_UsesTheDefault_SplitAcrossOpenBills()
+        public void SplitByGuests_TiedRemainders_OldestBillFirst()
+        {
+            // Equal parties, so every remainder is the same
+            var guests = new[] { 1, 1, 1 };
+
+            var shares = LeftoverFee.SplitByGuests(10.00m, guests);
+
+            shares.Should().Equal(3.34m, 3.33m, 3.33m);
+        }
+
+        [Theory]
+        [InlineData(10.00, new[] { 2, 1, 1 })]
+        [InlineData(10.01, new[] { 3, 1, 1 })]
+        [InlineData(7.77, new[] { 5, 2, 1, 1 })]
+        [InlineData(0.05, new[] { 1, 1, 1, 1, 1, 1 })]
+        public void SplitByGuests_AlwaysAddsUpToTheFee(double fee, int[] guests)
+        {
+            var amount = (decimal)fee;
+
+            var shares = LeftoverFee.SplitByGuests(amount, guests);
+
+            shares.Sum().Should().Be(amount);
+            shares.Should().OnlyContain(s => s >= 0m);
+        }
+
+        [Fact]
+        public void SplitByGuests_ZeroFee_IsZeroForEveryBill()
+        {
+            var shares = LeftoverFee.SplitByGuests(0m, new[] { 2, 1 });
+
+            shares.Should().Equal(0m, 0m);
+        }
+
+        [Fact]
+        public void SplitByGuests_NoBills_IsEmpty()
+        {
+            var shares = LeftoverFee.SplitByGuests(10.00m, Array.Empty<int>());
+
+            shares.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task NoAmount_UsesTheDefault_SharedByGuests()
         {
             var response = await Apply(null);
 
+            // $10.00 over 2, 1 and 1 guest count bills
             response.Amount.Should().Be(10.00m);
             response.DefaultFee.Should().Be(10.00m);
-            ChargeOn(1).Should().Be(3.34m);
-            ChargeOn(2).Should().Be(3.33m);
-            ChargeOn(3).Should().Be(3.33m);
+            ChargeOn(Lee).Should().Be(5.00m);
+            ChargeOn(Park).Should().Be(2.50m);
+            ChargeOn(Kim).Should().Be(2.50m);
         }
 
         [Fact]
-        public async Task StaffAmount_OverridesTheDefault()
+        public async Task Response_IncludesEachBillsGuestCount()
         {
-            (await Apply(15.00m)).Amount.Should().Be(15.00m);
-            ChargeOn(1).Should().Be(5.00m);
+            var response = await Apply(10.00m);
+
+            response.Bills.Select(b => b.GuestCount).Should().Equal(2, 1, 1);
+        }
+
+        [Fact]
+        public async Task EnteredAmount_OverridesTheDefault()
+        {
+            var response = await Apply(20.00m);
+
+            response.Amount.Should().Be(20.00m);
+            ChargeOn(Lee).Should().Be(10.00m);
         }
 
         [Fact]
         public async Task ApplyingAgain_ReplacesTheFee_AndZeroRemovesIt()
         {
             await Apply(15.00m);
-            (await Apply(0m)).Amount.Should().Be(0m);
-            ChargeOn(1).Should().Be(0m);
+
+            var response = await Apply(0m);
+
+            response.Amount.Should().Be(0m);
+            ChargeOn(Lee).Should().Be(0m);
         }
 
         [Fact]
         public async Task ClosedBills_KeepWhatTheyHad()
         {
-            var closed = _context.Bills.Single(b => b.Bill_Id == 3);
-            closed.Status = BillStatus.Closed;
-            closed.Leftover_Charge = 2.00m;
-            _context.SaveChanges();
-            _context.ChangeTracker.Clear();
+            Close(Kim, 2.00m);
 
+            // $10.00 over the open bills' 2 and 1 guests
             var response = await Apply(10.00m);
 
             response.Bills.Should().HaveCount(2);
-            ChargeOn(1).Should().Be(5.00m);
-            ChargeOn(2).Should().Be(5.00m);
-            ChargeOn(3).Should().Be(2.00m);
+            ChargeOn(Lee).Should().Be(6.67m);
+            ChargeOn(Park).Should().Be(3.33m);
+            ChargeOn(Kim).Should().Be(2.00m);
         }
 
         [Fact]
         public async Task NegativeAmount_IsRejected()
         {
-            (await Bills().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = -1m }))
-                .Should().BeOfType<BadRequestObjectResult>();
+            var result = await Bills().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = -1m });
+
+            result.Should().BeOfType<BadRequestObjectResult>();
         }
 
         [Fact]
@@ -145,23 +210,63 @@ namespace back_end.Tests.Controllers
             _context.SaveChanges();
             _context.ChangeTracker.Clear();
 
-            (await Bills().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = 10m }))
-                .Should().BeOfType<BadRequestObjectResult>();
+            var result = await Bills().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = 10m });
+
+            result.Should().BeOfType<BadRequestObjectResult>();
         }
 
-        // On the bill
+        [Fact]
+        public async Task StaffEditGuests_SharesTheFeeAgain()
+        {
+            // $10.00 over 2, 1 and 1 guests
+            await Apply(10.00m);
+
+            // Park goes from 1 guest to 3
+            await Bills().UpdateGuestCounts(SessionId, Park, new UpdateGuestCountsDto { AdultCount = 3 });
+            _context.ChangeTracker.Clear();
+
+            // $10.00 over 2, 3 and 1 guests, still adding up exactly
+            ChargeOn(Lee).Should().Be(3.33m);
+            ChargeOn(Park).Should().Be(5.00m);
+            ChargeOn(Kim).Should().Be(1.67m);
+        }
+
+        [Fact]
+        public async Task StaffEditGuests_NoFee_StaysAtZero()
+        {
+            await Bills().UpdateGuestCounts(SessionId, Park, new UpdateGuestCountsDto { AdultCount = 3 });
+            _context.ChangeTracker.Clear();
+
+            ChargeOn(Lee).Should().Be(0m);
+            ChargeOn(Park).Should().Be(0m);
+        }
+
+        [Fact]
+        public async Task StaffEditGuests_LeavesClosedBillsAlone()
+        {
+            await Apply(10.00m);
+            Close(Kim, 2.50m);
+
+            // The open bills hold $7.50, now over 2 and 3 guests
+            await Bills().UpdateGuestCounts(SessionId, Park, new UpdateGuestCountsDto { AdultCount = 3 });
+            _context.ChangeTracker.Clear();
+
+            ChargeOn(Lee).Should().Be(3.00m);
+            ChargeOn(Park).Should().Be(4.50m);
+            ChargeOn(Kim).Should().Be(2.50m);
+        }
 
         [Fact]
         public async Task BillSummary_IncludesTheShare_AndTaxesIt()
         {
-            await Apply(15.00m);
+            await Apply(20.00m);
 
-            var summary = ((await Bills().GetBillSummary(SessionId, 1)) as OkObjectResult)!.Value as BillSummaryResponse;
+            var summary = ((await Bills().GetBillSummary(SessionId, Lee)) as OkObjectResult)!.Value as BillSummaryResponse;
 
-            summary!.LeftoverCharge.Should().Be(5.00m);
-            summary.Subtotal.Should().Be(5.00m);       // base prices are 0 in this test
-            summary.TaxAmount.Should().Be(0.25m);     // 5% of the fee
-            summary.TotalAmount.Should().Be(5.25m);
+            summary!.LeftoverCharge.Should().Be(10.00m);
+            summary.Subtotal.Should().Be(10.00m);      // base prices are 0 in this test
+            summary.TaxAmount.Should().Be(0.50m);      // 5% of the fee
+            summary.TotalAmount.Should().Be(10.50m);
         }
     }
 }

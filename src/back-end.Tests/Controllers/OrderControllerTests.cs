@@ -1109,4 +1109,64 @@ public class OrderControllerTests : IDisposable
         // Assert
         BadRequestDetails(result).Errors.Should().ContainKey("to");
     }
+
+    private static string[] HistoryDays(ActionResult<IEnumerable<string>> result)
+    {
+        result.Result.Should().BeOfType<OkObjectResult>();
+        return ((result.Result as OkObjectResult)!.Value as IEnumerable<string>)!.ToArray();
+    }
+
+    [Fact]
+    public async Task GetOrderHistoryDays_ReturnsEachLocalDayWithOrders_OnceAndInOrder()
+    {
+        // Arrange: two orders on Mar 9, one late on Mar 5 (already Mar 6 in UTC), one in February
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        SeedHistoryOrder(EndedSessionId, LocalToUtc(new DateOnly(2026, 3, 9), 12));
+        SeedHistoryOrder(OpenSessionId, LocalToUtc(new DateOnly(2026, 3, 9), 18));
+        SeedHistoryOrder(EndedSessionId, LocalToUtc(new DateOnly(2026, 3, 5), 23, 30));
+        SeedHistoryOrder(EndedSessionId, LocalToUtc(new DateOnly(2026, 2, 28), 12));
+
+        // Act
+        var days = HistoryDays(await _controller.GetOrderHistoryDays("2026-03", locationId: 1));
+
+        // Assert
+        days.Should().Equal("2026-03-05", "2026-03-09");
+    }
+
+    [Fact]
+    public async Task GetOrderHistoryDays_OnlyCountsTheRequestedLocation()
+    {
+        // Arrange
+        SeedAllOrderSessions();
+        SetupUserClaims("1", role: "Admin");
+        SeedHistoryOrder(EndedSessionId, LocalToUtc(new DateOnly(2026, 3, 9), 12));
+        SeedHistoryOrder(OtherLocationSessionId, LocalToUtc(new DateOnly(2026, 3, 10), 12));
+
+        // Act
+        var days = HistoryDays(await _controller.GetOrderHistoryDays("2026-03", locationId: 2));
+
+        // Assert
+        days.Should().Equal("2026-03-10");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("2026-3")]
+    [InlineData("03/2026")]
+    [InlineData("2026-13")]
+    public async Task GetOrderHistoryDays_InvalidMonth_ReturnsBadRequest(string? month)
+    {
+        // Arrange
+        SetupUserClaims("1", role: "Admin");
+
+        // Act
+        var result = await _controller.GetOrderHistoryDays(month, locationId: 1);
+
+        // Assert
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        var details = (result.Result as BadRequestObjectResult)!.Value.Should().BeOfType<ValidationProblemDetails>().Subject;
+        details.Errors.Should().ContainKey("month");
+    }
 }
