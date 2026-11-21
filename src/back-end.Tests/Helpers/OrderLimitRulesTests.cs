@@ -133,7 +133,8 @@ public class OrderLimitRulesTests
                            used: new OrderLimitRules.Usage(0, 0, 0, SessionItem: 3));
 
         result.IsValid.Should().BeFalse();
-        result.Error.Should().Contain("limit for this table is 4");
+        result.Error.Should().Contain("limit for the bill is 4");
+        result.Error.Should().Contain("limit for the bill is 4");
     }
 
     [Fact]
@@ -276,5 +277,77 @@ public class OrderLimitRulesTests
         var over = Apply(requested: 6, category: PerGuestPerOrder(30), used: used);
         over.IsValid.Should().BeFalse();
         over.Error.Should().Contain("maximum 60 combined per order (30 per guest x 2 guests)");
+    }
+
+    private static readonly OrderLimitRules.Limits TwoEach =
+        new(Adult: 2, Child: 2, Senior: 2, Toddler: 0, PerOrder: 0, OverLimitBehavior.Block);
+
+    private static readonly OrderLimitRules.Headcount OneAdult = new(1, 0, 0, 0);
+    private static readonly OrderLimitRules.Headcount ThreeAdults = new(3, 0, 0, 0);
+
+    [Fact]
+    public void EffectSessionUsed_GuestsMovedWithoutOrders_TableLeftWins()
+    {
+        // Bill B has 1 adult who was moved off bill A without their orders.
+        // The table (2 adults, cap 4) already ate 4 on bill A
+        var billHeads = OneAdult;
+        var tableHeads = TwoAdults;
+        const int billUsed = 0;
+        const int tableUsedFree = 4;
+
+        var used = OrderLimitRules.EffectSessionUsed(TwoEach, billHeads, billUsed, tableHeads, tableUsedFree);
+        var left = OrderLimitRules.SessionLeftBeforeBlock(TwoEach, billHeads, used);
+
+        // No new allowance
+        left.Should().Be(0);
+    }
+
+    [Fact]
+    public void EffectSessionUsed_OtherBillWithinItsCap_BillKeepsFullAllowance()
+    {
+        // This bill has 2 adults and nothing ordered. The table has 3 adults (cap 6),
+        // the other bill's 1 adult ate their 2
+        var billHeads = TwoAdults;
+        var tableHeads = ThreeAdults;
+        const int billUsed = 0;
+        const int tableUsedFree = 2;
+
+        var used = OrderLimitRules.EffectSessionUsed(TwoEach, billHeads, billUsed, tableHeads, tableUsedFree);
+        var left = OrderLimitRules.SessionLeftBeforeBlock(TwoEach, billHeads, used);
+
+        // 2 per adult x 2 adults
+        left.Should().Be(4);
+    }
+
+    [Fact]
+    public void EffectSessionUsed_ChargedLinesLeftOut_DontUseUpOtherBills()
+    {
+        // Hot Stone, 1 each then charged. Bill A (1 adult) had 1 included and 2 charged,
+        // so only 1 counts at the table. Bill B (1 adult) has nothing ordered
+        var hotStone = new OrderLimitRules.Limits(Adult: 1, Child: 1, Senior: 1, Toddler: 0, PerOrder: 0, OverLimitBehavior.Charge);
+        var billHeads = OneAdult;
+        var tableHeads = TwoAdults;
+        const int billUsed = 0;
+        const int tableUsedFree = 1;
+
+        var used = OrderLimitRules.EffectSessionUsed(hotStone, billHeads, billUsed, tableHeads, tableUsedFree);
+        var freeLeft = OrderLimitRules.SessionLeftBeforeCharge(hotStone, billHeads, used);
+
+        // Bill B still gets its 1 included
+        freeLeft.Should().Be(1);
+    }
+
+    [Fact]
+    public void EffectSessionUsed_Unlimited_ReturnsBillUsage()
+    {
+        // No limit, so the table's usage doesn't matter
+        var billHeads = OneAdult;
+        var tableHeads = TwoAdults;
+        const int billUsed = 3;
+        const int tableUsedFree = 50;
+
+        var used = OrderLimitRules.EffectSessionUsed(Unlimited, billHeads, billUsed, tableHeads, tableUsedFree);
+
+        used.Should().Be(billUsed);
     }
 }

@@ -342,8 +342,10 @@ test("menu assignment dialog", async ({ page }) => {
 
 test("category dialog", async ({ page }) => {
   // Tall enough that the whole dialog shows without scrolling
-  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.setViewportSize({ width: 1280, height: 1100 });
   await page.goto("/admin/menu-categories");
+  await expect(page.getByRole("row").nth(1)).toBeVisible();
+  await page.getByRole("searchbox").fill("Sashimi");
   const edit = page.getByRole("button", { name: "Edit Sashimi" });
   await expect(edit).toBeVisible();
   await settle(page);
@@ -453,7 +455,9 @@ const showIceCreamYes = async (page, { sent = false, nobody = false } = {}) => {
     const sessions = await response.json();
     let request = null;
     for (const session of Array.isArray(sessions) ? sessions : []) {
-      const open = (session.bills ?? []).filter((b) => /open/i.test(String(b.status)));
+      const open = (session.bills ?? []).filter((b) =>
+        /open/i.test(String(b.status)),
+      );
       for (const bill of session.bills ?? []) {
         bill.wants_ice_cream = false;
         bill.ice_cream_sent_at = null;
@@ -463,9 +467,12 @@ const showIceCreamYes = async (page, { sent = false, nobody = false } = {}) => {
       const bill = open[0];
       bill.requested_at = askedAt;
       bill.wants_ice_cream = true;
-      bill.ice_cream_sent_at = sent ? new Date(Date.now() - 2 * 60_000).toISOString() : null;
+      bill.ice_cream_sent_at = sent
+        ? new Date(Date.now() - 2 * 60_000).toISOString()
+        : null;
       if ((bill.total_guests ?? 0) < 4) {
-        bill.adult_count = (bill.adult_count ?? 0) + (4 - (bill.total_guests ?? 0));
+        bill.adult_count =
+          (bill.adult_count ?? 0) + (4 - (bill.total_guests ?? 0));
         bill.total_guests = 4;
       }
       if (!sent) {
@@ -494,7 +501,9 @@ const showIceCreamYes = async (page, { sent = false, nobody = false } = {}) => {
     const request = await askedRequest;
     await route.fulfill({
       response,
-      json: request ? [request, ...(Array.isArray(pending) ? pending : [])] : pending,
+      json: request
+        ? [request, ...(Array.isArray(pending) ? pending : [])]
+        : pending,
     });
   });
 };
@@ -505,10 +514,12 @@ const showIceCreamYes = async (page, { sent = false, nobody = false } = {}) => {
 const showDefaultFlavours = (page) =>
   page.route(/\/api\/bill\/ice-cream-flavours/i, (route) =>
     route.fulfill({
-      json: ["Strawberry", "Chocolate", "Mango", "Vanilla"].map((flavour, i) => ({
-        item_id: 9001 + i,
-        name: `${flavour} Ice Cream`,
-      })),
+      json: ["Strawberry", "Chocolate", "Mango", "Vanilla"].map(
+        (flavour, i) => ({
+          item_id: 9001 + i,
+          name: `${flavour} Ice Cream`,
+        }),
+      ),
     }),
   );
 
@@ -529,10 +540,14 @@ test("free ice cream strip", async ({ page }) => {
   await highlight(
     dialog
       .getByText(/\(wants free ice cream\)$/)
-      .locator('xpath=ancestor::*[.//button[@aria-label="Mark request done"]][1]'),
+      .locator(
+        'xpath=ancestor::*[.//button[@aria-label="Mark request done"]][1]',
+      ),
   );
   await highlight(dialog.getByText("Asked for bill").first());
-  await highlight(dialog.getByRole("button", { name: "Free ice cream for the table" }));
+  await highlight(
+    dialog.getByRole("button", { name: "Free ice cream for the table" }),
+  );
   await dialog.screenshot({ path: file("free-ice-cream-strip") });
 });
 
@@ -540,10 +555,14 @@ test("free ice cream dialog", async ({ page }) => {
   await showIceCreamYes(page);
   await showDefaultFlavours(page);
   const dialog = await openIceCreamSession(page);
-  await dialog.getByRole("button", { name: "Free ice cream for the table" }).click();
+  await dialog
+    .getByRole("button", { name: "Free ice cream for the table" })
+    .click();
 
   const picker = page.getByRole("dialog", { name: /^Free ice cream for/ });
-  await expect(picker.getByRole("button", { name: /^Add one Mango/ })).toHaveAttribute("aria-disabled", "false");
+  await expect(
+    picker.getByRole("button", { name: /^Add one Mango/ }),
+  ).toHaveAttribute("aria-disabled", "false");
   await picker.getByRole("button", { name: /^Add one Mango/ }).click();
   await picker.getByRole("button", { name: /^Add one Mango/ }).click();
   await picker.getByRole("button", { name: /^Add one Vanilla/ }).click();
@@ -578,7 +597,10 @@ test("free with the bill category", async ({ page }) => {
   await expect(page.getByRole("row").nth(1)).toBeVisible();
   // It's on a later page of the table
   await page.getByRole("searchbox").fill("Free Ice Cream");
-  const row = page.getByRole("row").filter({ hasText: "Free Ice Cream" }).first();
+  const row = page
+    .getByRole("row")
+    .filter({ hasText: "Free Ice Cream" })
+    .first();
   await expect(row).toBeVisible();
   await settle(page);
   await row.getByRole("button", { name: "Edit Free Ice Cream" }).click();
@@ -587,7 +609,11 @@ test("free with the bill category", async ({ page }) => {
   const freeSwitch = dialog.getByRole("switch", { name: "Free with the bill" });
   await expect(freeSwitch).toBeChecked();
   await settle(page);
-  await highlight(freeSwitch.locator('xpath=ancestor::div[contains(@class,"MuiFormControl-root")][1]'));
+  await highlight(
+    freeSwitch.locator(
+      'xpath=ancestor::div[contains(@class,"MuiFormControl-root")][1]',
+    ),
+  );
   await dialog.screenshot({ path: file("free-with-bill-category") });
 });
 
@@ -605,7 +631,9 @@ test("adding a free ice cream flavour", async ({ page }) => {
   await dialog.getByLabel(/^Category/).click();
   await page.getByRole("option", { name: "Free Ice Cream" }).click();
   // Nothing focused, so the field's focus colour doesn't look like an error
-  await page.evaluate(() => /** @type {HTMLElement | null} */ (document.activeElement)?.blur());
+  await page.evaluate(() =>
+    /** @type {HTMLElement | null} */ (document.activeElement)?.blur(),
+  );
   await settle(page);
   await highlight(fieldOf(dialog.getByLabel(/^Category/)));
   await dialog.screenshot({ path: file("free-ice-cream-flavour-item") });
@@ -614,7 +642,10 @@ test("adding a free ice cream flavour", async ({ page }) => {
 // What the guest sees when they ask for the bill, on a phone. Signs in as the seeded customer who's
 // seated with a bill (docs/dev/database.md). If they already asked for it, the summary is changed in
 // the browser so the button shows. Stops at the question: nothing is sent
-const SEATED_CUSTOMER = { email: "emma.wilson@email.com", password: "Customer123!" };
+const SEATED_CUSTOMER = {
+  email: "emma.wilson@email.com",
+  password: "Customer123!",
+};
 
 test.describe("guest", () => {
   test.use({ storageState: SIGNED_OUT, viewport: { width: 390, height: 844 } });
@@ -623,7 +654,10 @@ test.describe("guest", () => {
     await page.route(/\/api\/bill\/summary\/\d+/i, async (route) => {
       const response = await route.fetch();
       const summary = await response.json();
-      await route.fulfill({ response, json: { ...summary, requested_at: null, status: "Open" } });
+      await route.fulfill({
+        response,
+        json: { ...summary, requested_at: null, status: "Open" },
+      });
     });
     await signIn(page, SEATED_CUSTOMER);
     await page.waitForURL((url) => !url.pathname.startsWith("/auth"));
@@ -635,9 +669,13 @@ test.describe("guest", () => {
 
     const confirm = page.getByRole("dialog");
     await confirm.getByRole("button", { name: "Yes, please" }).click();
-    await expect(confirm.getByText(/Your server will ask for your flavour/)).toBeVisible();
+    await expect(
+      confirm.getByText(/Your server will ask for your flavour/),
+    ).toBeVisible();
     await settle(page);
-    await highlight(confirm.getByRole("group", { name: "Would you like free ice cream?" }));
+    await highlight(
+      confirm.getByRole("group", { name: "Would you like free ice cream?" }),
+    );
     await confirm.screenshot({ path: file("free-ice-cream-guest-question") });
   });
 });
@@ -647,7 +685,9 @@ test("free ice cream without an app request", async ({ page }) => {
   await showIceCreamYes(page, { nobody: true });
   await openSessions(page);
   const dialog = await openBusiestSession(page);
-  const button = dialog.getByRole("button", { name: "Free ice cream for the table" });
+  const button = dialog.getByRole("button", {
+    name: "Free ice cream for the table",
+  });
   await expect(button).toBeVisible();
   await expect(dialog.getByText("Table wants ice cream")).toHaveCount(0);
   await highlight(button);
@@ -657,7 +697,9 @@ test("free ice cream without an app request", async ({ page }) => {
   await showDefaultFlavours(page);
   await button.click();
   const picker = page.getByRole("dialog", { name: /^Free ice cream for/ });
-  await expect(picker.getByRole("button", { name: /^Add one Mango/ })).toBeVisible();
+  await expect(
+    picker.getByRole("button", { name: /^Add one Mango/ }),
+  ).toBeVisible();
   await settle(page);
   await highlight(picker.locator("fieldset"));
   await picker.screenshot({ path: file("free-ice-cream-staff-dialog") });
