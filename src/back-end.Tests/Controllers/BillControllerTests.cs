@@ -516,6 +516,28 @@ public class BillControllerTests : IDisposable
         IceCreamOrders().Single().Status.Should().Be(OrderStatus.Pending);
     }
 
+    // Only an all-ice-cream order is let through: a paid item added to it (staff can add items to a
+    // pending order while the bill is open) still needs to go out before the bill closes
+    [Fact]
+    public async Task CloseBill_WithIceCreamAndAPaidItemPending_Returns400()
+    {
+        await GuestsWantIceCream();
+        await Send(ForLee(("Mango", 2)));
+        _context.Categories.Add(new Category { Category_id = 40, Category_name = "Dessert", Description = "Paid desserts" });
+        _context.MenuItems.Add(new Menu_Item { item_id = 600, Name = "Mochi", Description = "Paid", Category_id = 40 });
+        var order = IceCreamOrders().Single();
+        order.OrderItems.Add(new OrderItems
+        {
+            Menu_Id = 1, Item_Id = 600, Quantity = 1, Price_At_Time = 4m, Order_Item_Status = OrderStatus.Pending,
+        });
+        await _context.SaveChangesAsync();
+
+        var result = await Bills().CloseBill(TableSession, LeeBill);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+        Bill(LeeBill).Status.Should().Be(BillStatus.Open);
+    }
+
     // Lee said yes, then joins Park's bill before the server comes over: the yes isn't lost
     [Fact]
     public async Task MergeBill_CarriesTheIceCreamYesOver()
