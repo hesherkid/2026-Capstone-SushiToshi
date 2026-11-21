@@ -451,9 +451,10 @@ public class BillControllerTests : IDisposable
         Bill(ParkBill).Ice_Cream_Sent_At.Should().BeNull();
     }
 
-    // Merging can't give a party a second round: Lee had theirs, then joins Park's bill
+    // Lee had theirs, then joins Park's bill: Park hasn't been served, so the merged bill can still
+    // be sent. Lee's yes doesn't carry over, as they already had theirs
     [Fact]
-    public async Task MergeBill_IntoAnUnservedBill_CountsAsServed()
+    public async Task MergeBill_ServedIntoUnserved_StaysUnserved()
     {
         AddParkBill();
         await GuestsWantIceCream();
@@ -461,10 +462,58 @@ public class BillControllerTests : IDisposable
 
         (await Bills().MergeBill(TableSession, LeeBill, new MergeBillDto { IntoBillId = ParkBill })).Should().BeOfType<OkObjectResult>();
 
+        Bill(ParkBill).Ice_Cream_Sent_At.Should().BeNull();
+        Bill(ParkBill).Wants_Ice_Cream.Should().BeFalse();
+        var again = await Send(Scoops(new[] { ParkBill }, ("Vanilla", 3)));
+        again.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeEquivalentTo(new { already_sent = false });
+        IceCreamOrders().Should().HaveCount(2);
+    }
+
+    // Park said yes and is waiting; Lee already had theirs and joins Park's bill: Park's yes stays
+    [Fact]
+    public async Task MergeBill_ServedIntoWaiting_KeepsTheYes()
+    {
+        AddParkBill();
+        await GuestsWantIceCream();
+        await Send(ForLee(("Mango", 2)));
+        Bill(ParkBill).Wants_Ice_Cream = true;
+        await _context.SaveChangesAsync();
+
+        await Bills().MergeBill(TableSession, LeeBill, new MergeBillDto { IntoBillId = ParkBill });
+
+        Bill(ParkBill).Wants_Ice_Cream.Should().BeTrue();
+        Bill(ParkBill).Ice_Cream_Sent_At.Should().BeNull();
+    }
+
+    // Both parties had theirs: the merged bill counts as served, so no second round
+    [Fact]
+    public async Task MergeBill_BothServed_CountsAsServed()
+    {
+        AddParkBill();
+        await GuestsWantIceCream();
+        await Send(Scoops(new[] { LeeBill, ParkBill }, ("Mango", 5)));
+
+        await Bills().MergeBill(TableSession, LeeBill, new MergeBillDto { IntoBillId = ParkBill });
+
         Bill(ParkBill).Ice_Cream_Sent_At.Should().NotBeNull();
         var again = await Send(Scoops(new[] { ParkBill }, ("Vanilla", 5)));
-        again.Should().BeOfType<OkObjectResult>(); // already served: nothing new goes out
+        again.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeEquivalentTo(new { already_sent = true });
         IceCreamOrders().Should().ContainSingle();
+    }
+
+    // The ice cream often comes out while the table pays: a pending ice cream order doesn't stop
+    // the bill closing, but the order stays pending for the kitchen
+    [Fact]
+    public async Task CloseBill_WithOnlyIceCreamPending_ClosesIt()
+    {
+        await GuestsWantIceCream();
+        await Send(ForLee(("Mango", 2)));
+
+        var result = await Bills().CloseBill(TableSession, LeeBill);
+
+        result.Should().BeOfType<OkObjectResult>();
+        Bill(LeeBill).Status.Should().Be(BillStatus.Closed);
+        IceCreamOrders().Single().Status.Should().Be(OrderStatus.Pending);
     }
 
     // Lee said yes, then joins Park's bill before the server comes over: the yes isn't lost

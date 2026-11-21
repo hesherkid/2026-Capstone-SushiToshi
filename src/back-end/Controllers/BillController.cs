@@ -625,10 +625,22 @@ namespace back_end.Controllers
             into.Tot_Count + from.Tot_Count);
         into.Leftover_Charge += from.Leftover_Charge;
         from.Leftover_Charge = 0m;
-        // Free ice cream: a yes on either bill carries over. If either already had theirs, the merged
-        // bill counts as served, so its guests can't get a second round; staff can still ask in person
-        into.Wants_Ice_Cream |= from.Wants_Ice_Cream;
-        into.Ice_Cream_Sent_At ??= from.Ice_Cream_Sent_At;
+        // Free ice cream: the merged bill counts as served only if both bills had theirs, so a party
+        // that hasn't been served can still get it in the app. Only a yes from a party still waiting
+        // carries over, so staff aren't asked again for guests who already had theirs
+        if (into.Ice_Cream_Sent_At != null && from.Ice_Cream_Sent_At != null)
+        {
+            // Both had theirs: keep the earlier time
+            if (from.Ice_Cream_Sent_At < into.Ice_Cream_Sent_At) into.Ice_Cream_Sent_At = from.Ice_Cream_Sent_At;
+            into.Wants_Ice_Cream |= from.Wants_Ice_Cream;
+        }
+        else
+        {
+            var intoWaiting = into.Wants_Ice_Cream && into.Ice_Cream_Sent_At == null;
+            var fromWaiting = from.Wants_Ice_Cream && from.Ice_Cream_Sent_At == null;
+            into.Ice_Cream_Sent_At = null;
+            into.Wants_Ice_Cream = intoWaiting || fromWaiting;
+        }
 
         // Cancelled bills don't count towards guests or turnover, so its counts can stay as a record
         from.Status = BillStatus.Cancelled;
@@ -679,7 +691,8 @@ namespace back_end.Controllers
     /// Requirements:
     /// - Bill must be open (not already closed or cancelled)
     /// - Freezes the bill's prices and gratuity, so later pricing changes don't alter it.
-    /// - All orders associated with the bill must not be at a state of pending
+    /// - All orders associated with the bill must not be at a state of pending, except the free ice
+    ///   cream (an order of only free-with-the-bill items), which can still be on its way
     /// </remarks>
     [Authorize(Policy = "staffOnly")]
     [HttpPut("close-bill/{billId}")]
@@ -723,8 +736,11 @@ namespace back_end.Controllers
           return BadRequest(new { message = $"Only open bills can be closed (this bill is {bill.Status})." });
         }
 
+        // The free ice cream doesn't count: it's $0 so it can't change the total, and it often comes
+        // out while the table pays. The kitchen still has to deliver it before the session can end
         var pendingOrders = await _context.SessionOrders
-            .Where(o => o.Bill_Id == billId && o.Status == OrderStatus.Pending)
+            .Where(o => o.Bill_Id == billId && o.Status == OrderStatus.Pending
+                     && (!o.OrderItems.Any() || o.OrderItems.Any(oi => !oi.MenuItem.Category.Free_With_Bill)))
             .ToListAsync();
 
         if (pendingOrders.Any())
