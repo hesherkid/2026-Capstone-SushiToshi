@@ -59,6 +59,25 @@ namespace back_end.Dtos
                 .ToList()
         };
 
+        // The staff order shape, shared by all-orders and order history so the two can't drift apart.
+        // Needs the includes from StaffOrderQuery.WithStaffOrderDetails
+        public static object ToStaffOrder(this SessionOrder o) => new
+        {
+            order_id = o.Order_Id,
+            session_id = o.session_id,
+            bill_id = o.Bill_Id,
+            bill_name = o.Bill.Bill_Name,
+            location_id = o.DiningSession.Location_Id,
+            table_numbers = o.DiningSession.Table_Id.HasValue
+                ? new[] { o.DiningSession.Table!.table_number }
+                : o.DiningSession.TableGroup?.Tables?.Select(t => t.table_number).ToArray() ?? Array.Empty<int>(),
+            user_name = o.User_Name,
+            status = o.Status.ToString(),
+            created_at = o.Created_At,
+            completed_at = o.Completed_At,
+            items = o.OrderItems.Select(oi => oi.ToPricedItem(o.DiningSession.Location_Id)).ToList()
+        };
+
         // Needs MenuItem.MenuAssignments loaded. Add-ons and over-limit lines show their price; the rest are 0
         public static PricedOrderItemDto ToPricedItem(this OrderItems item, int? locationId)
         {
