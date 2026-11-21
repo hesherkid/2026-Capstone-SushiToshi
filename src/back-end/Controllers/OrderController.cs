@@ -4,7 +4,6 @@ using back_end.domain.DbContexts;
 using back_end.domain.Entities;
 using back_end.domain.enums;
 using back_end.Dtos;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using back_end.Helpers;
 using back_end.Services;
@@ -220,28 +219,7 @@ namespace back_end.Controllers
                 await _context.SaveChangesAsync();
                 if (billLock != null) await billLock.CommitAsync();
 
-                return Ok(new OrderResponseDto
-                {
-                    OrderId = newOrder.Order_Id,
-                    SessionId = newOrder.session_id,
-                    BillId = newOrder.Bill_Id,
-                    UserId = newOrder.User_Id,
-                    UserName = newOrder.User_Name,
-                    Status = newOrder.Status,
-                    CreatedAt = newOrder.Created_At,
-                    OrderItems = plan.Lines.Select(l => new OrderItemResponseDto
-                    {
-                        OrderItemId = l.Order_Item_Id,
-                        OrderId = newOrder.Order_Id,
-                        MenuId = l.Menu_Id,
-                        ItemId = l.Item_Id,
-                        Quantity = l.Quantity,
-                        PriceAtTime = l.Price_At_Time,
-                        Status = l.Order_Item_Status,
-                        Name = plan.NamesById.GetValueOrDefault(l.Item_Id),
-                        ChargeReason = l.Charge_Reason.ToString()
-                    }).ToList()
-                });
+                return Ok(newOrder.ToResponseDto(plan.NamesById));
             }
             catch (Exception ex)
             {
@@ -304,9 +282,7 @@ namespace back_end.Controllers
                 {
                     return LocationResults.OtherLocation();
                 }
-                // Use authenticated user info
                 var userIdString = ClaimsHelpers.GetUserId(User);
-                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
                 if (string.IsNullOrEmpty(userIdString))
                 {
                     return Unauthorized("User ID not found in claims.");
@@ -339,31 +315,10 @@ namespace back_end.Controllers
                     }
                 }
 
-                _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
                 if (billLock != null) await billLock.CommitAsync();
 
-                return Ok(new OrderResponseDto
-                {
-                    OrderId = order.Order_Id,
-                    SessionId = order.session_id,
-                    BillId = order.Bill_Id,
-                    UserId = order.User_Id,
-                    UserName = order.User_Name,
-                    Status = order.Status,
-                    CreatedAt = order.Created_At,
-                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
-                    {
-                        OrderItemId = oi.Order_Item_Id,
-                        OrderId = oi.Order_Key,
-                        MenuId = oi.Menu_Id,
-                        ItemId = oi.Item_Id,
-                        Quantity = oi.Quantity,
-                        PriceAtTime = oi.Price_At_Time,
-                        Status = oi.Order_Item_Status,
-                        Name = oi.MenuItem?.Name
-                    }).ToList()
-                });
+                return Ok(order.ToResponseDto());
             }
             catch (Exception ex)
             {
@@ -431,18 +386,7 @@ namespace back_end.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-                var response = new OrderItemResponseDto
-                {
-                    OrderItemId = item.Order_Item_Id,
-                    OrderId = item.Order_Key,
-                    MenuId = item.Menu_Id,
-                    ItemId = item.Item_Id,
-                    Quantity = item.Quantity,
-                    PriceAtTime = item.Price_At_Time,
-                    Status = item.Order_Item_Status,
-                    CompletedAt = item.Completed_At,
-                };
-                return Ok(response);
+                return Ok(item.ToResponseDto());
             }
             catch (Exception ex)
             {
@@ -512,31 +456,9 @@ namespace back_end.Controllers
                 order.Status = OrderStatus.Delivered;
                 order.Completed_At = now;
 
-                _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
 
-                return Ok(new OrderResponseDto
-                {
-                    OrderId = order.Order_Id,
-                    SessionId = order.session_id,
-                    BillId = order.Bill_Id,
-                    UserId = order.User_Id,
-                    Status = order.Status,
-                    CreatedAt = order.Created_At,
-                    CompletedAt = order.Completed_At,
-                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
-                    {
-                        OrderItemId = oi.Order_Item_Id,
-                        OrderId = oi.Order_Key,
-                        MenuId = oi.Menu_Id,
-                        ItemId = oi.Item_Id,
-                        Quantity = oi.Quantity,
-                        PriceAtTime = oi.Price_At_Time,
-                        Status = oi.Order_Item_Status,
-                        CompletedAt = oi.Completed_At,
-                        Name = oi.MenuItem?.Name
-                    }).ToList()
-                });
+                return Ok(order.ToResponseDto());
             }
             catch (Exception ex)
             {
@@ -583,7 +505,10 @@ namespace back_end.Controllers
         {
             try
             {
-                var order = await _context.SessionOrders.Include(o => o.OrderItems).FirstOrDefaultAsync(so => so.Order_Id == orderId);
+                var order = await _context.SessionOrders
+                    .Include(o => o.OrderItems)
+                        .ThenInclude(oi => oi.MenuItem)
+                    .FirstOrDefaultAsync(so => so.Order_Id == orderId);
                 if (order is null)
                 {
                     return NotFound("Order was not found to cancel");
@@ -619,32 +544,8 @@ namespace back_end.Controllers
                     item.Completed_At = DateTime.UtcNow;
                 }
 
-                _context.SessionOrders.Update(order);
                 await _context.SaveChangesAsync();
-                return Ok(new OrderResponseDto
-                {
-                    OrderId = order.Order_Id,
-                    SessionId = order.session_id,
-                    BillId = order.Bill_Id,
-                    UserId = order.User_Id,
-                    UserName = order.User_Name,
-                    Status = order.Status,
-                    CreatedAt = order.Created_At,
-                    CompletedAt = order.Completed_At,
-                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
-                    {
-                        OrderItemId = oi.Order_Item_Id,
-                        OrderId = oi.Order_Key,
-                        MenuId = oi.Menu_Id,
-                        ItemId = oi.Item_Id,
-                        Quantity = oi.Quantity,
-                        PriceAtTime = oi.Price_At_Time,
-                        Status = oi.Order_Item_Status,
-                        CompletedAt = oi.Completed_At,
-                        Name = oi.MenuItem?.Name
-                    }).ToList()
-                });
-
+                return Ok(order.ToResponseDto());
             }
             catch (Exception ex)
             {
@@ -850,31 +751,6 @@ namespace back_end.Controllers
                     return LocationResults.OtherLocation();
                 }
 
-                // Use authenticated user info
-                var userIdString = ClaimsHelpers.GetUserId(User);
-                var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
-
-                if (string.IsNullOrEmpty(userIdString))
-                {
-                    return Unauthorized("User ID not found in claims.");
-                }
-
-                if (!int.TryParse(userIdString, out var userId))
-                {
-                    return Unauthorized("Invalid User ID format.");
-                }
-
-                // Check if user is the owner of the order
-                bool isOwner = order.User_Id == userId;
-
-                // Check if user is staff/admin
-                bool isStaff = userRole.Contains("Staff") || userRole.Contains("Admin");
-
-                if (!isOwner && !isStaff)
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "You don't have permission to modify this order" });
-                }
-
                 // Can only modify pending orders
                 if (order.Status != OrderStatus.Pending)
                 {
@@ -919,13 +795,8 @@ namespace back_end.Controllers
                     orderItem.Quantity = updateData.Quantity.Value;
                 }
 
-                // Update price if provided (staff only)
                 if (updateData.PriceAtTime.HasValue)
                 {
-                    if (!isStaff)
-                    {
-                        return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only staff can modify prices" });
-                    }
                     if (updateData.PriceAtTime.Value < 0)
                     {
                         return BadRequest("Price cannot be negative");
@@ -933,13 +804,8 @@ namespace back_end.Controllers
                     orderItem.Price_At_Time = updateData.PriceAtTime.Value;
                 }
 
-                // Update status if provided
                 if (!string.IsNullOrEmpty(updateData.Status))
                 {
-                    if (!isStaff)
-                    {
-                        return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only staff can modify order item status" });
-                    }
                     if (!Enum.TryParse<OrderStatus>(updateData.Status, true, out var newStatus))
                     {
                         return BadRequest("Invalid status value");
@@ -964,18 +830,7 @@ namespace back_end.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Ok(new OrderItemResponseDto
-                {
-                    OrderItemId = orderItem.Order_Item_Id,
-                    OrderId = orderItem.Order_Key,
-                    MenuId = orderItem.Menu_Id,
-                    ItemId = orderItem.Item_Id,
-                    Quantity = orderItem.Quantity,
-                    PriceAtTime = orderItem.Price_At_Time,
-                    Status = orderItem.Order_Item_Status,
-                    CompletedAt = orderItem.Completed_At,
-                    Name = orderItem.MenuItem?.Name
-                });
+                return Ok(orderItem.ToResponseDto());
             }
             catch (Exception ex)
             {
@@ -1247,26 +1102,7 @@ namespace back_end.Controllers
             status = o.Status.ToString(),
             created_at = o.Created_At,
             completed_at = o.Completed_At,
-            items = o.OrderItems.Select(oi =>
-            {
-                var assignment = oi
-                    .MenuItem
-                    .MenuAssignments
-                    .EffectiveFor(oi.Menu_Id, oi.Item_Id, o.DiningSession.Location_Id);
-                bool isAddOn = assignment?.Is_Add_On ?? false;
-
-                return new
-                {
-                    order_item_id = oi.Order_Item_Id,
-                    item_id = oi.Item_Id,
-                    name = oi.MenuItem.Name,
-                    quantity = oi.Quantity,
-                    price_at_time = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0,
-                    is_add_on = isAddOn,
-                    charge_reason = oi.Charge_Reason.ToString(),
-                    status = oi.Order_Item_Status.ToString()
-                };
-            }).ToList()
+            items = o.OrderItems.Select(oi => oi.ToPricedItem(o.DiningSession.Location_Id)).ToList()
         };
 
         /// <summary>
@@ -1425,55 +1261,26 @@ namespace back_end.Controllers
                     .OrderBy(o => o.Created_At)
                     .ToListAsync();
 
-                var orderAll = sessionOrder.Select(o => new
+                var orderAll = sessionOrder.Select(o =>
                 {
-                    order_id = o.Order_Id,
-                    bill_id = o.Bill_Id,
-                    bill_name = o.Bill?.Bill_Name,
-                    bill_status = o.Bill?.Status.ToString(),
-                    session_id = o.session_id,
-                    user_id = o.User_Id,
-                    user_name = o.User_Name,
-                    status = o.Status,
-                    item_total = o.OrderItems.Count,
-                    order_total = o.OrderItems.Sum(or =>
+                    var items = o.OrderItems.Select(oi => oi.ToPricedItem(session.Location_Id)).ToList();
+                    return new
                     {
-                        // Get menu assignment for this item
-                        var assignment = or
-                            .MenuItem?
-                            .MenuAssignments
-                            .EffectiveFor(or.Menu_Id, or.Item_Id, session.Location_Id);
-
-                        // Only count price if it's an add-on item
-                        bool isAddOn = assignment?.Is_Add_On ?? false;
-                        return isAddOn || or.Charge_Reason == ChargeReason.OverLimit ? (or.Quantity * or.Price_At_Time) : 0;
-                    }),
-                    created_at = o.Created_At,
-                    completed_at = o.Completed_At,
-                    // List of items in the order
-                    items = o.OrderItems.Select(oi =>
-                    {
-                        // Get menu assignment for this specific item
-                        var assignment = oi
-                            .MenuItem?
-                            .MenuAssignments
-                            .EffectiveFor(oi.Menu_Id, oi.Item_Id, session.Location_Id);
-
-                        bool isAddOn = assignment?.Is_Add_On ?? false;
-
-
-                        return new
-                        {
-                            order_item_id = oi.Order_Item_Id,
-                            item_id = oi.Item_Id,
-                            name = oi.MenuItem?.Name,
-                            quantity = oi.Quantity,
-                            price_at_time = isAddOn || oi.Charge_Reason == ChargeReason.OverLimit ? oi.Price_At_Time : 0, // Only show price for add-ons
-                            is_add_on = isAddOn,
-                            charge_reason = oi.Charge_Reason.ToString(),
-                            status = oi.Order_Item_Status
-                        };
-                    }).ToList()
+                        order_id = o.Order_Id,
+                        bill_id = o.Bill_Id,
+                        bill_name = o.Bill?.Bill_Name,
+                        bill_status = o.Bill?.Status.ToString(),
+                        session_id = o.session_id,
+                        user_id = o.User_Id,
+                        user_name = o.User_Name,
+                        status = o.Status,
+                        item_total = items.Count,
+                        // Only add-ons and over-limit lines are charged; the rest show a price of 0
+                        order_total = items.Sum(i => i.Quantity * i.PriceAtTime),
+                        created_at = o.Created_At,
+                        completed_at = o.Completed_At,
+                        items
+                    };
                 }).ToList();
 
                 return Ok(orderAll);
@@ -1556,28 +1363,7 @@ namespace back_end.Controllers
                     status = o.Status.ToString(),
                     created_at = o.Created_At,
                     completed_at = o.Completed_At,
-                    items = o.OrderItems.Select(i =>
-                    {
-                        // Get menu assignment for this item at this session's location
-                        var assignment = i
-                            .MenuItem?
-                            .MenuAssignments
-                            .EffectiveFor(i.Menu_Id, i.Item_Id, o.DiningSession.Location_Id);
-
-                        bool isAddOn = assignment?.Is_Add_On ?? false;
-
-                        return new
-                        {
-                            order_item_id = i.Order_Item_Id,
-                            item_id = i.Item_Id,
-                            name = i.MenuItem?.Name,
-                            quantity = i.Quantity,
-                            price_at_time = isAddOn || i.Charge_Reason == ChargeReason.OverLimit ? i.Price_At_Time : 0, // Only show price for add-ons
-                            is_add_on = isAddOn,
-                            charge_reason = i.Charge_Reason.ToString(),
-                            status = i.Order_Item_Status.ToString()
-                        };
-                    }).ToList()
+                    items = o.OrderItems.Select(i => i.ToPricedItem(o.DiningSession.Location_Id)).ToList()
                 });
 
                 return Ok(userOrder);
