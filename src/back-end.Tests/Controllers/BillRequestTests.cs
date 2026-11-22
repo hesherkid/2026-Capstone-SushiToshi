@@ -82,7 +82,7 @@ public class BillRequestTests : IDisposable
         { ControllerContext = As(userId, role) };
 
     private OrderController Orders(int userId, string role = "Customer") =>
-        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context)) { ControllerContext = As(userId, role) };
+        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context), new OrderPlanningService(_context)) { ControllerContext = As(userId, role) };
 
     private static JsonElement Body(IActionResult result) =>
         JsonSerializer.SerializeToElement((result as OkObjectResult)!.Value);

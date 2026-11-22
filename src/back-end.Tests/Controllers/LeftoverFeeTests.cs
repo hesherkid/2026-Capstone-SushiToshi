@@ -45,32 +45,43 @@ namespace back_end.Tests.Controllers
 
         public void Dispose() => _context.Dispose();
 
-        private BillController Bills()
+        private static IPricingService Pricing()
         {
             var pricing = new Mock<IPricingService>();
             var info = new PricingInfo { PricingType = "Test", TaxRate = 0.05m, LeftoverFee = 10.00m };
             pricing.Setup(p => p.GetPricingAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(info);
             pricing.Setup(p => p.GetCurrentPricingAsync(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(info);
-
-            return new BillController(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<BillController>>().Object, pricing.Object)
-            {
-                ControllerContext = new ControllerContext
-                {
-                    HttpContext = new DefaultHttpContext
-                    {
-                        User = new ClaimsPrincipal(new ClaimsIdentity(new[]
-                        {
-                            new Claim(ClaimTypes.NameIdentifier, "30"),
-                            new Claim(ClaimTypes.Role, "Staff"),
-                        }, "TestAuth")),
-                    },
-                },
-            };
+            return pricing.Object;
         }
+
+        // Signed in as staff member 30
+        private static ControllerContext AsStaff() => new()
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, "30"),
+                    new Claim(ClaimTypes.Role, "Staff"),
+                }, "TestAuth")),
+            },
+        };
+
+        private BillController Bills() =>
+            new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<BillController>>().Object, Pricing())
+            {
+                ControllerContext = AsStaff(),
+            };
+
+        private LeftoverFeeController Fees() =>
+            new(_context, new Mock<ILogger<LeftoverFeeController>>().Object, Pricing())
+            {
+                ControllerContext = AsStaff(),
+            };
 
         private async Task<LeftoverFeeResponse> Apply(decimal? amount)
         {
-            var result = await Bills().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = amount });
+            var result = await Fees().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = amount });
             _context.ChangeTracker.Clear();
             return ((result as OkObjectResult)!.Value as LeftoverFeeResponse)!;
         }
@@ -198,7 +209,7 @@ namespace back_end.Tests.Controllers
         [Fact]
         public async Task NegativeAmount_IsRejected()
         {
-            var result = await Bills().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = -1m });
+            var result = await Fees().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = -1m });
 
             result.Should().BeOfType<BadRequestObjectResult>();
         }
@@ -210,7 +221,7 @@ namespace back_end.Tests.Controllers
             _context.SaveChanges();
             _context.ChangeTracker.Clear();
 
-            var result = await Bills().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = 10m });
+            var result = await Fees().ApplyLeftoverFee(SessionId, new LeftoverFeeRequest { Amount = 10m });
 
             result.Should().BeOfType<BadRequestObjectResult>();
         }

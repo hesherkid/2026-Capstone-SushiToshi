@@ -133,7 +133,9 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - CustomerController
 - DashboardController
 - DiningSessionController (session join, active session lookup, menu access)
+- FreeIceCreamController
 - HolidayController
+- LeftoverFeeController
 - LocationController
 - MenuController
 - MenuAssignmentController
@@ -143,6 +145,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - MyItemsController
 - MyVisitsController
 - OrderController
+- OrderHistoryController
 - PricingController
 - ServiceRequestController
 - SessionParticipantController
@@ -153,7 +156,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - Analytics: BrowsingBehavior, ItemPerformance, OrderTiming and TableTurnover controllers
 - Staff location lock, which covers Dashboard, DiningSession, MenuAssignment, Order, ServiceRequest and TableEntity controllers
 
-**Services with tests:** AdminBootstrap, QrGeneratorService, LocationAccessService, GuestCleanup, GuestCleanupWorker, PricingService (restaurant time), and the four analytics services through their controller tests.
+**Services with tests:** AdminBootstrap, QrGeneratorService, LocationAccessService, GuestCleanup, GuestCleanupWorker, PricingService (restaurant time), OrderPlanningService through the order controller tests, and the four analytics services through their controller tests.
 
 **Other unit tests:** BillCalculator, OrderLimitRules, ClaimsHelpers, GoogleNames, GoogleAccounts, UserRoles, RestaurantNetwork, password rules, leftover fee, analytics date ranges, DTO validation, seeder rules, DTO JSON keys (`DtoJsonKeysTests`) and route names (`RouteNameTests`).
 

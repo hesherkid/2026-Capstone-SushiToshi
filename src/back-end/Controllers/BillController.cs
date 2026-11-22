@@ -28,20 +28,6 @@ namespace back_end.Controllers
       _pricingService = pricingService;
     }
 
-    // Helper method to get table numbers from session
-    private List<int> GetTableNumbers(DiningSession session)
-    {
-      if (session.Table != null)
-      {
-        return new List<int> { session.Table.table_number };
-      }
-      else if (session.TableGroup != null && session.TableGroup.Tables != null)
-      {
-        return session.TableGroup.Tables.Select(t => t.table_number).ToList();
-      }
-      return new List<int>();
-    }
-
     /// <summary>
     /// Creates a new bill for a dining session.
     /// </summary>
@@ -201,21 +187,7 @@ namespace back_end.Controllers
         await _context.SaveChangesAsync();
         await _context.Entry(newBill).ReloadAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = newBill.Bill_Id,
-          SessionId = newBill.Session_Id,
-          BillName = newBill.Bill_Name,
-          SeniorCount = newBill.Senior_Count,
-          AdultCount = newBill.Adult_Count,
-          ChildCount = newBill.Child_Count,
-          TotCount = newBill.Tot_Count,
-          TotalCount = newBill.Total_Count,
-          Status = newBill.Status.ToString(),
-          CreatedAt = newBill.Created_At,
-          ClosedAt = newBill.Closed_At,
-          TableNumbers = GetTableNumbers(session)
-        });
+        return Ok(newBill.ToBillResponse(session));
       }
       catch (Exception ex)
       {
@@ -307,22 +279,7 @@ namespace back_end.Controllers
         // A session with no bills yet is normal (e.g. just seated), so return an empty list
         var bills = billQuery.OrderByDescending(b => b.Created_At).ToList();
 
-        var billResponses = bills.Select(bill => new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(session)
-        }).ToList();
+        var billResponses = bills.Select(bill => bill.ToBillResponse(session)).ToList();
 
         return Ok(billResponses);
       }
@@ -377,22 +334,7 @@ namespace back_end.Controllers
           return NotFound(new { message = "Bill or session was not found" });
         }
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -466,21 +408,7 @@ namespace back_end.Controllers
         await _context.SaveChangesAsync();
         if (billLock != null) await billLock.CommitAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -653,22 +581,7 @@ namespace back_end.Controllers
         await _context.SaveChangesAsync();
         if (billLock != null) await billLock.CommitAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = into.Bill_Id,
-          SessionId = into.Session_Id,
-          BillName = into.Bill_Name,
-          SeniorCount = into.Senior_Count,
-          AdultCount = into.Adult_Count,
-          ChildCount = into.Child_Count,
-          TotCount = into.Tot_Count,
-          TotalCount = into.Total_Count,
-          Status = into.Status.ToString(),
-          CreatedAt = into.Created_At,
-          ClosedAt = into.Closed_At,
-          RequestedAt = into.Requested_At,
-          TableNumbers = GetTableNumbers(into.DiningSession)
-        });
+        return Ok(into.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -764,22 +677,7 @@ namespace back_end.Controllers
         if (billLock != null) await billLock.CommitAsync();
         await _context.Entry(bill).ReloadAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -788,194 +686,8 @@ namespace back_end.Controllers
       }
     }
 
-    /// <summary>
-    /// The table's leftover fee: the default amount, and each open bill's current share.
-    /// </summary>
-    /// <param name="sessionId">The dining session (table)</param>
-    /// <param name="amount">Optional. Previews this fee: each open bill's share of it, without saving anything</param>
-    /// <response code="200">The default fee, the current total and each open bill's share</response>
-    /// <response code="400">If the previewed amount is negative</response>
-    /// <response code="404">If the session doesn't exist</response>
-    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
-    /// <response code="500">If there was an error retrieving the leftover fee</response>
-    /// <remarks>
-    /// Sample requests:
-    ///
-    ///     GET /api/bill/leftover-fee/456
-    ///     GET /api/bill/leftover-fee/456?amount=15.00
-    ///
-    /// Without amount: the fee already applied and each open bill's share of it.
-    /// With amount: what each open bill's share would be (shared by guest count, as PUT applies it),
-    /// so the "Add leftover fee" dialog can show it before staff apply it. Nothing is saved.
-    /// </remarks>
-    [HttpGet("leftover-fee/{sessionId}")]
-    [Authorize(Policy = "staffOnly")]
-    [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetLeftoverFee(int sessionId, [FromQuery(Name = "amount")] decimal? amount = null)
-    {
-      try
-      {
-        var locationId = await SessionLocationAsync(sessionId);
-        if (locationId == null)
-        {
-          return NotFound(new { message = "Session was not found" });
-        }
-
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
-        {
-          return LocationResults.OtherLocation();
-        }
-
-        if (amount < 0)
-        {
-          return BadRequest(new { message = "The leftover fee can't be negative." });
-        }
-
-        var openBills = await OpenBillsAsync(sessionId);
-        var pricing = await _pricingService.GetCurrentPricingAsync(locationId.Value);
-        return Ok(amount == null
-          ? LeftoverFeeResult(sessionId, openBills, pricing.LeftoverFee)
-          : LeftoverFeePreview(sessionId, openBills, pricing.LeftoverFee, amount.Value));
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error getting leftover fee for session {SessionId}", sessionId);
-        return StatusCode(500, new { message = "Error getting leftover fee" });
-      }
-    }
-
-    /// <summary>
-    /// Applies a leftover fee to the table, split evenly across its open bills.
-    /// </summary>
-    /// <param name="sessionId">The dining session (table)</param>
-    /// <param name="request">The fee; leave amount out to use the default, or send 0 to remove it</param>
-    /// <response code="200">The fee was applied; returns each open bill's share</response>
-    /// <response code="400">If the amount is negative or the table has no open bills</response>
-    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
-    /// <response code="404">If the session doesn't exist</response>
-    /// <remarks>
-    /// Sample request:
-    ///
-    ///     PUT /api/bill/leftover-fee/456
-    ///     { "amount": 15.00 }
-    ///
-    /// Staff decide when a table has left too much food. The fee is for the whole table and is
-    /// shared across its open bills by how many guests are on each, toddlers included. 
-    /// Example $20.00 over a bill of 4 guests and a bill of 1 guest, bill of 4 = $16.00. 
-    /// bill of 1 = $4.00, replacing any fee applied before. The shares add up exactly. 
-    /// It's shared again whenever an open bill's guest count changes. Closed and
-    /// paid bills keep what they had, so apply it before closing bills.
-    /// </remarks>
-    [HttpPut("leftover-fee/{sessionId}")]
-    [Authorize(Policy = "staffOnly")]
-    [ProducesResponseType(typeof(LeftoverFeeResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ApplyLeftoverFee(int sessionId, [FromBody] LeftoverFeeRequest request)
-    {
-      try
-      {
-        if (!await _context.DiningSessions.AnyAsync(s => s.Session_Id == sessionId))
-        {
-          return NotFound(new { message = "Session was not found" });
-        }
-
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
-        {
-          return LocationResults.OtherLocation();
-        }
-        var locationId = await SessionLocationAsync(sessionId);
-        if (locationId == null)
-        {
-          return NotFound(new { message = "Session was not found" });
-        }
-        // The location's default fee unless staff entered an amount
-        var defaultFee = (await _pricingService.GetCurrentPricingAsync(locationId.Value)).LeftoverFee;
-        var amount = request?.Amount ?? defaultFee;
-        if (amount < 0)
-        {
-          return BadRequest(new { message = "The leftover fee can't be negative." });
-        }
-
-        var openBills = await OpenBillsAsync(sessionId);
-        if (openBills.Count == 0)
-        {
-          return BadRequest(new { message = "This table has no open bills to add a leftover fee to." });
-        }
-
-        var shares = LeftoverFee.SplitByGuests(amount, openBills.Select(b => b.Total_Count).ToList());
-        for (var i = 0; i < openBills.Count; i++)
-        {
-          openBills[i].Leftover_Charge = shares[i];
-        }
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Leftover fee {Amount:F2} applied to session {SessionId} across {Count} bills",
-            amount, sessionId, openBills.Count);
-
-        return Ok(LeftoverFeeResult(sessionId, openBills, defaultFee));
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error applying leftover fee to session {SessionId}", sessionId);
-        return StatusCode(500, new { message = "Error applying leftover fee" });
-      }
-    }
-
-    // Open bills in a fixed order (oldest first), so any extra cent always lands on the same bill
-    private Task<List<Billing>> OpenBillsAsync(int sessionId) =>
-        _context.Bills
-            .Where(b => b.Session_Id == sessionId && b.Status == BillStatus.Open)
-            .OrderBy(b => b.Bill_Id)
-            .ToListAsync();
-
-    // The session's location, or null if the session doesn't exist
-    private Task<int?> SessionLocationAsync(int sessionId) =>
-        _context.DiningSessions
-            .Where(s => s.Session_Id == sessionId)
-            .Select(s => (int?)s.Location_Id)
-            .FirstOrDefaultAsync();
-
     // Everyone at the table, so a big group splitting into small bills still gets the gratuity on each one
     private Task<int> PartySizeAsync(int sessionId) => BillTotalQuery.PartySizeAsync(_context, sessionId);
-
-    private static LeftoverFeeResponse LeftoverFeeResult(int sessionId, List<Billing> openBills, decimal defaultFee) => new()
-    {
-      SessionId = sessionId,
-      DefaultFee = defaultFee,
-      Amount = openBills.Sum(b => b.Leftover_Charge),
-      Bills = openBills.Select(b => new LeftoverFeeBillShare
-      {
-        BillId = b.Bill_Id,
-        BillName = b.Bill_Name ?? string.Empty,
-        GuestCount = b.Total_Count,
-        LeftoverCharge = b.Leftover_Charge,
-      }).ToList(),
-    };
-
-    // What each open bill's share of this fee would be, worked out the same way ApplyLeftoverFee does it
-    private static LeftoverFeeResponse LeftoverFeePreview(int sessionId, List<Billing> openBills, decimal defaultFee, decimal amount)
-    {
-      var shares = LeftoverFee.SplitByGuests(amount, openBills.Select(b => b.Total_Count).ToList());
-      return new()
-      {
-        SessionId = sessionId,
-        DefaultFee = defaultFee,
-        Amount = shares.Sum(),
-        Bills = openBills.Select((b, i) => new LeftoverFeeBillShare
-        {
-          BillId = b.Bill_Id,
-          BillName = b.Bill_Name ?? string.Empty,
-          GuestCount = b.Total_Count,
-          LeftoverCharge = shares[i],
-        }).ToList(),
-      };
-    }
 
     // Added to the "Ready for bill" request when the guests said yes to free ice cream
     public const string IceCreamNote = "(wants free ice cream)";
@@ -1073,203 +785,6 @@ namespace back_end.Controllers
     }
 
     /// <summary>
-    /// The free ice cream flavours staff can send with the bill.
-    /// </summary>
-    /// <remarks>
-    /// The Available items in the Dessert category, in the order they were added. Admins manage them
-    /// with the menu item tools: add an item to Dessert for a new flavour, or set one Unavailable to
-    /// stop offering it. Dessert items can't go on a menu, so guests can't order them.
-    ///
-    /// Sample request:
-    ///
-    ///     GET /api/bill/ice-cream-flavours
-    /// </remarks>
-    /// <response code="200">The flavours (possibly none).</response>
-    /// <response code="403">The caller isn't staff.</response>
-    [Authorize(Policy = "staffOnly")]
-    [HttpGet("ice-cream-flavours")]
-    [ProducesResponseType(typeof(List<IceCreamFlavourOptionDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetIceCreamFlavours()
-    {
-      try
-      {
-        var flavours = await FreeIceCream.Flavours(_context)
-            .Select(i => new IceCreamFlavourOptionDto { ItemId = i.item_id, Name = i.Name })
-            .ToListAsync();
-        return Ok(flavours);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error loading ice cream flavours");
-        return StatusCode(500, new { message = "Error loading ice cream flavours" });
-      }
-    }
-
-    /// <summary>
-    /// Staff send free ice cream to the kitchen for the bills at a table that are ready for it.
-    /// </summary>
-    /// <remarks>
-    /// Guests say yes on their own bill when they ask for it. Staff go to the table, ask which
-    /// flavours, and send them for every bill that's ready in one go: the ones that said yes, and
-    /// any other party at the table that wants some too. Each bill gets its ice cream once
-    /// (Ice_Cream_Sent_At); a bill that says yes later gets its own turn.
-    ///
-    /// Adds a pending order with a line for each flavour at $0. The flavours are the Available items
-    /// in the Dessert category (see ice-cream-flavours), so analytics count each one. An order needs
-    /// a bill, so it goes on the first chosen bill that said yes. It's free, so no total changes.
-    /// It works on closed bills too: the ice cream comes after the bill, so staff can close it
-    /// and take payment first. Up to one each for the guests on the chosen bills, so each chosen
-    /// bill needs a guest count.
-    /// Sending again for the same bills returns the first time.
-    ///
-    /// Sample request:
-    ///
-    ///     POST /api/bill/send-ice-cream/269
-    ///     { "bill_ids": [332, 333], "flavours": [ { "item_id": 120, "quantity": 2 }, { "item_id": 121, "quantity": 1 } ] }
-    /// </remarks>
-    /// <param name="sessionId">The dining session (the table) the ice cream is for</param>
-    /// <param name="request">The bills it's for, and how many of each flavour</param>
-    /// <response code="200">The ice cream order is pending; returns when it was sent, and whether it already had been.</response>
-    /// <response code="400">No bills chosen, a bill isn't at this table, was cancelled, already had ice cream or has no guests, a flavour isn't available, the count is 0 or more than the guests, or the table has left.</response>
-    /// <response code="403">The table is at another location, or the caller isn't staff.</response>
-    /// <response code="404">The session was not found.</response>
-    [Authorize(Policy = "staffOnly")]
-    [HttpPost("send-ice-cream/{sessionId}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendIceCream(int sessionId, SendIceCreamDto request)
-    {
-      try
-      {
-        var chosenIds = (request?.BillIds ?? new List<int>()).Distinct().ToArray();
-        if (chosenIds.Length == 0)
-        {
-          return BadRequest(new { message = "Choose who the ice cream is for." });
-        }
-
-        // So two taps (or two staff) can't send it twice
-        await using var billLock = await BillLock.LockAsync(_context, chosenIds);
-
-        var session = await _context.DiningSessions
-            .Include(ds => ds.Bills)
-            .FirstOrDefaultAsync(ds => ds.Session_Id == sessionId);
-        if (session == null)
-        {
-          return NotFound(new { message = "Session was not found" });
-        }
-        if (!await SessionAccess.CanViewSessionAsync(_context, User, sessionId))
-        {
-          return LocationResults.OtherLocation();
-        }
-
-        var chosen = session.Bills.Where(b => chosenIds.Contains(b.Bill_Id)).ToList();
-        if (chosen.Count != chosenIds.Length)
-        {
-          return BadRequest(new { message = "A chosen bill isn't at this table." });
-        }
-        // A repeat of a send that already went through (a double tap)
-        if (chosen.All(b => b.Ice_Cream_Sent_At != null))
-        {
-          return Ok(new { ice_cream_sent_at = chosen.Max(b => b.Ice_Cream_Sent_At), already_sent = true });
-        }
-        if (session.Ended_At != null)
-        {
-          return BadRequest(new { message = "This table has already left." });
-        }
-        var cancelled = chosen.FirstOrDefault(b => b.Status == BillStatus.Cancelled);
-        if (cancelled != null)
-        {
-          return BadRequest(new { message = $"{cancelled.Bill_Name} was cancelled." });
-        }
-        var served = chosen.FirstOrDefault(b => b.Ice_Cream_Sent_At != null);
-        if (served != null)
-        {
-          return BadRequest(new { message = $"{served.Bill_Name} already had their ice cream." });
-        }
-
-        // Same flavour twice adds up; flavours with none are left out
-        var flavourIds = await FreeIceCream.Flavours(_context).Select(i => i.item_id).ToListAsync();
-        var counts = new Dictionary<int, int>();
-        foreach (var line in request?.Flavours ?? new List<IceCreamFlavourDto>())
-        {
-          if (!flavourIds.Contains(line.ItemId))
-          {
-            return BadRequest(new { message = "That ice cream flavour isn't available. Refresh and choose again." });
-          }
-          if (line.Quantity < 0)
-          {
-            return BadRequest(new { message = "Ice cream counts can't be negative." });
-          }
-          counts[line.ItemId] = counts.GetValueOrDefault(line.ItemId) + line.Quantity;
-        }
-        var total = counts.Values.Sum();
-        if (total == 0)
-        {
-          return BadRequest(new { message = "Choose at least one ice cream." });
-        }
-        // One each for the chosen bills' guests, so each needs a guest count first
-        var uncounted = chosen.FirstOrDefault(b => b.Total_Count <= 0);
-        if (uncounted != null)
-        {
-          return BadRequest(new { message = $"{uncounted.Bill_Name} has no guests yet. Fix the count with Edit Guests first." });
-        }
-        var guests = chosen.Sum(b => b.Total_Count);
-        if (total > guests)
-        {
-          return BadRequest(new { message = $"That's {total} ice creams for {guests} guests: one each at most." });
-        }
-
-        // The first chosen bill that said yes, or the first chosen bill
-        var bill = chosen
-            .OrderByDescending(b => b.Wants_Ice_Cream)
-            .ThenBy(b => b.Requested_At ?? DateTime.MaxValue)
-            .ThenBy(b => b.Bill_Id)
-            .First();
-
-        int.TryParse(ClaimsHelpers.GetUserId(User), out var staffId);
-        var now = DateTime.UtcNow;
-        var order = new SessionOrder
-        {
-          session_id = session.Session_Id,
-          Bill_Id = bill.Bill_Id,
-          User_Id = staffId > 0 ? staffId : null,
-          User_Name = ClaimsHelpers.GetUserDisplayName(User),
-          Status = OrderStatus.Pending,
-          Created_At = now,
-        };
-        // In the usual flavour order, so the kitchen sees them the same way every time
-        foreach (var itemId in flavourIds.Where(id => counts.GetValueOrDefault(id) > 0))
-        {
-          order.OrderItems.Add(new OrderItems
-          {
-            Menu_Id = session.Menu_Id,
-            Item_Id = itemId,
-            Quantity = counts[itemId],
-            Price_At_Time = 0m, // free, so the bill leaves it out
-            Order_Item_Status = OrderStatus.Pending,
-          });
-        }
-        _context.SessionOrders.Add(order);
-        foreach (var b in chosen)
-        {
-          b.Ice_Cream_Sent_At = now;
-        }
-        await _context.SaveChangesAsync();
-        if (billLock != null) await billLock.CommitAsync();
-
-        return Ok(new { ice_cream_sent_at = now, already_sent = false });
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error sending ice cream for session {SessionId}", sessionId);
-        return StatusCode(500, new { message = "Error sending ice cream" });
-      }
-    }
-
-    /// <summary>
     /// Cancels an open bill and all associated pending orders.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the dining session</param>
@@ -1355,22 +870,7 @@ namespace back_end.Controllers
         if (billLock != null) await billLock.CommitAsync();
         await _context.Entry(bill).ReloadAsync();
 
-        return Ok(new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        });
+        return Ok(bill.ToBillResponse());
       }
       catch (Exception ex)
       {
@@ -1444,22 +944,7 @@ namespace back_end.Controllers
         // Convert bills to response model
         _logger.LogInformation($"Found {bills.Count} bills for user {userId}'s active session");
 
-        var billResponses = bills.Select(bill => new BillResponse
-        {
-          BillId = bill.Bill_Id,
-          SessionId = bill.Session_Id,
-          BillName = bill.Bill_Name ?? string.Empty,
-          SeniorCount = bill.Senior_Count,
-          AdultCount = bill.Adult_Count,
-          ChildCount = bill.Child_Count,
-          TotCount = bill.Tot_Count,
-          TotalCount = bill.Total_Count,
-          Status = bill.Status.ToString(),
-          CreatedAt = bill.Created_At,
-          ClosedAt = bill.Closed_At,
-          RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
-        }).ToList();
+        var billResponses = bills.Select(bill => bill.ToBillResponse()).ToList();
 
         return Ok(billResponses);
       }
@@ -1596,7 +1081,7 @@ namespace back_end.Controllers
           CreatedAt = bill.Created_At,
           ClosedAt = bill.Closed_At,
           RequestedAt = bill.Requested_At,
-          TableNumbers = GetTableNumbers(bill.DiningSession)
+          TableNumbers = bill.DiningSession.TableNumbers()
         };
 
         _logger.LogInformation(

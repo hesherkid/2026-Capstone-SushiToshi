@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -86,7 +85,7 @@ public class QueryParameterNameTests : IClassFixture<WebApplicationFactory<Progr
     [Theory]
     [InlineData("GET api/Dashboard/sessions", "location_id")]
     [InlineData("GET api/Order/all-orders", "location_id", "delivered_open_sessions_only")]
-    [InlineData("GET api/Order/history", "from", "to", "location_id", "table_number", "name")]
+    [InlineData("GET api/order/history", "from", "to", "location_id", "table_number", "name")]
     [InlineData("GET api/Bill/get-bills/{sessionId}", "table_id")]
     [InlineData("GET api/Bill/summary/{billId}", "session_id")]
     [InlineData("GET api/DiningSession/get-list-dining-sessions", "active_only")]

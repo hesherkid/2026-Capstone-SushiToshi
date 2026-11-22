@@ -115,6 +115,22 @@ public class BillControllerTests : IDisposable
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } },
         };
 
+    private FreeIceCreamController IceCream(int userId = StaffHere, string role = "Staff") =>
+        new(_context, new Mock<ILogger<FreeIceCreamController>>().Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                        new Claim(ClaimTypes.Role, role),
+                    }, "TestAuth")),
+                },
+            },
+        };
+
     private static T OkValue<T>(IActionResult result) =>
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeOfType<T>().Which;
 
@@ -351,7 +367,7 @@ public class BillControllerTests : IDisposable
     private SendIceCreamDto ForLee(params (string Flavour, int Quantity)[] flavours) => Scoops(new[] { LeeBill }, flavours);
 
     private Task<IActionResult> Send(SendIceCreamDto request, int sessionId = TableSession) =>
-        Bills().SendIceCream(sessionId, request);
+        IceCream().SendIceCream(sessionId, request);
 
     private List<SessionOrder> IceCreamOrders() =>
         _context.SessionOrders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).ThenInclude(mi => mi.Category)
@@ -572,7 +588,7 @@ public class BillControllerTests : IDisposable
     {
         SeedFlavours();
 
-        FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).Should().Equal(
+        FlavourList(await IceCream().GetIceCreamFlavours()).Select(f => f.Name).Should().Equal(
             "Strawberry Ice Cream", "Chocolate Ice Cream", "Mango Ice Cream", "Vanilla Ice Cream");
         var ids = _context.MenuItems.Where(i => i.Category.Free_With_Bill).Select(i => i.item_id).ToList();
         _context.MenuItemAssignments.Any(a => ids.Contains(a.Item_Id)).Should().BeFalse();
@@ -587,7 +603,7 @@ public class BillControllerTests : IDisposable
         _context.SaveChanges();
         SeedFlavours();
 
-        var flavours = FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).ToList();
+        var flavours = FlavourList(await IceCream().GetIceCreamFlavours()).Select(f => f.Name).ToList();
         flavours.Should().NotContain("Mochi");
         flavours.Should().Contain("Mango Ice Cream");
     }
@@ -601,7 +617,7 @@ public class BillControllerTests : IDisposable
         _context.SaveChanges();
         await GuestsWantIceCream();
 
-        FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).Should().EndWith("Pistachio Ice Cream");
+        FlavourList(await IceCream().GetIceCreamFlavours()).Select(f => f.Name).Should().EndWith("Pistachio Ice Cream");
         (await Send(ForLee(("Pistachio", 1)))).Should().BeOfType<OkObjectResult>();
         IceCreamOrders().Single().OrderItems.Single().Item_Id.Should().Be(500);
     }
@@ -614,7 +630,7 @@ public class BillControllerTests : IDisposable
         _context.SaveChanges();
         await GuestsWantIceCream();
 
-        FlavourList(await Bills().GetIceCreamFlavours()).Select(f => f.Name).Should().NotContain("Mango Ice Cream");
+        FlavourList(await IceCream().GetIceCreamFlavours()).Select(f => f.Name).Should().NotContain("Mango Ice Cream");
         (await Send(ForLee(("Mango", 1)))).Should().BeOfType<BadRequestObjectResult>();
         _context.SessionOrders.Any().Should().BeFalse();
     }

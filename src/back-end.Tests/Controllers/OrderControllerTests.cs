@@ -22,6 +22,7 @@ public class OrderControllerTests : IDisposable
     private readonly ApplicationDbContext _context;
     private readonly Mock<ILogger<OrderController>> _mockLogger;
     private readonly OrderController _controller;
+    private readonly OrderHistoryController _historyController;
 
     public OrderControllerTests()
     {
@@ -31,7 +32,8 @@ public class OrderControllerTests : IDisposable
 
         _context = new ApplicationDbContext(options);
         _mockLogger = new Mock<ILogger<OrderController>>();
-        _controller = new OrderController(_context, _mockLogger.Object, new LocationAccessService(_context));
+        _controller = new OrderController(_context, _mockLogger.Object, new LocationAccessService(_context), new OrderPlanningService(_context));
+        _historyController = new OrderHistoryController(_context, Mock.Of<ILogger<OrderHistoryController>>(), new LocationAccessService(_context));
 
         SeedTestData();
     }
@@ -117,6 +119,10 @@ public class OrderControllerTests : IDisposable
         var claimsPrincipal = new ClaimsPrincipal(identity);
 
         _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+        _historyController.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
@@ -986,7 +992,7 @@ public class OrderControllerTests : IDisposable
         var tooOld = SeedHistoryOrder(EndedSessionId, LocalToUtc(yesterday.AddDays(-4), 12));
 
         // Act
-        var ids = OrderIds(await _controller.GetOrderHistory(Day(yesterday), Day(yesterday), locationId: 1));
+        var ids = OrderIds(await _historyController.GetOrderHistory(Day(yesterday), Day(yesterday), locationId: 1));
 
         // Assert
         ids.Should().Equal(inRange.Order_Id);
@@ -1005,7 +1011,7 @@ public class OrderControllerTests : IDisposable
         var pending = SeedHistoryOrder(OpenSessionId, LocalToUtc(day, 14), OrderStatus.Pending);
 
         // Act
-        var ids = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1));
+        var ids = OrderIds(await _historyController.GetOrderHistory(Day(day), Day(day), locationId: 1));
 
         // Assert
         ids.Should().BeEquivalentTo(new[] { delivered.Order_Id, cancelled.Order_Id, pending.Order_Id });
@@ -1023,8 +1029,8 @@ public class OrderControllerTests : IDisposable
         var tables1And2 = SeedHistoryOrder(OpenSessionId, LocalToUtc(day, 13));
 
         // Act
-        var single = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, tableNumber: 14));
-        var grouped = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, tableNumber: 2));
+        var single = OrderIds(await _historyController.GetOrderHistory(Day(day), Day(day), locationId: 1, tableNumber: 14));
+        var grouped = OrderIds(await _historyController.GetOrderHistory(Day(day), Day(day), locationId: 1, tableNumber: 2));
 
         // Assert
         single.Should().Equal(table14.Order_Id);
@@ -1043,8 +1049,8 @@ public class OrderControllerTests : IDisposable
         var noMatch = SeedHistoryOrder(OpenSessionId, LocalToUtc(day, 14), userName: "Sam");
 
         // Act
-        var billIds = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, name: "ENDE"));
-        var guestIds = OrderIds(await _controller.GetOrderHistory(Day(day), Day(day), locationId: 1, name: " lee "));
+        var billIds = OrderIds(await _historyController.GetOrderHistory(Day(day), Day(day), locationId: 1, name: "ENDE"));
+        var guestIds = OrderIds(await _historyController.GetOrderHistory(Day(day), Day(day), locationId: 1, name: " lee "));
 
         // Assert
         billIds.Should().Equal(byBill.Order_Id);
@@ -1057,10 +1063,10 @@ public class OrderControllerTests : IDisposable
     {
         // Arrange
         SetupUserClaims("1", role: "Admin");
-        var from = LocalToday.AddDays(-(OrderController.MaxHistoryRangeDays - 1));
+        var from = LocalToday.AddDays(-(OrderHistoryController.MaxHistoryRangeDays - 1));
 
         // Act
-        var result = await _controller.GetOrderHistory(Day(from), Day(LocalToday), locationId: 1);
+        var result = await _historyController.GetOrderHistory(Day(from), Day(LocalToday), locationId: 1);
 
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
@@ -1071,10 +1077,10 @@ public class OrderControllerTests : IDisposable
     {
         // Arrange
         SetupUserClaims("1", role: "Admin");
-        var from = LocalToday.AddDays(-OrderController.MaxHistoryRangeDays);
+        var from = LocalToday.AddDays(-OrderHistoryController.MaxHistoryRangeDays);
 
         // Act
-        var result = await _controller.GetOrderHistory(Day(from), Day(LocalToday), locationId: 1);
+        var result = await _historyController.GetOrderHistory(Day(from), Day(LocalToday), locationId: 1);
 
         // Assert
         BadRequestDetails(result).Errors.Should().ContainKey("to");
@@ -1091,7 +1097,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("1", role: "Admin");
 
         // Act
-        var result = await _controller.GetOrderHistory(from, to, locationId: 1);
+        var result = await _historyController.GetOrderHistory(from, to, locationId: 1);
 
         // Assert
         BadRequestDetails(result).Errors.Should().ContainKey(expectedKey);
@@ -1104,7 +1110,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("1", role: "Admin");
 
         // Act
-        var result = await _controller.GetOrderHistory(Day(LocalToday), Day(LocalToday.AddDays(1)), locationId: 1);
+        var result = await _historyController.GetOrderHistory(Day(LocalToday), Day(LocalToday.AddDays(1)), locationId: 1);
 
         // Assert
         BadRequestDetails(result).Errors.Should().ContainKey("to");
@@ -1128,7 +1134,7 @@ public class OrderControllerTests : IDisposable
         SeedHistoryOrder(EndedSessionId, LocalToUtc(new DateOnly(2026, 2, 28), 12));
 
         // Act
-        var days = HistoryDays(await _controller.GetOrderHistoryDays("2026-03", locationId: 1));
+        var days = HistoryDays(await _historyController.GetOrderHistoryDays("2026-03", locationId: 1));
 
         // Assert
         days.Should().Equal("2026-03-05", "2026-03-09");
@@ -1144,7 +1150,7 @@ public class OrderControllerTests : IDisposable
         SeedHistoryOrder(OtherLocationSessionId, LocalToUtc(new DateOnly(2026, 3, 10), 12));
 
         // Act
-        var days = HistoryDays(await _controller.GetOrderHistoryDays("2026-03", locationId: 2));
+        var days = HistoryDays(await _historyController.GetOrderHistoryDays("2026-03", locationId: 2));
 
         // Assert
         days.Should().Equal("2026-03-10");
@@ -1162,7 +1168,7 @@ public class OrderControllerTests : IDisposable
         SetupUserClaims("1", role: "Admin");
 
         // Act
-        var result = await _controller.GetOrderHistoryDays(month, locationId: 1);
+        var result = await _historyController.GetOrderHistoryDays(month, locationId: 1);
 
         // Assert
         result.Result.Should().BeOfType<BadRequestObjectResult>();

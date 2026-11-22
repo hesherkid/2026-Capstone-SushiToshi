@@ -262,6 +262,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ILocationAccessService, LocationAccessService>();
+builder.Services.AddScoped<IOrderPlanningService, OrderPlanningService>();
 builder.Services.AddScoped<GuestCleanup>();
 if (builder.Configuration.GetValue("GuestCleanup:Enabled", true))
 {

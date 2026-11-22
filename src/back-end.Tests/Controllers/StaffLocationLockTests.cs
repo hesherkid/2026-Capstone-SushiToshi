@@ -91,7 +91,7 @@ public class StaffLocationLockTests : IDisposable
         new(_context, new Mock<IConfiguration>().Object, new Mock<ILogger<DiningSessionController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
 
     private OrderController Orders(int userId, UserRoles role) =>
-        new(_context, new Mock<ILogger<OrderController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };
+        new(_context, new Mock<ILogger<OrderController>>().Object, LocationAccess(), new OrderPlanningService(_context)) { ControllerContext = As(userId, role) };
 
     private ServiceRequestController ServiceRequests(int userId, UserRoles role) =>
         new(_context, new Mock<ILogger<ServiceRequestController>>().Object, LocationAccess()) { ControllerContext = As(userId, role) };

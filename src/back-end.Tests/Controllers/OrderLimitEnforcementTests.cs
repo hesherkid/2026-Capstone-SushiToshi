@@ -116,7 +116,7 @@ public class OrderLimitEnforcementTests : IDisposable
     };
 
     private OrderController Orders() =>
-        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context)) { ControllerContext = AsStaff() };
+        new(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context), new OrderPlanningService(_context)) { ControllerContext = AsStaff() };
 
     private BillController Bills()
     {
@@ -338,7 +338,7 @@ public class OrderLimitEnforcementTests : IDisposable
     [Fact]
     public async Task Limits_AreOnlyForTheTableYoureAt()
     {
-        var controller = new OrderController(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context))
+        var controller = new OrderController(_context, new Mock<ILogger<OrderController>>().Object, new LocationAccessService(_context), new OrderPlanningService(_context))
         {
             ControllerContext = new ControllerContext
             {

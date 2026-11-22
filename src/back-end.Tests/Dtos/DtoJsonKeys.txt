@@ -100,6 +100,7 @@ back_end.Dtos.OrderResponseDto: bill_id, completed_at, created_at, order_id, ord
 back_end.Dtos.PastVisitBillDto: bill_id, bill_name, guest_count, total
 back_end.Dtos.PastVisitDto: bills, ended_at, items, location_name, session_id, started_at, table_numbers
 back_end.Dtos.PastVisitItemDto: item_id, name, quantity
+back_end.Dtos.PricedOrderItemDto: charge_reason, is_add_on, item_id, name, order_item_id, price_at_time, quantity, status
 back_end.Dtos.PricingPreviewResponse: adult_price, child_price, date, gratuity_min_party_size, gratuity_rate, holiday_name, leftover_fee, location_id, pricing_source, pricing_type, senior_price, tax_rate, toddler_price
 back_end.Dtos.PricingProfileRequest: apply_holiday_pricing, gratuity_min_party_size, gratuity_rate, leftover_fee, rates, tax_rate, weekend_days
 back_end.Dtos.PricingProfileResponse: apply_holiday_pricing, gratuity_min_party_size, gratuity_rate, leftover_fee, location_id, pricing_profile_id, rates, source, tax_rate, updated_at, weekend_days
