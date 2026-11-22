@@ -133,6 +133,7 @@ Test counts change with almost every PR, so they aren't listed here. Run the sui
 - CustomerController
 - DashboardController
 - DiningSessionController (session join, active session lookup, menu access)
+- FreeIceCreamController
 - HolidayController
 - LeftoverFeeController
 - LocationController
